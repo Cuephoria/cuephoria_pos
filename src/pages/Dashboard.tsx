@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StatCardSection from '@/components/dashboard/StatCardSection';
@@ -17,29 +18,83 @@ const Dashboard = () => {
     salesChange: '',
     activeSessionsCount: 0,
     newMembersCount: 0,
-    lowStockCount: 0
+    lowStockCount: 0,
+    lowStockItems: []
   });
   
   useEffect(() => {
     setChartData(generateChartData());
+    
+    const lowStockItems = products.filter(p => p.stock < 5)
+      .sort((a, b) => a.stock - b.stock);
     
     setDashboardStats({
       totalSales: calculateTotalSales(),
       salesChange: calculatePercentChange(),
       activeSessionsCount: getActiveSessionsCount(),
       newMembersCount: getNewMembersCount(),
-      lowStockCount: getLowStockCount()
+      lowStockCount: lowStockItems.length,
+      lowStockItems: lowStockItems
     });
   }, [bills, customers, stations, sessions, products, activeTab]);
   
   const generateChartData = () => {
-    if (activeTab === 'daily') {
+    if (activeTab === 'hourly') {
+      return generateHourlyChartData();
+    } else if (activeTab === 'daily') {
       return generateDailyChartData();
     } else if (activeTab === 'weekly') {
       return generateWeeklyChartData();
     } else {
       return generateMonthlyChartData();
     }
+  };
+  
+  const generateHourlyChartData = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Create array for all 24 hours of the day
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    
+    if (bills.length > 0) {
+      const hourlyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const billDate = new Date(bill.createdAt);
+        
+        // Only include bills from today
+        if (billDate >= today) {
+          const hour = billDate.getHours();
+          const current = hourlyTotals.get(hour) || 0;
+          hourlyTotals.set(hour, current + bill.total);
+        }
+      });
+      
+      // Format hours with AM/PM
+      return hours.map(hour => {
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12; // Convert 0 to 12 for 12 AM
+        const formattedHour = `${hour12}${ampm}`;
+        
+        return {
+          name: formattedHour,
+          amount: hourlyTotals.get(hour) || 0
+        };
+      });
+    }
+    
+    // Default empty data with AM/PM format
+    return hours.map(hour => {
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      const formattedHour = `${hour12}${ampm}`;
+      
+      return {
+        name: formattedHour,
+        amount: 0
+      };
+    });
   };
   
   const generateDailyChartData = () => {
@@ -142,7 +197,9 @@ const Dashboard = () => {
   const calculateTotalSales = () => {
     let startDate = new Date();
     
-    if (activeTab === 'daily') {
+    if (activeTab === 'hourly') {
+      startDate.setHours(0, 0, 0, 0); // Start of today
+    } else if (activeTab === 'daily') {
       startDate.setHours(0, 0, 0, 0);
     } else if (activeTab === 'weekly') {
       startDate.setDate(startDate.getDate() - startDate.getDay());
@@ -192,6 +249,7 @@ const Dashboard = () => {
         customersCount={customers.length}
         newMembersCount={dashboardStats.newMembersCount}
         lowStockCount={dashboardStats.lowStockCount}
+        lowStockItems={dashboardStats.lowStockItems}
       />
       
       <ActionButtonSection />

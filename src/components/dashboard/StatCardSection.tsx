@@ -2,6 +2,7 @@
 import React from 'react';
 import StatsCard from './StatsCard';
 import { CreditCard, Users, Clock, AlertTriangle, PlayCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Product } from '@/context/POSContext';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -11,6 +12,7 @@ interface StatCardSectionProps {
   customersCount: number;
   newMembersCount: number;
   lowStockCount: number;
+  lowStockItems: Product[];
 }
 
 const StatCardSection: React.FC<StatCardSectionProps> = ({
@@ -20,7 +22,8 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
   totalStations,
   customersCount,
   newMembersCount,
-  lowStockCount
+  lowStockCount,
+  lowStockItems
 }) => {
   // Determine whether the sales trend is positive or negative
   const isSalesTrendPositive = salesChange.includes('+');
@@ -45,6 +48,17 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
   };
   
   const { icon: TrendIcon, class: trendClass } = getTrendIconAndClass();
+  
+  // Format low stock items for display
+  const formatLowStockItems = () => {
+    if (lowStockItems.length === 0) return "All inventory levels are good";
+    
+    if (lowStockItems.length <= 2) {
+      return lowStockItems.map(item => `${item.name}: ${item.stock} left`).join(", ");
+    }
+    
+    return `${lowStockItems[0].name}: ${lowStockItems[0].stock} left, ${lowStockItems[1].name}: ${lowStockItems[1].stock} left, +${lowStockItems.length - 2} more`;
+  };
   
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -87,7 +101,7 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
         title="Inventory Alert"
         value={`${lowStockCount} item${lowStockCount !== 1 ? 's' : ''}`}
         icon={AlertTriangle}
-        subValue={lowStockCount > 0 ? "Low stock items need attention" : "All inventory levels are good"}
+        subValue={formatLowStockItems()}
         iconColor="text-[#F97316]"
         iconBgColor="bg-[#F97316]/20"
         className="hover:shadow-red-900/10"

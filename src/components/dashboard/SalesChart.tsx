@@ -22,6 +22,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, activeTab, setActiveTab }
           <CardTitle className="text-xl font-bold text-white font-heading">Sales Overview</CardTitle>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
             <TabsList className="bg-gray-800 text-gray-400">
+              <TabsTrigger value="hourly">Hourly</TabsTrigger>
               <TabsTrigger value="daily">Daily</TabsTrigger>
               <TabsTrigger value="weekly">Weekly</TabsTrigger>
               <TabsTrigger value="monthly">Monthly</TabsTrigger>
@@ -75,7 +76,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, activeTab, setActiveTab }
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex flex-col">
                             <span className="text-[0.70rem] uppercase text-muted-foreground">
-                              Day
+                              {activeTab === 'hourly' ? 'Hour' : activeTab === 'daily' ? 'Day' : activeTab === 'weekly' ? 'Week' : 'Month'}
                             </span>
                             <span className="font-bold text-muted-foreground">
                               {payload[0].payload.name}
