@@ -12,10 +12,17 @@ const ActiveSessions = () => {
   
   // Calculate session duration in minutes
   const getSessionDuration = (startTime: Date) => {
+    // Ensure we're working with Date objects
     const start = new Date(startTime);
     const now = new Date();
-    const durationMs = now.getTime() - start.getTime();
-    return Math.floor(durationMs / (1000 * 60)); // Convert to minutes
+    
+    // Convert to milliseconds (numbers) before arithmetic
+    const startMs = start.getTime();
+    const nowMs = now.getTime();
+    const durationMs = nowMs - startMs;
+    
+    // Convert milliseconds to minutes
+    return Math.floor(durationMs / (1000 * 60));
   };
   
   return (
