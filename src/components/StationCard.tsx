@@ -74,48 +74,52 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     if (selectedCustomerId) {
       startSession(station.id, selectedCustomerId);
       setSelectedCustomerId('');
+      toast({
+        title: 'Session Started',
+        description: `Started session on ${station.name}`,
+      });
     }
   };
 
   const handleEndSession = () => {
+    // Only proceed if there's an active session
     if (!station.currentSession) return;
     
     const customerId = station.currentSession.customerId;
-    const sessionCost = cost;
-    const durationMinutes = elapsedTime;
-    const sessionName = `${station.name} (${durationMinutes} mins)`;
-    
-    // Generate a unique session ID to ensure we can track this specific session
-    const sessionId = `session-${Date.now()}`;
-    
-    // End the session first
-    endSession(station.id);
+    const sessionCost = cost > 0 ? cost : station.hourlyRate; // Ensure we have at least the minimum cost
+    const sessionDuration = elapsedTime > 0 ? elapsedTime : 1; // Ensure we have at least 1 minute
+    const stationName = station.name;
     
     console.log("Ending session with data:", {
       customerId,
-      stationName: station.name,
-      duration: durationMinutes,
-      cost: sessionCost,
-      sessionId
+      stationName,
+      duration: sessionDuration,
+      cost: sessionCost
     });
     
-    // Toast notification to confirm session ended
-    toast({
-      title: "Session Ended",
-      description: `${station.name} session has been added to the cart.`,
-    });
+    // End the session first to get the updated session data
+    endSession(station.id);
+    
+    // Reset local state
+    setElapsedTime(0);
+    setCost(0);
+    setHours(0);
+    setMinutes(0);
+    setSeconds(0);
+    
+    // Generate a unique session ID for tracking
+    const sessionId = `session-${Date.now()}`;
     
     // Navigate to POS page with session data
     navigate('/pos', { 
       state: { 
         fromSession: true, 
         customerId,
-        stationName: station.name,
-        duration: durationMinutes,
+        stationName,
+        duration: sessionDuration,
         cost: sessionCost,
-        sessionId
-      },
-      replace: true // Use replace to prevent navigation issues
+        sessionId: sessionId // Add unique ID to prevent duplicate processing
+      } 
     });
   };
 
