@@ -62,22 +62,18 @@ const POS = () => {
     }
   }, [isCheckoutDialogOpen]);
 
-  // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
       console.log("Selected customer changed:", selectedCustomer.name);
       
-      // Check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
       
-      // Log active sessions for debugging
       console.log("Active stations for customer:", activeStations.length);
       
-      // If there are active sessions, add them to the cart
       if (activeStations.length > 0) {
         toast({
           title: 'Gaming Sessions Added',
@@ -183,14 +179,7 @@ const POS = () => {
       setIsCheckoutDialogOpen(false);
       setLastCompletedBill(bill);
       
-      // Show success message first
       setShowSuccess(true);
-      
-      // After a delay, show the receipt
-      setTimeout(() => {
-        setShowSuccess(false);
-        setShowReceipt(true);
-      }, 2000);
       
       toast({
         title: 'Sale Completed',
