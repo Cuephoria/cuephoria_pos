@@ -2,10 +2,12 @@
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
+import { useToast } from '@/hooks/use-toast';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const { toast } = useToast();
   
   // Load data from localStorage
   useEffect(() => {
@@ -40,7 +42,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         
         if (expiryDate < now) {
           customersUpdated = true;
-          // Membership has expired, update the customer
           console.log(`Membership expired for ${customer.name}`);
           return {
             ...customer,
@@ -89,8 +90,110 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       setSelectedCustomer(null);
       return;
     }
+    
     const customer = customers.find(c => c.id === id);
-    setSelectedCustomer(customer || null);
+    
+    if (customer) {
+      // Check if membership is expired before selecting
+      if (customer.isMember && customer.membershipExpiryDate) {
+        const expiryDate = new Date(customer.membershipExpiryDate);
+        
+        if (expiryDate < new Date()) {
+          toast({
+            title: "Membership Expired",
+            description: `${customer.name}'s membership has expired on ${expiryDate.toLocaleDateString()}`,
+            variant: "destructive"
+          });
+          
+          // Update the customer to mark membership as inactive
+          const updatedCustomer = {
+            ...customer,
+            isMember: false
+          };
+          
+          updateCustomer(updatedCustomer);
+          setSelectedCustomer(updatedCustomer);
+          return;
+        }
+        
+        if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
+          toast({
+            title: "Membership Hours Depleted",
+            description: `${customer.name} has no remaining hours on their membership plan`,
+            variant: "destructive"
+          });
+        }
+      }
+      
+      setSelectedCustomer(customer);
+    } else {
+      setSelectedCustomer(null);
+    }
+  };
+  
+  const checkMembershipValidity = (customerId: string): boolean => {
+    const customer = customers.find(c => c.id === customerId);
+    
+    if (!customer) return false;
+    if (!customer.isMember) return false;
+    
+    // Check expiry date
+    if (customer.membershipExpiryDate) {
+      const expiryDate = new Date(customer.membershipExpiryDate);
+      if (expiryDate < new Date()) {
+        toast({
+          title: "Membership Expired",
+          description: `${customer.name}'s membership has expired on ${expiryDate.toLocaleDateString()}`,
+          variant: "destructive"
+        });
+        
+        // Update the customer status
+        updateCustomer({
+          ...customer,
+          isMember: false
+        });
+        
+        return false;
+      }
+    }
+    
+    // Check hours remaining
+    if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
+      toast({
+        title: "No Hours Remaining",
+        description: `${customer.name} has used all allocated hours in their membership plan`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
+  
+  const deductMembershipHours = (customerId: string, hours: number): boolean => {
+    const customer = customers.find(c => c.id === customerId);
+    
+    if (!customer || !customer.isMember || customer.membershipHoursLeft === undefined) {
+      return false;
+    }
+    
+    if (customer.membershipHoursLeft < hours) {
+      toast({
+        title: "Insufficient Hours",
+        description: `Customer only has ${customer.membershipHoursLeft} hours remaining`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    // Deduct hours
+    const updatedCustomer = {
+      ...customer,
+      membershipHoursLeft: customer.membershipHoursLeft - hours
+    };
+    
+    updateCustomer(updatedCustomer);
+    return true;
   };
   
   return {
@@ -101,6 +204,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     addCustomer,
     updateCustomer,
     deleteCustomer,
-    selectCustomer
+    selectCustomer,
+    checkMembershipValidity,
+    deductMembershipHours
   };
 };

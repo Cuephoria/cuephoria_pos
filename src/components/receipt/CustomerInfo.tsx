@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Customer } from '@/context/POSContext';
-import { CalendarCheck, Award } from 'lucide-react';
+import { CalendarCheck, Award, Clock } from 'lucide-react';
 
 interface CustomerInfoProps {
   customer: Customer;
@@ -26,15 +26,39 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
     <div className="mb-4">
       <p className="font-medium text-sm">Customer: {customer.name}</p>
       <p className="text-xs text-gray-600">{customer.phone}</p>
-      {customer.isMember && (
-        <p className="text-xs flex items-center text-cuephoria-purple mt-1">
+      
+      <div className="mt-2 border-t pt-2">
+        <p className="text-xs flex items-center">
           <Award className="h-3 w-3 mr-1" />
-          <span>{isMembershipActive() ? 'Active Member' : 'Expired Membership'}</span>
-          {customer.membershipExpiryDate && (
-            <span className="ml-1">until {formatDate(customer.membershipExpiryDate)}</span>
-          )}
+          <span className="font-medium">Membership Status:</span> 
+          <span className={`ml-1 ${isMembershipActive() ? 'text-green-600' : 'text-red-600'}`}>
+            {isMembershipActive() ? 'Active' : 'Inactive'}
+          </span>
         </p>
-      )}
+        
+        {customer.membershipPlan && (
+          <p className="text-xs flex items-center mt-1">
+            <span className="font-medium">Plan Name:</span>
+            <span className="ml-1">{customer.membershipPlan}</span>
+          </p>
+        )}
+        
+        {customer.membershipExpiryDate && (
+          <p className="text-xs flex items-center mt-1">
+            <CalendarCheck className="h-3 w-3 mr-1" />
+            <span className="font-medium">Valid Until:</span>
+            <span className="ml-1">{formatDate(customer.membershipExpiryDate)}</span>
+          </p>
+        )}
+        
+        {customer.membershipHoursLeft !== undefined && (
+          <p className="text-xs flex items-center mt-1">
+            <Clock className="h-3 w-3 mr-1" />
+            <span className="font-medium">Hours Remaining:</span>
+            <span className="ml-1">{customer.membershipHoursLeft}</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 };

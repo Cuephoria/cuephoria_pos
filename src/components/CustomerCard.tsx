@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePOS, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { User, Edit, Trash, Clock, CreditCard, Star } from 'lucide-react';
+import { User, Edit, Trash, Clock, CreditCard, Star, Award, CalendarCheck } from 'lucide-react';
 
 interface CustomerCardProps {
   customer: Customer;
@@ -31,6 +31,12 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
   };
+  
+  const isMembershipActive = () => {
+    if (!customer.isMember || !customer.membershipExpiryDate) return false;
+    const expiryDate = new Date(customer.membershipExpiryDate);
+    return expiryDate > new Date();
+  };
 
   return (
     <Card>
@@ -40,8 +46,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <User className="h-5 w-5 mr-2" />
             {customer.name}
           </CardTitle>
-          <Badge className={customer.isMember ? 'bg-cuephoria-purple' : 'bg-gray-500'}>
-            {customer.isMember ? 'Member' : 'Non-Member'}
+          <Badge className={isMembershipActive() ? 'bg-cuephoria-purple' : 'bg-gray-500'}>
+            {isMembershipActive() ? 'Member' : 'Non-Member'}
           </Badge>
         </div>
       </CardHeader>
@@ -57,6 +63,38 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
               <span className="truncate max-w-[150px]">{customer.email}</span>
             </div>
           )}
+          
+          {customer.isMember && (
+            <>
+              {customer.membershipPlan && (
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center">
+                    <Award className="h-4 w-4 mr-1" /> Plan:
+                  </span>
+                  <span>{customer.membershipPlan}</span>
+                </div>
+              )}
+              
+              {customer.membershipExpiryDate && (
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center">
+                    <CalendarCheck className="h-4 w-4 mr-1" /> Valid Until:
+                  </span>
+                  <span>{formatDate(customer.membershipExpiryDate)}</span>
+                </div>
+              )}
+              
+              {customer.membershipHoursLeft !== undefined && (
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" /> Hours Left:
+                  </span>
+                  <span>{customer.membershipHoursLeft}</span>
+                </div>
+              )}
+            </>
+          )}
+          
           <div className="flex justify-between text-sm">
             <span className="flex items-center">
               <Star className="h-4 w-4 mr-1" /> Loyalty:

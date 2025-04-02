@@ -4,7 +4,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
+  category: 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
   stock: number;
   image?: string;
   originalPrice?: number;
@@ -19,6 +19,8 @@ export interface Customer {
   email?: string;
   isMember: boolean;
   membershipExpiryDate?: Date;
+  membershipPlan?: string;
+  membershipHoursLeft?: number;
   loyaltyPoints: number;
   totalSpent: number;
   totalPlayTime: number;
@@ -103,6 +105,10 @@ export interface POSContextType {
   updateCustomer: (customer: Customer) => void;
   deleteCustomer: (id: string) => void;
   selectCustomer: (id: string | null) => void;
+  
+  // Membership functions
+  checkMembershipValidity: (customerId: string) => boolean;
+  deductMembershipHours: (customerId: string, hours: number) => boolean;
   
   // Cart functions
   addToCart: (item: Omit<CartItem, 'total'>) => void;

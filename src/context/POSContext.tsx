@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext } from 'react';
 import { 
   POSContextType, 
@@ -36,7 +37,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addCustomer, 
     updateCustomer, 
     deleteCustomer, 
-    selectCustomer 
+    selectCustomer,
+    checkMembershipValidity,
+    deductMembershipHours
   } = useCustomers(initialCustomers);
   
   const { 
@@ -75,6 +78,15 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useBills(updateCustomer, updateProduct);
   
   // Wrapper functions that combine functionality from multiple hooks
+  const startSession = (stationId: string, customerId: string) => {
+    // Check membership validity before allowing session
+    if (!checkMembershipValidity(customerId)) {
+      return;
+    }
+    
+    return startSessionBase(stationId, customerId);
+  };
+  
   const endSession = (stationId: string) => {
     const result = endSessionBase(stationId, customers);
     if (result) {
@@ -181,12 +193,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addProduct,
         updateProduct,
         deleteProduct,
-        startSession: startSessionBase,
+        startSession,
         endSession,
         addCustomer,
         updateCustomer,
         deleteCustomer,
         selectCustomer,
+        checkMembershipValidity,
+        deductMembershipHours,
         addToCart,
         removeFromCart,
         updateCartItem,
