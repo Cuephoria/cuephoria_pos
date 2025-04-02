@@ -19,6 +19,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
+				heading: ['Poppins', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -65,9 +69,12 @@ export default {
 				},
 				cuephoria: {
 					purple: '#6E59A5',
+					lightpurple: '#9b87f5',
 					orange: '#F97316',
 					blue: '#0EA5E9',
+					green: '#10B981',
 					dark: '#1A1F2C',
+					darker: '#161b27',
 					light: '#F1F0FB',
 				}
 			},
@@ -92,11 +99,16 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-soft': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.8' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-soft': 'pulse-soft 3s infinite ease-in-out'
 			}
 		}
 	},

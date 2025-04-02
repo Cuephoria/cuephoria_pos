@@ -8,7 +8,6 @@ import {
   SidebarFooter, 
   SidebarGroup, 
   SidebarGroupContent, 
-  SidebarGroupLabel, 
   SidebarHeader, 
   SidebarMenu, 
   SidebarMenuButton, 
@@ -34,13 +33,15 @@ const AppSidebar: React.FC = () => {
   ];
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4">
-        <Logo />
+    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
+      <SidebarHeader className="p-4 flex items-center gap-2">
+        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-[#6E59A5]">
+          <span className="text-white font-bold">CQ</span>
+        </div>
+        <span className="text-xl font-bold text-[#9b87f5] font-heading">Cuephoria</span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -65,7 +66,7 @@ const AppSidebar: React.FC = () => {
           </div>
           <button 
             onClick={logout}
-            className="text-xs text-muted-foreground hover:text-primary"
+            className="text-xs text-muted-foreground hover:text-[#9b87f5]"
           >
             Logout
           </button>
