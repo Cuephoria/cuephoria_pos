@@ -1,14 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StationCard from '@/components/StationCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronDown, Plus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import AddStationDialog from '@/components/AddStationDialog';
 
 const Stations = () => {
   const { stations } = usePOS();
+  const [openAddDialog, setOpenAddDialog] = useState(false);
   
   // Separate stations by type
   const ps5Stations = stations.filter(station => station.type === 'ps5');
@@ -23,11 +24,20 @@ const Stations = () => {
       <div className="flex items-center justify-between animate-slide-down">
         <h2 className="text-3xl font-bold tracking-tight gradient-text font-heading">Gaming Stations</h2>
         <div className="flex space-x-2">
-          <Button className="bg-cuephoria-purple hover:bg-cuephoria-purple/80">
+          <Button 
+            className="bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+            onClick={() => setOpenAddDialog(true)}
+          >
             <Plus className="mr-2 h-4 w-4" /> Add Station
           </Button>
         </div>
       </div>
+
+      {/* Add Station Dialog */}
+      <AddStationDialog 
+        open={openAddDialog} 
+        onOpenChange={setOpenAddDialog} 
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
         <Card className="bg-gradient-to-r from-cuephoria-purple/20 to-cuephoria-lightpurple/20 border-0 animate-fade-in">
