@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Bill, CartItem, Customer, Product, MembershipTier } from '@/types/pos.types';
+import { Bill, CartItem, Customer, Product } from '@/types/pos.types';
 import { generateId, exportBillsToCSV, exportCustomersToCSV } from '@/utils/pos.utils';
 
 export const useBills = (
@@ -19,46 +19,6 @@ export const useBills = (
   useEffect(() => {
     localStorage.setItem('cuephoriaBills', JSON.stringify(bills));
   }, [bills]);
-  
-  // Helper function to get price based on membership tier for a specific station type
-  const getMembershipDiscountedPrice = (
-    originalPrice: number,
-    stationType: string,
-    membershipTier?: MembershipTier
-  ): number => {
-    if (!membershipTier || membershipTier === 'none') {
-      return originalPrice;
-    }
-    
-    // Apply discounts based on membership tier
-    switch (membershipTier) {
-      case 'introWeekly2Pax':
-        if (stationType === '8ball') {
-          return 399; // Discounted price for 2 Pax 8ball pass
-        }
-        break;
-      case 'introWeekly4Pax':
-        if (stationType === '8ball') {
-          return 599; // Discounted price for 4 Pax 8ball pass
-        }
-        break;
-      case 'introWeeklyPS5':
-        if (stationType === 'ps5') {
-          return 399; // Discounted price for PS5 pass
-        }
-        break;
-      case 'introWeeklyCombo':
-        if (stationType === 'ps5') {
-          return 399; // Discounted price for combo PS5
-        }
-        if (stationType === '8ball') {
-          return 599; // Discounted price for combo 8ball
-        }
-        break;
-    }
-    
-    return originalPrice;
-  };
   
   const completeSale = (
     cart: CartItem[], 
@@ -85,9 +45,6 @@ export const useBills = (
     
     // Calculate loyalty points earned (1 point for every ₹10 spent)
     const loyaltyPointsEarned = Math.floor(total / 10);
-    
-    // Apply membership benefits
-    // In a real system, you would also track hours used from membership here
     
     // Create the bill
     const newBill = {
@@ -143,7 +100,6 @@ export const useBills = (
     setBills,
     completeSale,
     exportBills,
-    exportCustomers,
-    getMembershipDiscountedPrice
+    exportCustomers
   };
 };
