@@ -11,17 +11,14 @@ import {
   SidebarHeader, 
   SidebarMenu, 
   SidebarMenuButton, 
-  SidebarMenuItem,
-  useSidebar
+  SidebarMenuItem 
 } from '@/components/ui/sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 
 const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { openMobile, setOpenMobile } = useSidebar();
-  const isMobile = useIsMobile();
 
   if (!user) return null;
 
@@ -37,22 +34,21 @@ const AppSidebar: React.FC = () => {
 
   return (
     <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
-      <SidebarHeader className="p-4 flex items-center justify-center mb-4">
-        <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-r from-[#6E59A5] to-[#9b87f5] shadow-lg animate-pulse-glow">
+      <SidebarHeader className="p-4 flex items-center gap-2">
+        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-gradient-to-r from-[#6E59A5] to-[#9b87f5] shadow-lg animate-pulse-glow">
           <span className="text-white font-bold font-heading">CQ</span>
         </div>
-        <span className="text-2xl font-bold gradient-text font-heading ml-2">Cuephoria</span>
+        <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="px-4">
+            <SidebarMenu>
               {menuItems.map((item, index) => (
-                <SidebarMenuItem key={item.path} 
-                  className={`animate-fade-in delay-${index * 100} mb-2`}>
+                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100}`}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.path}>
                     <Link to={item.path} className="flex items-center menu-item">
-                      <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
+                      <item.icon className={`mr-2 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
                       <span className="font-quicksand">{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
