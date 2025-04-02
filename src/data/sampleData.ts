@@ -62,6 +62,7 @@ export const initialCustomers: Customer[] = [
     phone: '9876543210', 
     email: 'raj.sharma@example.com', 
     isMember: true, 
+    membershipTier: 'basic',
     loyaltyPoints: 150, 
     totalSpent: 3500,
     totalPlayTime: 420, // 7 hours
@@ -72,6 +73,7 @@ export const initialCustomers: Customer[] = [
     name: 'Priya Patel', 
     phone: '8765432109', 
     isMember: false, 
+    membershipTier: 'none',
     loyaltyPoints: 0, 
     totalSpent: 800,
     totalPlayTime: 120, // 2 hours
@@ -83,6 +85,7 @@ export const initialCustomers: Customer[] = [
     phone: '7654321098', 
     email: 'vikram@example.com', 
     isMember: true, 
+    membershipTier: 'standard',
     loyaltyPoints: 75, 
     totalSpent: 1200,
     totalPlayTime: 180, // 3 hours
@@ -149,6 +152,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     phone: '9876543210',
     email: 'rajesh.kumar@gmail.com',
     isMember: true,
+    membershipTier: 'premium',
     loyaltyPoints: 250,
     totalSpent: 5000,
     totalPlayTime: 600
@@ -158,6 +162,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     phone: '8765432109',
     email: 'priya.singh@gmail.com',
     isMember: true,
+    membershipTier: 'basic',
     loyaltyPoints: 180,
     totalSpent: 3500,
     totalPlayTime: 420
@@ -166,6 +171,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     name: 'Amit Patel',
     phone: '7654321098',
     isMember: false,
+    membershipTier: 'none',
     loyaltyPoints: 0,
     totalSpent: 1500,
     totalPlayTime: 180
@@ -175,6 +181,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     phone: '6543210987',
     email: 'sneha.sharma@yahoo.com',
     isMember: true,
+    membershipTier: 'combo',
     loyaltyPoints: 120,
     totalSpent: 2800,
     totalPlayTime: 300
@@ -183,6 +190,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     name: 'Vikram Desai',
     phone: '9876543211',
     isMember: false,
+    membershipTier: 'none',
     loyaltyPoints: 0,
     totalSpent: 800,
     totalPlayTime: 120

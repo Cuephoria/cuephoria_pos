@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePOS, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { User, Edit, Trash, Clock, CreditCard, Star } from 'lucide-react';
+import { User, Edit, Trash, Clock, CreditCard, Star, Crown } from 'lucide-react';
 
 interface CustomerCardProps {
   customer: Customer;
@@ -13,6 +13,7 @@ interface CustomerCardProps {
   onDelete?: (id: string) => void;
   onSelect?: (customer: Customer) => void;
   isSelectable?: boolean;
+  showMembershipDetails?: boolean;
 }
 
 const CustomerCard: React.FC<CustomerCardProps> = ({ 
@@ -20,7 +21,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onEdit, 
   onDelete,
   onSelect,
-  isSelectable = false
+  isSelectable = false,
+  showMembershipDetails = false
 }) => {
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-IN');
@@ -75,6 +77,18 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             </span>
             <span>{formatTime(customer.totalPlayTime)}</span>
           </div>
+          
+          {showMembershipDetails && customer.membershipTier !== 'none' && (
+            <div className="flex justify-between text-sm">
+              <span className="flex items-center">
+                <Crown className="h-4 w-4 mr-1" /> Membership:
+              </span>
+              <Badge className="bg-cuephoria-purple">
+                {customer.membershipTier.charAt(0).toUpperCase() + customer.membershipTier.slice(1)}
+              </Badge>
+            </div>
+          )}
+          
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Joined:</span>
             <span>{formatDate(customer.createdAt)}</span>

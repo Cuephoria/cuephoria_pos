@@ -59,7 +59,7 @@ export const addSampleIndianData = (
   console.log('Adding sample Indian data');
   
   // Add membership fields to customers if needed
-  const updatedCustomers = customers.map(customer => {
+  const updatedCustomers = customers.map((customer: Customer) => {
     if (!('membershipTier' in customer)) {
       return {
         ...customer,
