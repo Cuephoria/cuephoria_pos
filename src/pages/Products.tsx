@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Package, Filter, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -88,7 +89,7 @@ const Products = () => {
     const productData: Omit<Product, 'id'> = {
       name,
       price: Number(price),
-      category: category as 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
+      category: category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
       stock: Number(stock),
     };
     

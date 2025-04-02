@@ -24,8 +24,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'gaming':
-        return 'bg-cuephoria-purple';
       case 'food':
         return 'bg-cuephoria-orange';
       case 'drinks':

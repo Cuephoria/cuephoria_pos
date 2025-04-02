@@ -11,10 +11,10 @@ const ProductInventoryChart: React.FC = () => {
   
   // Categorize products by stock status
   const categorizeProductsByStock = () => {
-    const criticalStock = products.filter(p => p.stock < 5 && p.stock > 0 && p.category !== 'gaming' && p.category !== 'challenges').length;
-    const lowStock = products.filter(p => p.stock >= 5 && p.stock < 15 && p.category !== 'gaming' && p.category !== 'challenges').length;
-    const healthyStock = products.filter(p => p.stock >= 15 && p.category !== 'gaming' && p.category !== 'challenges').length;
-    const outOfStock = products.filter(p => p.stock === 0 && p.category !== 'gaming' && p.category !== 'challenges').length;
+    const criticalStock = products.filter(p => p.stock < 5 && p.stock > 0 && p.category !== 'challenges' && p.category !== 'membership').length;
+    const lowStock = products.filter(p => p.stock >= 5 && p.stock < 15 && p.category !== 'challenges' && p.category !== 'membership').length;
+    const healthyStock = products.filter(p => p.stock >= 15 && p.category !== 'challenges' && p.category !== 'membership').length;
+    const outOfStock = products.filter(p => p.stock === 0 && p.category !== 'challenges' && p.category !== 'membership').length;
     
     return [
       { name: 'Critical', value: criticalStock, color: '#F97316' },

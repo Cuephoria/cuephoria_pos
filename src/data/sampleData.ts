@@ -7,14 +7,14 @@ export const initialProducts: Product[] = [
     id: 'p1', 
     name: 'PS5 Session', 
     price: 300, // ₹300 per hour
-    category: 'gaming', 
+    category: 'challenges', // Changed from 'gaming' to 'challenges'
     stock: 9999 
   },
   { 
     id: 'p2', 
     name: '8-Ball Session', 
     price: 200, // ₹200 per hour
-    category: 'gaming', 
+    category: 'challenges', // Changed from 'gaming' to 'challenges'
     stock: 9999 
   },
   { 
