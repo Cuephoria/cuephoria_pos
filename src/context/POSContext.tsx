@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Types
@@ -101,7 +100,7 @@ interface POSContextType {
   setDiscount: (amount: number, type: 'percentage' | 'fixed') => void;
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
-  completeSale: (paymentMethod: 'cash' | 'upi') => void;
+  completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
   
   // Data export
   exportBills: () => void;
@@ -427,7 +426,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const completeSale = (paymentMethod: 'cash' | 'upi') => {
-    if (!selectedCustomer || cart.length === 0) return;
+    if (!selectedCustomer || cart.length === 0) return undefined;
     
     const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
     

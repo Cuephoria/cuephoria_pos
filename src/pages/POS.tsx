@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -45,14 +44,12 @@ const POS = () => {
   const [customDiscountType, setCustomDiscountType] = useState<'percentage' | 'fixed'>(discountType);
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
 
-  // Update the form values when the context values change
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
     setCustomDiscountType(discountType);
     setCustomLoyaltyPoints(loyaltyPointsUsed.toString());
   }, [discount, discountType, loyaltyPointsUsed]);
 
-  // Apply the discount and loyalty points when the dialog is opened
   useEffect(() => {
     if (isCheckoutDialogOpen) {
       handleApplyDiscount();
@@ -151,7 +148,6 @@ const POS = () => {
     }
     
     const result = completeSale(paymentMethod);
-    // Check if result exists before proceeding
     if (result) {
       setIsCheckoutDialogOpen(false);
       toast({
@@ -161,7 +157,6 @@ const POS = () => {
     }
   };
 
-  // Calculate subtotal, discount value and total
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
   let discountValue = 0;
   if (discountType === 'percentage') {
@@ -178,7 +173,6 @@ const POS = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cart Section */}
         <Card className="lg:col-span-1 h-[calc(100vh-12rem)] flex flex-col">
           <CardHeader className="pb-3">
             <div className="flex justify-between items-center">
@@ -306,7 +300,6 @@ const POS = () => {
           </CardFooter>
         </Card>
 
-        {/* Products Section */}
         <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl">Products</CardTitle>
@@ -356,7 +349,6 @@ const POS = () => {
         </Card>
       </div>
 
-      {/* Customer Selection Dialog */}
       <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -397,7 +389,6 @@ const POS = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Checkout Dialog */}
       <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
