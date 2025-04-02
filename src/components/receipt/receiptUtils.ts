@@ -101,27 +101,17 @@ export const generatePDF = async (element: HTMLElement, billId: string): Promise
 };
 
 export const handlePrint = (printContent: string): void => {
+  // Store the current page content
   const originalContents = document.body.innerHTML;
-
-  document.body.innerHTML = `
-    <html>
-      <head>
-        <title>Cuephoria Receipt</title>
-        <style>
-          body { font-family: monospace; padding: 20px; }
-          .receipt-header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-          .receipt-item { display: flex; justify-content: space-between; margin-bottom: 8px; }
-          .receipt-total { border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div style="max-width: 85mm; margin: 0 auto;">
-          ${printContent}
-        </div>
-      </body>
-    </html>
-  `;
-
+  
+  // Replace with our receipt content
+  document.body.innerHTML = printContent;
+  
+  // Trigger the browser print dialog
   window.print();
-  document.body.innerHTML = originalContents;
+  
+  // Restore original content after print dialog closes
+  setTimeout(() => {
+    document.body.innerHTML = originalContents;
+  }, 100);
 };
