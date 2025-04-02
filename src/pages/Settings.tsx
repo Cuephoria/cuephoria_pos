@@ -7,8 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, User, DollarSign, Receipt } from 'lucide-react';
+import { Shield, User, DollarSign, Receipt, AlertTriangle } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -262,11 +273,38 @@ const Settings = () => {
               <div className="space-y-2 pt-4 border-t">
                 <h3 className="text-lg font-medium">Data Reset</h3>
                 <p className="text-sm text-muted-foreground">
-                  Reset all data in the system. This action cannot be undone.
+                  Reset all data in the system to sample values. This action cannot be undone.
                 </p>
-                <Button variant="destructive" onClick={handleResetData}>
-                  Reset All Data
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                      Reset All Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                        Reset All Data
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will reset all your data (customers, products, stations, bills, sessions) to the initial sample values.
+                        <div className="mt-2 p-2 bg-red-50 text-red-700 rounded-md">
+                          This action cannot be undone. All your current data will be permanently deleted.
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleResetData}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Yes, Reset Everything
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardContent>
           </Card>
