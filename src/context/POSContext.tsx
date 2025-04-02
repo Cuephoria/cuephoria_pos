@@ -5,7 +5,8 @@ import {
   ResetOptions, 
   Customer, 
   CartItem, 
-  Bill
+  Bill,
+  MembershipType
 } from '@/types/pos.types';
 import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
@@ -37,7 +38,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addCustomer, 
     updateCustomer, 
     deleteCustomer, 
-    selectCustomer 
+    selectCustomer,
+    addMembership,
+    useMembershipCredit,
+    isMembershipExpired,
+    getMembershipDetails
   } = useCustomers(initialCustomers);
   
   const { 
@@ -73,7 +78,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     completeSale: completeSaleBase, 
     exportBills: exportBillsBase, 
     exportCustomers: exportCustomersBase 
-  } = useBills(updateCustomer, updateProduct);
+  } = useBills(updateCustomer, updateProduct, addMembership);
   
   // Wrapper functions that combine functionality from multiple hooks
   const endSession = (stationId: string) => {
@@ -194,7 +199,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportBills,
         exportCustomers,
         resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData
+        addSampleIndianData: handleAddSampleIndianData,
+        // Add new membership functions
+        addMembership,
+        useMembershipCredit,
+        isMembershipExpired,
+        getMembershipDetails
       }}
     >
       {children}
@@ -221,6 +231,8 @@ export type {
   Session,
   CartItem,
   Bill,
+  MembershipType,
+  Membership,
   ResetOptions,
   POSContextType
 } from '@/types/pos.types';

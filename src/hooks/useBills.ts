@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from 'react';
-import { Bill, CartItem, Customer, Product } from '@/types/pos.types';
+import { Bill, CartItem, Customer, Membership, MembershipType, Product } from '@/types/pos.types';
 import { generateId, exportBillsToCSV, exportCustomersToCSV } from '@/utils/pos.utils';
 
 export const useBills = (
   updateCustomer: (customer: Customer) => void,
-  updateProduct: (product: Product) => void
+  updateProduct: (product: Product) => void,
+  addMembership?: (customerId: string, membershipType: MembershipType, creditHours: number) => boolean
 ) => {
   const [bills, setBills] = useState<Bill[]>([]);
   
@@ -71,6 +72,19 @@ export const useBills = (
       totalSpent: selectedCustomer.totalSpent + total
     });
     
+    // Handle membership purchases if applicable
+    if (addMembership) {
+      const membershipItems = cart.filter(item => item.type === 'membership');
+      membershipItems.forEach(item => {
+        if (item.membershipType) {
+          const membershipDetails = getMembershipDetailsByType(item.membershipType);
+          if (membershipDetails) {
+            addMembership(selectedCustomer.id, item.membershipType, membershipDetails.creditHours);
+          }
+        }
+      });
+    }
+    
     // Update product stock
     cart.forEach(item => {
       if (item.type === 'product') {
@@ -93,6 +107,22 @@ export const useBills = (
   
   const exportCustomers = (customers: Customer[]) => {
     exportCustomersToCSV(customers);
+  };
+  
+  // Helper function to get membership details
+  const getMembershipDetailsByType = (membershipType: MembershipType) => {
+    switch (membershipType) {
+      case '8ball_2pax':
+        return { creditHours: 4 };
+      case '8ball_4pax':
+        return { creditHours: 4 };
+      case 'ps5':
+        return { creditHours: 4 };
+      case 'combo':
+        return { creditHours: 6 };
+      default:
+        return null;
+    }
   };
   
   return {

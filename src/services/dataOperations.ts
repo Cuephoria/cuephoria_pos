@@ -1,5 +1,5 @@
 
-import { Bill, Customer, Product, ResetOptions, CartItem } from '@/types/pos.types';
+import { Bill, Customer, Membership, MembershipType, Product, ResetOptions, CartItem } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 import { indianCustomers, indianProducts } from '@/data/sampleData';
 
@@ -14,6 +14,44 @@ export const addSampleIndianData = (
 ) => {
   // Add Indian products (don't replace existing ones)
   const newProducts = [...products];
+  
+  // Add membership products
+  const membershipProducts = [
+    {
+      name: "Introductory Weekly Pass - 8 ball (2 Pax)",
+      price: 399,
+      category: 'membership',
+      stock: 999,
+    },
+    {
+      name: "Introductory Weekly Pass - 8 ball (4 Pax)",
+      price: 599,
+      category: 'membership',
+      stock: 999,
+    },
+    {
+      name: "Introductory Weekly Pass - PS5 Gaming",
+      price: 399,
+      category: 'membership',
+      stock: 999,
+    },
+    {
+      name: "Introductory Weekly Pass - Combo",
+      price: 899,
+      category: 'membership',
+      stock: 999,
+    }
+  ];
+  
+  membershipProducts.forEach(product => {
+    // Check if product with same name already exists
+    if (!newProducts.some(p => p.name === product.name)) {
+      newProducts.push({
+        ...product,
+        id: generateId() // Generate new ID
+      });
+    }
+  });
   
   indianProducts.forEach(product => {
     // Check if product with same name already exists
@@ -33,10 +71,37 @@ export const addSampleIndianData = (
   indianCustomers.forEach(customer => {
     // Check if customer with same phone number already exists
     if (!newCustomers.some(c => c.phone === customer.phone)) {
+      // Random creation date in last 90 days
+      const createdAt = new Date(Date.now() - Math.floor(Math.random() * 7776000000));
+      
+      // Random membership (30% chance of having a membership)
+      let membership: Membership | null = null;
+      if (Math.random() < 0.3) {
+        const membershipTypes: MembershipType[] = ['8ball_2pax', '8ball_4pax', 'ps5', 'combo'];
+        const randomType = membershipTypes[Math.floor(Math.random() * membershipTypes.length)];
+        
+        const startDate = new Date(Date.now() - Math.floor(Math.random() * 2592000000)); // Random date in last 30 days
+        const expiryDate = new Date(startDate);
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        
+        const creditHours = randomType === 'combo' ? 6 : 4;
+        const usedHours = Math.floor(Math.random() * (creditHours + 1));
+        
+        membership = {
+          type: randomType,
+          startDate,
+          expiryDate,
+          creditHoursRemaining: creditHours - usedHours,
+          originalCreditHours: creditHours
+        };
+      }
+      
       const newCustomer = {
         ...customer,
         id: generateId(),
-        createdAt: new Date(Date.now() - Math.floor(Math.random() * 7776000000)) // Random date in last 90 days
+        createdAt,
+        isMember: !!membership,
+        membership
       };
       
       newCustomers.push(newCustomer);
@@ -60,6 +125,28 @@ export const addSampleIndianData = (
       const numItems = Math.floor(Math.random() * 4) + 1;
       const billItems: CartItem[] = [];
       let subtotal = 0;
+      
+      // 20% chance of including a membership purchase
+      if (Math.random() < 0.2) {
+        const membershipTypes: MembershipType[] = ['8ball_2pax', '8ball_4pax', 'ps5', 'combo'];
+        const randomType = membershipTypes[Math.floor(Math.random() * membershipTypes.length)];
+        const membershipPrice = randomType === '8ball_4pax' ? 599 : 
+                               randomType === 'combo' ? 899 : 399;
+        
+        billItems.push({
+          id: `membership_${randomType}`,
+          type: 'membership',
+          name: `Introductory Weekly Pass - ${randomType === '8ball_2pax' ? '8 ball (2 Pax)' : 
+                                             randomType === '8ball_4pax' ? '8 Ball (4 Pax)' :
+                                             randomType === 'ps5' ? 'PS5 Gaming' : 'Combo'}`,
+          price: membershipPrice,
+          quantity: 1,
+          total: membershipPrice,
+          membershipType: randomType
+        });
+        
+        subtotal += membershipPrice;
+      }
       
       for (let j = 0; j < numItems; j++) {
         // Randomly select a product

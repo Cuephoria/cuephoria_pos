@@ -4,7 +4,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges';
+  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
   stock: number;
   image?: string;
 }
@@ -18,6 +18,16 @@ export interface Station {
   currentSession: Session | null;
 }
 
+export type MembershipType = '8ball_2pax' | '8ball_4pax' | 'ps5' | 'combo' | 'none';
+
+export interface Membership {
+  type: MembershipType;
+  startDate: Date;
+  expiryDate: Date;
+  creditHoursRemaining: number;
+  originalCreditHours: number;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -27,6 +37,7 @@ export interface Customer {
   loyaltyPoints: number;
   totalSpent: number;
   totalPlayTime: number; // in minutes
+  membership: Membership | null;
   createdAt: Date;
 }
 
@@ -41,11 +52,12 @@ export interface Session {
 
 export interface CartItem {
   id: string;
-  type: 'product' | 'session';
+  type: 'product' | 'session' | 'membership';
   name: string;
   price: number;
   quantity: number;
   total: number;
+  membershipType?: MembershipType;
 }
 
 export interface Bill {
@@ -119,4 +131,10 @@ export interface POSContextType {
   // Reset and sample data functions
   resetToSampleData: (options?: ResetOptions) => void;
   addSampleIndianData: () => void;
+  
+  // Membership functions
+  addMembership: (customerId: string, membershipType: MembershipType, creditHours: number) => boolean;
+  useMembershipCredit: (customerId: string, hoursUsed: number) => boolean;
+  isMembershipExpired: (customer: Customer) => boolean;
+  getMembershipDetails: (membershipType: MembershipType) => any;
 }
