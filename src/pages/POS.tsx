@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -365,7 +366,6 @@ const POS = () => {
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
             <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
               <TabsTrigger value="all" className="font-heading flex-grow basis-0">All</TabsTrigger>
-              <TabsTrigger value="gaming" className="font-heading flex-grow basis-0">Gaming</TabsTrigger>
               <TabsTrigger value="food" className="font-heading flex-grow basis-0">Food</TabsTrigger>
               <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">Drinks</TabsTrigger>
               <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">Tobacco</TabsTrigger>

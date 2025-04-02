@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Package, Filter, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
 
-  // Form state
   const [formState, setFormState] = useState({
     name: '',
     price: '',
@@ -94,7 +92,6 @@ const Products = () => {
       stock: Number(stock),
     };
     
-    // Add pricing tiers if provided (for membership products)
     if (originalPrice) productData.originalPrice = Number(originalPrice);
     if (offerPrice) productData.offerPrice = Number(offerPrice);
     if (studentPrice) productData.studentPrice = Number(studentPrice);
@@ -126,13 +123,11 @@ const Products = () => {
     setFormState(prev => ({ ...prev, [name]: value }));
   };
 
-  // Filter products based on active tab
   const filteredProducts = activeTab === 'all' 
     ? products 
     : products.filter(product => product.category === activeTab);
   
-  // Get products with low stock
-  const lowStockProducts = products.filter(product => product.stock <= 10 && product.category !== 'gaming' && product.category !== 'membership');
+  const lowStockProducts = products.filter(product => product.stock <= 10 && product.category !== 'membership');
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -143,7 +138,6 @@ const Products = () => {
         </Button>
       </div>
 
-      {/* Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -182,7 +176,6 @@ const Products = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gaming">Gaming</SelectItem>
                     <SelectItem value="food">Food</SelectItem>
                     <SelectItem value="drinks">Drinks</SelectItem>
                     <SelectItem value="tobacco">Tobacco</SelectItem>
@@ -203,7 +196,6 @@ const Products = () => {
                 />
               </div>
 
-              {/* Additional fields for membership products */}
               {formState.category === 'membership' && (
                 <>
                   <div className="grid gap-2">
@@ -254,7 +246,6 @@ const Products = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Low stock alerts */}
       {lowStockProducts.length > 0 && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
           <div className="flex">
@@ -276,11 +267,9 @@ const Products = () => {
         </div>
       )}
       
-      {/* Product categories tabs */}
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="all">All Products</TabsTrigger>
-          <TabsTrigger value="gaming">Gaming</TabsTrigger>
           <TabsTrigger value="food">Food</TabsTrigger>
           <TabsTrigger value="drinks">Drinks</TabsTrigger>
           <TabsTrigger value="tobacco">Tobacco</TabsTrigger>
