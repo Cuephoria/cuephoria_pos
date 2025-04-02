@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -591,7 +592,9 @@ const POS = () => {
             <Button 
               onClick={() => {
                 setShowSuccess(false);
-                setShowReceipt(true);
+                setTimeout(() => {
+                  setShowReceipt(true);
+                }, 100);
               }}
               className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
             >
