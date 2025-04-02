@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import { Bill, CartItem, Customer, Membership, MembershipType, Product } from '@/types/pos.types';
 import { generateId, exportBillsToCSV, exportCustomersToCSV } from '@/utils/pos.utils';
 
-export const useBills = (
+export function useBills(
   updateCustomer: (customer: Customer) => void,
   updateProduct: (product: Product) => void,
   addMembership?: (customerId: string, membershipType: MembershipType, creditHours: number) => boolean
-) => {
+) {
   const [bills, setBills] = useState<Bill[]>([]);
   
   // Load data from localStorage
@@ -132,4 +132,4 @@ export const useBills = (
     exportBills,
     exportCustomers
   };
-};
+}

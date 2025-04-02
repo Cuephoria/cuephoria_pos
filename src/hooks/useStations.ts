@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { Station, Session, Customer } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-export const useStations = (
+export function useStations(
   initialStations: Station[], 
   updateCustomer: (customer: Customer) => void
-) => {
+) {
   const [stations, setStations] = useState<Station[]>(initialStations);
   const [sessions, setSessions] = useState<Session[]>([]);
   
@@ -112,4 +112,4 @@ export const useStations = (
     startSession,
     endSession
   };
-};
+}

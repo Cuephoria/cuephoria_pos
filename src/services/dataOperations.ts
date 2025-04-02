@@ -1,264 +1,115 @@
 
-import { Bill, Customer, Membership, MembershipType, Product, ResetOptions, CartItem } from '@/types/pos.types';
-import { generateId } from '@/utils/pos.utils';
-import { indianCustomers, indianProducts } from '@/data/sampleData';
+import { ResetOptions, Product, Customer, Station, Bill } from '@/types/pos.types';
 
-// Function to add sample Indian data
-export const addSampleIndianData = (
-  products: Product[], 
-  customers: Customer[], 
-  bills: Bill[],
-  setProducts: React.Dispatch<React.SetStateAction<Product[]>>,
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>,
-  setBills: React.Dispatch<React.SetStateAction<Bill[]>>
-) => {
-  // Add Indian products (don't replace existing ones)
-  const newProducts = [...products];
-  
-  // Add membership products
-  const membershipProducts = [
-    {
-      name: "Introductory Weekly Pass - 8 ball (2 Pax)",
-      price: 399,
-      category: 'membership',
-      stock: 999,
-    },
-    {
-      name: "Introductory Weekly Pass - 8 ball (4 Pax)",
-      price: 599,
-      category: 'membership',
-      stock: 999,
-    },
-    {
-      name: "Introductory Weekly Pass - PS5 Gaming",
-      price: 399,
-      category: 'membership',
-      stock: 999,
-    },
-    {
-      name: "Introductory Weekly Pass - Combo",
-      price: 899,
-      category: 'membership',
-      stock: 999,
-    }
-  ];
-  
-  membershipProducts.forEach(product => {
-    // Check if product with same name already exists
-    if (!newProducts.some(p => p.name === product.name)) {
-      newProducts.push({
-        ...product,
-        id: generateId() // Generate new ID
-      });
-    }
-  });
-  
-  indianProducts.forEach(product => {
-    // Check if product with same name already exists
-    if (!newProducts.some(p => p.name === product.name)) {
-      newProducts.push({
-        ...product,
-        id: generateId() // Generate new ID
-      });
-    }
-  });
-  
-  setProducts(newProducts);
-  
-  // Add Indian customers (don't replace existing ones)
-  const newCustomers = [...customers];
-  
-  indianCustomers.forEach(customer => {
-    // Check if customer with same phone number already exists
-    if (!newCustomers.some(c => c.phone === customer.phone)) {
-      // Random creation date in last 90 days
-      const createdAt = new Date(Date.now() - Math.floor(Math.random() * 7776000000));
-      
-      // Random membership (30% chance of having a membership)
-      let membership: Membership | null = null;
-      if (Math.random() < 0.3) {
-        const membershipTypes: MembershipType[] = ['8ball_2pax', '8ball_4pax', 'ps5', 'combo'];
-        const randomType = membershipTypes[Math.floor(Math.random() * membershipTypes.length)];
-        
-        const startDate = new Date(Date.now() - Math.floor(Math.random() * 2592000000)); // Random date in last 30 days
-        const expiryDate = new Date(startDate);
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        
-        const creditHours = randomType === 'combo' ? 6 : 4;
-        const usedHours = Math.floor(Math.random() * (creditHours + 1));
-        
-        membership = {
-          type: randomType,
-          startDate,
-          expiryDate,
-          creditHoursRemaining: creditHours - usedHours,
-          originalCreditHours: creditHours
-        };
-      }
-      
-      const newCustomer = {
-        ...customer,
-        id: generateId(),
-        createdAt,
-        isMember: !!membership,
-        membership
-      };
-      
-      newCustomers.push(newCustomer);
-    }
-  });
-  
-  setCustomers(newCustomers);
-  
-  // Generate some sample bills
-  const sampleBills: Bill[] = [];
-  
-  // Get all customer IDs (including the newly added ones)
-  const customerIds = newCustomers.map(c => c.id);
-  
-  // Create sample bills (1-3 per customer)
-  customerIds.forEach(customerId => {
-    const numBills = Math.floor(Math.random() * 3) + 1;
-    
-    for (let i = 0; i < numBills; i++) {
-      // Create 1-4 items per bill
-      const numItems = Math.floor(Math.random() * 4) + 1;
-      const billItems: CartItem[] = [];
-      let subtotal = 0;
-      
-      // 20% chance of including a membership purchase
-      if (Math.random() < 0.2) {
-        const membershipTypes: MembershipType[] = ['8ball_2pax', '8ball_4pax', 'ps5', 'combo'];
-        const randomType = membershipTypes[Math.floor(Math.random() * membershipTypes.length)];
-        const membershipPrice = randomType === '8ball_4pax' ? 599 : 
-                               randomType === 'combo' ? 899 : 399;
-        
-        billItems.push({
-          id: `membership_${randomType}`,
-          type: 'membership',
-          name: `Introductory Weekly Pass - ${randomType === '8ball_2pax' ? '8 ball (2 Pax)' : 
-                                             randomType === '8ball_4pax' ? '8 Ball (4 Pax)' :
-                                             randomType === 'ps5' ? 'PS5 Gaming' : 'Combo'}`,
-          price: membershipPrice,
-          quantity: 1,
-          total: membershipPrice,
-          membershipType: randomType
-        });
-        
-        subtotal += membershipPrice;
-      }
-      
-      for (let j = 0; j < numItems; j++) {
-        // Randomly select a product
-        const product = newProducts[Math.floor(Math.random() * newProducts.length)];
-        const quantity = Math.floor(Math.random() * 3) + 1;
-        const total = product.price * quantity;
-        
-        billItems.push({
-          id: product.id,
-          type: 'product',
-          name: product.name,
-          price: product.price,
-          quantity,
-          total
-        });
-        
-        subtotal += total;
-      }
-      
-      // Random discount (0-10%)
-      const discount = Math.floor(Math.random() * 11);
-      const discountValue = subtotal * (discount / 100);
-      const total = subtotal - discountValue;
-      
-      // Random loyalty points
-      const loyaltyPointsEarned = Math.floor(total / 10);
-      
-      const bill: Bill = {
-        id: generateId(),
-        customerId,
-        items: billItems,
-        subtotal,
-        discount,
-        discountValue,
-        discountType: 'percentage',
-        loyaltyPointsUsed: 0,
-        loyaltyPointsEarned,
-        total,
-        paymentMethod: Math.random() > 0.5 ? 'cash' : 'upi',
-        createdAt: new Date(Date.now() - Math.floor(Math.random() * 2592000000)) // Random date in last 30 days
-      };
-      
-      sampleBills.push(bill);
-    }
-  });
-  
-  setBills([...bills, ...sampleBills]);
-  
-  // Save to localStorage
-  localStorage.setItem('cuephoriaProducts', JSON.stringify(newProducts));
-  localStorage.setItem('cuephoriaCustomers', JSON.stringify(newCustomers));
-  localStorage.setItem('cuephoriaBills', JSON.stringify([...bills, ...sampleBills]));
-};
-
-// Reset function with options
 export const resetToSampleData = (
-  options: ResetOptions | undefined,
+  options: ResetOptions = { all: true },
   initialProducts: Product[],
   initialCustomers: Customer[],
-  initialStations: any[],
-  setProducts: React.Dispatch<React.SetStateAction<Product[]>>,
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>,
-  setBills: React.Dispatch<React.SetStateAction<Bill[]>>,
-  setSessions: React.Dispatch<React.SetStateAction<any[]>>,
-  setStations: React.Dispatch<React.SetStateAction<any[]>>,
-  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>,
-  setDiscountAmount: React.Dispatch<React.SetStateAction<number>>,
-  setLoyaltyPointsUsedAmount: React.Dispatch<React.SetStateAction<number>>,
-  setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | null>>
+  initialStations: Station[],
+  setProducts: (products: Product[]) => void,
+  setCustomers: (customers: Customer[]) => void,
+  setBills: (bills: Bill[]) => void,
+  setSessions: (sessions: any[]) => void,
+  setStations: (stations: Station[]) => void,
+  setCart: (cart: any[]) => void,
+  setDiscountAmount: (discount: number) => void,
+  setLoyaltyPointsUsedAmount: (points: number) => void,
+  setSelectedCustomer: (customer: Customer | null) => void
 ) => {
-  const defaultOptions = {
-    products: true,
-    customers: true,
-    sales: true,
-    sessions: true
-  };
-  
-  const resetOpts = options || defaultOptions;
-  
-  // Reset selected data types to initial values
-  if (resetOpts.products) {
-    setProducts(initialProducts);
-    localStorage.removeItem('cuephoriaProducts');
+  // Reset products
+  if (options.all || options.products) {
+    setProducts([...initialProducts]);
+    localStorage.setItem('cuephoriaProducts', JSON.stringify(initialProducts));
   }
   
-  if (resetOpts.customers) {
-    setCustomers(initialCustomers);
-    localStorage.removeItem('cuephoriaCustomers');
+  // Reset customers
+  if (options.all || options.customers) {
+    setCustomers([...initialCustomers]);
+    localStorage.setItem('cuephoriaCustomers', JSON.stringify(initialCustomers));
   }
   
-  if (resetOpts.sales) {
+  // Reset bills
+  if (options.all || options.bills) {
     setBills([]);
-    localStorage.removeItem('cuephoriaBills');
+    localStorage.setItem('cuephoriaBills', JSON.stringify([]));
   }
   
-  if (resetOpts.sessions) {
+  // Reset sessions
+  if (options.all || options.sessions) {
     setSessions([]);
-    
-    // Reset station occupation status
-    setStations(initialStations.map(station => ({
+    localStorage.setItem('cuephoriaSessions', JSON.stringify([]));
+  }
+  
+  // Reset stations
+  if (options.all || options.stations) {
+    const resetStations = initialStations.map(station => ({
       ...station,
       isOccupied: false,
       currentSession: null
-    })));
-    
-    localStorage.removeItem('cuephoriaSessions');
-    localStorage.removeItem('cuephoriaStations');
+    }));
+    setStations(resetStations);
+    localStorage.setItem('cuephoriaStations', JSON.stringify(resetStations));
   }
   
-  // Clear cart regardless of options
-  setCart([]);
-  setDiscountAmount(0);
-  setLoyaltyPointsUsedAmount(0);
-  setSelectedCustomer(null);
+  // Reset cart and related state
+  if (options.all || options.cart) {
+    setCart([]);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    setSelectedCustomer(null);
+  }
+};
+
+export const addSampleIndianData = (
+  products: Product[],
+  customers: Customer[],
+  bills: Bill[],
+  setProducts: (products: Product[]) => void,
+  setCustomers: (customers: Customer[]) => void,
+  setBills: (bills: Bill[]) => void
+) => {
+  try {
+    // Import the sample data
+    import('@/data/sampleData').then(({ sampleIndianProducts, sampleIndianCustomers }) => {
+      // Add products if they don't already exist
+      const newProducts = [...products];
+      
+      sampleIndianProducts.forEach(product => {
+        const exists = products.some(p => p.name === product.name);
+        if (!exists) {
+          const newProduct = { 
+            ...product, 
+            id: `product_${Date.now()}_${Math.floor(Math.random() * 1000)}` 
+          };
+          newProducts.push(newProduct as Product);
+        }
+      });
+      
+      // Add customers if they don't already exist
+      const newCustomers = [...customers];
+      
+      sampleIndianCustomers.forEach((customer: Customer) => {
+        const exists = customers.some(c => c.phone === customer.phone);
+        if (!exists) {
+          const newCustomer = {
+            ...customer,
+            id: `customer_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            createdAt: new Date()
+          };
+          newCustomers.push(newCustomer);
+        }
+      });
+      
+      // Update state and localStorage
+      setProducts(newProducts);
+      localStorage.setItem('cuephoriaProducts', JSON.stringify(newProducts));
+      
+      setCustomers(newCustomers);
+      localStorage.setItem('cuephoriaCustomers', JSON.stringify(newCustomers));
+      
+      console.log('Added sample Indian data successfully');
+    });
+  } catch (error) {
+    console.error('Error adding sample data:', error);
+  }
 };

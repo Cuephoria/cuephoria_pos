@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { CartItem } from '@/types/pos.types';
 
-export const useCart = () => {
+export function useCart() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discount, setDiscountAmount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
@@ -81,4 +81,4 @@ export const useCart = () => {
     setLoyaltyPointsUsed,
     calculateTotal
   };
-};
+}

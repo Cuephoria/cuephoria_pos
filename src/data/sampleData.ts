@@ -1,190 +1,269 @@
 
 import { Product, Station, Customer } from '@/types/pos.types';
+import { generateId } from '@/utils/pos.utils';
 
-// Sample data
+// Sample Products
 export const initialProducts: Product[] = [
-  { 
-    id: 'p1', 
-    name: 'PS5 Session', 
-    price: 300, // ₹300 per hour
-    category: 'gaming', 
-    stock: 9999 
+  {
+    id: 'product1',
+    name: '8-Ball Pool (Per Hour)',
+    price: 200,
+    category: 'gaming',
+    stock: 999,
   },
-  { 
-    id: 'p2', 
-    name: '8-Ball Session', 
-    price: 200, // ₹200 per hour
-    category: 'gaming', 
-    stock: 9999 
+  {
+    id: 'product2',
+    name: 'PS5 Gaming (Per Hour)',
+    price: 200,
+    category: 'gaming',
+    stock: 999,
   },
-  { 
-    id: 'p3', 
-    name: 'Lay\'s Classic', 
-    price: 20, 
-    category: 'food', 
-    stock: 50 
+  {
+    id: 'product3',
+    name: 'Snooker (Per Hour)',
+    price: 300,
+    category: 'gaming',
+    stock: 999,
   },
-  { 
-    id: 'p4', 
-    name: 'Red Bull', 
-    price: 110, 
-    category: 'drinks', 
-    stock: 40 
+  {
+    id: 'product4',
+    name: 'Coca Cola',
+    price: 40,
+    category: 'drinks',
+    stock: 24,
   },
-  { 
-    id: 'p5', 
-    name: 'Cigarettes (Pack)', 
-    price: 350, 
-    category: 'tobacco', 
-    stock: 30 
+  {
+    id: 'product5',
+    name: 'Cheese Sandwich',
+    price: 80,
+    category: 'food',
+    stock: 10,
   },
-  { 
-    id: 'p6', 
-    name: 'MetaShot Challenge 1', 
-    price: 49, 
-    category: 'challenges', 
-    stock: 9999 
+  {
+    id: 'product6',
+    name: 'Cigarettes (Pack)',
+    price: 350,
+    category: 'tobacco',
+    stock: 15,
+  },
+  {
+    id: 'product7',
+    name: 'Introductory Weekly Pass - 8 Ball (2 Pax)',
+    price: 399,
+    category: 'membership',
+    stock: 999,
+  },
+  {
+    id: 'product8',
+    name: 'Introductory Weekly Pass - 8 Ball (4 Pax)',
+    price: 599,
+    category: 'membership',
+    stock: 999,
+  },
+  {
+    id: 'product9',
+    name: 'Introductory Weekly Pass - PS5 Gaming',
+    price: 399,
+    category: 'membership',
+    stock: 999,
+  },
+  {
+    id: 'product10',
+    name: 'Introductory Weekly Pass - Combo',
+    price: 899,
+    category: 'membership',
+    stock: 999,
   }
 ];
 
-export const initialStations: Station[] = [
-  { id: 's1', name: 'PS5 Console 1', type: 'ps5', hourlyRate: 300, isOccupied: false, currentSession: null },
-  { id: 's2', name: 'PS5 Console 2', type: 'ps5', hourlyRate: 300, isOccupied: false, currentSession: null },
-  { id: 's3', name: '8-Ball Table 1', type: '8ball', hourlyRate: 200, isOccupied: false, currentSession: null },
-  { id: 's4', name: '8-Ball Table 2', type: '8ball', hourlyRate: 200, isOccupied: false, currentSession: null },
-  { id: 's5', name: '8-Ball Table 3', type: '8ball', hourlyRate: 200, isOccupied: false, currentSession: null },
-];
-
+// Sample Customers
 export const initialCustomers: Customer[] = [
-  { 
-    id: 'c1', 
-    name: 'Raj Sharma', 
-    phone: '9876543210', 
-    email: 'raj.sharma@example.com', 
-    isMember: true, 
-    loyaltyPoints: 150, 
-    totalSpent: 3500,
-    totalPlayTime: 420, // 7 hours
-    createdAt: new Date(2023, 2, 15)
-  },
-  { 
-    id: 'c2', 
-    name: 'Priya Patel', 
-    phone: '8765432109', 
-    isMember: false, 
-    loyaltyPoints: 0, 
-    totalSpent: 800,
-    totalPlayTime: 120, // 2 hours
-    createdAt: new Date(2023, 3, 20) 
-  },
-  { 
-    id: 'c3', 
-    name: 'Vikram Singh', 
-    phone: '7654321098', 
-    email: 'vikram@example.com', 
-    isMember: true, 
-    loyaltyPoints: 75, 
-    totalSpent: 1200,
-    totalPlayTime: 180, // 3 hours
-    createdAt: new Date(2023, 4, 5) 
-  }
-];
-
-// Sample Indian data
-export const indianProducts: Product[] = [
-  { 
-    id: 'ip1', 
-    name: 'Masala Chai', 
-    price: 25, 
-    category: 'drinks', 
-    stock: 100 
-  },
-  { 
-    id: 'ip2', 
-    name: 'Samosa', 
-    price: 20, 
-    category: 'food', 
-    stock: 50 
-  },
-  { 
-    id: 'ip3', 
-    name: 'Vada Pav', 
-    price: 40, 
-    category: 'food', 
-    stock: 40 
-  },
-  { 
-    id: 'ip4', 
-    name: 'Aloo Paratha', 
-    price: 60, 
-    category: 'food', 
-    stock: 25 
-  },
-  { 
-    id: 'ip5', 
-    name: 'Panipuri Challenge', 
-    price: 99, 
-    category: 'challenges', 
-    stock: 9999 
-  },
-  { 
-    id: 'ip6', 
-    name: 'Thums Up', 
-    price: 45, 
-    category: 'drinks', 
-    stock: 60 
-  },
-  { 
-    id: 'ip7', 
-    name: 'Gulab Jamun', 
-    price: 35, 
-    category: 'food', 
-    stock: 30 
-  }
-];
-
-export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
   {
-    name: 'Rajesh Kumar',
+    id: 'customer1',
+    name: 'Raj Sharma',
     phone: '9876543210',
-    email: 'rajesh.kumar@gmail.com',
-    isMember: true,
-    loyaltyPoints: 250,
-    totalSpent: 5000,
-    totalPlayTime: 600
-  },
-  {
-    name: 'Priya Singh',
-    phone: '8765432109',
-    email: 'priya.singh@gmail.com',
-    isMember: true,
-    loyaltyPoints: 180,
-    totalSpent: 3500,
-    totalPlayTime: 420
-  },
-  {
-    name: 'Amit Patel',
-    phone: '7654321098',
-    isMember: false,
-    loyaltyPoints: 0,
-    totalSpent: 1500,
-    totalPlayTime: 180
-  },
-  {
-    name: 'Sneha Sharma',
-    phone: '6543210987',
-    email: 'sneha.sharma@yahoo.com',
+    email: 'raj.sharma@example.com',
     isMember: true,
     loyaltyPoints: 120,
-    totalSpent: 2800,
-    totalPlayTime: 300
+    totalSpent: 1200,
+    totalPlayTime: 240,
+    createdAt: new Date('2023-01-15'),
+    membership: null
   },
   {
-    name: 'Vikram Desai',
-    phone: '9876543211',
+    id: 'customer2',
+    name: 'Priya Patel',
+    phone: '8765432109',
+    isMember: false,
+    loyaltyPoints: 50,
+    totalSpent: 500,
+    totalPlayTime: 120,
+    createdAt: new Date('2023-02-20'),
+    membership: null
+  },
+  {
+    id: 'customer3',
+    name: 'Amit Singh',
+    phone: '7654321098',
+    email: 'amit.singh@example.com',
+    isMember: true,
+    loyaltyPoints: 80,
+    totalSpent: 800,
+    totalPlayTime: 180,
+    createdAt: new Date('2023-03-10'),
+    membership: null
+  }
+];
+
+// Sample Stations
+export const initialStations: Station[] = [
+  {
+    id: 'station1',
+    name: '8-Ball Table 1',
+    type: 'pool',
+    status: 'available',
+    hourlyRate: 200,
+    isOccupied: false,
+    currentSession: null
+  },
+  {
+    id: 'station2',
+    name: '8-Ball Table 2',
+    type: 'pool',
+    status: 'available',
+    hourlyRate: 200,
+    isOccupied: false,
+    currentSession: null
+  },
+  {
+    id: 'station3',
+    name: 'Snooker Table 1',
+    type: 'snooker',
+    status: 'available',
+    hourlyRate: 300,
+    isOccupied: false,
+    currentSession: null
+  },
+  {
+    id: 'station4',
+    name: 'PS5 Station 1',
+    type: 'console',
+    status: 'available',
+    hourlyRate: 200,
+    isOccupied: false,
+    currentSession: null
+  },
+  {
+    id: 'station5',
+    name: 'PS5 Station 2',
+    type: 'console',
+    status: 'available',
+    hourlyRate: 200,
+    isOccupied: false,
+    currentSession: null
+  }
+];
+
+// Sample Indian Names for new customers
+export const sampleIndianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
+  {
+    name: 'Arjun Krishnan',
+    phone: '9988776655',
+    email: 'arjun.k@example.com',
+    isMember: true,
+    loyaltyPoints: 0,
+    totalSpent: 0,
+    totalPlayTime: 0,
+    membership: null
+  },
+  {
+    name: 'Deepika Rastogi',
+    phone: '8877665544',
+    email: 'deepika.r@example.com',
+    isMember: true,
+    loyaltyPoints: 0,
+    totalSpent: 0,
+    totalPlayTime: 0,
+    membership: null
+  },
+  {
+    name: 'Vikram Mehta',
+    phone: '7766554433',
     isMember: false,
     loyaltyPoints: 0,
-    totalSpent: 800,
-    totalPlayTime: 120
+    totalSpent: 0,
+    totalPlayTime: 0,
+    membership: null
+  },
+  {
+    name: 'Ananya Desai',
+    phone: '6655443322',
+    email: 'ananya.d@example.com',
+    isMember: true,
+    loyaltyPoints: 0,
+    totalSpent: 0,
+    totalPlayTime: 0,
+    membership: null
+  },
+  {
+    name: 'Rajan Verma',
+    phone: '5544332211',
+    isMember: false,
+    loyaltyPoints: 0,
+    totalSpent: 0,
+    totalPlayTime: 0,
+    membership: null
+  }
+];
+
+// Sample Indian Food and Drink Products
+export const sampleIndianProducts: Omit<Product, 'id'>[] = [
+  {
+    name: 'Masala Chai',
+    price: 30,
+    category: 'drinks',
+    stock: 50
+  },
+  {
+    name: 'Samosa (2 pcs)',
+    price: 40,
+    category: 'food',
+    stock: 30
+  },
+  {
+    name: 'Vada Pav',
+    price: 35,
+    category: 'food',
+    stock: 25
+  },
+  {
+    name: 'Pav Bhaji',
+    price: 90,
+    category: 'food',
+    stock: 15
+  },
+  {
+    name: 'Masala Soda',
+    price: 45,
+    category: 'drinks',
+    stock: 20
+  },
+  {
+    name: 'Paneer Sandwich',
+    price: 70,
+    category: 'food',
+    stock: 18
+  },
+  {
+    name: 'Lassi',
+    price: 60,
+    category: 'drinks',
+    stock: 22
+  },
+  {
+    name: 'Dahi Puri',
+    price: 65,
+    category: 'food',
+    stock: 20
   }
 ];

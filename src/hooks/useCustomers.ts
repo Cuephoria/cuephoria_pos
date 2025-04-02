@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Customer, Membership, MembershipType } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-export const useCustomers = (initialCustomers: Customer[]) => {
+export function useCustomers(initialCustomers: Customer[]) {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
@@ -226,4 +225,4 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     isMembershipExpired,
     getMembershipDetails
   };
-};
+}
