@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, Receipt, Download } from 'lucide-react';
+import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
@@ -339,7 +339,7 @@ const POS = () => {
                 disabled={cart.length === 0 || !selectedCustomer}
                 onClick={() => setIsCheckoutDialogOpen(true)}
               >
-                <Receipt className="mr-2 h-4 w-4" />
+                <ReceiptIcon className="mr-2 h-4 w-4" />
                 Checkout
               </Button>
             </div>
