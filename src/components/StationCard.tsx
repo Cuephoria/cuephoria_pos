@@ -107,6 +107,9 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     setMinutes(0);
     setSeconds(0);
     
+    // Generate a unique session ID for tracking
+    const sessionId = `session-${Date.now()}`;
+    
     // Navigate to POS page with session data
     navigate('/pos', { 
       state: { 
@@ -114,7 +117,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         customerId,
         stationName,
         duration: sessionDuration,
-        cost: sessionCost 
+        cost: sessionCost,
+        sessionId: sessionId // Add unique ID to prevent duplicate processing
       } 
     });
   };
