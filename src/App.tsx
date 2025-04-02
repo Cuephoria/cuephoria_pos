@@ -20,7 +20,6 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
-import PaymentSuccess from "./pages/PaymentSuccess";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -82,12 +81,6 @@ const App = () => (
               <Route path="/pos" element={
                 <ProtectedRoute>
                   <POS />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/payment-success" element={
-                <ProtectedRoute>
-                  <PaymentSuccess />
                 </ProtectedRoute>
               } />
               
