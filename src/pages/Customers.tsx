@@ -18,34 +18,7 @@ const Customers = () => {
   const [customersData, setCustomersData] = useState<Customer[]>([]);
   const [isContextLoaded, setIsContextLoaded] = useState(false);
   
-  // Use a try-catch when getting the context
-  let posContext;
-  try {
-    posContext = usePOS();
-    setIsContextLoaded(true);
-  } catch (e) {
-    console.error('Error using POS context:', e);
-    setError(e instanceof Error ? e.message : 'Unknown error');
-  }
-  
-  const { toast } = useToast();
-  
-  // If we have the context, extract what we need
-  const { 
-    customers = [], 
-    addCustomer = () => {}, 
-    updateCustomer = () => {}, 
-    deleteCustomer = () => {}, 
-    exportCustomers = () => {} 
-  } = isContextLoaded && posContext ? posContext : {};
-  
-  useEffect(() => {
-    // Update local state when context data changes
-    if (isContextLoaded && customers) {
-      setCustomersData(customers);
-    }
-  }, [isContextLoaded, customers]);
-
+  // State for component functionality
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -58,6 +31,41 @@ const Customers = () => {
     email: '',
     isMember: false,
   });
+  
+  const { toast } = useToast();
+  
+  // Use a try-catch when getting the context - but only once, not on every render
+  let posContext;
+  try {
+    posContext = usePOS();
+  } catch (e) {
+    console.error('Error using POS context:', e);
+    const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+    
+    // Only set the error if it's not already set
+    if (error !== errorMessage) {
+      setError(errorMessage);
+    }
+    
+    posContext = null;
+  }
+  
+  // If we have the context, extract what we need
+  const { 
+    customers = [], 
+    addCustomer = () => {}, 
+    updateCustomer = () => {}, 
+    deleteCustomer = () => {}, 
+    exportCustomers = () => {} 
+  } = posContext || {};
+  
+  // Update local state when context data changes
+  useEffect(() => {
+    if (posContext && customers) {
+      setCustomersData(customers);
+      setIsContextLoaded(true);
+    }
+  }, [posContext, customers]);
 
   const resetForm = () => {
     setFormState({
@@ -194,7 +202,7 @@ const Customers = () => {
           <Button variant="outline" onClick={exportCustomers}>
             <Download className="h-4 w-4 mr-2" /> Export
           </Button>
-          <Button onClick={() => setIsDialogOpen(true)}>
+          <Button onClick={handleOpenDialog}>
             <Plus className="h-4 w-4 mr-2" /> Add Customer
           </Button>
         </div>
