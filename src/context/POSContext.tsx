@@ -106,6 +106,9 @@ interface POSContextType {
   // Data export
   exportBills: () => void;
   exportCustomers: () => void;
+  
+  // Reset function
+  resetToSampleData: () => void;
 }
 
 // Helper functions
@@ -576,6 +579,29 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.body.removeChild(link);
   };
   
+  // Reset function
+  const resetToSampleData = () => {
+    // Reset all data to initial values
+    setProducts(initialProducts);
+    setStations(initialStations);
+    setCustomers(initialCustomers);
+    setSessions([]);
+    setBills([]);
+    setCart([]);
+    setSelectedCustomer(null);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    
+    // Also clear localStorage
+    localStorage.removeItem('cuephoriaProducts');
+    localStorage.removeItem('cuephoriaStations');
+    localStorage.removeItem('cuephoriaCustomers');
+    localStorage.removeItem('cuephoriaSessions');
+    localStorage.removeItem('cuephoriaBills');
+    
+    // The next time the app loads, it will use the initial data
+  };
+  
   console.log('POSProvider rendering with context value'); // Debug log
   
   return (
@@ -609,7 +635,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         calculateTotal,
         completeSale,
         exportBills,
-        exportCustomers
+        exportCustomers,
+        resetToSampleData
       }}
     >
       {children}

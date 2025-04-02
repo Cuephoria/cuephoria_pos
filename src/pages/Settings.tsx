@@ -8,9 +8,11 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, User, DollarSign, Receipt } from 'lucide-react';
+import { usePOS } from '@/context/POSContext';
 
 const Settings = () => {
   const { toast } = useToast();
+  const { resetToSampleData } = usePOS();
   const [generalSettings, setGeneralSettings] = useState({
     businessName: 'Cuephoria Gaming Center',
     address: '123 Gaming Street, Bangalore, Karnataka',
@@ -55,11 +57,12 @@ const Settings = () => {
   };
   
   const handleResetData = () => {
-    // This would be a more complex operation in a real app,
-    // potentially clearing local storage or database
+    // Use the resetToSampleData function from context
+    resetToSampleData();
+    
     toast({
       title: 'Data Reset',
-      description: 'All data has been reset successfully.',
+      description: 'All data has been reset to sample values.',
       variant: 'destructive',
     });
   };

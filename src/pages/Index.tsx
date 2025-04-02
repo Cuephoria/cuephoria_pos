@@ -6,12 +6,8 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Use a small timeout to ensure React is fully initialized
-    const timeout = setTimeout(() => {
-      navigate('/login');
-    }, 100);
-    
-    return () => clearTimeout(timeout);
+    // Immediate redirect to login page
+    navigate('/login');
   }, [navigate]);
 
   return (
