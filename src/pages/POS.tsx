@@ -5,15 +5,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check, Printer } from 'lucide-react';
+import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
+import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import CustomerInfo from '@/components/receipt/CustomerInfo';
-import ReceiptFooter from '@/components/receipt/ReceiptFooter';
 
 const POS = () => {
   const {
@@ -187,117 +186,6 @@ const POS = () => {
         className: 'bg-green-600',
       });
     }
-  };
-
-  const handlePrintReceipt = () => {
-    if (!lastCompletedBill || !selectedCustomer) return;
-    
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast({
-        title: 'Print Error',
-        description: 'Could not open print window. Please check your browser settings.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Cuephoria - Receipt</title>
-          <style>
-            body { font-family: 'Arial', sans-serif; width: 300px; margin: 0 auto; padding: 20px; }
-            .receipt { border: 1px solid #ddd; padding: 15px; }
-            .receipt-header { text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
-            .receipt-logo { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-            .receipt-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-            .receipt-items { margin: 15px 0; }
-            .item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
-            .item-name { flex: 2; }
-            .item-price { flex: 1; text-align: right; }
-            .totals { border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 10px; }
-            .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
-            .grand-total { font-weight: bold; font-size: 14px; }
-            .receipt-footer { text-align: center; margin-top: 20px; font-size: 10px; }
-            @media print {
-              body { width: 100%; }
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="receipt">
-            <div class="receipt-header">
-              <div class="receipt-logo">Cuephoria</div>
-              <div>Gaming & Cafe</div>
-              <div style="font-size: 10px; margin-top: 5px;">${new Date(lastCompletedBill.createdAt).toLocaleString()}</div>
-              <div style="font-size: 10px;">Receipt #: ${lastCompletedBill.id}</div>
-            </div>
-            
-            <div style="margin-bottom: 10px; font-size: 12px;">
-              <div style="font-weight: bold;">Customer: ${selectedCustomer.name}</div>
-              <div>${selectedCustomer.phone}</div>
-            </div>
-            
-            <div class="receipt-title">Order Details</div>
-            <div class="receipt-items">
-              ${lastCompletedBill.items.map(item => `
-                <div class="item">
-                  <div class="item-name">${item.name} (×${item.quantity})</div>
-                  <div class="item-price">₹${item.total.toFixed(2)}</div>
-                </div>
-              `).join('')}
-            </div>
-            
-            <div class="totals">
-              <div class="total-row">
-                <div>Subtotal:</div>
-                <div>₹${lastCompletedBill.subtotal.toFixed(2)}</div>
-              </div>
-              
-              ${lastCompletedBill.discount > 0 ? `
-                <div class="total-row">
-                  <div>Discount (${lastCompletedBill.discountType === 'percentage' ? `${lastCompletedBill.discount}%` : 'Fixed'}):</div>
-                  <div>₹${lastCompletedBill.discountValue.toFixed(2)}</div>
-                </div>
-              ` : ''}
-              
-              ${lastCompletedBill.loyaltyPointsUsed > 0 ? `
-                <div class="total-row">
-                  <div>Loyalty Points:</div>
-                  <div>₹${lastCompletedBill.loyaltyPointsUsed.toFixed(2)}</div>
-                </div>
-              ` : ''}
-              
-              <div class="total-row grand-total">
-                <div>TOTAL:</div>
-                <div>₹${lastCompletedBill.total.toFixed(2)}</div>
-              </div>
-              
-              <div class="total-row">
-                <div>Payment Method:</div>
-                <div>${lastCompletedBill.paymentMethod.toUpperCase()}</div>
-              </div>
-            </div>
-            
-            <div class="receipt-footer">
-              <div>Thank you for visiting Cuephoria!</div>
-              <div>We hope to see you again soon.</div>
-              ${lastCompletedBill.loyaltyPointsEarned > 0 ? `
-                <div style="margin-top: 5px;">You earned ${lastCompletedBill.loyaltyPointsEarned} loyalty points!</div>
-              ` : ''}
-            </div>
-          </div>
-          <div style="text-align: center; margin-top: 20px;">
-            <button onclick="window.print(); setTimeout(() => window.close(), 500);">Print Receipt</button>
-          </div>
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
-    printWindow.focus();
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
@@ -682,95 +570,116 @@ const POS = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
         <DialogContent className="max-w-md animate-scale-in">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-heading">Payment Successful!</DialogTitle>
-            <DialogDescription>
-              Your transaction has been completed.
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="rounded-full bg-green-100 p-6 mb-4">
+              <Check className="h-12 w-12 text-green-600" />
+            </div>
+            <DialogTitle className="text-2xl font-heading mb-2">Payment Successful!</DialogTitle>
+            <DialogDescription className="text-center mb-4">
+              Your transaction has been completed successfully.
             </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex flex-col items-center py-3">
-            <div className="rounded-full bg-green-100 p-4 mb-4">
-              <Check className="h-8 w-8 text-green-600" />
+            
+            {lastCompletedBill && selectedCustomer && (
+              <div className="w-full space-y-4 my-2">
+                {/* Customer Information */}
+                <div className="border rounded-md p-3 bg-gradient-to-r from-cuephoria-purple/10 to-transparent">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-medium flex items-center">
+                        <User className="h-4 w-4 mr-2 text-cuephoria-lightpurple" /> {selectedCustomer.name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
+                    </div>
+                    {selectedCustomer.isMember && (
+                      <div className="bg-cuephoria-purple text-white text-xs px-2 py-1 rounded">
+                        Member
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Order Details */}
+                <div className="border rounded-md p-3">
+                  <h3 className="text-sm font-medium border-b pb-1 mb-2">Order Details</h3>
+                  <div className="max-h-32 overflow-y-auto">
+                    {lastCompletedBill.items.map((item, index) => (
+                      <div key={index} className="flex justify-between text-sm py-1">
+                        <div>
+                          <span>{item.name}</span>
+                          {item.quantity > 1 && <span className="text-gray-600"> x{item.quantity}</span>}
+                        </div>
+                        <span>₹{item.total.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t mt-2 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal:</span>
+                      <span>₹{lastCompletedBill.subtotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    {lastCompletedBill.discount > 0 && (
+                      <div className="flex justify-between text-sm text-cuephoria-purple">
+                        <span>
+                          Discount {lastCompletedBill.discountType === 'percentage' ? `(${lastCompletedBill.discount}%)` : ''}:
+                        </span>
+                        <span>-₹{lastCompletedBill.discountValue.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {lastCompletedBill.loyaltyPointsUsed > 0 && (
+                      <div className="flex justify-between text-sm text-cuephoria-orange">
+                        <span>Loyalty Points:</span>
+                        <span>-₹{lastCompletedBill.loyaltyPointsUsed.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-medium mt-1 pt-1 border-t">
+                      <span>Total:</span>
+                      <span className="text-cuephoria-lightpurple">₹{lastCompletedBill.total.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Time and Payment Method */}
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(lastCompletedBill.createdAt).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Payment Method: {lastCompletedBill.paymentMethod.toUpperCase()}
+                  </p>
+                  {lastCompletedBill.loyaltyPointsEarned > 0 && (
+                    <p className="text-sm text-cuephoria-orange mt-1">
+                      Points Earned: {lastCompletedBill.loyaltyPointsEarned}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex w-full space-x-2 mt-4">
+              <Button 
+                onClick={() => setShowSuccess(false)}
+                className="flex-1"
+                variant="outline"
+              >
+                Close
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  if (lastCompletedBill && selectedCustomer) {
+                    window.print();
+                  }
+                }}
+                className="flex-1 bg-cuephoria-purple hover:bg-cuephoria-purple/90"
+              >
+                <ReceiptIcon className="mr-2 h-4 w-4" />
+                Print Receipt
+              </Button>
             </div>
           </div>
-
-          {lastCompletedBill && selectedCustomer && (
-            <div className="border rounded-lg p-4 mb-4 bg-card animate-fade-in">
-              <div className="border-b pb-2 mb-2">
-                <CustomerInfo customer={selectedCustomer} />
-                <p className="text-xs text-gray-500">Receipt #{lastCompletedBill.id}</p>
-                <p className="text-xs text-gray-500">{new Date(lastCompletedBill.createdAt).toLocaleString()}</p>
-              </div>
-              
-              <div className="py-2 space-y-2">
-                <h4 className="font-semibold text-sm">Order Items</h4>
-                <div className="max-h-40 overflow-y-auto">
-                  {lastCompletedBill.items.map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm py-1">
-                      <span className="text-muted-foreground">
-                        {item.name} (×{item.quantity})
-                      </span>
-                      <span className="font-mono">₹{item.total}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between text-sm py-1">
-                  <span>Subtotal</span>
-                  <span className="font-mono">₹{lastCompletedBill.subtotal}</span>
-                </div>
-                
-                {lastCompletedBill.discount > 0 && (
-                  <div className="flex justify-between text-sm py-1 text-cuephoria-purple">
-                    <span>
-                      Discount {lastCompletedBill.discountType === 'percentage' ? `(${lastCompletedBill.discount}%)` : ''}
-                    </span>
-                    <span className="font-mono">-₹{lastCompletedBill.discountValue}</span>
-                  </div>
-                )}
-                
-                {lastCompletedBill.loyaltyPointsUsed > 0 && (
-                  <div className="flex justify-between text-sm py-1 text-cuephoria-orange">
-                    <span>Loyalty Points Used</span>
-                    <span className="font-mono">-₹{lastCompletedBill.loyaltyPointsUsed}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between py-1 font-bold text-base border-t mt-2 pt-2">
-                  <span>Total</span>
-                  <span className="font-mono text-cuephoria-lightpurple">₹{lastCompletedBill.total}</span>
-                </div>
-                
-                <div className="flex justify-between text-sm py-1">
-                  <span>Payment Method</span>
-                  <span className="capitalize">{lastCompletedBill.paymentMethod}</span>
-                </div>
-                
-                {lastCompletedBill.loyaltyPointsEarned > 0 && (
-                  <div className="mt-2 text-xs text-green-600">
-                    <span>You earned {lastCompletedBill.loyaltyPointsEarned} loyalty points with this purchase!</span>
-                  </div>
-                )}
-              </div>
-              
-              <ReceiptFooter />
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button 
-              onClick={handlePrintReceipt}
-              className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              Print Receipt
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
