@@ -62,9 +62,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <POSProvider>
+    <AuthProvider>
+      <POSProvider>
+        <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -117,9 +117,9 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </POSProvider>
-      </AuthProvider>
-    </TooltipProvider>
+        </TooltipProvider>
+      </POSProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
