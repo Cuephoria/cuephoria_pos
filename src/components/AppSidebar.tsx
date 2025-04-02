@@ -20,7 +20,8 @@ const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
 
-  if (!user) return null;
+  // Don't render the sidebar when printing
+  if (!user || window.matchMedia('(print-mode: active)').matches) return null;
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },

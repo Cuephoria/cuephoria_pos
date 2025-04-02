@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -62,27 +61,22 @@ const POS = () => {
     }
   }, [isCheckoutDialogOpen]);
 
-  // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
-      // First, clear any existing gaming sessions in the cart
       const newCart = cart.filter(item => item.type !== 'session');
       if (newCart.length !== cart.length) {
         clearCart();
-        // Re-add the product items
         newCart.forEach(item => {
           addToCart(item);
         });
       }
       
-      // Then check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
       
-      // If there are active sessions, add them to the cart
       if (activeStations.length > 0) {
         toast({
           title: 'Gaming Sessions Added',
@@ -187,13 +181,8 @@ const POS = () => {
     if (bill) {
       setIsCheckoutDialogOpen(false);
       setLastCompletedBill(bill);
-      setShowReceipt(true);
       
-      toast({
-        title: 'Sale Completed',
-        description: `Total: ${formatCurrency(bill.total)}`,
-        className: 'bg-green-600',
-      });
+      setShowReceipt(true);
     }
   };
 
@@ -583,7 +572,10 @@ const POS = () => {
         <Receipt 
           bill={lastCompletedBill} 
           customer={selectedCustomer} 
-          onClose={() => setShowReceipt(false)} 
+          onClose={() => {
+            setShowReceipt(false);
+            setLastCompletedBill(null);
+          }} 
         />
       )}
     </div>
