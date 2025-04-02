@@ -1,0 +1,107 @@
+
+import React from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { usePOS, Product } from '@/context/POSContext';
+import { CurrencyDisplay } from '@/components/ui/currency';
+import { ShoppingCart, Edit, Trash } from 'lucide-react';
+
+interface ProductCardProps {
+  product: Product;
+  isAdmin?: boolean;
+  onEdit?: (product: Product) => void;
+  onDelete?: (id: string) => void;
+}
+
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  product, 
+  isAdmin = false, 
+  onEdit, 
+  onDelete 
+}) => {
+  const { addToCart } = usePOS();
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'gaming':
+        return 'bg-cuephoria-purple';
+      case 'food':
+        return 'bg-cuephoria-orange';
+      case 'drinks':
+        return 'bg-cuephoria-blue';
+      case 'tobacco':
+        return 'bg-red-500';
+      case 'challenges':
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const handleAddToCart = () => {
+    addToCart({
+      id: product.id,
+      type: 'product',
+      name: product.name,
+      price: product.price,
+      quantity: 1
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg">{product.name}</CardTitle>
+          <Badge className={getCategoryColor(product.category)}>
+            {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col space-y-2">
+          <div className="flex justify-between text-sm font-medium">
+            <span>Price:</span>
+            <CurrencyDisplay amount={product.price} />
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Stock:</span>
+            <span className={product.stock <= 10 ? 'text-red-500' : ''}>{product.stock}</span>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        {isAdmin ? (
+          <>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onEdit && onEdit(product)}
+            >
+              <Edit className="h-4 w-4 mr-1" /> Edit
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => onDelete && onDelete(product.id)}
+            >
+              <Trash className="h-4 w-4 mr-1" /> Delete
+            </Button>
+          </>
+        ) : (
+          <Button 
+            variant="default" 
+            className="w-full"
+            disabled={product.stock <= 0}
+            onClick={handleAddToCart}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default ProductCard;
