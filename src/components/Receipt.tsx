@@ -29,7 +29,6 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
     
     try {
       await generatePDF(receiptRef.current, bill.id);
-      setShowSuccessMsg(true);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -47,13 +46,25 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
     setIsPrinting(false);
   };
 
+  const handleCloseSuccessMsg = () => {
+    setShowSuccessMsg(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-scale-in overflow-hidden">
         {showSuccessMsg && (
-          <div className="bg-green-500 text-white p-3 flex items-center justify-center animate-fade-in gap-2">
-            <Check className="h-5 w-5" />
-            <span className="font-medium">Payment Successful!</span>
+          <div className="bg-green-500 text-white p-3 flex items-center justify-between animate-fade-in gap-2">
+            <div className="flex items-center gap-2">
+              <Check className="h-5 w-5" />
+              <span className="font-medium">Payment Successful!</span>
+            </div>
+            <button 
+              onClick={handleCloseSuccessMsg}
+              className="hover:bg-white/20 rounded-full p-1"
+            >
+              ✕
+            </button>
           </div>
         )}
         
