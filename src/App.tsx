@@ -36,7 +36,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
+      <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
+    </div>;
   }
   
   if (!user) {
@@ -76,6 +78,12 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              <Route path="/pos" element={
+                <ProtectedRoute>
+                  <POS />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/stations" element={
                 <ProtectedRoute>
                   <Stations />
@@ -85,12 +93,6 @@ const App = () => (
               <Route path="/products" element={
                 <ProtectedRoute>
                   <Products />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/pos" element={
-                <ProtectedRoute>
-                  <POS />
                 </ProtectedRoute>
               } />
               

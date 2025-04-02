@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -5,18 +6,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2 } from 'lucide-react';
+import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, Receipt, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { usePOS, Customer, Product } from '@/context/POSContext';
+import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
+import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const POS = () => {
   const {
     products,
     customers,
+    stations,
     cart,
     selectedCustomer,
     discount,
@@ -43,6 +46,8 @@ const POS = () => {
   const [customDiscountAmount, setCustomDiscountAmount] = useState(discount.toString());
   const [customDiscountType, setCustomDiscountType] = useState<'percentage' | 'fixed'>(discountType);
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
+  const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -56,6 +61,36 @@ const POS = () => {
       handleApplyLoyaltyPoints();
     }
   }, [isCheckoutDialogOpen]);
+
+  // Auto-add active gaming sessions for the selected customer
+  useEffect(() => {
+    if (selectedCustomer) {
+      // First, clear any existing gaming sessions in the cart
+      const newCart = cart.filter(item => item.type !== 'session');
+      if (newCart.length !== cart.length) {
+        clearCart();
+        // Re-add the product items
+        newCart.forEach(item => {
+          addToCart(item);
+        });
+      }
+      
+      // Then check if the customer has any active sessions
+      const activeStations = stations.filter(
+        station => station.isOccupied && 
+        station.currentSession && 
+        station.currentSession.customerId === selectedCustomer.id
+      );
+      
+      // If there are active sessions, add them to the cart
+      if (activeStations.length > 0) {
+        toast({
+          title: 'Gaming Sessions Added',
+          description: `${activeStations.length} active gaming sessions have been added to the cart.`,
+        });
+      }
+    }
+  }, [selectedCustomer]);
 
   const filteredProducts = activeTab === 'all'
     ? products
@@ -89,6 +124,7 @@ const POS = () => {
     toast({
       title: 'Customer Selected',
       description: `${customer.name} has been selected for this transaction.`,
+      className: 'bg-cuephoria-purple/90',
     });
   };
 
@@ -147,12 +183,16 @@ const POS = () => {
       return;
     }
     
-    const result = completeSale(paymentMethod);
-    if (result) {
+    const bill = completeSale(paymentMethod);
+    if (bill) {
       setIsCheckoutDialogOpen(false);
+      setLastCompletedBill(bill);
+      setShowReceipt(true);
+      
       toast({
         title: 'Sale Completed',
-        description: `Total: ${formatCurrency(result.total)}`,
+        description: `Total: ${formatCurrency(bill.total)}`,
+        className: 'bg-green-600',
       });
     }
   };
@@ -168,19 +208,24 @@ const POS = () => {
 
   return (
     <div className="flex-1 p-8 pt-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold tracking-tight">Point of Sale</h2>
+      <div className="flex items-center justify-between mb-6 animate-slide-down">
+        <h2 className="text-3xl font-bold tracking-tight gradient-text font-heading">Point of Sale</h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1 h-[calc(100vh-12rem)] flex flex-col">
-          <CardHeader className="pb-3">
+        <Card className="lg:col-span-1 h-[calc(100vh-12rem)] flex flex-col animate-slide-up">
+          <CardHeader className="pb-3 bg-gradient-to-r from-cuephoria-purple/20 to-transparent">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-xl">
-                <ShoppingCart className="h-5 w-5 inline-block mr-2" />
+              <CardTitle className="text-xl font-heading">
+                <ShoppingCart className="h-5 w-5 inline-block mr-2 text-cuephoria-lightpurple" />
                 Cart
               </CardTitle>
-              <Button variant="ghost" size="sm" onClick={clearCart}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearCart}
+                className="hover:text-red-500 transition-colors"
+              >
                 Clear
               </Button>
             </div>
@@ -191,10 +236,10 @@ const POS = () => {
           <CardContent className="flex-grow overflow-auto px-6">
             {cart.length > 0 ? (
               <div className="space-y-4">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between border-b pb-3">
+                {cart.map((item, index) => (
+                  <div key={item.id} className={`flex items-center justify-between border-b pb-3 animate-fade-in`} style={{animationDelay: `${index * 50}ms`}}>
                     <div className="flex-1">
-                      <p className="font-medium">{item.name}</p>
+                      <p className="font-medium font-quicksand">{item.name}</p>
                       <p className="text-sm text-muted-foreground indian-rupee">
                         {item.price.toLocaleString('en-IN')} each
                       </p>
@@ -220,59 +265,59 @@ const POS = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 text-destructive"
+                        className="h-7 w-7 p-0 text-destructive hover:bg-red-500/10"
                         onClick={() => handleRemoveItem(item.id)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="w-20 text-right indian-rupee">
+                    <div className="w-20 text-right indian-rupee font-mono">
                       {item.total.toLocaleString('en-IN')}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full">
-                <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-medium">Cart Empty</h3>
-                <p className="text-muted-foreground mt-2">
+              <div className="flex flex-col items-center justify-center h-full animate-fade-in">
+                <ShoppingCart className="h-12 w-12 text-muted-foreground mb-4 animate-pulse-soft" />
+                <h3 className="text-xl font-medium font-heading">Cart Empty</h3>
+                <p className="text-muted-foreground mt-2 text-center">
                   Add products to the cart to begin
                 </p>
               </div>
             )}
           </CardContent>
-          <CardFooter className="border-t pt-4 flex flex-col">
+          <CardFooter className="border-t pt-4 flex flex-col bg-gradient-to-r from-transparent to-cuephoria-purple/10">
             <div className="w-full">
               <div className="flex justify-between py-1">
                 <span>Subtotal</span>
-                <span className="indian-rupee">{subtotal.toLocaleString('en-IN')}</span>
+                <span className="indian-rupee font-mono">{subtotal.toLocaleString('en-IN')}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-purple">
                   <span>
                     Discount {discountType === 'percentage' ? `(${discount}%)` : ''}
                   </span>
-                  <span className="indian-rupee">-{discountValue.toLocaleString('en-IN')}</span>
+                  <span className="indian-rupee font-mono">-{discountValue.toLocaleString('en-IN')}</span>
                 </div>
               )}
               {loyaltyPointsUsed > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-orange">
                   <span>Loyalty Points Used</span>
-                  <span className="indian-rupee">-{loyaltyPointsUsed.toLocaleString('en-IN')}</span>
+                  <span className="indian-rupee font-mono">-{loyaltyPointsUsed.toLocaleString('en-IN')}</span>
                 </div>
               )}
               <div className="flex justify-between py-1 text-lg font-bold border-t mt-2 pt-2">
                 <span>Total</span>
-                <span className="indian-rupee">{total.toLocaleString('en-IN')}</span>
+                <span className="indian-rupee font-mono text-cuephoria-lightpurple">{total.toLocaleString('en-IN')}</span>
               </div>
             </div>
             
             <div className="flex flex-col space-y-3 w-full mt-4">
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
-                  className="flex-1"
+                  variant={selectedCustomer ? "outline" : "default"}
+                  className={`flex-1 btn-hover-effect ${selectedCustomer ? "" : "bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple"}`}
                   onClick={() => setIsCustomerDialogOpen(true)}
                 >
                   {selectedCustomer ? (
@@ -289,26 +334,27 @@ const POS = () => {
                 </Button>
               </div>
               <Button 
-                variant="default"
-                className="w-full"
+                variant="default" 
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90 animate-pulse-soft"
                 disabled={cart.length === 0 || !selectedCustomer}
                 onClick={() => setIsCheckoutDialogOpen(true)}
               >
+                <Receipt className="mr-2 h-4 w-4" />
                 Checkout
               </Button>
             </div>
           </CardFooter>
         </Card>
 
-        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl">Products</CardTitle>
+        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200">
+          <CardHeader className="pb-3 bg-gradient-to-r from-transparent to-cuephoria-blue/10">
+            <CardTitle className="text-xl font-heading">Products</CardTitle>
             <div className="flex space-x-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products..."
-                  className="pl-8"
+                  className="pl-8 font-quicksand"
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
                 />
@@ -316,29 +362,32 @@ const POS = () => {
             </div>
           </CardHeader>
           
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="px-6">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="gaming">Gaming</TabsTrigger>
-              <TabsTrigger value="food">Food</TabsTrigger>
-              <TabsTrigger value="drinks">Drinks</TabsTrigger>
-              <TabsTrigger value="tobacco">Tobacco</TabsTrigger>
-              <TabsTrigger value="challenges">Challenges</TabsTrigger>
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
+            <TabsList className="px-6 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+              <TabsTrigger value="all" className="font-heading">All</TabsTrigger>
+              <TabsTrigger value="gaming" className="font-heading">Gaming</TabsTrigger>
+              <TabsTrigger value="food" className="font-heading">Food</TabsTrigger>
+              <TabsTrigger value="drinks" className="font-heading">Drinks</TabsTrigger>
+              <TabsTrigger value="tobacco" className="font-heading">Tobacco</TabsTrigger>
+              <TabsTrigger value="challenges" className="font-heading">Challenges</TabsTrigger>
             </TabsList>
             
             <TabsContent value={activeTab} className="flex-grow overflow-auto px-6 mt-4">
               {searchedProducts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {searchedProducts.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                    />
+                  {searchedProducts.map((product, index) => (
+                    <div 
+                      key={product.id} 
+                      className={`animate-scale-in delay-${index % 5}`} 
+                      style={{animationDelay: `${(index % 5) * 100}ms`}}
+                    >
+                      <ProductCard product={product} />
+                    </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <h3 className="text-xl font-medium">No Products Found</h3>
+                <div className="flex flex-col items-center justify-center h-full animate-fade-in">
+                  <h3 className="text-xl font-medium font-heading">No Products Found</h3>
                   <p className="text-muted-foreground mt-2">
                     Try a different search or category
                   </p>
@@ -350,15 +399,15 @@ const POS = () => {
       </div>
 
       <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl animate-scale-in">
           <DialogHeader>
-            <DialogTitle>Select Customer</DialogTitle>
+            <DialogTitle className="font-heading text-xl">Select Customer</DialogTitle>
           </DialogHeader>
           <div className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search customers..."
-              className="pl-8"
+              className="pl-8 font-quicksand"
               value={customerSearchQuery}
               onChange={(e) => setCustomerSearchQuery(e.target.value)}
             />
@@ -367,19 +416,24 @@ const POS = () => {
           <div className="max-h-[60vh] overflow-auto">
             {filteredCustomers.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredCustomers.map((customer) => (
-                  <CustomerCard
-                    key={customer.id}
-                    customer={customer}
-                    isSelectable={true}
-                    onSelect={handleSelectCustomer}
-                  />
+                {filteredCustomers.map((customer, index) => (
+                  <div 
+                    key={customer.id} 
+                    className={`animate-scale-in delay-${index % 6}`} 
+                    style={{animationDelay: `${(index % 6) * 100}ms`}}
+                  >
+                    <CustomerCard
+                      customer={customer}
+                      isSelectable={true}
+                      onSelect={handleSelectCustomer}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8">
                 <User className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-medium">No Customers Found</h3>
+                <h3 className="text-xl font-medium font-heading">No Customers Found</h3>
                 <p className="text-muted-foreground mt-2">
                   Try a different search or add a new customer
                 </p>
@@ -390,18 +444,18 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md animate-scale-in">
           <DialogHeader>
-            <DialogTitle>Complete Transaction</DialogTitle>
+            <DialogTitle className="font-heading text-xl">Complete Transaction</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-2">
             {selectedCustomer && (
-              <div className="border rounded-md p-3">
+              <div className="border rounded-md p-3 bg-gradient-to-r from-cuephoria-purple/10 to-transparent animate-fade-in">
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="font-medium flex items-center">
-                      <User className="h-4 w-4 mr-2" /> {selectedCustomer.name}
+                      <User className="h-4 w-4 mr-2 text-cuephoria-lightpurple" /> {selectedCustomer.name}
                     </div>
                     <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
                   </div>
@@ -412,13 +466,13 @@ const POS = () => {
                   )}
                 </div>
                 <div className="mt-2 text-sm">
-                  Available Points: {selectedCustomer.loyaltyPoints}
+                  Available Points: <span className="font-semibold">{selectedCustomer.loyaltyPoints}</span>
                 </div>
               </div>
             )}
             
-            <div className="space-y-3">
-              <h4 className="font-medium">Apply Discount</h4>
+            <div className="space-y-3 animate-slide-up delay-100">
+              <h4 className="font-medium font-heading">Apply Discount</h4>
               <div className="flex space-x-2">
                 <div className="flex-1">
                   <Input
@@ -426,31 +480,43 @@ const POS = () => {
                     value={customDiscountAmount}
                     onChange={(e) => setCustomDiscountAmount(e.target.value)}
                     placeholder="Discount amount"
+                    className="font-quicksand"
                   />
                 </div>
                 <select
-                  className="px-3 py-2 rounded-md border border-input bg-background"
+                  className="px-3 py-2 rounded-md border border-input bg-background font-quicksand"
                   value={customDiscountType}
                   onChange={(e) => setCustomDiscountType(e.target.value as 'percentage' | 'fixed')}
                 >
                   <option value="percentage">%</option>
                   <option value="fixed">₹</option>
                 </select>
-                <Button onClick={handleApplyDiscount}>Apply</Button>
+                <Button 
+                  onClick={handleApplyDiscount}
+                  className="bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+                >
+                  Apply
+                </Button>
               </div>
             </div>
             
             {selectedCustomer && selectedCustomer.loyaltyPoints > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-medium">Use Loyalty Points</h4>
+              <div className="space-y-3 animate-slide-up delay-200">
+                <h4 className="font-medium font-heading">Use Loyalty Points</h4>
                 <div className="flex space-x-2">
                   <Input
                     type="number"
                     value={customLoyaltyPoints}
                     onChange={(e) => setCustomLoyaltyPoints(e.target.value)}
                     placeholder="Points to use"
+                    className="font-quicksand"
                   />
-                  <Button onClick={handleApplyLoyaltyPoints}>Apply</Button>
+                  <Button 
+                    onClick={handleApplyLoyaltyPoints}
+                    className="bg-cuephoria-orange hover:bg-cuephoria-orange/80"
+                  >
+                    Apply
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Customer has {selectedCustomer.loyaltyPoints} points (₹1 per point)
@@ -458,33 +524,33 @@ const POS = () => {
               </div>
             )}
             
-            <div className="border-t pt-4 mt-2">
+            <div className="border-t pt-4 mt-2 animate-slide-up delay-300">
               <div className="flex justify-between py-1">
                 <span>Subtotal</span>
-                <CurrencyDisplay amount={subtotal} />
+                <CurrencyDisplay amount={subtotal} className="font-mono" />
               </div>
               {discount > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-purple">
                   <span>
                     Discount {discountType === 'percentage' ? `(${discount}%)` : ''}
                   </span>
-                  <span>-<CurrencyDisplay amount={discountValue} /></span>
+                  <span>-<CurrencyDisplay amount={discountValue} className="font-mono" /></span>
                 </div>
               )}
               {loyaltyPointsUsed > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-orange">
                   <span>Loyalty Points Used</span>
-                  <span>-<CurrencyDisplay amount={loyaltyPointsUsed} /></span>
+                  <span>-<CurrencyDisplay amount={loyaltyPointsUsed} className="font-mono" /></span>
                 </div>
               )}
               <div className="flex justify-between py-1 text-lg font-bold border-t mt-2 pt-2">
                 <span>Total</span>
-                <CurrencyDisplay amount={total} />
+                <CurrencyDisplay amount={total} className="font-mono text-cuephoria-lightpurple" />
               </div>
             </div>
             
-            <div className="space-y-3">
-              <h4 className="font-medium">Payment Method</h4>
+            <div className="space-y-3 animate-slide-up delay-400">
+              <h4 className="font-medium font-heading">Payment Method</h4>
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={(value) => setPaymentMethod(value as 'cash' | 'upi')}
@@ -492,26 +558,34 @@ const POS = () => {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="cash" id="cash" />
-                  <Label htmlFor="cash">Cash</Label>
+                  <Label htmlFor="cash" className="font-quicksand">Cash</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="upi" id="upi" />
-                  <Label htmlFor="upi">UPI</Label>
+                  <Label htmlFor="upi" className="font-quicksand">UPI</Label>
                 </div>
               </RadioGroup>
             </div>
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="animate-slide-up delay-500">
             <Button variant="outline" onClick={() => setIsCheckoutDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCompleteSale}>
+            <Button onClick={handleCompleteSale} className="bg-gradient-to-r from-green-500 to-green-600 hover:opacity-90">
               Complete Sale (<CurrencyDisplay amount={total} />)
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {showReceipt && lastCompletedBill && selectedCustomer && (
+        <Receipt 
+          bill={lastCompletedBill} 
+          customer={selectedCustomer} 
+          onClose={() => setShowReceipt(false)} 
+        />
+      )}
     </div>
   );
 };

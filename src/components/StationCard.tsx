@@ -17,21 +17,42 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
+  const [hours, setHours] = useState<number>(0);
+  const [minutes, setMinutes] = useState<number>(0);
+  const [seconds, setSeconds] = useState<number>(0);
 
   // Update elapsed time every second for active sessions
   useEffect(() => {
-    if (!station.isOccupied || !station.currentSession) return;
+    if (!station.isOccupied || !station.currentSession) {
+      setElapsedTime(0);
+      setCost(0);
+      setHours(0);
+      setMinutes(0);
+      setSeconds(0);
+      return;
+    }
 
     const startTime = new Date(station.currentSession.startTime).getTime();
     
     const updateElapsedTime = () => {
       const now = new Date().getTime();
       const elapsedMs = now - startTime;
-      const elapsedMinutes = Math.floor(elapsedMs / (1000 * 60));
-      setElapsedTime(elapsedMinutes);
+      
+      // Calculate time components
+      const secondsTotal = Math.floor(elapsedMs / 1000);
+      const minutesTotal = Math.floor(secondsTotal / 60);
+      const hoursTotal = Math.floor(minutesTotal / 60);
+      
+      // Set displayed time values
+      setSeconds(secondsTotal % 60);
+      setMinutes(minutesTotal % 60);
+      setHours(hoursTotal);
+      
+      // Update elapsed minutes for cost calculation
+      setElapsedTime(minutesTotal);
       
       // Calculate cost based on hourly rate
-      const hoursElapsed = elapsedMinutes / 60;
+      const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       setCost(calculatedCost);
     };
@@ -56,12 +77,13 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     endSession(station.id);
     setElapsedTime(0);
     setCost(0);
+    setHours(0);
+    setMinutes(0);
+    setSeconds(0);
   };
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+  const formatTimeDisplay = () => {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const getCustomerName = (id: string) => {
@@ -72,14 +94,14 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const stationIcon = station.type === 'ps5' ? <Monitor className="h-8 w-8" /> : <Clock className="h-8 w-8" />;
 
   return (
-    <Card className={`${station.isOccupied ? 'border-cuephoria-orange' : 'border-gray-200'}`}>
+    <Card className={`card-hover ${station.isOccupied ? 'border-cuephoria-orange' : 'border-gray-200'} animate-scale-in`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center text-lg">
+          <CardTitle className="flex items-center text-lg font-heading">
             {stationIcon}
             <span className="ml-2">{station.name}</span>
           </CardTitle>
-          <Badge className={station.isOccupied ? 'bg-cuephoria-orange' : 'bg-green-500'}>
+          <Badge className={`${station.isOccupied ? 'bg-cuephoria-orange' : 'bg-green-500'} ${station.isOccupied ? 'animate-pulse' : ''}`}>
             {station.isOccupied ? 'Occupied' : 'Available'}
           </Badge>
         </div>
@@ -99,11 +121,13 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
               </div>
               <div className="flex justify-between text-sm">
                 <span>Duration:</span>
-                <span>{formatTime(elapsedTime)}</span>
+                <span className="font-mono bg-black/10 px-2 py-1 rounded text-cuephoria-lightpurple font-bold">
+                  {formatTimeDisplay()}
+                </span>
               </div>
-              <div className="flex justify-between text-sm font-medium">
+              <div className="flex justify-between text-sm font-medium mt-2">
                 <span>Current Cost:</span>
-                <CurrencyDisplay amount={cost} />
+                <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold" />
               </div>
             </>
           )}
@@ -113,7 +137,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         {station.isOccupied ? (
           <Button 
             variant="destructive" 
-            className="w-full"
+            className="w-full btn-hover-effect"
             onClick={handleEndSession}
           >
             End Session
@@ -121,12 +145,12 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         ) : (
           <>
             <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-              <SelectTrigger>
+              <SelectTrigger className="font-quicksand">
                 <SelectValue placeholder="Select Customer" />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
+                  <SelectItem key={customer.id} value={customer.id} className="font-quicksand">
                     {customer.name}
                   </SelectItem>
                 ))}
@@ -134,7 +158,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
             </Select>
             <Button 
               variant="default" 
-              className="w-full"
+              className="w-full bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
               disabled={!selectedCustomerId} 
               onClick={handleStartSession}
             >
