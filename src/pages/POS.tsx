@@ -46,7 +46,6 @@ const POS = () => {
   const [customDiscountType, setCustomDiscountType] = useState<'percentage' | 'fixed'>(discountType);
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
-  const [showReceipt, setShowReceipt] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
@@ -573,42 +572,116 @@ const POS = () => {
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="max-w-md animate-scale-in text-center">
-          <div className="flex flex-col items-center justify-center py-6">
+        <DialogContent className="max-w-md animate-scale-in">
+          <div className="flex flex-col items-center justify-center py-4">
             <div className="rounded-full bg-green-100 p-6 mb-4">
               <Check className="h-12 w-12 text-green-600" />
             </div>
             <DialogTitle className="text-2xl font-heading mb-2">Payment Successful!</DialogTitle>
-            <DialogDescription className="text-center mb-6">
+            <DialogDescription className="text-center mb-4">
               Your transaction has been completed successfully.
             </DialogDescription>
-            <p className="font-bold text-xl mb-2">
-              <CurrencyDisplay amount={lastCompletedBill?.total || 0} />
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              {lastCompletedBill ? new Date(lastCompletedBill.createdAt).toLocaleString() : ''}
-            </p>
-            <Button 
-              onClick={() => {
-                setShowSuccess(false);
-                setShowReceipt(true);
-              }}
-              className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
-            >
-              <ReceiptIcon className="mr-2 h-4 w-4" />
-              View Receipt
-            </Button>
+            
+            {lastCompletedBill && selectedCustomer && (
+              <div className="w-full space-y-4 my-2">
+                {/* Customer Information */}
+                <div className="border rounded-md p-3 bg-gradient-to-r from-cuephoria-purple/10 to-transparent">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-medium flex items-center">
+                        <User className="h-4 w-4 mr-2 text-cuephoria-lightpurple" /> {selectedCustomer.name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
+                    </div>
+                    {selectedCustomer.isMember && (
+                      <div className="bg-cuephoria-purple text-white text-xs px-2 py-1 rounded">
+                        Member
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Order Details */}
+                <div className="border rounded-md p-3">
+                  <h3 className="text-sm font-medium border-b pb-1 mb-2">Order Details</h3>
+                  <div className="max-h-32 overflow-y-auto">
+                    {lastCompletedBill.items.map((item, index) => (
+                      <div key={index} className="flex justify-between text-sm py-1">
+                        <div>
+                          <span>{item.name}</span>
+                          {item.quantity > 1 && <span className="text-gray-600"> x{item.quantity}</span>}
+                        </div>
+                        <span>₹{item.total.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t mt-2 pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal:</span>
+                      <span>₹{lastCompletedBill.subtotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    {lastCompletedBill.discount > 0 && (
+                      <div className="flex justify-between text-sm text-cuephoria-purple">
+                        <span>
+                          Discount {lastCompletedBill.discountType === 'percentage' ? `(${lastCompletedBill.discount}%)` : ''}:
+                        </span>
+                        <span>-₹{lastCompletedBill.discountValue.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {lastCompletedBill.loyaltyPointsUsed > 0 && (
+                      <div className="flex justify-between text-sm text-cuephoria-orange">
+                        <span>Loyalty Points:</span>
+                        <span>-₹{lastCompletedBill.loyaltyPointsUsed.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-medium mt-1 pt-1 border-t">
+                      <span>Total:</span>
+                      <span className="text-cuephoria-lightpurple">₹{lastCompletedBill.total.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Time and Payment Method */}
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(lastCompletedBill.createdAt).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Payment Method: {lastCompletedBill.paymentMethod.toUpperCase()}
+                  </p>
+                  {lastCompletedBill.loyaltyPointsEarned > 0 && (
+                    <p className="text-sm text-cuephoria-orange mt-1">
+                      Points Earned: {lastCompletedBill.loyaltyPointsEarned}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex w-full space-x-2 mt-4">
+              <Button 
+                onClick={() => setShowSuccess(false)}
+                className="flex-1"
+                variant="outline"
+              >
+                Close
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  if (lastCompletedBill && selectedCustomer) {
+                    window.print();
+                  }
+                }}
+                className="flex-1 bg-cuephoria-purple hover:bg-cuephoria-purple/90"
+              >
+                <ReceiptIcon className="mr-2 h-4 w-4" />
+                Print Receipt
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
-
-      {showReceipt && lastCompletedBill && selectedCustomer && (
-        <Receipt 
-          bill={lastCompletedBill} 
-          customer={selectedCustomer} 
-          onClose={() => setShowReceipt(false)} 
-        />
-      )}
     </div>
   );
 };
