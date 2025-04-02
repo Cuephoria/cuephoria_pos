@@ -1,122 +1,115 @@
 
 import { useState, useEffect } from 'react';
-import { Station, StationStatus } from '@/types/pos.types';
+import { Station, Session, Customer } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-export function useStations(initialStations: Station[]) {
+export const useStations = (
+  initialStations: Station[], 
+  updateCustomer: (customer: Customer) => void
+) => {
   const [stations, setStations] = useState<Station[]>(initialStations);
+  const [sessions, setSessions] = useState<Session[]>([]);
   
   // Load data from localStorage
   useEffect(() => {
     const storedStations = localStorage.getItem('cuephoriaStations');
-    if (storedStations) {
-      try {
-        const parsedStations = JSON.parse(storedStations);
-        // Ensure all stations have the status property with the correct type
-        const updatedStations = parsedStations.map((station: any) => ({
-          ...station,
-          status: station.status || (station.isOccupied ? 'occupied' as StationStatus : 'available' as StationStatus)
-        }));
-        console.log("Loaded stations from localStorage:", updatedStations);
-        setStations(updatedStations);
-      } catch (error) {
-        console.error("Error parsing stations from localStorage:", error);
-        // Fallback to initial stations
-        setStations(initialStations);
-      }
-    } else {
-      console.log("No stations in localStorage, using initial stations:", initialStations);
-    }
-  }, [initialStations]);
+    if (storedStations) setStations(JSON.parse(storedStations));
+    
+    const storedSessions = localStorage.getItem('cuephoriaSessions');
+    if (storedSessions) setSessions(JSON.parse(storedSessions));
+  }, []);
   
   // Save data to localStorage
   useEffect(() => {
     localStorage.setItem('cuephoriaStations', JSON.stringify(stations));
-    console.log("Saved stations to localStorage:", stations);
   }, [stations]);
   
-  const addStation = (station: Station) => {
-    console.log("Adding station:", station);
-    setStations([...stations, station]);
-  };
+  useEffect(() => {
+    localStorage.setItem('cuephoriaSessions', JSON.stringify(sessions));
+  }, [sessions]);
   
-  const updateStation = (updatedStation: Station) => {
-    console.log("Updating station:", updatedStation);
-    setStations(stations.map(station => 
-      station.id === updatedStation.id ? updatedStation : station
+  const startSession = (stationId: string, customerId: string) => {
+    const station = stations.find(s => s.id === stationId);
+    if (!station || station.isOccupied) return;
+    
+    const newSession = {
+      id: generateId(),
+      stationId,
+      customerId,
+      startTime: new Date(),
+    };
+    
+    setSessions([...sessions, newSession]);
+    
+    setStations(stations.map(s => 
+      s.id === stationId 
+        ? { ...s, isOccupied: true, currentSession: newSession } 
+        : s
     ));
   };
   
-  const removeStation = (id: string) => {
-    console.log("Removing station:", id);
-    setStations(stations.filter(station => station.id !== id));
-  };
-  
-  const startSession = (stationId: string, customerId?: string) => {
-    console.log("Starting session for station:", stationId, "customer:", customerId);
-    setStations(stations.map(station => {
-      if (station.id === stationId) {
-        return {
-          ...station,
-          isOccupied: true,
-          status: 'occupied' as StationStatus,
-          currentSession: {
-            startTime: Date.now(),
-            customerId: customerId || null,
-            customerName: customerId ? 'Customer' : 'Guest' // In a real app, look up the name
-          }
-        };
-      }
-      return station;
-    }));
-  };
-  
-  const endSession = (stationId: string) => {
+  const endSession = (stationId: string, customers: Customer[]) => {
     console.log("Ending session for station:", stationId);
-    // Find the station
     const station = stations.find(s => s.id === stationId);
-    if (!station || !station.currentSession) return null;
-
+    if (!station || !station.isOccupied || !station.currentSession) {
+      console.log("No active session found for this station");
+      return;
+    }
+    
+    const endTime = new Date();
+    const startTime = new Date(station.currentSession.startTime);
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+    
+    // Update the session
+    const updatedSession = {
+      ...station.currentSession,
+      endTime,
+      duration: durationMinutes
+    };
+    
+    setSessions(sessions.map(s => 
+      s.id === updatedSession.id ? updatedSession : s
+    ));
+    
+    // Update the station
+    setStations(stations.map(s => 
+      s.id === stationId 
+        ? { ...s, isOccupied: false, currentSession: null } 
+        : s
+    ));
+    
+    // Update customer's total play time
+    const customer = customers.find(c => c.id === updatedSession.customerId);
+    if (customer) {
+      updateCustomer({
+        ...customer,
+        totalPlayTime: customer.totalPlayTime + durationMinutes
+      });
+    }
+    
     // Create a cart item for the session
-    const sessionDuration = Date.now() - station.currentSession.startTime;
-    const hoursUsed = Math.max(0.5, Math.ceil(sessionDuration / (1000 * 60 * 30)) / 2); // Round up to nearest 30 min
+    const stationRate = station.hourlyRate;
+    const hoursPlayed = durationMinutes / 60;
+    const sessionCost = Math.ceil(hoursPlayed * stationRate);
     
     const sessionCartItem = {
-      id: generateId(),
+      id: updatedSession.id,
       type: 'session' as const,
-      name: `${station.name} Session (${hoursUsed} hr)`,
-      price: station.hourlyRate,
-      quantity: hoursUsed,
-      total: station.hourlyRate * hoursUsed
+      name: `${station.name} (${durationMinutes} mins)`,
+      price: sessionCost,
+      quantity: 1
     };
     
-    // Update the station status
-    setStations(stations.map(s => {
-      if (s.id === stationId) {
-        return {
-          ...s,
-          isOccupied: false,
-          status: 'available' as StationStatus,
-          currentSession: null
-        };
-      }
-      return s;
-    }));
-    
-    return {
-      sessionCartItem,
-      // If there was a customer ID associated with the session, return it
-      customer: station.currentSession.customerId ? { id: station.currentSession.customerId, name: station.currentSession.customerName } : null
-    };
+    return { updatedSession, sessionCartItem, customer };
   };
   
   return {
     stations,
     setStations,
-    addStation,
-    updateStation,
-    removeStation,
+    sessions,
+    setSessions,
     startSession,
     endSession
   };
-}
+};

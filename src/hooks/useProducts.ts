@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-export function useProducts(initialProducts: Product[]) {
+export const useProducts = (initialProducts: Product[]) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   
   // Load data from localStorage
@@ -37,4 +37,4 @@ export function useProducts(initialProducts: Product[]) {
     updateProduct,
     deleteProduct
   };
-}
+};

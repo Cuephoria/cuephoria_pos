@@ -1,51 +1,33 @@
 
-import { LucideIcon } from 'lucide-react';
-
-// Product related types
+// Types for the POS system
 export interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
+  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges';
   stock: number;
+  image?: string;
 }
 
-export type MembershipType = '8ball_2pax' | '8ball_4pax' | 'ps5' | 'combo';
-
-export interface Membership {
-  type: MembershipType;
-  startDate: Date;
-  expiryDate: Date;
-  creditHoursRemaining: number;
-  originalCreditHours: number;
+export interface Station {
+  id: string;
+  name: string;
+  type: 'ps5' | '8ball';
+  hourlyRate: number;
+  isOccupied: boolean;
+  currentSession: Session | null;
 }
 
-// Customer related types
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   email?: string;
   isMember: boolean;
-  membership: Membership | null;
   loyaltyPoints: number;
   totalSpent: number;
   totalPlayTime: number; // in minutes
   createdAt: Date;
-}
-
-// Station related types
-export type StationType = 'ps5' | '8ball' | 'pool' | 'snooker' | 'console';
-export type StationStatus = 'available' | 'occupied' | 'maintenance';
-
-export interface Station {
-  id: string;
-  name: string;
-  type: StationType;
-  hourlyRate: number;
-  isOccupied: boolean;
-  currentSession: any | null;
-  status: StationStatus;
 }
 
 export interface Session {
@@ -57,17 +39,13 @@ export interface Session {
   duration?: number; // in minutes
 }
 
-// POS related types
-export type CartItemType = 'product' | 'session' | 'membership';
-
 export interface CartItem {
   id: string;
-  type: CartItemType;
+  type: 'product' | 'session';
   name: string;
   price: number;
   quantity: number;
   total: number;
-  membershipType?: MembershipType; // Only for membership products
 }
 
 export interface Bill {
@@ -85,20 +63,14 @@ export interface Bill {
   createdAt: Date;
 }
 
-// Reset Options type
 export interface ResetOptions {
-  all?: boolean;
-  products?: boolean;
-  customers?: boolean;
-  bills?: boolean;
-  sessions?: boolean;
-  stations?: boolean;
-  cart?: boolean;
+  products: boolean;
+  customers: boolean;
+  sales: boolean;
+  sessions: boolean;
 }
 
-// Context type definition
 export interface POSContextType {
-  // State
   products: Product[];
   stations: Station[];
   customers: Customer[];
@@ -110,48 +82,41 @@ export interface POSContextType {
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
   
-  // Station actions
+  // Station state setter
   setStations: (stations: Station[]) => void;
-  addStation: (station: Station) => void;
-  updateStation: (station: Station) => void;
-  removeStation: (id: string) => void;
   
-  // Product actions
+  // Product functions
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
   
-  // Station and session actions
+  // Station functions
   startSession: (stationId: string, customerId: string) => void;
-  endSession: (stationId: string) => any;
+  endSession: (stationId: string) => void;
   
-  // Customer actions
-  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => Customer;
+  // Customer functions
+  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
   updateCustomer: (customer: Customer) => void;
   deleteCustomer: (id: string) => void;
   selectCustomer: (id: string | null) => void;
   
-  // Membership actions
-  addMembership: (customerId: string, membershipType: MembershipType, creditHours: number) => boolean;
-  useMembershipCredit: (customerId: string, hoursUsed: number) => boolean;
-  isMembershipExpired: (customer: Customer) => boolean;
-  getMembershipDetails: (membershipType: MembershipType) => any;
-  
-  // Cart actions
+  // Cart functions
   addToCart: (item: Omit<CartItem, 'total'>) => void;
   removeFromCart: (id: string) => void;
   updateCartItem: (id: string, quantity: number) => void;
   clearCart: () => void;
+  
+  // Billing functions
   setDiscount: (amount: number, type: 'percentage' | 'fixed') => void;
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
-  
-  // Billing actions
   completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
+  
+  // Data export
   exportBills: () => void;
   exportCustomers: () => void;
   
-  // Data operations
+  // Reset and sample data functions
   resetToSampleData: (options?: ResetOptions) => void;
   addSampleIndianData: () => void;
 }

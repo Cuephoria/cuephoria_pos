@@ -5,12 +5,9 @@ import {
   ResetOptions, 
   Customer, 
   CartItem, 
-  Bill,
-  MembershipType,
-  Station,
-  CartItemType
+  Bill
 } from '@/types/pos.types';
-import { sampleProducts, sampleStations, sampleCustomers, sampleBills } from '@/data/sampleData';
+import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
@@ -30,7 +27,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addProduct, 
     updateProduct, 
     deleteProduct 
-  } = useProducts(sampleProducts);
+  } = useProducts(initialProducts);
   
   const { 
     customers, 
@@ -40,22 +37,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addCustomer, 
     updateCustomer, 
     deleteCustomer, 
-    selectCustomer,
-    addMembership,
-    useMembershipCredit,
-    isMembershipExpired,
-    getMembershipDetails
-  } = useCustomers(sampleCustomers);
+    selectCustomer 
+  } = useCustomers(initialCustomers);
   
   const { 
     stations, 
     setStations, 
-    addStation, 
-    updateStation, 
-    removeStation, 
+    sessions, 
+    setSessions, 
     startSession: startSessionBase, 
     endSession: endSessionBase 
-  } = useStations(sampleStations);
+  } = useStations(initialStations, updateCustomer);
   
   const { 
     cart, 
@@ -81,12 +73,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     completeSale: completeSaleBase, 
     exportBills: exportBillsBase, 
     exportCustomers: exportCustomersBase 
-  } = useBills(updateCustomer, updateProduct, addMembership);
+  } = useBills(updateCustomer, updateProduct);
   
   // Wrapper functions that combine functionality from multiple hooks
   const endSession = (stationId: string) => {
-    const result = endSessionBase(stationId);
-    if (result && result.sessionCartItem) {
+    const result = endSessionBase(stationId, customers);
+    if (result) {
       const { sessionCartItem, customer } = result;
       
       // Clear cart before adding the new session
@@ -102,9 +94,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log("Adding session to cart:", sessionCartItem);
       addToCart(sessionCartItem);
       
-      return result;
+      return result.updatedSession;
     }
-    return null;
   };
   
   const completeSale = (paymentMethod: 'cash' | 'upi') => {
@@ -141,12 +132,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const handleResetToSampleData = (options?: ResetOptions) => {
     resetToSampleData(
       options,
-      sampleProducts,
-      sampleCustomers,
-      sampleStations,
+      initialProducts,
+      initialCustomers,
+      initialStations,
       setProducts,
       setCustomers,
       setBills,
+      setSessions,
       setStations,
       setCart,
       setDiscountAmount,
@@ -167,7 +159,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   console.log('POSProvider rendering with context value'); // Debug log
-  console.log('Stations in context:', stations); // Debug log to check stations data
   
   return (
     <POSContext.Provider
@@ -175,6 +166,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         products,
         stations,
         customers,
+        sessions,
         bills,
         cart,
         selectedCustomer,
@@ -182,9 +174,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountType,
         loyaltyPointsUsed,
         setStations,
-        addStation,
-        updateStation,
-        removeStation,
         addProduct,
         updateProduct,
         deleteProduct,
@@ -205,13 +194,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportBills,
         exportCustomers,
         resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData,
-        // Membership functions
-        addMembership,
-        useMembershipCredit,
-        isMembershipExpired,
-        getMembershipDetails,
-        sessions: [], // This is to match the POSContextType
+        addSampleIndianData: handleAddSampleIndianData
       }}
     >
       {children}
@@ -238,9 +221,6 @@ export type {
   Session,
   CartItem,
   Bill,
-  MembershipType,
-  Membership,
   ResetOptions,
-  POSContextType,
-  CartItemType
+  POSContextType
 } from '@/types/pos.types';
