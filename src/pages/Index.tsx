@@ -1,22 +1,14 @@
 
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
+import AppSidebar from '@/components/AppSidebar';
 
 const Index = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Immediate redirect to login page
-    navigate('/login');
-  }, [navigate]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-t-cuephoria-lightpurple border-cuephoria-dark rounded-full animate-spin mx-auto mb-4"></div>
-        <h1 className="text-2xl font-bold mb-2 text-white">Redirecting to login...</h1>
-        <p className="text-muted-foreground">Please wait a moment</p>
-      </div>
+    <div className="flex h-screen bg-cuephoria-dark text-white">
+      <AppSidebar />
+      <main className="flex-1 overflow-auto p-4 md:p-8">
+        <Outlet />
+      </main>
     </div>
   );
 };
