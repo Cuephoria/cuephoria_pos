@@ -69,7 +69,10 @@ const AppSidebar = () => {
   const { isMobile, isSidebarOpen, toggleSidebar } = useMobile();
 
   return (
-    <Sidebar isMobile={isMobile} isOpen={isSidebarOpen}>
+    <Sidebar 
+      collapsible="offcanvas"
+      className="border-r border-border"
+    >
       <div className="h-14 flex items-center px-4 border-b sticky top-0 bg-background z-10">
         <Logo />
         <div className="ml-auto">
