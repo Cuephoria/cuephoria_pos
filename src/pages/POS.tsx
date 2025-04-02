@@ -162,15 +162,18 @@ const POS = () => {
     const bill = completeSale(paymentMethod);
     if (bill) {
       setIsCheckoutDialogOpen(false);
-      setLastCompletedBill(bill);
-      setShowPaymentSuccess(true);
-      console.log("Payment success dialog should show now", { showPaymentSuccess: true, bill });
+      setTimeout(() => {
+        setLastCompletedBill(bill);
+        setShowPaymentSuccess(true);
+      }, 100);
     }
   };
 
   const handleBackToPos = () => {
     setShowPaymentSuccess(false);
-    setLastCompletedBill(null);
+    setTimeout(() => {
+      setLastCompletedBill(null);
+    }, 100);
   };
 
   const handleApplyCustomDiscount = (amount: number, type: 'percentage' | 'fixed') => {
@@ -247,7 +250,7 @@ const POS = () => {
           bill={lastCompletedBill} 
           customer={selectedCustomer} 
           isOpen={showPaymentSuccess}
-          onClose={() => setShowPaymentSuccess(false)}
+          onClose={() => handleBackToPos()}
           onBackToPos={handleBackToPos}
         />
       )}

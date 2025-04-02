@@ -9,30 +9,28 @@ interface ConfettiEffectProps {
 const ConfettiEffect: React.FC<ConfettiEffectProps> = ({ isActive }) => {
   useEffect(() => {
     if (isActive) {
-      // More controlled confetti that won't cause glitches
+      // Lighter confetti for better performance
       const runConfetti = () => {
         confetti({
-          particleCount: 30,
-          spread: 50,
+          particleCount: 20,  // Reduced particle count
+          spread: 40,
           origin: { y: 0.6 },
           colors: ['#9b87f5', '#6E59A5', '#0EA5E9'],
-          disableForReducedMotion: true
+          disableForReducedMotion: true,
+          scalar: 0.8  // Smaller confetti particles
         });
       };
       
-      // Run once immediately
-      runConfetti();
-      
-      // Then run only once more with delay
-      const timer1 = setTimeout(() => runConfetti(), 500);
+      // Run once with a short delay
+      const timer = setTimeout(() => runConfetti(), 100);
       
       return () => {
-        clearTimeout(timer1);
+        clearTimeout(timer);
       };
     }
   }, [isActive]);
 
-  return null; // This component doesn't render anything visible
+  return null;
 };
 
 export default ConfettiEffect;
