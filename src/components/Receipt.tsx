@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Printer, ArrowLeft, Check } from 'lucide-react';
@@ -17,15 +16,8 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
-
-  // Auto-hide success message after 3 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSuccessMsg(false);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) return;
@@ -51,9 +43,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       pdf.save(`cuephoria_receipt_${bill.id}.pdf`);
       
-      // Show success feedback
       setShowSuccessMsg(true);
-      setTimeout(() => setShowSuccessMsg(false), 3000);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -95,7 +85,6 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-scale-in overflow-hidden">
-        {/* Success banner */}
         {showSuccessMsg && (
           <div className="bg-green-500 text-white p-3 flex items-center justify-center animate-fade-in gap-2">
             <Check className="h-5 w-5" />
@@ -113,7 +102,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
           </button>
         </div>
         
-        <div ref={receiptRef} className="p-6 text-black">
+        <div ref={receiptRef} className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto">
           <div className="receipt-header">
             <h1 className="text-lg font-bold mb-1 font-heading">CUEPHORIA</h1>
             <p className="text-sm">Gaming Lounge & Café</p>
