@@ -363,14 +363,14 @@ const POS = () => {
           </CardHeader>
           
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
-            <TabsList className="px-6 flex flex-wrap justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
-              <TabsTrigger value="all" className="font-heading">All</TabsTrigger>
-              <TabsTrigger value="gaming" className="font-heading">Gaming</TabsTrigger>
-              <TabsTrigger value="food" className="font-heading">Food</TabsTrigger>
-              <TabsTrigger value="drinks" className="font-heading">Drinks</TabsTrigger>
-              <TabsTrigger value="tobacco" className="font-heading">Tobacco</TabsTrigger>
-              <TabsTrigger value="challenges" className="font-heading">Challenges</TabsTrigger>
-              <TabsTrigger value="membership" className="font-heading">
+            <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+              <TabsTrigger value="all" className="font-heading flex-grow basis-0">All</TabsTrigger>
+              <TabsTrigger value="gaming" className="font-heading flex-grow basis-0">Gaming</TabsTrigger>
+              <TabsTrigger value="food" className="font-heading flex-grow basis-0">Food</TabsTrigger>
+              <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">Drinks</TabsTrigger>
+              <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">Tobacco</TabsTrigger>
+              <TabsTrigger value="challenges" className="font-heading flex-grow basis-0">Challenges</TabsTrigger>
+              <TabsTrigger value="membership" className="font-heading flex-grow basis-0">
                 <Award className="h-4 w-4 mr-1" /> Membership
               </TabsTrigger>
             </TabsList>
