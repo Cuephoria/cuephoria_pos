@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Monitor, Users } from 'lucide-react';
 import { usePOS, Station, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 
 interface StationCardProps {
   station: Station;
@@ -22,8 +20,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   // Update elapsed time every second for active sessions
   useEffect(() => {
@@ -74,59 +70,16 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     if (selectedCustomerId) {
       startSession(station.id, selectedCustomerId);
       setSelectedCustomerId('');
-      toast({
-        title: 'Session Started',
-        description: `Started session on ${station.name}`,
-      });
     }
   };
 
   const handleEndSession = () => {
-    // Only proceed if there's an active session
-    if (!station.currentSession) return;
-    
-    const customerId = station.currentSession.customerId;
-    const sessionCost = cost > 0 ? cost : station.hourlyRate; // Ensure we have at least the minimum cost
-    const sessionDuration = elapsedTime > 0 ? elapsedTime : 1; // Ensure we have at least 1 minute
-    const stationName = station.name;
-    
-    console.log("Ending session with data:", {
-      customerId,
-      stationName,
-      duration: sessionDuration,
-      cost: sessionCost
-    });
-    
-    // End the session first
     endSession(station.id);
-    
-    // Generate a unique session ID for tracking
-    const sessionId = `session-${Date.now()}`;
-    
-    // Navigate to POS page with session data
-    navigate('/pos', { 
-      state: { 
-        fromSession: true, 
-        customerId,
-        stationName,
-        duration: sessionDuration,
-        cost: sessionCost,
-        sessionId
-      },
-      replace: true // Use replace to prevent back navigation issues
-    });
-    
-    // Reset local state
     setElapsedTime(0);
     setCost(0);
     setHours(0);
     setMinutes(0);
     setSeconds(0);
-    
-    toast({
-      title: 'Session Ended',
-      description: `${stationName} session: ${sessionDuration} minutes`,
-    });
   };
 
   const formatTimeDisplay = () => {

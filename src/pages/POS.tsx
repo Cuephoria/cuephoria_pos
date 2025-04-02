@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -13,11 +14,8 @@ import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useLocation, useNavigate } from 'react-router-dom';
 
 const POS = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const {
     products,
     customers,
@@ -50,61 +48,6 @@ const POS = () => {
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [processedSessionIds, setProcessedSessionIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const state = location.state as { 
-      fromSession?: boolean; 
-      customerId?: string; 
-      stationName?: string;
-      duration?: number;
-      cost?: number;
-      sessionId?: string;
-    } | null;
-    
-    console.log("POS page state:", state);
-    
-    if (state?.fromSession && 
-        state.customerId && 
-        state.stationName && 
-        state.duration !== undefined && 
-        state.cost !== undefined && 
-        state.sessionId) {
-        
-      if (processedSessionIds.includes(state.sessionId)) {
-        console.log("Session already processed, skipping:", state.sessionId);
-        return;
-      }
-      
-      console.log("Processing session data:", state);
-      
-      clearCart();
-      
-      selectCustomer(state.customerId);
-      
-      const sessionItem = {
-        id: state.sessionId,
-        type: 'session' as const,
-        name: `${state.stationName} (${state.duration} mins)`,
-        price: state.cost,
-        quantity: 1
-      };
-      
-      setTimeout(() => {
-        addToCart(sessionItem);
-        console.log("Added session to cart:", sessionItem);
-        
-        setProcessedSessionIds(prev => [...prev, state.sessionId]);
-        
-        toast({
-          title: 'Session Added to Cart',
-          description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
-        });
-      }, 100);
-      
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, navigate, addToCart, selectCustomer, toast, processedSessionIds, clearCart]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -119,22 +62,27 @@ const POS = () => {
     }
   }, [isCheckoutDialogOpen]);
 
+  // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
+      // First, clear any existing gaming sessions in the cart
       const newCart = cart.filter(item => item.type !== 'session');
       if (newCart.length !== cart.length) {
         clearCart();
+        // Re-add the product items
         newCart.forEach(item => {
           addToCart(item);
         });
       }
       
+      // Then check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
       
+      // If there are active sessions, add them to the cart
       if (activeStations.length > 0) {
         toast({
           title: 'Gaming Sessions Added',
