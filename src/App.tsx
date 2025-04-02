@@ -7,6 +7,7 @@ import { POSProvider } from './context/POSContext';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import AppSidebar from '@/components/AppSidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 // Pages
 import Dashboard from '@/pages/Dashboard';
@@ -39,73 +40,89 @@ function App() {
                 <Route 
                   path="/dashboard" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Dashboard />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Dashboard />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/pos" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <POS />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <POS />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/products" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Products />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Products />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/customers" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Customers />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Customers />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/stations" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Stations />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Stations />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/memberships" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Memberships />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Memberships />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/reports" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Reports />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Reports />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route 
                   path="/settings" 
                   element={
-                    <div className="flex min-h-screen bg-background">
-                      <AppSidebar />
-                      <Settings />
-                    </div>
+                    <SidebarProvider>
+                      <div className="flex min-h-screen w-full bg-background">
+                        <AppSidebar />
+                        <Settings />
+                      </div>
+                    </SidebarProvider>
                   } 
                 />
                 <Route path="*" element={<NotFound />} />
