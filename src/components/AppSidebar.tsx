@@ -46,13 +46,13 @@ const AppSidebar: React.FC = () => {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="px-2">
+            <SidebarMenu className="px-4">
               {menuItems.map((item, index) => (
                 <SidebarMenuItem key={item.path} 
-                  className={`animate-fade-in delay-${index * 100} ${index % 2 === 0 ? 'pl-4' : 'pl-8'}`}>
+                  className={`animate-fade-in delay-${index * 100} mb-2`}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.path}>
                     <Link to={item.path} className="flex items-center menu-item">
-                      <item.icon className={`mr-2 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
+                      <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
                       <span className="font-quicksand">{item.label}</span>
                     </Link>
                   </SidebarMenuButton>

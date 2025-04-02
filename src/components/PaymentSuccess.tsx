@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Download, Printer, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { Bill, Customer } from '@/context/POSContext';
 import { formatCurrency } from '@/components/ui/currency';
@@ -28,24 +28,28 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
   
   useEffect(() => {
     if (isOpen) {
-      // Trigger confetti when component is shown
-      const duration = 3000;
-      const end = Date.now() + duration;
-
-      const launchConfetti = () => {
+      // More controlled confetti that won't cause glitches
+      const runConfetti = () => {
         confetti({
-          particleCount: 100,
-          spread: 70,
+          particleCount: 50,
+          spread: 60,
           origin: { y: 0.6 },
           colors: ['#9b87f5', '#6E59A5', '#0EA5E9'],
+          disableForReducedMotion: true
         });
-        
-        if (Date.now() < end) {
-          requestAnimationFrame(launchConfetti);
-        }
       };
       
-      launchConfetti();
+      // Run once immediately
+      runConfetti();
+      
+      // Then run a couple more times with delay
+      const timer1 = setTimeout(() => runConfetti(), 300);
+      const timer2 = setTimeout(() => runConfetti(), 700);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     }
   }, [isOpen]);
 
@@ -103,15 +107,18 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg w-full p-0 overflow-hidden animate-scale-in bg-gradient-to-b from-white to-gray-50 border-none">
+        <DialogTitle className="sr-only">Payment Successful</DialogTitle>
+        <DialogDescription className="sr-only">Your payment has been processed successfully</DialogDescription>
+        
         <div className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple p-8 text-white flex flex-col items-center justify-center">
-          <div className="rounded-full bg-white/20 p-4 backdrop-blur-sm animate-bounce-slow mb-4">
+          <div className="rounded-full bg-white/20 p-4 backdrop-blur-sm mb-4">
             <CheckCircle2 className="h-12 w-12" />
           </div>
           <h2 className="text-2xl font-bold font-heading mb-2 animate-fade-in">Payment Successful!</h2>
           <p className="text-white/80 text-center animate-fade-in delay-100">Your transaction has been completed</p>
         </div>
         
-        <div className="p-6 max-h-[70vh] overflow-auto">
+        <div className="p-6 max-h-[60vh] overflow-auto">
           <div ref={receiptRef} className="bg-white p-6 rounded-lg shadow-sm text-black">
             <div className="receipt-header">
               <h1 className="text-lg font-bold mb-1 font-heading">CUEPHORIA</h1>
