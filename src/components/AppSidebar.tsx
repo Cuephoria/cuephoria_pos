@@ -1,148 +1,79 @@
 
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Sidebar } from '@/components/ui/sidebar';
-import Logo from '@/components/Logo';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users } from 'lucide-react';
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem 
+} from '@/components/ui/sidebar';
+import Logo from './Logo';
+import { useAuth } from '@/context/AuthContext';
 
-import {
-  LayoutDashboard,
-  Store,
-  Package,
-  Users,
-  Gamepad2,
-  Crown,
-  LineChart,
-  Settings,
-  Menu,
-} from 'lucide-react';
-import { useMobile } from '@/hooks/use-mobile';
-
-interface SidebarLinkProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  badge?: string | number;
-  showMobile?: boolean;
-  onClick?: () => void;
-}
-
-const SidebarLink: React.FC<SidebarLinkProps> = ({
-  to,
-  icon,
-  label,
-  badge,
-  showMobile = true,
-  onClick,
-}) => {
+const AppSidebar: React.FC = () => {
   const location = useLocation();
-  const isActive = location.pathname === to;
+  const { user, logout } = useAuth();
+  const hideOnPaths = ['/receipt'];
+  const shouldHide = hideOnPaths.some(path => location.pathname.includes(path));
+
+  if (!user || shouldHide) return null;
+
+  const menuItems = [
+    { icon: Home, label: 'Dashboard', path: '/dashboard' },
+    { icon: ShoppingCart, label: 'POS', path: '/pos' },
+    { icon: Clock, label: 'Gaming Stations', path: '/stations' },
+    { icon: Package, label: 'Products', path: '/products' },
+    { icon: Users, label: 'Customers', path: '/customers' },
+    { icon: BarChart2, label: 'Reports', path: '/reports' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
+  ];
 
   return (
-    <li className={cn(showMobile ? '' : 'hidden md:block')}>
-      <NavLink
-        to={to}
-        className={({ isActive }) =>
-          cn(
-            'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
-            isActive
-              ? 'bg-cuephoria-purple/20 text-white hover:bg-cuephoria-purple/30'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-          )
-        }
-        onClick={onClick}
-      >
-        <span className="flex items-center justify-center w-5 h-5 mr-2">
-          {icon}
-        </span>
-        <span className="flex-1">{label}</span>
-        {badge && (
-          <span className="ml-auto bg-cuephoria-purple/90 text-white px-2.5 py-0.5 rounded-full text-xs font-medium">
-            {badge}
-          </span>
-        )}
-      </NavLink>
-    </li>
-  );
-};
-
-const AppSidebar = () => {
-  const { isMobile, isSidebarOpen, toggleSidebar } = useMobile();
-
-  return (
-    <Sidebar 
-      collapsible="offcanvas"
-      className="border-r border-border"
-    >
-      <div className="h-16 flex items-center px-4 border-b sticky top-0 bg-background z-10">
-        <div className="flex items-center justify-center w-full md:justify-start">
-          <Logo size="md" className="py-2" />
+    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
+      <SidebarHeader className="p-4 flex items-center gap-2">
+        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-gradient-to-r from-[#6E59A5] to-[#9b87f5] shadow-lg animate-pulse-glow">
+          <span className="text-white font-bold font-heading">CQ</span>
         </div>
-        <div className="ml-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className="md:hidden"
+        <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item, index) => (
+                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100}`}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.path}>
+                    <Link to={item.path} className="flex items-center menu-item">
+                      <item.icon className={`mr-2 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
+                      <span className="font-quicksand">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="p-4">
+        <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 animate-scale-in shadow-md">
+          <div className="flex items-center">
+            <User className="h-6 w-6 text-cuephoria-lightpurple" />
+            <span className="ml-2 text-sm font-medium font-quicksand">{user.username}</span>
+          </div>
+          <button 
+            onClick={logout}
+            className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading"
           >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle Menu</span>
-          </Button>
+            Logout
+          </button>
         </div>
-      </div>
-      <div className="flex-1 overflow-auto py-4">
-        <nav className="grid items-start px-2 space-y-2">
-          <SidebarLink
-            to="/dashboard"
-            icon={<LayoutDashboard className="h-4 w-4" />}
-            label="Dashboard"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/pos"
-            icon={<Store className="h-4 w-4" />}
-            label="Point of Sale"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/products"
-            icon={<Package className="h-4 w-4" />}
-            label="Products"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/customers"
-            icon={<Users className="h-4 w-4" />}
-            label="Customers"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/stations"
-            icon={<Gamepad2 className="h-4 w-4" />}
-            label="Gaming Stations"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/memberships"
-            icon={<Crown className="h-4 w-4" />}
-            label="Memberships"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/reports"
-            icon={<LineChart className="h-4 w-4" />}
-            label="Reports"
-            onClick={toggleSidebar}
-          />
-          <SidebarLink
-            to="/settings"
-            icon={<Settings className="h-4 w-4" />}
-            label="Settings"
-            onClick={toggleSidebar}
-          />
-        </nav>
-      </div>
+      </SidebarFooter>
     </Sidebar>
   );
 };

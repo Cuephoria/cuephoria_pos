@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Customer, MembershipTier } from '@/types/pos.types';
+import { Customer } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
@@ -22,8 +22,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const newCustomer = { 
       ...customer, 
       id: generateId(), 
-      createdAt: new Date(),
-      membershipTier: customer.membershipTier || 'none'
+      createdAt: new Date() 
     };
     setCustomers([...customers, newCustomer]);
     return newCustomer;
@@ -31,20 +30,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const updateCustomer = (customer: Customer) => {
     setCustomers(customers.map(c => c.id === customer.id ? customer : c));
-    
-    // If the updated customer is the selected one, update selectedCustomer as well
-    if (selectedCustomer && selectedCustomer.id === customer.id) {
-      setSelectedCustomer(customer);
-    }
   };
   
   const deleteCustomer = (id: string) => {
     setCustomers(customers.filter(c => c.id !== id));
-    
-    // If the deleted customer is the selected one, clear selectedCustomer
-    if (selectedCustomer && selectedCustomer.id === id) {
-      setSelectedCustomer(null);
-    }
   };
   
   const selectCustomer = (id: string | null) => {
@@ -56,28 +45,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     setSelectedCustomer(customer || null);
   };
   
-  const upgradeMembership = (customerId: string, tier: MembershipTier) => {
-    const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
-    
-    // Set membership expiry to 7 days from now
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 7); // Weekly pass = 7 days
-    
-    const updatedCustomer = {
-      ...customer,
-      isMember: true,
-      membershipTier: tier,
-      membershipStartDate: startDate,
-      membershipEndDate: endDate
-    };
-    
-    updateCustomer(updatedCustomer);
-    
-    return updatedCustomer;
-  };
-  
   return {
     customers,
     setCustomers,
@@ -86,7 +53,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     addCustomer,
     updateCustomer,
     deleteCustomer,
-    selectCustomer,
-    upgradeMembership
+    selectCustomer
   };
 };

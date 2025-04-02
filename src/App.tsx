@@ -1,155 +1,126 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
-import { POSProvider } from './context/POSContext';
-import { AuthProvider } from './context/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
-import AppSidebar from '@/components/AppSidebar';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { POSProvider } from "@/context/POSContext";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import AppSidebar from "@/components/AppSidebar";
 
 // Pages
-import Dashboard from '@/pages/Dashboard';
-import POS from '@/pages/POS';
-import Products from '@/pages/Products';
-import Customers from '@/pages/Customers';
-import Stations from '@/pages/Stations';
-import Memberships from '@/pages/Memberships';
-import Reports from '@/pages/Reports';
-import Settings from '@/pages/Settings';
-import Login from '@/pages/Login';
-import NotFound from '@/pages/NotFound';
-import Index from '@/pages/Index';
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Stations from "./pages/Stations";
+import Products from "./pages/Products";
+import POS from "./pages/POS";
+import Customers from "./pages/Customers";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 
-import './App.css';
+// Create a new QueryClient instance outside of the component
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
-// Create React Query client
-const queryClient = new QueryClient();
-
-function App() {
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
+      <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
+    </div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="dark">
-          <POSProvider>
-            <Router>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Dashboard />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/pos" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <POS />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/products" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Products />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/customers" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Customers />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/stations" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Stations />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/memberships" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Memberships />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/reports" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Reports />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route 
-                  path="/settings" 
-                  element={
-                    <SidebarProvider>
-                      <div className="flex min-h-screen w-full bg-background">
-                        <AppSidebar />
-                        <div className="flex-1 overflow-auto">
-                          <Settings />
-                        </div>
-                      </div>
-                    </SidebarProvider>
-                  } 
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Router>
-            <Toaster />
-          </POSProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col">
+          <div className="hidden md:block">
+            <SidebarTrigger />
+          </div>
+          {children}
+        </div>
+      </div>
+    </SidebarProvider>
   );
-}
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <POSProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/pos" element={
+                <ProtectedRoute>
+                  <POS />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/stations" element={
+                <ProtectedRoute>
+                  <Stations />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/customers" element={
+                <ProtectedRoute>
+                  <Customers />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </POSProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;

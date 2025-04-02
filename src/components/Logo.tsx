@@ -14,11 +14,10 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', className }) => {
   };
 
   return (
-    <div className={`font-bold ${sizeClasses[size]} ${className} flex items-center`}>
-      <div className="inline-flex items-center bg-gradient-to-r from-cuephoria-purple via-cuephoria-orange to-cuephoria-blue bg-clip-text text-transparent">
-        <span className="font-heading">Cuephoria</span>
-        <span className="ml-1 font-heading">POS</span>
-      </div>
+    <div className={`font-bold ${sizeClasses[size]} ${className}`}>
+      <span className="text-cuephoria-purple">Cue</span>
+      <span className="text-cuephoria-orange">phoria</span>
+      <span className="ml-1 text-cuephoria-blue">POS</span>
     </div>
   );
 };
