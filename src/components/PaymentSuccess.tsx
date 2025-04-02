@@ -31,8 +31,8 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
       // More controlled confetti that won't cause glitches
       const runConfetti = () => {
         confetti({
-          particleCount: 50,
-          spread: 60,
+          particleCount: 30,
+          spread: 50,
           origin: { y: 0.6 },
           colors: ['#9b87f5', '#6E59A5', '#0EA5E9'],
           disableForReducedMotion: true
@@ -42,13 +42,11 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
       // Run once immediately
       runConfetti();
       
-      // Then run a couple more times with delay
-      const timer1 = setTimeout(() => runConfetti(), 300);
-      const timer2 = setTimeout(() => runConfetti(), 700);
+      // Then run only once more with delay
+      const timer1 = setTimeout(() => runConfetti(), 500);
       
       return () => {
         clearTimeout(timer1);
-        clearTimeout(timer2);
       };
     }
   }, [isOpen]);
@@ -102,13 +100,11 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-full p-0 overflow-hidden animate-scale-in bg-gradient-to-b from-white to-gray-50 border-none">
-        <DialogTitle className="sr-only">Payment Successful</DialogTitle>
-        <DialogDescription className="sr-only">Your payment has been processed successfully</DialogDescription>
+      <DialogContent className="max-w-lg w-full p-0 overflow-hidden animate-scale-in bg-gradient-to-b from-white to-gray-50 border-none" aria-labelledby="payment-success-title" aria-describedby="payment-success-description">
+        <DialogTitle id="payment-success-title" className="sr-only">Payment Successful</DialogTitle>
+        <DialogDescription id="payment-success-description" className="sr-only">Your payment has been processed successfully</DialogDescription>
         
         <div className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple p-8 text-white flex flex-col items-center justify-center">
           <div className="rounded-full bg-white/20 p-4 backdrop-blur-sm mb-4">
@@ -118,7 +114,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
           <p className="text-white/80 text-center animate-fade-in delay-100">Your transaction has been completed</p>
         </div>
         
-        <div className="p-6 max-h-[60vh] overflow-auto">
+        <div className="p-6 max-h-[calc(70vh-256px)] overflow-auto">
           <div ref={receiptRef} className="bg-white p-6 rounded-lg shadow-sm text-black">
             <div className="receipt-header">
               <h1 className="text-lg font-bold mb-1 font-heading">CUEPHORIA</h1>
@@ -160,7 +156,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
                   <span>
                     Discount {bill.discountType === 'percentage' ? `(${bill.discount}%)` : ''}:
                   </span>
-                  <span>-₹{bill.discount.toLocaleString('en-IN')}</span>
+                  <span>-₹{bill.discountValue.toLocaleString('en-IN')}</span>
                 </div>
               )}
               

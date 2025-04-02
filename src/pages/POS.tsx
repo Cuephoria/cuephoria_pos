@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -44,27 +43,22 @@ const POS = () => {
     }
   }, [isCheckoutDialogOpen]);
 
-  // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
-      // First, clear any existing gaming sessions in the cart
       const newCart = cart.filter(item => item.type !== 'session');
       if (newCart.length !== cart.length) {
         clearCart();
-        // Re-add the product items
         newCart.forEach(item => {
           addToCart(item);
         });
       }
       
-      // Then check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
       
-      // If there are active sessions, add them to the cart
       activeStations.forEach(station => {
         const sessionStart = station.currentSession ? new Date(station.currentSession.startTime) : new Date();
         const now = new Date();
@@ -170,6 +164,7 @@ const POS = () => {
       setIsCheckoutDialogOpen(false);
       setLastCompletedBill(bill);
       setShowPaymentSuccess(true);
+      console.log("Payment success dialog should show now", { showPaymentSuccess: true, bill });
     }
   };
 
