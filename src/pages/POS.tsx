@@ -7,7 +7,7 @@ import CustomerSelector from '@/components/pos/CustomerSelector';
 import Cart from '@/components/pos/Cart';
 import ProductGrid from '@/components/pos/ProductGrid';
 import CheckoutDialog from '@/components/pos/CheckoutDialog';
-import PaymentSuccess from '@/components/PaymentSuccess';
+import PaymentSuccess from '@/components/payment/PaymentSuccess';
 
 const POS = () => {
   const {
