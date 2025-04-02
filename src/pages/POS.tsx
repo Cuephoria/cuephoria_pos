@@ -363,7 +363,7 @@ const POS = () => {
           </CardHeader>
           
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
-            <TabsList className="px-6 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+            <TabsList className="px-6 flex flex-wrap justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
               <TabsTrigger value="all" className="font-heading">All</TabsTrigger>
               <TabsTrigger value="gaming" className="font-heading">Gaming</TabsTrigger>
               <TabsTrigger value="food" className="font-heading">Food</TabsTrigger>
