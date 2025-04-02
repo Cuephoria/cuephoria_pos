@@ -19,10 +19,8 @@ import { useAuth } from '@/context/AuthContext';
 const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const hideOnPaths = ['/receipt'];
-  const shouldHide = hideOnPaths.some(path => location.pathname.includes(path));
 
-  if (!user || shouldHide) return null;
+  if (!user) return null;
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
