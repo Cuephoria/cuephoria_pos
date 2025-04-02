@@ -173,6 +173,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discount,
         discountType,
         loyaltyPointsUsed,
+        setStations,
         addProduct,
         updateProduct,
         deleteProduct,

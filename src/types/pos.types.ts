@@ -82,6 +82,9 @@ export interface POSContextType {
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
   
+  // Station state setter
+  setStations: (stations: Station[]) => void;
+  
   // Product functions
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (product: Product) => void;
