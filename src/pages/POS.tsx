@@ -162,18 +162,14 @@ const POS = () => {
     const bill = completeSale(paymentMethod);
     if (bill) {
       setIsCheckoutDialogOpen(false);
-      setTimeout(() => {
-        setLastCompletedBill(bill);
-        setShowPaymentSuccess(true);
-      }, 100);
+      setLastCompletedBill(bill);
+      setShowPaymentSuccess(true);
     }
   };
 
   const handleBackToPos = () => {
     setShowPaymentSuccess(false);
-    setTimeout(() => {
-      setLastCompletedBill(null);
-    }, 100);
+    setLastCompletedBill(null);
   };
 
   const handleApplyCustomDiscount = (amount: number, type: 'percentage' | 'fixed') => {

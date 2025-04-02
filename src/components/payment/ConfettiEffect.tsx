@@ -1,35 +1,12 @@
-
-import React, { useEffect } from 'react';
-import confetti from 'canvas-confetti';
+import React from 'react';
 
 interface ConfettiEffectProps {
   isActive: boolean;
 }
 
-const ConfettiEffect: React.FC<ConfettiEffectProps> = ({ isActive }) => {
-  useEffect(() => {
-    if (isActive) {
-      // Lighter confetti for better performance
-      const runConfetti = () => {
-        confetti({
-          particleCount: 20,  // Reduced particle count
-          spread: 40,
-          origin: { y: 0.6 },
-          colors: ['#9b87f5', '#6E59A5', '#0EA5E9'],
-          disableForReducedMotion: true,
-          scalar: 0.8  // Smaller confetti particles
-        });
-      };
-      
-      // Run once with a short delay
-      const timer = setTimeout(() => runConfetti(), 100);
-      
-      return () => {
-        clearTimeout(timer);
-      };
-    }
-  }, [isActive]);
-
+// This component is now a placeholder that doesn't render anything
+// We're keeping the interface for compatibility but not using confetti
+const ConfettiEffect: React.FC<ConfettiEffectProps> = () => {
   return null;
 };
 

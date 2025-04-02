@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { CheckCircle2 } from 'lucide-react';
 import { Bill, Customer } from '@/context/POSContext';
@@ -30,6 +30,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({
         <DialogTitle id="payment-success-title" className="sr-only">Payment Successful</DialogTitle>
         <DialogDescription id="payment-success-description" className="sr-only">Your payment has been processed successfully</DialogDescription>
         
+        {/* ConfettiEffect is still rendered but does nothing now */}
         <ConfettiEffect isActive={isOpen} />
         
         <div className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple p-6 text-white flex flex-col items-center justify-center">
