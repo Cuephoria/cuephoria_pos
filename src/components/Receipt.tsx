@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Bill, Customer } from '@/context/POSContext';
 import { generatePDF, handlePrint } from './receipt/receiptUtils';
 import ReceiptContainer from './receipt/ReceiptContainer';
@@ -12,29 +12,21 @@ interface ReceiptProps {
   bill: Bill;
   customer: Customer;
   onClose: () => void;
-  autoDownload?: boolean;
 }
 
-const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload = false }) => {
+const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
-  const [pdfGenerated, setPdfGenerated] = useState(false);
 
   const handleDownloadPDF = async () => {
-    if (!receiptRef.current) {
-      console.error('Receipt reference is null');
-      return;
-    }
+    if (!receiptRef.current) return;
     
     setIsDownloading(true);
-    console.log('Starting download process for bill:', bill.id);
     
     try {
       await generatePDF(receiptRef.current, bill.id);
-      console.log('PDF generated successfully');
-      setPdfGenerated(true);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -56,35 +48,15 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload
     setShowSuccessMsg(false);
   };
 
-  // Auto-download PDF if autoDownload is true
-  useEffect(() => {
-    console.log('Receipt component mounted, autoDownload:', autoDownload);
-    let timeoutId: ReturnType<typeof setTimeout>;
-    
-    if (autoDownload && !pdfGenerated) {
-      // Add a longer delay to ensure the component is fully rendered
-      timeoutId = setTimeout(() => {
-        console.log('Attempting auto-download now...');
-        handleDownloadPDF();
-      }, 1000);
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [autoDownload, bill.id, pdfGenerated]);
-
   return (
     <ReceiptContainer>
       {showSuccessMsg && <SuccessMessage onClose={handleCloseSuccessMsg} />}
       <ReceiptTitle onClose={onClose} />
-      <div className="pdf-container overflow-auto max-h-[calc(100vh-250px)]">
-        <ReceiptContent 
-          bill={bill} 
-          customer={customer} 
-          receiptRef={receiptRef} 
-        />
-      </div>
+      <ReceiptContent 
+        bill={bill} 
+        customer={customer} 
+        receiptRef={receiptRef} 
+      />
       <ReceiptActions 
         onPrint={handlePrintReceipt}
         onDownload={handleDownloadPDF}

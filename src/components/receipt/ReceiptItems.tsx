@@ -8,14 +8,15 @@ interface ReceiptItemsProps {
 
 const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill }) => {
   return (
-    <div className="mb-4">
-      <div className="font-medium border-b border-gray-200 pb-2 mb-2">Items</div>
+    <div className="space-y-1 mb-4">
+      <div className="text-sm font-medium border-b pb-1 mb-2">Items</div>
       {bill.items.map((item, index) => (
-        <div key={index} className="flex justify-between mb-2">
+        <div key={index} className="receipt-item text-sm">
           <div>
-            {item.name} {item.quantity > 1 && <span>x{item.quantity}</span>}
+            <span>{item.name}</span>
+            {item.quantity > 1 && <span className="text-gray-600"> x{item.quantity}</span>}
           </div>
-          <div>₹{item.total.toLocaleString('en-IN')}</div>
+          <span>₹{item.total.toLocaleString('en-IN')}</span>
         </div>
       ))}
     </div>

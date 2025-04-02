@@ -5,14 +5,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check, Printer } from 'lucide-react';
+import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
+import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { handlePrint } from '@/components/receipt/receiptUtils';
 
 const POS = () => {
   const {
@@ -46,6 +46,7 @@ const POS = () => {
   const [customDiscountType, setCustomDiscountType] = useState<'percentage' | 'fixed'>(discountType);
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
@@ -185,147 +186,6 @@ const POS = () => {
         description: `Total: ${formatCurrency(bill.total)}`,
         className: 'bg-green-600',
       });
-    }
-  };
-
-  // Function to generate receipt HTML for printing
-  const generateReceiptHTML = (bill: Bill, customer: Customer) => {
-    const formattedDate = new Date(bill.createdAt).toLocaleString();
-    
-    return `
-      <html>
-        <head>
-          <title>Cuephoria Receipt</title>
-          <style>
-            body { 
-              font-family: monospace; 
-              margin: 0; 
-              padding: 20px;
-              max-width: 85mm;
-              margin: 0 auto;
-            }
-            .receipt-header { 
-              text-align: center; 
-              border-bottom: 1px solid #eee; 
-              padding-bottom: 10px; 
-              margin-bottom: 20px; 
-            }
-            .receipt-title { 
-              font-size: 18px; 
-              font-weight: bold;
-              margin-bottom: 5px;
-            }
-            .receipt-subtitle { 
-              font-size: 14px;
-              color: #666;
-            }
-            .customer-info {
-              margin-bottom: 15px;
-            }
-            .receipt-item { 
-              display: flex; 
-              justify-content: space-between; 
-              margin-bottom: 8px; 
-            }
-            .receipt-divider {
-              border-top: 1px dashed #eee;
-              margin: 10px 0;
-            }
-            .receipt-summary {
-              margin-top: 15px;
-            }
-            .receipt-total { 
-              border-top: 1px solid #eee; 
-              margin-top: 10px; 
-              padding-top: 10px; 
-              font-weight: bold; 
-            }
-            .receipt-footer {
-              text-align: center;
-              margin-top: 20px;
-              padding-top: 10px;
-              border-top: 1px solid #eee;
-              color: #666;
-              font-size: 14px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="receipt-header">
-            <div class="receipt-title">Cuephoria</div>
-            <div class="receipt-subtitle">Gaming Cafe</div>
-            <div>${formattedDate}</div>
-            <div>Bill #${bill.id}</div>
-          </div>
-          
-          <div class="customer-info">
-            <div><strong>Customer:</strong> ${customer.name}</div>
-            <div>${customer.phone}</div>
-          </div>
-          
-          <div class="receipt-items">
-            ${bill.items.map(item => `
-              <div class="receipt-item">
-                <div>${item.name} x${item.quantity}</div>
-                <div>₹${item.total.toLocaleString('en-IN')}</div>
-              </div>
-            `).join('')}
-          </div>
-          
-          <div class="receipt-divider"></div>
-          
-          <div class="receipt-summary">
-            <div class="receipt-item">
-              <div>Subtotal</div>
-              <div>₹${bill.subtotal.toLocaleString('en-IN')}</div>
-            </div>
-            
-            ${bill.discount > 0 ? `
-              <div class="receipt-item">
-                <div>Discount ${bill.discountType === 'percentage' ? `(${bill.discount}%)` : ''}</div>
-                <div>-₹${bill.discountValue.toLocaleString('en-IN')}</div>
-              </div>
-            ` : ''}
-            
-            ${bill.loyaltyPointsUsed > 0 ? `
-              <div class="receipt-item">
-                <div>Loyalty Points Used</div>
-                <div>-₹${bill.loyaltyPointsUsed.toLocaleString('en-IN')}</div>
-              </div>
-            ` : ''}
-            
-            <div class="receipt-item receipt-total">
-              <div>Total</div>
-              <div>₹${bill.total.toLocaleString('en-IN')}</div>
-            </div>
-            
-            <div class="receipt-item">
-              <div>Payment Method</div>
-              <div>${bill.paymentMethod.toUpperCase()}</div>
-            </div>
-          </div>
-          
-          <div class="receipt-footer">
-            <p>Thank you for visiting Cuephoria!</p>
-            <p>We hope to see you again soon.</p>
-          </div>
-        </body>
-      </html>
-    `;
-  };
-
-  // Function to handle print button click
-  const handlePrintReceipt = () => {
-    if (lastCompletedBill && selectedCustomer) {
-      const receiptHTML = generateReceiptHTML(lastCompletedBill, selectedCustomer);
-      handlePrint(receiptHTML);
-      
-      toast({
-        title: 'Printing Receipt',
-        description: 'Sending receipt to printer...',
-      });
-      
-      setShowSuccess(false);
     }
   };
 
@@ -711,7 +571,7 @@ const POS = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Success Dialog with Print button instead of View Receipt */}
+      {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
         <DialogContent className="max-w-md animate-scale-in text-center">
           <div className="flex flex-col items-center justify-center py-6">
@@ -729,15 +589,26 @@ const POS = () => {
               {lastCompletedBill ? new Date(lastCompletedBill.createdAt).toLocaleString() : ''}
             </p>
             <Button 
-              onClick={handlePrintReceipt}
+              onClick={() => {
+                setShowSuccess(false);
+                setShowReceipt(true);
+              }}
               className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
             >
-              <Printer className="mr-2 h-4 w-4" />
-              Print Receipt
+              <ReceiptIcon className="mr-2 h-4 w-4" />
+              View Receipt
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {showReceipt && lastCompletedBill && selectedCustomer && (
+        <Receipt 
+          bill={lastCompletedBill} 
+          customer={selectedCustomer} 
+          onClose={() => setShowReceipt(false)} 
+        />
+      )}
     </div>
   );
 };
