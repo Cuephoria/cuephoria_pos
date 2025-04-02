@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { 
   POSContextType, 
@@ -99,25 +98,30 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const completeSale = (paymentMethod: 'cash' | 'upi') => {
-    const bill = completeSaleBase(
-      cart, 
-      selectedCustomer, 
-      discount, 
-      discountType, 
-      loyaltyPointsUsed, 
-      calculateTotal, 
-      paymentMethod,
-      products
-    );
-    
-    if (bill) {
-      // Clear the cart after successful sale
-      clearCart();
-      // Reset selected customer
-      setSelectedCustomer(null);
+    try {
+      const bill = completeSaleBase(
+        cart, 
+        selectedCustomer, 
+        discount, 
+        discountType, 
+        loyaltyPointsUsed, 
+        calculateTotal, 
+        paymentMethod,
+        products
+      );
+      
+      if (bill) {
+        // Clear the cart after successful sale
+        clearCart();
+        // Reset selected customer
+        setSelectedCustomer(null);
+      }
+      
+      return bill;
+    } catch (error) {
+      // Re-throw the error to be handled by the component
+      throw error;
     }
-    
-    return bill;
   };
   
   const exportBills = () => {

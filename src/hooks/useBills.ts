@@ -1,106 +1,54 @@
-
 import { useState, useEffect } from 'react';
-import { Bill, CartItem, Customer, Product } from '@/types/pos.types';
-import { generateId, exportBillsToCSV, exportCustomersToCSV } from '@/utils/pos.utils';
-import { useToast } from '@/hooks/use-toast';
+import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
+import { generateId } from '@/utils/pos.utils';
 
 export const useBills = (
   updateCustomer: (customer: Customer) => void,
   updateProduct: (product: Product) => void
 ) => {
   const [bills, setBills] = useState<Bill[]>([]);
-  const { toast } = useToast();
-  
+
   // Load data from localStorage
   useEffect(() => {
     const storedBills = localStorage.getItem('cuephoriaBills');
-    if (storedBills) setBills(JSON.parse(storedBills));
+    if (storedBills) {
+      setBills(JSON.parse(storedBills));
+    }
   }, []);
-  
+
   // Save data to localStorage
   useEffect(() => {
     localStorage.setItem('cuephoriaBills', JSON.stringify(bills));
   }, [bills]);
-
-  const processMembershipPurchase = (
-    customer: Customer,
-    item: CartItem
-  ): { updatedCustomer: Customer; error?: string } => {
-    // Check if customer is already a member with valid membership
-    if (customer.isMember) {
-      const expiryDate = customer.membershipExpiryDate 
-        ? new Date(customer.membershipExpiryDate) 
-        : undefined;
-      
-      if (expiryDate && expiryDate > new Date()) {
-        return { 
-          updatedCustomer: customer, 
-          error: "Customer already has an active membership" 
-        };
-      }
-    }
-    
-    // Calculate new expiry date based on pass type
-    const today = new Date();
-    let expiryDate = new Date();
-    
-    // Weekly or monthly pass
-    if (item.name.toLowerCase().includes('weekly')) {
-      expiryDate.setDate(today.getDate() + 7); // 7 days from now
-    } else if (item.name.toLowerCase().includes('monthly')) {
-      expiryDate.setMonth(today.getMonth() + 1); // 1 month from now
-    } else {
-      // Default to 7 days if can't determine
-      expiryDate.setDate(today.getDate() + 7); 
-    }
-    
-    // Update customer with new membership status
-    return {
-      updatedCustomer: {
-        ...customer,
-        isMember: true,
-        membershipExpiryDate: expiryDate
-      }
-    };
-  };
   
   const completeSale = (
-    cart: CartItem[], 
-    selectedCustomer: Customer | null, 
-    discount: number, 
-    discountType: 'percentage' | 'fixed', 
-    loyaltyPointsUsed: number, 
-    calculateTotal: () => number, 
+    cart: CartItem[],
+    selectedCustomer: Customer | null,
+    discount: number,
+    discountType: 'percentage' | 'fixed',
+    loyaltyPointsUsed: number,
+    calculateTotal: () => number,
     paymentMethod: 'cash' | 'upi',
     products: Product[]
   ) => {
-    if (!selectedCustomer || cart.length === 0) return undefined;
+    if (!selectedCustomer) return undefined;
     
-    // Check for membership products and handle accordingly
+    // Check if customer is trying to buy a membership when already a member
     const membershipItems = cart.filter(item => {
-      const product = products.find(p => p.id === item.id);
-      return product && product.category === 'membership';
+      const product = products.find(p => p.id === item.id && p.category === 'membership');
+      return product !== undefined;
     });
     
-    // Process membership purchases if any
-    if (membershipItems.length > 0) {
-      for (const item of membershipItems) {
-        const { updatedCustomer, error } = processMembershipPurchase(selectedCustomer, item);
-        
-        if (error) {
-          toast({
-            title: "Membership Error",
-            description: error,
-            variant: "destructive"
-          });
-          return undefined;
-        }
-        
-        // Update the customer with new membership information
-        selectedCustomer = updatedCustomer;
+    if (membershipItems.length > 0 && selectedCustomer.isMember) {
+      if (new Date(selectedCustomer.membershipExpiryDate as Date) > new Date()) {
+        // Customer already has an active membership
+        console.error("Customer already has an active membership");
+        throw new Error("Customer already has an active membership");
       }
     }
     
+    // Create bill
+    const total = calculateTotal();
     const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
     
     let discountValue = 0;
@@ -110,13 +58,10 @@ export const useBills = (
       discountValue = discount;
     }
     
-    const total = calculateTotal();
+    // Calculate loyalty points earned (1 point per 100 rupees spent)
+    const loyaltyPointsEarned = Math.floor(total / 100);
     
-    // Calculate loyalty points earned (1 point for every ₹10 spent)
-    const loyaltyPointsEarned = Math.floor(total / 10);
-    
-    // Create the bill
-    const newBill = {
+    const bill: Bill = {
       id: generateId(),
       customerId: selectedCustomer.id,
       items: [...cart],
@@ -131,20 +76,47 @@ export const useBills = (
       createdAt: new Date()
     };
     
-    setBills([...bills, newBill]);
+    // Update bills
+    setBills([...bills, bill]);
     
     // Update customer data
-    updateCustomer({
+    const updatedCustomer = {
       ...selectedCustomer,
-      loyaltyPoints: selectedCustomer.loyaltyPoints + loyaltyPointsEarned - loyaltyPointsUsed,
+      loyaltyPoints: selectedCustomer.loyaltyPoints - loyaltyPointsUsed + loyaltyPointsEarned,
       totalSpent: selectedCustomer.totalSpent + total
-    });
+    };
+    
+    // Handle membership purchase
+    if (membershipItems.length > 0) {
+      const membershipProduct = products.find(p => 
+        p.id === membershipItems[0].id && p.category === 'membership'
+      );
+      
+      if (membershipProduct) {
+        // Set membership expiry date based on product name
+        const currentDate = new Date();
+        let expiryDate = new Date();
+        
+        if (membershipProduct.name.toLowerCase().includes("weekly")) {
+          // Add 7 days for weekly pass
+          expiryDate.setDate(currentDate.getDate() + 7);
+        } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
+          // Add 30 days for monthly pass
+          expiryDate.setDate(currentDate.getDate() + 30);
+        }
+        
+        updatedCustomer.isMember = true;
+        updatedCustomer.membershipExpiryDate = expiryDate;
+      }
+    }
+    
+    updateCustomer(updatedCustomer);
     
     // Update product stock
     cart.forEach(item => {
       if (item.type === 'product') {
         const product = products.find(p => p.id === item.id);
-        if (product) {
+        if (product && product.category !== 'membership') {
           updateProduct({
             ...product,
             stock: product.stock - item.quantity
@@ -153,17 +125,83 @@ export const useBills = (
       }
     });
     
-    return newBill;
+    return bill;
   };
   
   const exportBills = (customers: Customer[]) => {
-    exportBillsToCSV(bills, customers);
+    if (bills.length === 0) {
+      console.log("No bills to export.");
+      return;
+    }
+    
+    const billData = bills.map(bill => {
+      const customer = customers.find(c => c.id === bill.customerId);
+      const customerName = customer ? customer.name : 'Unknown Customer';
+      
+      const itemsData = bill.items.map(item => {
+        return `${item.name} (₹${item.price.toFixed(2)} x ${item.quantity})`;
+      }).join(', ');
+      
+      return `
+        Bill ID: ${bill.id}
+        Customer: ${customerName}
+        Items: ${itemsData}
+        Subtotal: ₹${bill.subtotal.toFixed(2)}
+        Discount: ${bill.discount}%
+        Total: ₹${bill.total.toFixed(2)}
+        Payment Method: ${bill.paymentMethod}
+        Date: ${bill.createdAt.toLocaleString()}
+        --------------------------------------------------
+      `;
+    }).join('\n');
+    
+    const filename = 'cuephoria_bills.txt';
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(billData));
+    element.setAttribute('download', filename);
+    
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    
+    element.click();
+    
+    document.body.removeChild(element);
   };
   
   const exportCustomers = (customers: Customer[]) => {
-    exportCustomersToCSV(customers);
+    if (customers.length === 0) {
+      console.log("No customers to export.");
+      return;
+    }
+    
+    const customerData = customers.map(customer => {
+      return `
+        Customer ID: ${customer.id}
+        Name: ${customer.name}
+        Phone: ${customer.phone}
+        Email: ${customer.email || 'N/A'}
+        Is Member: ${customer.isMember ? 'Yes' : 'No'}
+        Membership Expiry: ${customer.membershipExpiryDate ? customer.membershipExpiryDate.toLocaleDateString() : 'N/A'}
+        Loyalty Points: ${customer.loyaltyPoints}
+        Total Spent: ₹${customer.totalSpent.toFixed(2)}
+        Created At: ${customer.createdAt.toLocaleString()}
+        --------------------------------------------------
+      `;
+    }).join('\n');
+    
+    const filename = 'cuephoria_customers.txt';
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(customerData));
+    element.setAttribute('download', filename);
+    
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    
+    element.click();
+    
+    document.body.removeChild(element);
   };
-  
+
   return {
     bills,
     setBills,

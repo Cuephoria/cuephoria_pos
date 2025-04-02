@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Customer } from '@/context/POSContext';
-import { CalendarCheck } from 'lucide-react';
+import { CalendarCheck, Award } from 'lucide-react';
 
 interface CustomerInfoProps {
   customer: Customer;
@@ -15,6 +15,12 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString();
   };
+  
+  const isMembershipActive = () => {
+    if (!customer.isMember || !customer.membershipExpiryDate) return false;
+    const expiryDate = new Date(customer.membershipExpiryDate);
+    return expiryDate > new Date();
+  };
 
   return (
     <div className="mb-4">
@@ -22,8 +28,8 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
       <p className="text-xs text-gray-600">{customer.phone}</p>
       {customer.isMember && (
         <p className="text-xs flex items-center text-cuephoria-purple mt-1">
-          <CalendarCheck className="h-3 w-3 mr-1" />
-          <span>Premium Member</span>
+          <Award className="h-3 w-3 mr-1" />
+          <span>{isMembershipActive() ? 'Active Member' : 'Expired Membership'}</span>
           {customer.membershipExpiryDate && (
             <span className="ml-1">until {formatDate(customer.membershipExpiryDate)}</span>
           )}

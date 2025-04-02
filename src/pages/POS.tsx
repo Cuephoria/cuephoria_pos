@@ -174,17 +174,25 @@ const POS = () => {
       return;
     }
     
-    const bill = completeSale(paymentMethod);
-    if (bill) {
-      setIsCheckoutDialogOpen(false);
-      setLastCompletedBill(bill);
-      
-      setShowSuccess(true);
-      
+    try {
+      const bill = completeSale(paymentMethod);
+      if (bill) {
+        setIsCheckoutDialogOpen(false);
+        setLastCompletedBill(bill);
+        
+        setShowSuccess(true);
+        
+        toast({
+          title: 'Sale Completed',
+          description: `Total: ${formatCurrency(bill.total)}`,
+          className: 'bg-green-600',
+        });
+      }
+    } catch (error) {
       toast({
-        title: 'Sale Completed',
-        description: `Total: ${formatCurrency(bill.total)}`,
-        className: 'bg-green-600',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive',
       });
     }
   };
