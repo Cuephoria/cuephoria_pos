@@ -77,7 +77,12 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
 
   const handleEndSession = () => {
     const customerId = station.currentSession?.customerId;
+    const sessionCost = cost;
+    
+    // End the session first to get the updated session data
     endSession(station.id);
+    
+    // Reset local state
     setElapsedTime(0);
     setCost(0);
     setHours(0);
@@ -86,7 +91,15 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     
     // Navigate to POS page after ending the session
     if (customerId) {
-      navigate('/pos', { state: { fromSession: true, customerId } });
+      navigate('/pos', { 
+        state: { 
+          fromSession: true, 
+          customerId,
+          stationName: station.name,
+          duration: elapsedTime,
+          cost: sessionCost 
+        } 
+      });
     }
   };
 

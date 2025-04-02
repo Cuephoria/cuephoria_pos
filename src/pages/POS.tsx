@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -53,21 +52,41 @@ const POS = () => {
 
   // Handle navigation from ending a session
   useEffect(() => {
-    const state = location.state as { fromSession?: boolean; customerId?: string } | null;
+    const state = location.state as { 
+      fromSession?: boolean; 
+      customerId?: string; 
+      stationName?: string;
+      duration?: number;
+      cost?: number;
+    } | null;
     
     if (state?.fromSession && state.customerId) {
       // Auto-select the customer from the session
       selectCustomer(state.customerId);
       
+      // Add the session to the cart if we have cost data
+      if (state.stationName && state.duration && state.cost) {
+        const sessionItem = {
+          id: `session-${Date.now()}`,
+          type: 'session' as const,
+          name: `${state.stationName} (${state.duration} mins)`,
+          price: state.cost,
+          quantity: 1
+        };
+        
+        // Add the session to the cart
+        addToCart(sessionItem);
+        
+        toast({
+          title: 'Session Added to Cart',
+          description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
+        });
+      }
+      
       // Clear location state to prevent reapplying on refresh
       window.history.replaceState({}, document.title);
-      
-      toast({
-        title: 'Session Ended',
-        description: 'Gaming session has been added to cart',
-      });
     }
-  }, [location.state, selectCustomer, toast]);
+  }, [location.state, selectCustomer, addToCart, toast]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -82,7 +101,6 @@ const POS = () => {
     }
   }, [isCheckoutDialogOpen]);
 
-  // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
       // First, clear any existing gaming sessions in the cart

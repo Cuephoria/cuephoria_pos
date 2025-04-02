@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users } from 'lucide-react';
@@ -19,7 +18,6 @@ import { useAuth } from '@/context/AuthContext';
 const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const state = location.state as { fromSession?: boolean } | null;
 
   if (!user) return null;
 
@@ -32,11 +30,6 @@ const AppSidebar: React.FC = () => {
     { icon: BarChart2, label: 'Reports', path: '/reports' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
-
-  // Don't show sidebar when coming from a session end - we need the full POS screen
-  if (state?.fromSession) {
-    return null;
-  }
 
   return (
     <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
