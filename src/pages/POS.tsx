@@ -14,8 +14,10 @@ import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useLocation } from 'react-router-dom';
 
 const POS = () => {
+  const location = useLocation();
   const {
     products,
     customers,
@@ -48,6 +50,24 @@ const POS = () => {
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+
+  // Handle navigation from ending a session
+  useEffect(() => {
+    const state = location.state as { fromSession?: boolean; customerId?: string } | null;
+    
+    if (state?.fromSession && state.customerId) {
+      // Auto-select the customer from the session
+      selectCustomer(state.customerId);
+      
+      // Clear location state to prevent reapplying on refresh
+      window.history.replaceState({}, document.title);
+      
+      toast({
+        title: 'Session Ended',
+        description: 'Gaming session has been added to cart',
+      });
+    }
+  }, [location.state, selectCustomer, toast]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());

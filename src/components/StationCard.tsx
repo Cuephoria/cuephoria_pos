@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Monitor, Users } from 'lucide-react';
 import { usePOS, Station, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { useNavigate } from 'react-router-dom';
 
 interface StationCardProps {
   station: Station;
@@ -20,6 +21,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
+  const navigate = useNavigate();
 
   // Update elapsed time every second for active sessions
   useEffect(() => {
@@ -74,12 +76,18 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   };
 
   const handleEndSession = () => {
+    const customerId = station.currentSession?.customerId;
     endSession(station.id);
     setElapsedTime(0);
     setCost(0);
     setHours(0);
     setMinutes(0);
     setSeconds(0);
+    
+    // Navigate to POS page after ending the session
+    if (customerId) {
+      navigate('/pos', { state: { fromSession: true, customerId } });
+    }
   };
 
   const formatTimeDisplay = () => {

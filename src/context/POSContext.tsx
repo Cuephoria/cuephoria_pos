@@ -329,13 +329,24 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const hoursPlayed = durationMinutes / 60;
     const sessionCost = Math.ceil(hoursPlayed * stationRate);
     
-    addToCart({
-      id: updatedSession.id,
-      type: 'session',
-      name: `${station.name} (${durationMinutes} mins)`,
-      price: sessionCost,
-      quantity: 1
+    // Clear any existing session items for this station
+    setCart(prevCart => {
+      const filteredCart = prevCart.filter(item => 
+        !(item.type === 'session' && item.id === updatedSession.id)
+      );
+      
+      // Add the new session item
+      return [...filteredCart, {
+        id: updatedSession.id,
+        type: 'session',
+        name: `${station.name} (${durationMinutes} mins)`,
+        price: sessionCost,
+        quantity: 1,
+        total: sessionCost
+      }];
     });
+    
+    return updatedSession.customerId;
   };
   
   // Customer functions
@@ -368,6 +379,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Cart functions
   const addToCart = (item: Omit<CartItem, 'total'>) => {
+    // Special handling for session items - don't duplicate them
+    if (item.type === 'session') {
+      const existingItem = cart.find(i => i.id === item.id && i.type === 'session');
+      if (existingItem) {
+        return; // Skip adding duplicate session items
+      }
+    }
+    
     const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
     
     if (existingItem) {
