@@ -37,18 +37,19 @@ const AppSidebar: React.FC = () => {
 
   return (
     <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
-      <SidebarHeader className="p-4 flex items-center gap-2">
-        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-gradient-to-r from-[#6E59A5] to-[#9b87f5] shadow-lg animate-pulse-glow">
+      <SidebarHeader className="p-4 flex items-center justify-center mb-4">
+        <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-r from-[#6E59A5] to-[#9b87f5] shadow-lg animate-pulse-glow">
           <span className="text-white font-bold font-heading">CQ</span>
         </div>
-        <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
+        <span className="text-2xl font-bold gradient-text font-heading ml-2">Cuephoria</span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="px-2">
               {menuItems.map((item, index) => (
-                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100}`}>
+                <SidebarMenuItem key={item.path} 
+                  className={`animate-fade-in delay-${index * 100} ${index % 2 === 0 ? 'pl-4' : 'pl-8'}`}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.path}>
                     <Link to={item.path} className="flex items-center menu-item">
                       <item.icon className={`mr-2 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />

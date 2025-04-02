@@ -12,7 +12,7 @@ import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
-import Receipt from '@/components/Receipt';
+import PaymentSuccess from '@/components/PaymentSuccess';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const POS = () => {
@@ -47,7 +47,7 @@ const POS = () => {
   const [customDiscountType, setCustomDiscountType] = useState<'percentage' | 'fixed'>(discountType);
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
-  const [showReceipt, setShowReceipt] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -83,6 +83,23 @@ const POS = () => {
       );
       
       // If there are active sessions, add them to the cart
+      activeStations.forEach(station => {
+        const sessionStart = station.currentSession ? new Date(station.currentSession.startTime) : new Date();
+        const now = new Date();
+        const durationMs = now.getTime() - sessionStart.getTime();
+        const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+        const hoursPlayed = durationMinutes / 60;
+        const sessionCost = Math.ceil(hoursPlayed * station.hourlyRate);
+        
+        addToCart({
+          id: station.id,
+          type: 'session',
+          name: `${station.name} (${durationMinutes} mins)`,
+          price: sessionCost,
+          quantity: 1
+        });
+      });
+      
       if (activeStations.length > 0) {
         toast({
           title: 'Gaming Sessions Added',
@@ -187,14 +204,13 @@ const POS = () => {
     if (bill) {
       setIsCheckoutDialogOpen(false);
       setLastCompletedBill(bill);
-      setShowReceipt(true);
-      
-      toast({
-        title: 'Sale Completed',
-        description: `Total: ${formatCurrency(bill.total)}`,
-        className: 'bg-green-600',
-      });
+      setShowPaymentSuccess(true);
     }
+  };
+
+  const handleBackToPos = () => {
+    setShowPaymentSuccess(false);
+    setLastCompletedBill(null);
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
@@ -579,11 +595,13 @@ const POS = () => {
         </DialogContent>
       </Dialog>
 
-      {showReceipt && lastCompletedBill && selectedCustomer && (
-        <Receipt 
+      {lastCompletedBill && selectedCustomer && (
+        <PaymentSuccess 
           bill={lastCompletedBill} 
           customer={selectedCustomer} 
-          onClose={() => setShowReceipt(false)} 
+          isOpen={showPaymentSuccess}
+          onClose={() => setShowPaymentSuccess(false)}
+          onBackToPos={handleBackToPos}
         />
       )}
     </div>
