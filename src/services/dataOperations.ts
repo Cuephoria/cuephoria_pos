@@ -23,7 +23,7 @@ export const resetToSampleData = (
   
   if (options.customers) {
     // Add membershipTier to customers if it doesn't exist
-    const updatedCustomers = initialCustomers.map(customer => ({
+    const updatedCustomers = initialCustomers.map((customer: Customer) => ({
       ...customer,
       membershipTier: customer.membershipTier || (customer.isMember ? 'basic' : 'none')
     }));
