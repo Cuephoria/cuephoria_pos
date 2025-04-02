@@ -2,7 +2,6 @@
 import React from 'react';
 import StatsCard from './StatsCard';
 import { CreditCard, Users, Clock, AlertTriangle, PlayCircle } from 'lucide-react';
-import { usePOS } from '@/context/POSContext';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -49,7 +48,7 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
         title="Customers"
         value={customersCount}
         icon={Users}
-        subValue={`${newMembersCount} new members today`}
+        subValue={`${newMembersCount || 'No'} new member${newMembersCount !== 1 ? 's' : ''} today`}
         iconColor="text-[#10B981]"
         iconBgColor="bg-[#10B981]/20"
         className="hover:shadow-green-900/10"
@@ -57,9 +56,9 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
 
       <StatsCard
         title="Inventory Alert"
-        value={`${lowStockCount} items`}
+        value={`${lowStockCount} item${lowStockCount !== 1 ? 's' : ''}`}
         icon={AlertTriangle}
-        subValue="Low stock items need attention"
+        subValue={lowStockCount > 0 ? "Low stock items need attention" : "All inventory levels are good"}
         iconColor="text-[#F97316]"
         iconBgColor="bg-[#F97316]/20"
         className="hover:shadow-red-900/10"
