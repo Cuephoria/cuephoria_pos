@@ -1,14 +1,12 @@
 
 import React, { useRef, useState } from 'react';
-import { Check } from 'lucide-react';
 import { Bill, Customer } from '@/context/POSContext';
-import ReceiptHeader from './receipt/ReceiptHeader';
-import CustomerInfo from './receipt/CustomerInfo';
-import ReceiptItems from './receipt/ReceiptItems';
-import ReceiptSummary from './receipt/ReceiptSummary';
-import ReceiptFooter from './receipt/ReceiptFooter';
-import ReceiptActions from './receipt/ReceiptActions';
 import { generatePDF, handlePrint } from './receipt/receiptUtils';
+import ReceiptContainer from './receipt/ReceiptContainer';
+import ReceiptTitle from './receipt/ReceiptTitle';
+import ReceiptContent from './receipt/ReceiptContent';
+import ReceiptActions from './receipt/ReceiptActions';
+import SuccessMessage from './receipt/SuccessMessage';
 
 interface ReceiptProps {
   bill: Bill;
@@ -51,50 +49,22 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-scale-in overflow-hidden">
-        {showSuccessMsg && (
-          <div className="bg-green-500 text-white p-3 flex items-center justify-between animate-fade-in gap-2">
-            <div className="flex items-center gap-2">
-              <Check className="h-5 w-5" />
-              <span className="font-medium">Payment Successful!</span>
-            </div>
-            <button 
-              onClick={handleCloseSuccessMsg}
-              className="hover:bg-white/20 rounded-full p-1"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-        
-        <div className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple p-4 text-white flex justify-between items-center">
-          <h2 className="text-xl font-bold font-heading">Payment Receipt</h2>
-          <button 
-            onClick={onClose} 
-            className="text-white hover:bg-white/20 rounded-full p-1"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <div ref={receiptRef} className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto">
-          <ReceiptHeader bill={bill} />
-          <CustomerInfo customer={customer} />
-          <ReceiptItems bill={bill} />
-          <ReceiptSummary bill={bill} />
-          <ReceiptFooter />
-        </div>
-        
-        <ReceiptActions 
-          onPrint={handlePrintReceipt}
-          onDownload={handleDownloadPDF}
-          onClose={onClose}
-          isPrinting={isPrinting}
-          isDownloading={isDownloading}
-        />
-      </div>
-    </div>
+    <ReceiptContainer>
+      {showSuccessMsg && <SuccessMessage onClose={handleCloseSuccessMsg} />}
+      <ReceiptTitle onClose={onClose} />
+      <ReceiptContent 
+        bill={bill} 
+        customer={customer} 
+        receiptRef={receiptRef} 
+      />
+      <ReceiptActions 
+        onPrint={handlePrintReceipt}
+        onDownload={handleDownloadPDF}
+        onClose={onClose}
+        isPrinting={isPrinting}
+        isDownloading={isDownloading}
+      />
+    </ReceiptContainer>
   );
 };
 
