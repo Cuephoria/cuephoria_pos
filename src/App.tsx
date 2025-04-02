@@ -1,126 +1,122 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { POSProvider } from "@/context/POSContext";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/AppSidebar";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { POSProvider } from './context/POSContext';
+import { AuthProvider } from './context/AuthContext';
+import { Toaster } from '@/components/ui/toaster';
+import AppSidebar from '@/components/AppSidebar';
 
 // Pages
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Stations from "./pages/Stations";
-import Products from "./pages/Products";
-import POS from "./pages/POS";
-import Customers from "./pages/Customers";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
-import Index from "./pages/Index";
+import Dashboard from '@/pages/Dashboard';
+import POS from '@/pages/POS';
+import Products from '@/pages/Products';
+import Customers from '@/pages/Customers';
+import Stations from '@/pages/Stations';
+import Memberships from '@/pages/Memberships';
+import Reports from '@/pages/Reports';
+import Settings from '@/pages/Settings';
+import Login from '@/pages/Login';
+import NotFound from '@/pages/NotFound';
+import Index from '@/pages/Index';
 
-// Create a new QueryClient instance outside of the component
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
-});
+import './App.css';
 
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
-      <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
-    </div>;
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
+// Create React Query client
+const queryClient = new QueryClient();
+
+function App() {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <div className="hidden md:block">
-            <SidebarTrigger />
-          </div>
-          {children}
-        </div>
-      </div>
-    </SidebarProvider>
-  );
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <POSProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/pos" element={
-                <ProtectedRoute>
-                  <POS />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/stations" element={
-                <ProtectedRoute>
-                  <Stations />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/products" element={
-                <ProtectedRoute>
-                  <Products />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/customers" element={
-                <ProtectedRoute>
-                  <Customers />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/reports" element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </POSProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="dark">
+          <POSProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Dashboard />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/pos" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <POS />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/products" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Products />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/customers" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Customers />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/stations" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Stations />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/memberships" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Memberships />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/reports" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Reports />
+                    </div>
+                  } 
+                />
+                <Route 
+                  path="/settings" 
+                  element={
+                    <div className="flex min-h-screen bg-background">
+                      <AppSidebar />
+                      <Settings />
+                    </div>
+                  } 
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Router>
+            <Toaster />
+          </POSProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </AuthProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;

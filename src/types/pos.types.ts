@@ -18,16 +18,38 @@ export interface Station {
   currentSession: Session | null;
 }
 
+// Membership levels and benefits
+export type MembershipTier = 'none' | 'basic' | 'standard' | 'premium' | 'combo';
+
+export interface MembershipBenefits {
+  name: string;
+  weeklyPlayTime: number; // in hours
+  maxHoursPerDay: number;
+  priorityBooking: boolean;
+  freeMetaShotChallenges: number;
+  bonusPasses: number;
+  psGamesAccess: boolean;
+  studentDiscount: boolean;
+  price: number;
+  originalPrice: number;
+  creditHours: number;
+  specialOffers: string[];
+}
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   email?: string;
   isMember: boolean;
+  membershipTier: MembershipTier;
+  membershipStartDate?: Date;
+  membershipEndDate?: Date;
   loyaltyPoints: number;
   totalSpent: number;
   totalPlayTime: number; // in minutes
   createdAt: Date;
+  isStudent?: boolean;
 }
 
 export interface Session {
@@ -41,7 +63,7 @@ export interface Session {
 
 export interface CartItem {
   id: string;
-  type: 'product' | 'session';
+  type: 'product' | 'session' | 'membership';
   name: string;
   price: number;
   quantity: number;
@@ -111,6 +133,11 @@ export interface POSContextType {
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
   completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
+  
+  // Membership functions
+  getMembershipBenefits: (tier: MembershipTier) => MembershipBenefits;
+  addMembershipToCart: (tier: MembershipTier) => void;
+  upgradeMembership: (customerId: string, tier: MembershipTier) => void;
   
   // Data export
   exportBills: () => void;

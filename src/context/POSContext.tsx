@@ -5,7 +5,9 @@ import {
   ResetOptions, 
   Customer, 
   CartItem, 
-  Bill
+  Bill,
+  MembershipTier,
+  MembershipBenefits
 } from '@/types/pos.types';
 import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
@@ -14,6 +16,8 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
+import { membershipBenefits } from '@/utils/membership.utils';
+import { generateId } from '@/utils/pos.utils';
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
 
@@ -37,7 +41,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addCustomer, 
     updateCustomer, 
     deleteCustomer, 
-    selectCustomer 
+    selectCustomer,
+    upgradeMembership: upgradeCustomerMembership
   } = useCustomers(initialCustomers);
   
   const { 
@@ -75,6 +80,39 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomers: exportCustomersBase 
   } = useBills(updateCustomer, updateProduct);
   
+  // Membership related functions
+  const getMembershipBenefits = (tier: MembershipTier): MembershipBenefits => {
+    return membershipBenefits[tier];
+  };
+  
+  const addMembershipToCart = (tier: MembershipTier) => {
+    const benefits = getMembershipBenefits(tier);
+    if (tier === 'none') return;
+    
+    // Apply student discount if the selected customer is a student
+    let price = benefits.price;
+    if (selectedCustomer?.isStudent && benefits.studentDiscount) {
+      price = price - 100; // ₹100 off for students
+    }
+    
+    const membershipCartItem: Omit<CartItem, 'total'> = {
+      id: generateId(),
+      type: 'membership',
+      name: `${benefits.name} Membership`,
+      price,
+      quantity: 1
+    };
+    
+    addToCart(membershipCartItem);
+  };
+  
+  const upgradeMembership = (customerId: string, tier: MembershipTier) => {
+    const updatedCustomer = upgradeCustomerMembership(customerId, tier);
+    if (updatedCustomer) {
+      return updatedCustomer;
+    }
+  };
+  
   // Wrapper functions that combine functionality from multiple hooks
   const endSession = (stationId: string) => {
     const result = endSessionBase(stationId, customers);
@@ -111,6 +149,32 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     
     if (bill) {
+      // Check if this sale includes a membership purchase
+      const membershipItem = cart.find(item => item.type === 'membership');
+      if (membershipItem && selectedCustomer) {
+        // Extract the membership tier from the item name
+        const tierMap: Record<string, MembershipTier> = {
+          'Introductory Weekly Pass - 8 ball (2 Pax)': 'basic',
+          'Introductory Weekly Pass - 8 Ball (4 Pax)': 'standard',
+          'Introductory Weekly Pass - PS5 Gaming': 'premium',
+          'Introductory Weekly Pass - Combo': 'combo'
+        };
+        
+        // Find the membership tier based on the item name
+        let tier: MembershipTier = 'none';
+        for (const [key, value] of Object.entries(tierMap)) {
+          if (membershipItem.name.includes(key)) {
+            tier = value;
+            break;
+          }
+        }
+        
+        if (tier !== 'none') {
+          // Upgrade customer membership
+          upgradeMembership(selectedCustomer.id, tier);
+        }
+      }
+      
       // Clear the cart after successful sale
       clearCart();
       // Reset selected customer
@@ -191,6 +255,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoyaltyPointsUsed,
         calculateTotal,
         completeSale,
+        getMembershipBenefits,
+        addMembershipToCart,
+        upgradeMembership,
         exportBills,
         exportCustomers,
         resetToSampleData: handleResetToSampleData,
@@ -222,5 +289,7 @@ export type {
   CartItem,
   Bill,
   ResetOptions,
-  POSContextType
+  POSContextType,
+  MembershipTier,
+  MembershipBenefits
 } from '@/types/pos.types';

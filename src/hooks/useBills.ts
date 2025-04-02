@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Bill, CartItem, Customer, Product } from '@/types/pos.types';
+import { Bill, CartItem, Customer, Product, MembershipTier } from '@/types/pos.types';
 import { generateId, exportBillsToCSV, exportCustomersToCSV } from '@/utils/pos.utils';
 
 export const useBills = (
