@@ -82,9 +82,12 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   };
 
   const handleEndSession = () => {
-    const customerId = station.currentSession?.customerId;
-    const sessionCost = cost;
-    const sessionDuration = elapsedTime;
+    // Only proceed if there's an active session
+    if (!station.currentSession) return;
+    
+    const customerId = station.currentSession.customerId;
+    const sessionCost = cost > 0 ? cost : station.hourlyRate; // Ensure we have at least the minimum cost
+    const sessionDuration = elapsedTime > 0 ? elapsedTime : 1; // Ensure we have at least 1 minute
     const stationName = station.name;
     
     console.log("Ending session with data:", {
@@ -104,18 +107,16 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     setMinutes(0);
     setSeconds(0);
     
-    // Navigate to POS page after ending the session
-    if (customerId) {
-      navigate('/pos', { 
-        state: { 
-          fromSession: true, 
-          customerId,
-          stationName,
-          duration: sessionDuration,
-          cost: sessionCost 
-        } 
-      });
-    }
+    // Navigate to POS page with session data
+    navigate('/pos', { 
+      state: { 
+        fromSession: true, 
+        customerId,
+        stationName,
+        duration: sessionDuration,
+        cost: sessionCost 
+      } 
+    });
   };
 
   const formatTimeDisplay = () => {

@@ -50,10 +50,13 @@ const POS = () => {
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [processedSessionId, setProcessedSessionId] = useState<string | null>(null);
 
   // Handle navigation from ending a session
   useEffect(() => {
     console.log("POS page state:", location.state);
+    
+    // Check if we have session data in the location state
     const state = location.state as { 
       fromSession?: boolean; 
       customerId?: string; 
@@ -62,36 +65,39 @@ const POS = () => {
       cost?: number;
     } | null;
     
-    if (state?.fromSession && state.customerId) {
+    if (state?.fromSession && state.customerId && state.stationName && state.duration !== undefined && state.cost !== undefined) {
       console.log("Processing session data:", state);
+      
+      // Generate a unique ID for this session to prevent duplicate processing
+      const sessionId = `session-${Date.now()}`;
+      
       // Auto-select the customer from the session
       selectCustomer(state.customerId);
       
-      // Add the session to the cart if we have cost data
-      if (state.stationName && state.duration && state.cost) {
-        console.log("Adding session to cart:", state.stationName, state.duration, state.cost);
-        
-        const sessionItem = {
-          id: `session-${Date.now()}`,
-          type: 'session' as const,
-          name: `${state.stationName} (${state.duration} mins)`,
-          price: state.cost,
-          quantity: 1
-        };
-        
-        // Add the session to the cart
-        addToCart(sessionItem);
-        
-        toast({
-          title: 'Session Added to Cart',
-          description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
-        });
-      }
+      // Create a new cart item for the session
+      const sessionItem = {
+        id: sessionId,
+        type: 'session' as const,
+        name: `${state.stationName} (${state.duration} mins)`,
+        price: state.cost,
+        quantity: 1
+      };
+      
+      // Add the session to the cart
+      addToCart(sessionItem);
+      
+      // Mark this session as processed
+      setProcessedSessionId(sessionId);
+      
+      toast({
+        title: 'Session Added to Cart',
+        description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
+      });
       
       // Clear location state to prevent reapplying on refresh
       navigate(location.pathname, { replace: true });
     }
-  }, [location.state, selectCustomer, addToCart, toast, navigate, location.pathname]);
+  }, [location.state]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
