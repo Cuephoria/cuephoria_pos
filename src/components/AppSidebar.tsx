@@ -47,14 +47,16 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
           cn(
             'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
             isActive
-              ? 'bg-accent text-accent-foreground hover:bg-accent/80'
+              ? 'bg-cuephoria-purple/20 text-white hover:bg-cuephoria-purple/30'
               : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
           )
         }
         onClick={onClick}
       >
-        {icon}
-        <span className="ml-3 flex-1">{label}</span>
+        <span className="flex items-center justify-center w-5 h-5 mr-2">
+          {icon}
+        </span>
+        <span className="flex-1">{label}</span>
         {badge && (
           <span className="ml-auto bg-cuephoria-purple/90 text-white px-2.5 py-0.5 rounded-full text-xs font-medium">
             {badge}
@@ -73,8 +75,10 @@ const AppSidebar = () => {
       collapsible="offcanvas"
       className="border-r border-border"
     >
-      <div className="h-14 flex items-center px-4 border-b sticky top-0 bg-background z-10">
-        <Logo />
+      <div className="h-16 flex items-center px-4 border-b sticky top-0 bg-background z-10">
+        <div className="flex items-center justify-center w-full md:justify-start">
+          <Logo size="md" className="py-2" />
+        </div>
         <div className="ml-auto">
           <Button
             variant="ghost"
@@ -87,8 +91,8 @@ const AppSidebar = () => {
           </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-auto py-2">
-        <nav className="grid items-start px-2 space-y-1">
+      <div className="flex-1 overflow-auto py-4">
+        <nav className="grid items-start px-2 space-y-2">
           <SidebarLink
             to="/dashboard"
             icon={<LayoutDashboard className="h-4 w-4" />}

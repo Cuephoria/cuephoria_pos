@@ -43,7 +43,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Dashboard />
+                        <div className="flex-1 overflow-auto">
+                          <Dashboard />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -54,7 +56,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <POS />
+                        <div className="flex-1 overflow-auto">
+                          <POS />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -65,7 +69,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Products />
+                        <div className="flex-1 overflow-auto">
+                          <Products />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -76,7 +82,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Customers />
+                        <div className="flex-1 overflow-auto">
+                          <Customers />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -87,7 +95,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Stations />
+                        <div className="flex-1 overflow-auto">
+                          <Stations />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -98,7 +108,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Memberships />
+                        <div className="flex-1 overflow-auto">
+                          <Memberships />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -109,7 +121,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Reports />
+                        <div className="flex-1 overflow-auto">
+                          <Reports />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
@@ -120,7 +134,9 @@ function App() {
                     <SidebarProvider>
                       <div className="flex min-h-screen w-full bg-background">
                         <AppSidebar />
-                        <Settings />
+                        <div className="flex-1 overflow-auto">
+                          <Settings />
+                        </div>
                       </div>
                     </SidebarProvider>
                   } 
