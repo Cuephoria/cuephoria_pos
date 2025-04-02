@@ -11,14 +11,17 @@ import {
   SidebarHeader, 
   SidebarMenu, 
   SidebarMenuButton, 
-  SidebarMenuItem 
+  SidebarMenuItem,
+  useSidebar
 } from '@/components/ui/sidebar';
-import Logo from './Logo';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/AuthContext';
 
 const AppSidebar: React.FC = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { openMobile, setOpenMobile } = useSidebar();
+  const isMobile = useIsMobile();
 
   if (!user) return null;
 
