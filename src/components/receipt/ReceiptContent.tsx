@@ -17,8 +17,9 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({ bill, customer, receipt
   return (
     <div 
       ref={receiptRef} 
-      className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto bg-white"
+      className="p-8 text-black bg-white w-[85mm] mx-auto font-mono"
       id={`receipt-content-${bill.id}`}
+      style={{ maxHeight: 'none', overflow: 'visible' }}
     >
       <ReceiptHeader bill={bill} />
       <CustomerInfo customer={customer} />

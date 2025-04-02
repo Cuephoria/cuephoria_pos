@@ -8,13 +8,13 @@ interface ReceiptHeaderProps {
 
 const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({ bill }) => {
   return (
-    <div className="receipt-header">
-      <h1 className="text-lg font-bold mb-1 font-heading">CUEPHORIA</h1>
-      <p className="text-sm">Gaming Lounge & Café</p>
-      <p className="text-xs text-gray-600 mt-2">
+    <div className="text-center border-b border-gray-200 pb-3 mb-4">
+      <h1 className="text-2xl font-bold mb-1 font-heading">CUEPHORIA</h1>
+      <p className="text-sm mb-3">Gaming Lounge & Café</p>
+      <p className="text-sm">
         Receipt #{bill.id.substring(0, 6).toUpperCase()}
       </p>
-      <p className="text-xs text-gray-600">
+      <p className="text-sm mb-1">
         {new Date(bill.createdAt).toLocaleString()}
       </p>
     </div>

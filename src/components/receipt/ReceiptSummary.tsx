@@ -8,14 +8,14 @@ interface ReceiptSummaryProps {
 
 const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ bill }) => {
   return (
-    <div className="space-y-1 text-sm">
-      <div className="receipt-item">
+    <div className="space-y-2">
+      <div className="flex justify-between">
         <span>Subtotal:</span>
         <span>₹{bill.subtotal.toLocaleString('en-IN')}</span>
       </div>
       
       {bill.discount > 0 && (
-        <div className="receipt-item text-cuephoria-purple">
+        <div className="flex justify-between text-cuephoria-purple">
           <span>
             Discount {bill.discountType === 'percentage' ? `(${bill.discount}%)` : ''}:
           </span>
@@ -24,21 +24,21 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ bill }) => {
       )}
       
       {bill.loyaltyPointsUsed > 0 && (
-        <div className="receipt-item text-cuephoria-orange">
+        <div className="flex justify-between text-cuephoria-orange">
           <span>Loyalty Points:</span>
           <span>-₹{bill.loyaltyPointsUsed.toLocaleString('en-IN')}</span>
         </div>
       )}
       
-      <div className="receipt-total flex justify-between font-bold">
+      <div className="flex justify-between font-bold border-t border-gray-200 pt-2 mt-2">
         <span>Total:</span>
         <span>₹{bill.total.toLocaleString('en-IN')}</span>
       </div>
       
-      <div className="text-xs text-gray-600 mt-4">
+      <div className="text-gray-600 mt-3">
         <div>Payment Method: {bill.paymentMethod.toUpperCase()}</div>
         {bill.loyaltyPointsEarned > 0 && (
-          <div className="mt-1">Points Earned: {bill.loyaltyPointsEarned}</div>
+          <div>Points Earned: {bill.loyaltyPointsEarned}</div>
         )}
       </div>
     </div>

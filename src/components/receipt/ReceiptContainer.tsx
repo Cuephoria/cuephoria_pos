@@ -8,7 +8,7 @@ interface ReceiptContainerProps {
 const ReceiptContainer: React.FC<ReceiptContainerProps> = ({ children }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-scale-in overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-auto overflow-hidden">
         {children}
       </div>
     </div>

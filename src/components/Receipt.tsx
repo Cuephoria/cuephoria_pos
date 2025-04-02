@@ -20,6 +20,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
+  const [pdfGenerated, setPdfGenerated] = useState(false);
 
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) {
@@ -33,6 +34,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload
     try {
       await generatePDF(receiptRef.current, bill.id);
       console.log('PDF generated successfully');
+      setPdfGenerated(true);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -59,28 +61,30 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload
     console.log('Receipt component mounted, autoDownload:', autoDownload);
     let timeoutId: ReturnType<typeof setTimeout>;
     
-    if (autoDownload) {
-      // Add a delay to ensure the component is fully rendered
+    if (autoDownload && !pdfGenerated) {
+      // Add a longer delay to ensure the component is fully rendered
       timeoutId = setTimeout(() => {
         console.log('Attempting auto-download now...');
         handleDownloadPDF();
-      }, 500);
+      }, 1000);
     }
     
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [autoDownload, bill.id]);
+  }, [autoDownload, bill.id, pdfGenerated]);
 
   return (
     <ReceiptContainer>
       {showSuccessMsg && <SuccessMessage onClose={handleCloseSuccessMsg} />}
       <ReceiptTitle onClose={onClose} />
-      <ReceiptContent 
-        bill={bill} 
-        customer={customer} 
-        receiptRef={receiptRef} 
-      />
+      <div className="pdf-container overflow-auto max-h-[calc(100vh-250px)]">
+        <ReceiptContent 
+          bill={bill} 
+          customer={customer} 
+          receiptRef={receiptRef} 
+        />
+      </div>
       <ReceiptActions 
         onPrint={handlePrintReceipt}
         onDownload={handleDownloadPDF}

@@ -2,16 +2,73 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+const injectStyles = () => {
+  // Create a style element to ensure proper styling in the PDF
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = `
+    .pdf-receipt {
+      font-family: monospace;
+      max-width: 85mm;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+    }
+    .pdf-receipt h1 {
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .pdf-receipt p {
+      margin: 0 0 8px;
+    }
+    .pdf-receipt .border-b {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+    .pdf-receipt .text-center {
+      text-align: center;
+    }
+    .pdf-receipt .flex {
+      display: flex;
+      justify-content: space-between;
+    }
+  `;
+  document.head.appendChild(styleEl);
+  
+  return () => {
+    document.head.removeChild(styleEl);
+  };
+};
+
 export const generatePDF = async (element: HTMLElement, billId: string): Promise<void> => {
-  if (!element) return;
+  if (!element) {
+    console.error("Element is null, cannot generate PDF");
+    return;
+  }
   
   console.log('Starting PDF generation for bill:', billId);
   
   try {
-    // Add a small delay to ensure the element is fully rendered
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Clone the element to avoid modifying the original
+    const clonedElement = element.cloneNode(true) as HTMLElement;
+    const tempContainer = document.createElement('div');
+    tempContainer.className = 'pdf-receipt';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.width = '85mm';
+    tempContainer.style.backgroundColor = '#ffffff';
+    tempContainer.appendChild(clonedElement);
+    document.body.appendChild(tempContainer);
     
-    const canvas = await html2canvas(element, {
+    // Add cleanup styles that will be removed later
+    const removeStyles = injectStyles();
+    
+    // Add a delay to ensure everything is rendered properly
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('Capturing canvas...');
+    const canvas = await html2canvas(tempContainer, {
       scale: 2,
       backgroundColor: '#ffffff',
       logging: true,
@@ -19,21 +76,22 @@ export const generatePDF = async (element: HTMLElement, billId: string): Promise
       allowTaint: true
     });
     
-    console.log('Canvas created successfully');
+    console.log('Canvas created successfully, dimensions:', canvas.width, 'x', canvas.height);
     
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/png', 1.0);
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: 'a4'
+      format: [85, (canvas.height * 85) / canvas.width]
     });
     
-    const imgWidth = 210;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.addImage(imgData, 'PNG', 0, 0, 85, (canvas.height * 85) / canvas.width);
     console.log('PDF created, saving as:', `cuephoria_receipt_${billId}.pdf`);
     pdf.save(`cuephoria_receipt_${billId}.pdf`);
+    
+    // Clean up
+    document.body.removeChild(tempContainer);
+    removeStyles();
     
     return;
   } catch (error) {
@@ -50,14 +108,16 @@ export const handlePrint = (printContent: string): void => {
       <head>
         <title>Cuephoria Receipt</title>
         <style>
-          body { font-family: 'Courier New', monospace; padding: 20px; }
-          .receipt-header { text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+          body { font-family: monospace; padding: 20px; }
+          .receipt-header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
           .receipt-item { display: flex; justify-content: space-between; margin-bottom: 8px; }
-          .receipt-total { border-top: 1px dashed #ccc; margin-top: 20px; padding-top: 10px; font-weight: bold; }
+          .receipt-total { border-top: 1px solid #eee; margin-top: 20px; padding-top: 10px; font-weight: bold; }
         </style>
       </head>
       <body>
-        ${printContent}
+        <div style="max-width: 85mm; margin: 0 auto;">
+          ${printContent}
+        </div>
       </body>
     </html>
   `;
