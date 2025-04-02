@@ -15,10 +15,11 @@ const Index = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Redirecting...</h1>
-        <p className="text-xl text-gray-600">Please wait while we redirect you to the login page.</p>
+        <div className="w-16 h-16 border-4 border-t-cuephoria-lightpurple border-cuephoria-dark rounded-full animate-spin mx-auto mb-4"></div>
+        <h1 className="text-2xl font-bold mb-2 text-white">Redirecting to login...</h1>
+        <p className="text-muted-foreground">Please wait a moment</p>
       </div>
     </div>
   );
