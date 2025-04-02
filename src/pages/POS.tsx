@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useNavigate } from 'react-router-dom';
 
 const POS = () => {
   const {
@@ -36,6 +36,7 @@ const POS = () => {
     completeSale,
   } = usePOS();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('all');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -62,33 +63,45 @@ const POS = () => {
     }
   }, [isCheckoutDialogOpen]);
 
-  // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
-      // First, clear any existing gaming sessions in the cart
       const newCart = cart.filter(item => item.type !== 'session');
       if (newCart.length !== cart.length) {
         clearCart();
-        // Re-add the product items
         newCart.forEach(item => {
           addToCart(item);
         });
       }
       
-      // Then check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
       
-      // If there are active sessions, add them to the cart
-      if (activeStations.length > 0) {
-        toast({
-          title: 'Gaming Sessions Added',
-          description: `${activeStations.length} active gaming sessions have been added to the cart.`,
-        });
-      }
+      activeStations.forEach(station => {
+        if (station.currentSession) {
+          const startTime = new Date(station.currentSession.startTime);
+          const now = new Date();
+          const durationMs = now.getTime() - startTime.getTime();
+          const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+          const hoursPlayed = durationMinutes / 60;
+          const sessionCost = Math.ceil(hoursPlayed * station.hourlyRate);
+          
+          addToCart({
+            id: station.currentSession.id,
+            type: 'session',
+            name: `${station.name} (${durationMinutes} mins)`,
+            price: sessionCost,
+            quantity: 1
+          });
+        }
+      });
+      
+      toast({
+        title: 'Gaming Sessions Added',
+        description: `${activeStations.length} active gaming sessions have been added to the cart.`,
+      });
     }
   }, [selectedCustomer]);
 
@@ -187,7 +200,13 @@ const POS = () => {
     if (bill) {
       setIsCheckoutDialogOpen(false);
       setLastCompletedBill(bill);
-      setShowReceipt(true);
+      
+      navigate('/payment-success', { 
+        state: { 
+          bill,
+          customer: selectedCustomer 
+        } 
+      });
       
       toast({
         title: 'Sale Completed',
