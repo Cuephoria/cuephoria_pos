@@ -606,7 +606,8 @@ const POS = () => {
         <Receipt 
           bill={lastCompletedBill} 
           customer={selectedCustomer} 
-          onClose={() => setShowReceipt(false)} 
+          onClose={() => setShowReceipt(false)}
+          autoDownload={true}
         />
       )}
     </div>

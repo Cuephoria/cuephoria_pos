@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Bill, Customer } from '@/context/POSContext';
 import { generatePDF, handlePrint } from './receipt/receiptUtils';
 import ReceiptContainer from './receipt/ReceiptContainer';
@@ -12,9 +12,10 @@ interface ReceiptProps {
   bill: Bill;
   customer: Customer;
   onClose: () => void;
+  autoDownload?: boolean;
 }
 
-const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
+const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload = false }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -47,6 +48,13 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   const handleCloseSuccessMsg = () => {
     setShowSuccessMsg(false);
   };
+
+  // Auto-download PDF if autoDownload is true
+  useEffect(() => {
+    if (autoDownload && receiptRef.current) {
+      handleDownloadPDF();
+    }
+  }, [autoDownload, receiptRef.current]);
 
   return (
     <ReceiptContainer>

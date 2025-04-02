@@ -15,7 +15,7 @@ interface ReceiptContentProps {
 
 const ReceiptContent: React.FC<ReceiptContentProps> = ({ bill, customer, receiptRef }) => {
   return (
-    <div ref={receiptRef} className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto">
+    <div ref={receiptRef} className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto bg-white">
       <ReceiptHeader bill={bill} />
       <CustomerInfo customer={customer} />
       <ReceiptItems bill={bill} />
