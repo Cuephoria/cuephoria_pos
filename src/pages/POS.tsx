@@ -13,10 +13,11 @@ import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const POS = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     products,
     customers,
@@ -49,6 +50,7 @@ const POS = () => {
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [processedSessionIds, setProcessedSessionIds] = useState<string[]>([]);
 
   // Handle navigation from ending a session
   useEffect(() => {
@@ -58,16 +60,28 @@ const POS = () => {
       stationName?: string;
       duration?: number;
       cost?: number;
+      sessionId?: string;
     } | null;
     
-    if (state?.fromSession && state.customerId) {
-      // Auto-select the customer from the session
+    console.log("Location state in POS:", state);
+    
+    if (state?.fromSession && state.customerId && state.sessionId) {
+      // Check if we've already processed this session
+      if (processedSessionIds.includes(state.sessionId)) {
+        console.log("Session already processed, skipping:", state.sessionId);
+        return;
+      }
+      
+      console.log("Processing new session:", state.sessionId);
+      
+      // Select the customer first
+      console.log("Selecting customer:", state.customerId);
       selectCustomer(state.customerId);
       
       // Add the session to the cart if we have cost data
-      if (state.stationName && state.duration && state.cost) {
+      if (state.stationName && state.duration !== undefined && state.cost !== undefined) {
         const sessionItem = {
-          id: `session-${Date.now()}`,
+          id: state.sessionId,
           type: 'session' as const,
           name: `${state.stationName} (${state.duration} mins)`,
           price: state.cost,
@@ -75,7 +89,11 @@ const POS = () => {
         };
         
         // Add the session to the cart
+        console.log("Adding session to cart:", sessionItem);
         addToCart(sessionItem);
+        
+        // Mark this session as processed
+        setProcessedSessionIds(prev => [...prev, state.sessionId]);
         
         toast({
           title: 'Session Added to Cart',
@@ -84,9 +102,9 @@ const POS = () => {
       }
       
       // Clear location state to prevent reapplying on refresh
-      window.history.replaceState({}, document.title);
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, selectCustomer, addToCart, toast]);
+  }, [location.state, addToCart, toast, navigate, selectCustomer, processedSessionIds]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());

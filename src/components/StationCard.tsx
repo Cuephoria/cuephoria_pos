@@ -8,6 +8,7 @@ import { Clock, Monitor, Users } from 'lucide-react';
 import { usePOS, Station, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface StationCardProps {
   station: Station;
@@ -22,6 +23,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Update elapsed time every second for active sessions
   useEffect(() => {
@@ -76,31 +78,45 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   };
 
   const handleEndSession = () => {
-    const customerId = station.currentSession?.customerId;
-    const sessionCost = cost;
+    if (!station.currentSession) return;
     
-    // End the session first to get the updated session data
+    const customerId = station.currentSession.customerId;
+    const sessionCost = cost;
+    const durationMinutes = elapsedTime;
+    const sessionName = `${station.name} (${durationMinutes} mins)`;
+    
+    // Generate a unique session ID to ensure we can track this specific session
+    const sessionId = `session-${Date.now()}`;
+    
+    // End the session first
     endSession(station.id);
     
-    // Reset local state
-    setElapsedTime(0);
-    setCost(0);
-    setHours(0);
-    setMinutes(0);
-    setSeconds(0);
+    console.log("Ending session with data:", {
+      customerId,
+      stationName: station.name,
+      duration: durationMinutes,
+      cost: sessionCost,
+      sessionId
+    });
     
-    // Navigate to POS page after ending the session
-    if (customerId) {
-      navigate('/pos', { 
-        state: { 
-          fromSession: true, 
-          customerId,
-          stationName: station.name,
-          duration: elapsedTime,
-          cost: sessionCost 
-        } 
-      });
-    }
+    // Toast notification to confirm session ended
+    toast({
+      title: "Session Ended",
+      description: `${station.name} session has been added to the cart.`,
+    });
+    
+    // Navigate to POS page with session data
+    navigate('/pos', { 
+      state: { 
+        fromSession: true, 
+        customerId,
+        stationName: station.name,
+        duration: durationMinutes,
+        cost: sessionCost,
+        sessionId
+      },
+      replace: true // Use replace to prevent navigation issues
+    });
   };
 
   const formatTimeDisplay = () => {
