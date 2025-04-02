@@ -18,12 +18,21 @@ export interface Station {
   currentSession: Session | null;
 }
 
+export type MembershipTier = 'none' | 'introWeekly2Pax' | 'introWeekly4Pax' | 'introWeeklyPS5' | 'introWeeklyCombo';
+
+export interface MembershipDetails {
+  tier: MembershipTier;
+  expiryDate?: Date;
+  creditHoursRemaining: number;
+}
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   email?: string;
   isMember: boolean;
+  membershipDetails?: MembershipDetails;
   loyaltyPoints: number;
   totalSpent: number;
   totalPlayTime: number; // in minutes

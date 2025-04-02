@@ -1,5 +1,5 @@
 
-import { Bill, Customer, Product, ResetOptions, CartItem } from '@/types/pos.types';
+import { Bill, Customer, Product, ResetOptions, CartItem, MembershipTier } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 import { indianCustomers, indianProducts } from '@/data/sampleData';
 
@@ -30,12 +30,27 @@ export const addSampleIndianData = (
   // Add Indian customers (don't replace existing ones)
   const newCustomers = [...customers];
   
-  indianCustomers.forEach(customer => {
+  indianCustomers.forEach((customer: Omit<Customer, 'id' | 'createdAt'>) => {
     // Check if customer with same phone number already exists
     if (!newCustomers.some(c => c.phone === customer.phone)) {
+      // Generate a random membership tier for some customers
+      const membershipTiers: MembershipTier[] = ['none', 'introWeekly2Pax', 'introWeekly4Pax', 'introWeeklyPS5', 'introWeeklyCombo'];
+      const randomTier = Math.random() > 0.5 ? membershipTiers[Math.floor(Math.random() * membershipTiers.length)] : 'none';
+      
+      // Create expiry date for membership (if they have one)
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 7); // 7 days from now
+      
+      const membershipDetails = randomTier !== 'none' ? {
+        tier: randomTier,
+        expiryDate,
+        creditHoursRemaining: randomTier === 'introWeeklyCombo' ? 6 : 4
+      } : undefined;
+      
       const newCustomer = {
         ...customer,
         id: generateId(),
+        membershipDetails,
         createdAt: new Date(Date.now() - Math.floor(Math.random() * 7776000000)) // Random date in last 90 days
       };
       

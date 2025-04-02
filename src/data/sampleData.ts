@@ -1,5 +1,5 @@
 
-import { Product, Station, Customer } from '@/types/pos.types';
+import { Product, Station, Customer, MembershipTier } from '@/types/pos.types';
 
 // Sample data
 export const initialProducts: Product[] = [
@@ -44,6 +44,34 @@ export const initialProducts: Product[] = [
     price: 49, 
     category: 'challenges', 
     stock: 9999 
+  },
+  {
+    id: 'p7',
+    name: 'Introductory Weekly Pass - 8 ball (2 Pax)',
+    price: 599,
+    category: 'gaming',
+    stock: 9999
+  },
+  {
+    id: 'p8',
+    name: 'Introductory Weekly Pass - 8 Ball (4 Pax)',
+    price: 1199,
+    category: 'gaming',
+    stock: 9999
+  },
+  {
+    id: 'p9',
+    name: 'Introductory Weekly Pass - PS5 Gaming',
+    price: 599,
+    category: 'gaming',
+    stock: 9999
+  },
+  {
+    id: 'p10',
+    name: 'Introductory Weekly Pass - Combo',
+    price: 1799,
+    category: 'gaming',
+    stock: 9999
   }
 ];
 
@@ -55,13 +83,26 @@ export const initialStations: Station[] = [
   { id: 's5', name: '8-Ball Table 3', type: '8ball', hourlyRate: 200, isOccupied: false, currentSession: null },
 ];
 
+// Helper to create a membership details object
+const createMembershipDetails = (tier: MembershipTier) => {
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + 7); // Expires in 7 days
+  
+  return {
+    tier,
+    expiryDate,
+    creditHoursRemaining: tier === 'introWeeklyCombo' ? 6 : 4
+  };
+};
+
 export const initialCustomers: Customer[] = [
   { 
     id: 'c1', 
     name: 'Raj Sharma', 
     phone: '9876543210', 
     email: 'raj.sharma@example.com', 
-    isMember: true, 
+    isMember: true,
+    membershipDetails: createMembershipDetails('introWeekly2Pax'),
     loyaltyPoints: 150, 
     totalSpent: 3500,
     totalPlayTime: 420, // 7 hours
@@ -82,7 +123,8 @@ export const initialCustomers: Customer[] = [
     name: 'Vikram Singh', 
     phone: '7654321098', 
     email: 'vikram@example.com', 
-    isMember: true, 
+    isMember: true,
+    membershipDetails: createMembershipDetails('introWeeklyPS5'),
     loyaltyPoints: 75, 
     totalSpent: 1200,
     totalPlayTime: 180, // 3 hours
