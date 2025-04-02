@@ -64,6 +64,13 @@ export interface Bill {
   createdAt: Date;
 }
 
+interface ResetOptions {
+  products: boolean;
+  customers: boolean;
+  sales: boolean;
+  sessions: boolean;
+}
+
 interface POSContextType {
   products: Product[];
   stations: Station[];
@@ -107,8 +114,9 @@ interface POSContextType {
   exportBills: () => void;
   exportCustomers: () => void;
   
-  // Reset function
-  resetToSampleData: () => void;
+  // Reset and sample data functions
+  resetToSampleData: (options?: ResetOptions) => void;
+  addSampleIndianData: () => void;
 }
 
 // Helper functions
@@ -202,6 +210,105 @@ const initialCustomers: Customer[] = [
     totalSpent: 1200,
     totalPlayTime: 180, // 3 hours
     createdAt: new Date(2023, 4, 5) 
+  }
+];
+
+// Sample Indian data
+const indianProducts: Product[] = [
+  { 
+    id: 'ip1', 
+    name: 'Masala Chai', 
+    price: 25, 
+    category: 'drinks', 
+    stock: 100 
+  },
+  { 
+    id: 'ip2', 
+    name: 'Samosa', 
+    price: 20, 
+    category: 'food', 
+    stock: 50 
+  },
+  { 
+    id: 'ip3', 
+    name: 'Vada Pav', 
+    price: 40, 
+    category: 'food', 
+    stock: 40 
+  },
+  { 
+    id: 'ip4', 
+    name: 'Aloo Paratha', 
+    price: 60, 
+    category: 'food', 
+    stock: 25 
+  },
+  { 
+    id: 'ip5', 
+    name: 'Panipuri Challenge', 
+    price: 99, 
+    category: 'challenges', 
+    stock: 9999 
+  },
+  { 
+    id: 'ip6', 
+    name: 'Thums Up', 
+    price: 45, 
+    category: 'drinks', 
+    stock: 60 
+  },
+  { 
+    id: 'ip7', 
+    name: 'Gulab Jamun', 
+    price: 35, 
+    category: 'food', 
+    stock: 30 
+  }
+];
+
+const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
+  {
+    name: 'Rajesh Kumar',
+    phone: '9876543210',
+    email: 'rajesh.kumar@gmail.com',
+    isMember: true,
+    loyaltyPoints: 250,
+    totalSpent: 5000,
+    totalPlayTime: 600
+  },
+  {
+    name: 'Priya Singh',
+    phone: '8765432109',
+    email: 'priya.singh@gmail.com',
+    isMember: true,
+    loyaltyPoints: 180,
+    totalSpent: 3500,
+    totalPlayTime: 420
+  },
+  {
+    name: 'Amit Patel',
+    phone: '7654321098',
+    isMember: false,
+    loyaltyPoints: 0,
+    totalSpent: 1500,
+    totalPlayTime: 180
+  },
+  {
+    name: 'Sneha Sharma',
+    phone: '6543210987',
+    email: 'sneha.sharma@yahoo.com',
+    isMember: true,
+    loyaltyPoints: 120,
+    totalSpent: 2800,
+    totalPlayTime: 300
+  },
+  {
+    name: 'Vikram Desai',
+    phone: '9876543211',
+    isMember: false,
+    loyaltyPoints: 0,
+    totalSpent: 800,
+    totalPlayTime: 120
   }
 ];
 
@@ -579,27 +686,156 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.body.removeChild(link);
   };
   
-  // Reset function
-  const resetToSampleData = () => {
-    // Reset all data to initial values
-    setProducts(initialProducts);
-    setStations(initialStations);
-    setCustomers(initialCustomers);
-    setSessions([]);
-    setBills([]);
+  // Reset function with options
+  const resetToSampleData = (options?: ResetOptions) => {
+    const defaultOptions = {
+      products: true,
+      customers: true,
+      sales: true,
+      sessions: true
+    };
+    
+    const resetOpts = options || defaultOptions;
+    
+    // Reset selected data types to initial values
+    if (resetOpts.products) {
+      setProducts(initialProducts);
+      localStorage.removeItem('cuephoriaProducts');
+    }
+    
+    if (resetOpts.customers) {
+      setCustomers(initialCustomers);
+      localStorage.removeItem('cuephoriaCustomers');
+    }
+    
+    if (resetOpts.sales) {
+      setBills([]);
+      localStorage.removeItem('cuephoriaBills');
+    }
+    
+    if (resetOpts.sessions) {
+      setSessions([]);
+      
+      // Reset station occupation status
+      setStations(stations.map(station => ({
+        ...station,
+        isOccupied: false,
+        currentSession: null
+      })));
+      
+      localStorage.removeItem('cuephoriaSessions');
+      localStorage.removeItem('cuephoriaStations');
+    }
+    
+    // Clear cart regardless of options
     setCart([]);
-    setSelectedCustomer(null);
     setDiscountAmount(0);
     setLoyaltyPointsUsedAmount(0);
+    setSelectedCustomer(null);
+  };
+  
+  // Function to add sample Indian data
+  const addSampleIndianData = () => {
+    // Add Indian products (don't replace existing ones)
+    const newProducts = [...products];
     
-    // Also clear localStorage
-    localStorage.removeItem('cuephoriaProducts');
-    localStorage.removeItem('cuephoriaStations');
-    localStorage.removeItem('cuephoriaCustomers');
-    localStorage.removeItem('cuephoriaSessions');
-    localStorage.removeItem('cuephoriaBills');
+    indianProducts.forEach(product => {
+      // Check if product with same name already exists
+      if (!newProducts.some(p => p.name === product.name)) {
+        newProducts.push({
+          ...product,
+          id: generateId() // Generate new ID
+        });
+      }
+    });
     
-    // The next time the app loads, it will use the initial data
+    setProducts(newProducts);
+    
+    // Add Indian customers (don't replace existing ones)
+    const newCustomers = [...customers];
+    
+    indianCustomers.forEach(customer => {
+      // Check if customer with same phone number already exists
+      if (!newCustomers.some(c => c.phone === customer.phone)) {
+        const newCustomer = {
+          ...customer,
+          id: generateId(),
+          createdAt: new Date(Date.now() - Math.floor(Math.random() * 7776000000)) // Random date in last 90 days
+        };
+        
+        newCustomers.push(newCustomer);
+      }
+    });
+    
+    setCustomers(newCustomers);
+    
+    // Generate some sample bills
+    const sampleBills: Bill[] = [];
+    
+    // Get all customer IDs (including the newly added ones)
+    const customerIds = newCustomers.map(c => c.id);
+    
+    // Create sample bills (1-3 per customer)
+    customerIds.forEach(customerId => {
+      const numBills = Math.floor(Math.random() * 3) + 1;
+      
+      for (let i = 0; i < numBills; i++) {
+        // Create 1-4 items per bill
+        const numItems = Math.floor(Math.random() * 4) + 1;
+        const billItems: CartItem[] = [];
+        let subtotal = 0;
+        
+        for (let j = 0; j < numItems; j++) {
+          // Randomly select a product
+          const product = newProducts[Math.floor(Math.random() * newProducts.length)];
+          const quantity = Math.floor(Math.random() * 3) + 1;
+          const total = product.price * quantity;
+          
+          billItems.push({
+            id: product.id,
+            type: 'product',
+            name: product.name,
+            price: product.price,
+            quantity,
+            total
+          });
+          
+          subtotal += total;
+        }
+        
+        // Random discount (0-10%)
+        const discount = Math.floor(Math.random() * 11);
+        const discountValue = subtotal * (discount / 100);
+        const total = subtotal - discountValue;
+        
+        // Random loyalty points
+        const loyaltyPointsEarned = Math.floor(total / 10);
+        
+        const bill: Bill = {
+          id: generateId(),
+          customerId,
+          items: billItems,
+          subtotal,
+          discount,
+          discountValue,
+          discountType: 'percentage',
+          loyaltyPointsUsed: 0,
+          loyaltyPointsEarned,
+          total,
+          paymentMethod: Math.random() > 0.5 ? 'cash' : 'upi',
+          createdAt: new Date(Date.now() - Math.floor(Math.random() * 2592000000)) // Random date in last 30 days
+        };
+        
+        sampleBills.push(bill);
+      }
+    });
+    
+    setBills([...bills, ...sampleBills]);
+    
+    // Save to localStorage
+    localStorage.setItem('cuephoriaProducts', JSON.stringify(newProducts));
+    localStorage.setItem('cuephoriaCustomers', JSON.stringify(newCustomers));
+    localStorage.setItem('cuephoriaBills', JSON.stringify([...bills, ...sampleBills]));
   };
   
   console.log('POSProvider rendering with context value'); // Debug log
@@ -636,7 +872,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         completeSale,
         exportBills,
         exportCustomers,
-        resetToSampleData
+        resetToSampleData,
+        addSampleIndianData
       }}
     >
       {children}

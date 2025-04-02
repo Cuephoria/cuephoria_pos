@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, User, DollarSign, Receipt, AlertTriangle } from 'lucide-react';
+import { Shield, User, DollarSign, Receipt, AlertTriangle, Database, Plus } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import {
   AlertDialog,
@@ -20,10 +20,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Settings = () => {
   const { toast } = useToast();
-  const { resetToSampleData } = usePOS();
+  const { resetToSampleData, addSampleIndianData } = usePOS();
   const [generalSettings, setGeneralSettings] = useState({
     businessName: 'Cuephoria Gaming Center',
     address: '123 Gaming Street, Bangalore, Karnataka',
@@ -37,6 +47,13 @@ const Settings = () => {
     eightBallHourlyRate: '200',
     taxRate: '18',
     pointsPerRupee: '10',
+  });
+  
+  const [resetOptions, setResetOptions] = useState({
+    products: true,
+    customers: true,
+    sales: true,
+    sessions: true,
   });
   
   const handleGeneralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,13 +85,30 @@ const Settings = () => {
   };
   
   const handleResetData = () => {
-    // Use the resetToSampleData function from context
-    resetToSampleData();
+    // Use the resetToSampleData function from context with specific options
+    resetToSampleData(resetOptions);
+    
+    // Build message based on what was reset
+    const resetItems = [];
+    if (resetOptions.products) resetItems.push('products');
+    if (resetOptions.customers) resetItems.push('customers');
+    if (resetOptions.sales) resetItems.push('bills');
+    if (resetOptions.sessions) resetItems.push('sessions');
     
     toast({
       title: 'Data Reset',
-      description: 'All data has been reset to sample values.',
+      description: `Reset completed for: ${resetItems.join(', ')}`,
       variant: 'destructive',
+    });
+  };
+  
+  const handleAddSampleData = () => {
+    // Call function to add sample Indian data
+    addSampleIndianData();
+    
+    toast({
+      title: 'Sample Data Added',
+      description: 'Indian sample data has been added to your system.',
     });
   };
 
@@ -271,26 +305,134 @@ const Settings = () => {
               </div>
               
               <div className="space-y-2 pt-4 border-t">
+                <h3 className="text-lg font-medium">Sample Data</h3>
+                <p className="text-sm text-muted-foreground">
+                  Add sample Indian data with realistic names, products, and sales records
+                </p>
+                <div className="flex space-x-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Sample Indian Data
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Sample Indian Data</DialogTitle>
+                        <DialogDescription>
+                          This will add new sample data with Indian names, products, and transactions to your system.
+                          Existing data will not be modified.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Sample data will include:
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1 text-sm">
+                          <li>Customers with Indian names and contact information</li>
+                          <li>Indian snacks and beverages as products</li>
+                          <li>Sample bills and transactions</li>
+                          <li>Gaming sessions with realistic durations</li>
+                        </ul>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => {}}>Cancel</Button>
+                        <Button onClick={handleAddSampleData}>Add Sample Data</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+              
+              <div className="space-y-2 pt-4 border-t">
                 <h3 className="text-lg font-medium">Data Reset</h3>
                 <p className="text-sm text-muted-foreground">
-                  Reset all data in the system to sample values. This action cannot be undone.
+                  Reset selected data in the system to default values. This action cannot be undone.
                 </p>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                      Reset All Data
+                    <Button variant="destructive" className="mt-2">
+                      Reset Selected Data
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle className="flex items-center gap-2">
                         <AlertTriangle className="h-5 w-5 text-red-500" />
-                        Reset All Data
+                        Reset Selected Data
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will reset all your data (customers, products, stations, bills, sessions) to the initial sample values.
-                        <div className="mt-2 p-2 bg-red-50 text-red-700 rounded-md">
-                          This action cannot be undone. All your current data will be permanently deleted.
+                        Select which data you want to reset to default values:
+                        
+                        <div className="mt-4 space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="resetProducts" 
+                              checked={resetOptions.products}
+                              onCheckedChange={(checked) => 
+                                setResetOptions(prev => ({...prev, products: !!checked}))
+                              }
+                            />
+                            <label
+                              htmlFor="resetProducts"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Products - Reset all product data
+                            </label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="resetCustomers" 
+                              checked={resetOptions.customers}
+                              onCheckedChange={(checked) => 
+                                setResetOptions(prev => ({...prev, customers: !!checked}))
+                              }
+                            />
+                            <label
+                              htmlFor="resetCustomers"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Customers - Reset all customer data
+                            </label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="resetSales" 
+                              checked={resetOptions.sales}
+                              onCheckedChange={(checked) => 
+                                setResetOptions(prev => ({...prev, sales: !!checked}))
+                              }
+                            />
+                            <label
+                              htmlFor="resetSales"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Sales - Reset all bills and transactions
+                            </label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <Checkbox 
+                              id="resetSessions" 
+                              checked={resetOptions.sessions}
+                              onCheckedChange={(checked) => 
+                                setResetOptions(prev => ({...prev, sessions: !!checked}))
+                              }
+                            />
+                            <label
+                              htmlFor="resetSessions"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Sessions - Reset all gaming sessions
+                            </label>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 p-2 bg-red-50 text-red-700 rounded-md">
+                          This action cannot be undone. Selected data will be permanently deleted.
                         </div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -299,8 +441,9 @@ const Settings = () => {
                       <AlertDialogAction 
                         onClick={handleResetData}
                         className="bg-red-600 hover:bg-red-700"
+                        disabled={!Object.values(resetOptions).some(Boolean)}
                       >
-                        Yes, Reset Everything
+                        Reset Selected Data
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
