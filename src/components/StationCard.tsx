@@ -97,15 +97,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
       cost: sessionCost
     });
     
-    // End the session first to get the updated session data
+    // End the session first
     endSession(station.id);
-    
-    // Reset local state
-    setElapsedTime(0);
-    setCost(0);
-    setHours(0);
-    setMinutes(0);
-    setSeconds(0);
     
     // Generate a unique session ID for tracking
     const sessionId = `session-${Date.now()}`;
@@ -118,8 +111,21 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         stationName,
         duration: sessionDuration,
         cost: sessionCost,
-        sessionId: sessionId // Add unique ID to prevent duplicate processing
-      } 
+        sessionId
+      },
+      replace: true // Use replace to prevent back navigation issues
+    });
+    
+    // Reset local state
+    setElapsedTime(0);
+    setCost(0);
+    setHours(0);
+    setMinutes(0);
+    setSeconds(0);
+    
+    toast({
+      title: 'Session Ended',
+      description: `${stationName} session: ${sessionDuration} minutes`,
     });
   };
 

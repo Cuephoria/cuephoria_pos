@@ -53,8 +53,6 @@ const POS = () => {
   const [processedSessionIds, setProcessedSessionIds] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log("POS page state:", location.state);
-    
     const state = location.state as { 
       fromSession?: boolean; 
       customerId?: string; 
@@ -63,6 +61,8 @@ const POS = () => {
       cost?: number;
       sessionId?: string;
     } | null;
+    
+    console.log("POS page state:", state);
     
     if (state?.fromSession && 
         state.customerId && 
@@ -75,8 +75,10 @@ const POS = () => {
         console.log("Session already processed, skipping:", state.sessionId);
         return;
       }
-        
+      
       console.log("Processing session data:", state);
+      
+      clearCart();
       
       selectCustomer(state.customerId);
       
@@ -88,18 +90,21 @@ const POS = () => {
         quantity: 1
       };
       
-      addToCart(sessionItem);
+      setTimeout(() => {
+        addToCart(sessionItem);
+        console.log("Added session to cart:", sessionItem);
+        
+        setProcessedSessionIds(prev => [...prev, state.sessionId]);
+        
+        toast({
+          title: 'Session Added to Cart',
+          description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
+        });
+      }, 100);
       
-      setProcessedSessionIds(prev => [...prev, state.sessionId]);
-      
-      toast({
-        title: 'Session Added to Cart',
-        description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
-      });
-      
-      navigate(location.pathname, { replace: true });
+      navigate(location.pathname, { replace: true, state: null });
     }
-  }, [location.state, navigate, addToCart, selectCustomer, toast, processedSessionIds]);
+  }, [location.state, navigate, addToCart, selectCustomer, toast, processedSessionIds, clearCart]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
