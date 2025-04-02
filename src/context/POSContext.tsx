@@ -55,6 +55,7 @@ export interface Bill {
   items: CartItem[];
   subtotal: number;
   discount: number;
+  discountValue: number;
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
   loyaltyPointsEarned: number;
@@ -448,7 +449,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customerId: selectedCustomer.id,
       items: [...cart],
       subtotal,
-      discount: discountValue,
+      discount,
+      discountValue,
       discountType,
       loyaltyPointsUsed,
       loyaltyPointsEarned,
