@@ -22,12 +22,17 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
 
   const handleDownloadPDF = async () => {
-    if (!receiptRef.current) return;
+    if (!receiptRef.current) {
+      console.error('Receipt reference is null');
+      return;
+    }
     
     setIsDownloading(true);
+    console.log('Starting download process for bill:', bill.id);
     
     try {
       await generatePDF(receiptRef.current, bill.id);
+      console.log('PDF generated successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -51,10 +56,21 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, autoDownload
 
   // Auto-download PDF if autoDownload is true
   useEffect(() => {
-    if (autoDownload && receiptRef.current) {
-      handleDownloadPDF();
+    console.log('Receipt component mounted, autoDownload:', autoDownload);
+    let timeoutId: ReturnType<typeof setTimeout>;
+    
+    if (autoDownload) {
+      // Add a delay to ensure the component is fully rendered
+      timeoutId = setTimeout(() => {
+        console.log('Attempting auto-download now...');
+        handleDownloadPDF();
+      }, 500);
     }
-  }, [autoDownload, receiptRef.current]);
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [autoDownload, bill.id]);
 
   return (
     <ReceiptContainer>

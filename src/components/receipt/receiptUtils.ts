@@ -5,11 +5,21 @@ import jsPDF from 'jspdf';
 export const generatePDF = async (element: HTMLElement, billId: string): Promise<void> => {
   if (!element) return;
   
+  console.log('Starting PDF generation for bill:', billId);
+  
   try {
+    // Add a small delay to ensure the element is fully rendered
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     const canvas = await html2canvas(element, {
       scale: 2,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      logging: true,
+      useCORS: true,
+      allowTaint: true
     });
+    
+    console.log('Canvas created successfully');
     
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
@@ -22,6 +32,7 @@ export const generatePDF = async (element: HTMLElement, billId: string): Promise
     const imgHeight = canvas.height * imgWidth / canvas.width;
     
     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    console.log('PDF created, saving as:', `cuephoria_receipt_${billId}.pdf`);
     pdf.save(`cuephoria_receipt_${billId}.pdf`);
     
     return;
