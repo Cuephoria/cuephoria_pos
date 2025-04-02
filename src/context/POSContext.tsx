@@ -6,9 +6,10 @@ import {
   Customer, 
   CartItem, 
   Bill,
-  MembershipType
+  MembershipType,
+  Station
 } from '@/types/pos.types';
-import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
+import { sampleProducts, sampleStations, sampleCustomers, sampleBills } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
@@ -28,7 +29,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addProduct, 
     updateProduct, 
     deleteProduct 
-  } = useProducts(initialProducts);
+  } = useProducts(sampleProducts);
   
   const { 
     customers, 
@@ -43,16 +44,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     useMembershipCredit,
     isMembershipExpired,
     getMembershipDetails
-  } = useCustomers(initialCustomers);
+  } = useCustomers(sampleCustomers);
   
   const { 
     stations, 
     setStations, 
-    sessions, 
-    setSessions, 
+    addStation, 
+    updateStation, 
+    removeStation, 
     startSession: startSessionBase, 
     endSession: endSessionBase 
-  } = useStations(initialStations, updateCustomer);
+  } = useStations(sampleStations);
   
   const { 
     cart, 
@@ -82,8 +84,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Wrapper functions that combine functionality from multiple hooks
   const endSession = (stationId: string) => {
-    const result = endSessionBase(stationId, customers);
-    if (result) {
+    const result = endSessionBase(stationId);
+    if (result && result.sessionCartItem) {
       const { sessionCartItem, customer } = result;
       
       // Clear cart before adding the new session
@@ -99,8 +101,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log("Adding session to cart:", sessionCartItem);
       addToCart(sessionCartItem);
       
-      return result.updatedSession;
+      return result;
     }
+    return null;
   };
   
   const completeSale = (paymentMethod: 'cash' | 'upi') => {
@@ -137,13 +140,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const handleResetToSampleData = (options?: ResetOptions) => {
     resetToSampleData(
       options,
-      initialProducts,
-      initialCustomers,
-      initialStations,
+      sampleProducts,
+      sampleCustomers,
+      sampleStations,
       setProducts,
       setCustomers,
       setBills,
-      setSessions,
       setStations,
       setCart,
       setDiscountAmount,
@@ -171,7 +173,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         products,
         stations,
         customers,
-        sessions,
         bills,
         cart,
         selectedCustomer,
@@ -179,6 +180,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountType,
         loyaltyPointsUsed,
         setStations,
+        addStation,
+        updateStation,
+        removeStation,
         addProduct,
         updateProduct,
         deleteProduct,

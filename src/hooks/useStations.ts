@@ -58,17 +58,41 @@ export function useStations(initialStations: Station[]) {
   };
   
   const endSession = (stationId: string) => {
-    setStations(stations.map(station => {
-      if (station.id === stationId) {
+    // Find the station
+    const station = stations.find(s => s.id === stationId);
+    if (!station || !station.currentSession) return null;
+
+    // Create a cart item for the session
+    const sessionDuration = Date.now() - station.currentSession.startTime;
+    const hoursUsed = Math.max(0.5, Math.ceil(sessionDuration / (1000 * 60 * 30)) / 2); // Round up to nearest 30 min
+    
+    const sessionCartItem = {
+      id: generateId(),
+      type: 'session',
+      name: `${station.name} Session (${hoursUsed} hr)`,
+      price: station.hourlyRate,
+      quantity: hoursUsed,
+      total: station.hourlyRate * hoursUsed
+    };
+    
+    // Update the station status
+    setStations(stations.map(s => {
+      if (s.id === stationId) {
         return {
-          ...station,
+          ...s,
           isOccupied: false,
           status: 'available',
           currentSession: null
         };
       }
-      return station;
+      return s;
     }));
+    
+    return {
+      sessionCartItem,
+      // If there was a customer ID associated with the session, return it
+      customer: station.currentSession.customerId ? { id: station.currentSession.customerId, name: station.currentSession.customerName } : null
+    };
   };
   
   return {
