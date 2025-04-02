@@ -8,6 +8,7 @@ import { Clock, Monitor, Users } from 'lucide-react';
 import { usePOS, Station, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface StationCardProps {
   station: Station;
@@ -22,6 +23,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Update elapsed time every second for active sessions
   useEffect(() => {
@@ -72,12 +74,25 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     if (selectedCustomerId) {
       startSession(station.id, selectedCustomerId);
       setSelectedCustomerId('');
+      toast({
+        title: 'Session Started',
+        description: `Started session on ${station.name}`,
+      });
     }
   };
 
   const handleEndSession = () => {
     const customerId = station.currentSession?.customerId;
     const sessionCost = cost;
+    const sessionDuration = elapsedTime;
+    const stationName = station.name;
+    
+    console.log("Ending session with data:", {
+      customerId,
+      stationName,
+      duration: sessionDuration,
+      cost: sessionCost
+    });
     
     // End the session first to get the updated session data
     endSession(station.id);
@@ -95,8 +110,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         state: { 
           fromSession: true, 
           customerId,
-          stationName: station.name,
-          duration: elapsedTime,
+          stationName,
+          duration: sessionDuration,
           cost: sessionCost 
         } 
       });

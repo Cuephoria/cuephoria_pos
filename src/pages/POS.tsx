@@ -13,10 +13,11 @@ import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const POS = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     products,
     customers,
@@ -52,6 +53,7 @@ const POS = () => {
 
   // Handle navigation from ending a session
   useEffect(() => {
+    console.log("POS page state:", location.state);
     const state = location.state as { 
       fromSession?: boolean; 
       customerId?: string; 
@@ -61,11 +63,14 @@ const POS = () => {
     } | null;
     
     if (state?.fromSession && state.customerId) {
+      console.log("Processing session data:", state);
       // Auto-select the customer from the session
       selectCustomer(state.customerId);
       
       // Add the session to the cart if we have cost data
       if (state.stationName && state.duration && state.cost) {
+        console.log("Adding session to cart:", state.stationName, state.duration, state.cost);
+        
         const sessionItem = {
           id: `session-${Date.now()}`,
           type: 'session' as const,
@@ -84,9 +89,9 @@ const POS = () => {
       }
       
       // Clear location state to prevent reapplying on refresh
-      window.history.replaceState({}, document.title);
+      navigate(location.pathname, { replace: true });
     }
-  }, [location.state, selectCustomer, addToCart, toast]);
+  }, [location.state, selectCustomer, addToCart, toast, navigate, location.pathname]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
