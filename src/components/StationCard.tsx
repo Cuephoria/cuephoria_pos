@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,13 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Monitor, Users } from 'lucide-react';
 import { usePOS, Station, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { useToast } from '@/hooks/use-toast';
 
 interface StationCardProps {
   station: Station;
 }
 
 const StationCard: React.FC<StationCardProps> = ({ station }) => {
-  const { customers, startSession, endSession } = usePOS();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { customers, startSession, endSession, selectCustomer } = usePOS();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
@@ -74,12 +78,26 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   };
 
   const handleEndSession = () => {
-    endSession(station.id);
-    setElapsedTime(0);
-    setCost(0);
-    setHours(0);
-    setMinutes(0);
-    setSeconds(0);
+    if (station.isOccupied && station.currentSession) {
+      const customerId = station.currentSession.customerId;
+      
+      // End the session and get session details
+      endSession(station.id);
+      
+      // Set the customer in context and navigate to POS
+      console.log('Navigating to POS with customer ID:', customerId);
+      selectCustomer(customerId);
+      
+      toast({
+        title: "Session Ended",
+        description: "Session has been ended and added to cart. Redirecting to checkout...",
+      });
+      
+      // Navigate to POS page with a small delay to allow state updates
+      setTimeout(() => {
+        navigate('/pos');
+      }, 300);
+    }
   };
 
   const formatTimeDisplay = () => {

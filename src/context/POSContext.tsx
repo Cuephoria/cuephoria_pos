@@ -290,8 +290,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const endSession = (stationId: string) => {
+    console.log("Ending session for station:", stationId);
     const station = stations.find(s => s.id === stationId);
-    if (!station || !station.isOccupied || !station.currentSession) return;
+    if (!station || !station.isOccupied || !station.currentSession) {
+      console.log("No active session found for this station");
+      return;
+    }
     
     const endTime = new Date();
     const startTime = new Date(station.currentSession.startTime);
@@ -330,13 +334,28 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const hoursPlayed = durationMinutes / 60;
     const sessionCost = Math.ceil(hoursPlayed * stationRate);
     
-    addToCart({
+    // Clear cart before adding the new session
+    clearCart();
+    
+    // Auto-select customer
+    if (customer) {
+      console.log("Auto-selecting customer:", customer.name);
+      selectCustomer(customer.id);
+    }
+    
+    // Add the session to cart with a unique identifier
+    const sessionCartItem = {
       id: updatedSession.id,
-      type: 'session',
+      type: 'session' as const,
       name: `${station.name} (${durationMinutes} mins)`,
       price: sessionCost,
       quantity: 1
-    });
+    };
+    
+    console.log("Adding session to cart:", sessionCartItem);
+    addToCart(sessionCartItem);
+    
+    return updatedSession;
   };
   
   // Customer functions

@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
@@ -48,6 +47,7 @@ const POS = () => {
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -65,22 +65,17 @@ const POS = () => {
   // Auto-add active gaming sessions for the selected customer
   useEffect(() => {
     if (selectedCustomer) {
-      // First, clear any existing gaming sessions in the cart
-      const newCart = cart.filter(item => item.type !== 'session');
-      if (newCart.length !== cart.length) {
-        clearCart();
-        // Re-add the product items
-        newCart.forEach(item => {
-          addToCart(item);
-        });
-      }
+      console.log("Selected customer changed:", selectedCustomer.name);
       
-      // Then check if the customer has any active sessions
+      // Check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
+      
+      // Log active sessions for debugging
+      console.log("Active stations for customer:", activeStations.length);
       
       // If there are active sessions, add them to the cart
       if (activeStations.length > 0) {
@@ -187,7 +182,15 @@ const POS = () => {
     if (bill) {
       setIsCheckoutDialogOpen(false);
       setLastCompletedBill(bill);
-      setShowReceipt(true);
+      
+      // Show success message first
+      setShowSuccess(true);
+      
+      // After a delay, show the receipt
+      setTimeout(() => {
+        setShowSuccess(false);
+        setShowReceipt(true);
+      }, 2000);
       
       toast({
         title: 'Sale Completed',
@@ -576,6 +579,37 @@ const POS = () => {
               Complete Sale (<CurrencyDisplay amount={total} />)
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="max-w-md animate-scale-in text-center">
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="rounded-full bg-green-100 p-6 mb-4">
+              <Check className="h-12 w-12 text-green-600" />
+            </div>
+            <DialogTitle className="text-2xl font-heading mb-2">Payment Successful!</DialogTitle>
+            <DialogDescription className="text-center mb-6">
+              Your transaction has been completed successfully.
+            </DialogDescription>
+            <p className="font-bold text-xl mb-2">
+              <CurrencyDisplay amount={lastCompletedBill?.total || 0} />
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              {lastCompletedBill ? new Date(lastCompletedBill.createdAt).toLocaleString() : ''}
+            </p>
+            <Button 
+              onClick={() => {
+                setShowSuccess(false);
+                setShowReceipt(true);
+              }}
+              className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
+            >
+              <ReceiptIcon className="mr-2 h-4 w-4" />
+              View Receipt
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
