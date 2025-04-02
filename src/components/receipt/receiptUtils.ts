@@ -8,10 +8,7 @@ export const generatePDF = async (element: HTMLElement, billId: string): Promise
   try {
     const canvas = await html2canvas(element, {
       scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      logging: false,
-      allowTaint: true
+      backgroundColor: '#ffffff'
     });
     
     const imgData = canvas.toDataURL('image/png');

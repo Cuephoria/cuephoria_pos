@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +11,8 @@ import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { generatePDF } from '@/components/receipt/receiptUtils';
 import Receipt from '@/components/Receipt';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const POS = () => {
   const {
@@ -49,7 +48,6 @@ const POS = () => {
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -187,25 +185,6 @@ const POS = () => {
         title: 'Sale Completed',
         description: `Total: ${formatCurrency(bill.total)}`,
         className: 'bg-green-600',
-      });
-    }
-  };
-
-  const handleDownloadReceipt = async () => {
-    if (!receiptRef.current || !lastCompletedBill) return;
-    
-    try {
-      await generatePDF(receiptRef.current, lastCompletedBill.id);
-      toast({
-        title: 'Receipt Downloaded',
-        description: 'Your receipt has been downloaded successfully',
-      });
-    } catch (error) {
-      console.error('Error downloading receipt:', error);
-      toast({
-        title: 'Download Failed',
-        description: 'There was an error downloading your receipt',
-        variant: 'destructive',
       });
     }
   };
@@ -594,107 +573,32 @@ const POS = () => {
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="max-w-md animate-scale-in">
-          <div className="flex flex-col items-center justify-center py-4">
-            <div className="rounded-full bg-green-100 p-4 mb-4">
-              <Check className="h-10 w-10 text-green-600" />
+        <DialogContent className="max-w-md animate-scale-in text-center">
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="rounded-full bg-green-100 p-6 mb-4">
+              <Check className="h-12 w-12 text-green-600" />
             </div>
             <DialogTitle className="text-2xl font-heading mb-2">Payment Successful!</DialogTitle>
-            <DialogDescription className="text-center mb-4">
+            <DialogDescription className="text-center mb-6">
               Your transaction has been completed successfully.
             </DialogDescription>
-          </div>
-          
-          {lastCompletedBill && selectedCustomer && (
-            <div className="border rounded-lg overflow-hidden" ref={receiptRef}>
-              <div className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple p-3 text-white">
-                <h3 className="font-heading text-lg font-bold">Cuephoria Gaming Cafe</h3>
-                <p className="text-xs opacity-80">Invoice #{lastCompletedBill.id}</p>
-              </div>
-              
-              <div className="p-4 space-y-3 bg-white">
-                <div className="flex justify-between text-sm pb-2 border-b">
-                  <span className="font-medium">Date:</span>
-                  <span>{new Date(lastCompletedBill.createdAt).toLocaleString()}</span>
-                </div>
-                
-                <div className="text-sm pb-2 border-b">
-                  <p className="font-medium">Customer:</p>
-                  <p>{selectedCustomer.name}</p>
-                  <p className="text-xs text-gray-600">{selectedCustomer.phone}</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="font-medium text-sm">Items:</p>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
-                    {lastCompletedBill.items.map((item, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span>
-                          {item.name} x{item.quantity}
-                        </span>
-                        <span className="font-mono">₹{item.total.toLocaleString('en-IN')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="space-y-1 pt-2 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span className="font-mono">₹{lastCompletedBill.subtotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  
-                  {lastCompletedBill.discount > 0 && (
-                    <div className="flex justify-between text-sm text-cuephoria-purple">
-                      <span>
-                        Discount {lastCompletedBill.discountType === 'percentage' ? `(${lastCompletedBill.discount}%)` : ''}:
-                      </span>
-                      <span className="font-mono">-₹{lastCompletedBill.discountValue.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  
-                  {lastCompletedBill.loyaltyPointsUsed > 0 && (
-                    <div className="flex justify-between text-sm text-cuephoria-orange">
-                      <span>Loyalty Points:</span>
-                      <span className="font-mono">-₹{lastCompletedBill.loyaltyPointsUsed.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between font-bold pt-2 border-t">
-                    <span>Total:</span>
-                    <span className="font-mono text-cuephoria-lightpurple">₹{lastCompletedBill.total.toLocaleString('en-IN')}</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-xs text-gray-500 pt-2">
-                    <span>Payment Method:</span>
-                    <span className="capitalize">{lastCompletedBill.paymentMethod}</span>
-                  </div>
-                  
-                  {lastCompletedBill.loyaltyPointsEarned > 0 && (
-                    <div className="flex justify-between text-xs text-cuephoria-orange mt-2 pt-2 border-t">
-                      <span>Loyalty Points Earned:</span>
-                      <span>{lastCompletedBill.loyaltyPointsEarned} points</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="text-center text-xs text-gray-500 pt-3 border-t">
-                  <p>Thank you for visiting Cuephoria Gaming Cafe!</p>
-                  <p>For any inquiries, please contact us.</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter className="mt-4">
+            <p className="font-bold text-xl mb-2">
+              <CurrencyDisplay amount={lastCompletedBill?.total || 0} />
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              {lastCompletedBill ? new Date(lastCompletedBill.createdAt).toLocaleString() : ''}
+            </p>
             <Button 
-              onClick={handleDownloadReceipt}
+              onClick={() => {
+                setShowSuccess(false);
+                setShowReceipt(true);
+              }}
               className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
             >
-              <Download className="mr-2 h-4 w-4" />
-              Download Receipt
+              <ReceiptIcon className="mr-2 h-4 w-4" />
+              View Receipt
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
