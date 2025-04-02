@@ -1,4 +1,3 @@
-
 import { LucideIcon } from 'lucide-react';
 
 // Product related types
@@ -35,14 +34,16 @@ export interface Customer {
 }
 
 // Station related types
+export type StationType = 'ps5' | '8ball' | 'pool' | 'snooker' | 'console';
+
 export interface Station {
   id: string;
   name: string;
-  type: 'pool' | 'snooker' | 'console';
-  status: 'available' | 'maintenance';
+  type: StationType;
   hourlyRate: number;
   isOccupied: boolean;
-  currentSession: Session | null;
+  currentSession: any | null;
+  status: 'available' | 'occupied' | 'maintenance';
 }
 
 export interface Session {

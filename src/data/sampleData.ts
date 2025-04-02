@@ -1,269 +1,320 @@
 
-import { Product, Station, Customer } from '@/types/pos.types';
+import { Customer, Product, Bill, Station } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-// Sample Products
-export const initialProducts: Product[] = [
+// Sample Customers
+export const sampleCustomers: Customer[] = [
   {
-    id: 'product1',
-    name: '8-Ball Pool (Per Hour)',
-    price: 200,
-    category: 'gaming',
-    stock: 999,
+    id: '1',
+    name: 'John Doe',
+    email: 'john@example.com',
+    phone: '555-123-4567',
+    membershipType: 'basic',
+    membershipStartDate: new Date('2023-01-15').getTime(),
+    membershipEndDate: new Date('2023-12-31').getTime(),
+    visits: 15,
+    totalSpent: 425.75,
+    lastVisit: new Date('2023-06-01').getTime(),
+    notes: 'Prefers PS5 station 1'
   },
   {
-    id: 'product2',
-    name: 'PS5 Gaming (Per Hour)',
-    price: 200,
-    category: 'gaming',
-    stock: 999,
+    id: '2',
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    phone: '555-987-6543',
+    membershipType: 'premium',
+    membershipStartDate: new Date('2023-02-20').getTime(),
+    membershipEndDate: new Date('2023-12-31').getTime(),
+    visits: 27,
+    totalSpent: 782.50,
+    lastVisit: new Date('2023-06-05').getTime(),
+    notes: 'Birthday on July 15'
   },
   {
-    id: 'product3',
-    name: 'Snooker (Per Hour)',
-    price: 300,
-    category: 'gaming',
-    stock: 999,
+    id: '3',
+    name: 'Mike Johnson',
+    email: 'mike@example.com',
+    phone: '555-555-5555',
+    membershipType: 'gold',
+    membershipStartDate: new Date('2023-03-10').getTime(),
+    membershipEndDate: new Date('2023-12-31').getTime(),
+    visits: 8,
+    totalSpent: 195.25,
+    lastVisit: new Date('2023-05-28').getTime(),
+    notes: ''
   },
   {
-    id: 'product4',
-    name: 'Coca Cola',
-    price: 40,
-    category: 'drinks',
-    stock: 24,
+    id: '4',
+    name: 'Emily Williams',
+    email: 'emily@example.com',
+    phone: '555-222-3333',
+    membershipType: 'platinum',
+    membershipStartDate: new Date('2023-01-05').getTime(),
+    membershipEndDate: new Date('2023-12-31').getTime(),
+    visits: 32,
+    totalSpent: 1250.75,
+    lastVisit: new Date('2023-06-07').getTime(),
+    notes: 'Prefers 8-ball table 2'
   },
   {
-    id: 'product5',
-    name: 'Cheese Sandwich',
-    price: 80,
-    category: 'food',
-    stock: 10,
-  },
-  {
-    id: 'product6',
-    name: 'Cigarettes (Pack)',
-    price: 350,
-    category: 'tobacco',
-    stock: 15,
-  },
-  {
-    id: 'product7',
-    name: 'Introductory Weekly Pass - 8 Ball (2 Pax)',
-    price: 399,
-    category: 'membership',
-    stock: 999,
-  },
-  {
-    id: 'product8',
-    name: 'Introductory Weekly Pass - 8 Ball (4 Pax)',
-    price: 599,
-    category: 'membership',
-    stock: 999,
-  },
-  {
-    id: 'product9',
-    name: 'Introductory Weekly Pass - PS5 Gaming',
-    price: 399,
-    category: 'membership',
-    stock: 999,
-  },
-  {
-    id: 'product10',
-    name: 'Introductory Weekly Pass - Combo',
-    price: 899,
-    category: 'membership',
-    stock: 999,
+    id: '5',
+    name: 'Alex Brown',
+    email: 'alex@example.com',
+    phone: '555-444-9999',
+    membershipType: 'basic',
+    membershipStartDate: new Date('2023-04-15').getTime(),
+    membershipEndDate: new Date('2023-12-31').getTime(),
+    visits: 3,
+    totalSpent: 75.50,
+    lastVisit: new Date('2023-05-20').getTime(),
+    notes: 'New customer'
   }
 ];
 
-// Sample Customers
-export const initialCustomers: Customer[] = [
+// Sample Products
+export const sampleProducts: Product[] = [
   {
-    id: 'customer1',
-    name: 'Raj Sharma',
-    phone: '9876543210',
-    email: 'raj.sharma@example.com',
-    isMember: true,
-    loyaltyPoints: 120,
-    totalSpent: 1200,
-    totalPlayTime: 240,
-    createdAt: new Date('2023-01-15'),
-    membership: null
+    id: '1',
+    name: 'Coca-Cola',
+    price: 2.50,
+    category: 'beverage',
+    description: '12oz can',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 48
   },
   {
-    id: 'customer2',
-    name: 'Priya Patel',
-    phone: '8765432109',
-    isMember: false,
-    loyaltyPoints: 50,
-    totalSpent: 500,
-    totalPlayTime: 120,
-    createdAt: new Date('2023-02-20'),
-    membership: null
+    id: '2',
+    name: 'Nachos',
+    price: 5.99,
+    category: 'food',
+    description: 'Cheese nachos with salsa',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 15
   },
   {
-    id: 'customer3',
-    name: 'Amit Singh',
-    phone: '7654321098',
-    email: 'amit.singh@example.com',
-    isMember: true,
-    loyaltyPoints: 80,
-    totalSpent: 800,
-    totalPlayTime: 180,
-    createdAt: new Date('2023-03-10'),
-    membership: null
+    id: '3',
+    name: 'Chicken Wings',
+    price: 8.99,
+    category: 'food',
+    description: '8 pieces, buffalo style',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 20
+  },
+  {
+    id: '4',
+    name: 'PS5 Controller',
+    price: 5.00,
+    category: 'rental',
+    description: 'Controller rental (included with station)',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 10
+  },
+  {
+    id: '5',
+    name: 'Pool Cue',
+    price: 3.00,
+    category: 'rental',
+    description: 'Premium pool cue rental',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 15
+  },
+  {
+    id: '6',
+    name: 'Basic Membership',
+    price: 29.99,
+    category: 'membership',
+    description: '10% discount on all stations',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 999
+  },
+  {
+    id: '7',
+    name: 'Premium Membership',
+    price: 49.99,
+    category: 'membership',
+    description: '15% discount on all stations + free snack',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 999
+  },
+  {
+    id: '8',
+    name: 'Gold Membership',
+    price: 79.99,
+    category: 'membership',
+    description: '20% discount on all stations + free drink and snack',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 999
+  },
+  {
+    id: '9',
+    name: 'Platinum Membership',
+    price: 129.99,
+    category: 'membership',
+    description: '25% discount on all stations + priority booking + free refreshments',
+    image: '/placeholder.svg',
+    inStock: true,
+    stockQuantity: 999
   }
 ];
 
 // Sample Stations
-export const initialStations: Station[] = [
+export const sampleStations: Station[] = [
   {
-    id: 'station1',
-    name: '8-Ball Table 1',
-    type: 'pool',
-    status: 'available',
-    hourlyRate: 200,
-    isOccupied: false,
-    currentSession: null
-  },
-  {
-    id: 'station2',
-    name: '8-Ball Table 2',
-    type: 'pool',
-    status: 'available',
-    hourlyRate: 200,
-    isOccupied: false,
-    currentSession: null
-  },
-  {
-    id: 'station3',
-    name: 'Snooker Table 1',
-    type: 'snooker',
-    status: 'available',
-    hourlyRate: 300,
-    isOccupied: false,
-    currentSession: null
-  },
-  {
-    id: 'station4',
+    id: '1',
     name: 'PS5 Station 1',
-    type: 'console',
-    status: 'available',
-    hourlyRate: 200,
+    type: 'ps5',
+    hourlyRate: 15.00,
     isOccupied: false,
-    currentSession: null
+    currentSession: null,
+    status: 'available'
   },
   {
-    id: 'station5',
+    id: '2',
     name: 'PS5 Station 2',
-    type: 'console',
-    status: 'available',
-    hourlyRate: 200,
+    type: 'ps5',
+    hourlyRate: 15.00,
+    isOccupied: true,
+    status: 'occupied',
+    currentSession: {
+      startTime: Date.now() - (1000 * 60 * 45), // Started 45 minutes ago
+      customerId: '1',
+      customerName: 'John Doe'
+    }
+  },
+  {
+    id: '3',
+    name: 'PS5 Station 3',
+    type: 'ps5',
+    hourlyRate: 15.00,
     isOccupied: false,
-    currentSession: null
+    currentSession: null,
+    status: 'maintenance'
+  },
+  {
+    id: '4',
+    name: '8-Ball Table 1',
+    type: '8ball',
+    hourlyRate: 12.00,
+    isOccupied: true,
+    status: 'occupied',
+    currentSession: {
+      startTime: Date.now() - (1000 * 60 * 120), // Started 2 hours ago
+      customerId: '2',
+      customerName: 'Jane Smith'
+    }
+  },
+  {
+    id: '5',
+    name: '8-Ball Table 2',
+    type: '8ball',
+    hourlyRate: 12.00,
+    isOccupied: false,
+    currentSession: null,
+    status: 'available'
+  },
+  {
+    id: '6',
+    name: '8-Ball Table 3',
+    type: '8ball',
+    hourlyRate: 12.00,
+    isOccupied: false,
+    currentSession: null,
+    status: 'available'
   }
 ];
 
-// Sample Indian Names for new customers
-export const sampleIndianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
+// Sample Bills/Transactions
+export const sampleBills: Bill[] = [
   {
-    name: 'Arjun Krishnan',
-    phone: '9988776655',
-    email: 'arjun.k@example.com',
-    isMember: true,
-    loyaltyPoints: 0,
-    totalSpent: 0,
-    totalPlayTime: 0,
-    membership: null
+    id: generateId(),
+    customerId: '1',
+    customerName: 'John Doe',
+    items: [
+      { id: '1', name: 'PS5 Station 1', price: 15.00, quantity: 2, subtotal: 30.00, type: 'station' },
+      { id: '1', name: 'Coca-Cola', price: 2.50, quantity: 2, subtotal: 5.00, type: 'product' }
+    ],
+    total: 35.00,
+    discount: 0,
+    paymentMethod: 'cash',
+    timestamp: Date.now() - (1000 * 60 * 60 * 24 * 1), // 1 day ago
+    notes: ''
   },
   {
-    name: 'Deepika Rastogi',
-    phone: '8877665544',
-    email: 'deepika.r@example.com',
-    isMember: true,
-    loyaltyPoints: 0,
-    totalSpent: 0,
-    totalPlayTime: 0,
-    membership: null
+    id: generateId(),
+    customerId: '2',
+    customerName: 'Jane Smith',
+    items: [
+      { id: '2', name: 'PS5 Station 2', price: 15.00, quantity: 3, subtotal: 45.00, type: 'station' },
+      { id: '2', name: 'Nachos', price: 5.99, quantity: 1, subtotal: 5.99, type: 'product' },
+      { id: '1', name: 'Coca-Cola', price: 2.50, quantity: 1, subtotal: 2.50, type: 'product' }
+    ],
+    total: 53.49,
+    discount: 0,
+    paymentMethod: 'card',
+    timestamp: Date.now() - (1000 * 60 * 60 * 24 * 2), // 2 days ago
+    notes: ''
   },
   {
-    name: 'Vikram Mehta',
-    phone: '7766554433',
-    isMember: false,
-    loyaltyPoints: 0,
-    totalSpent: 0,
-    totalPlayTime: 0,
-    membership: null
+    id: generateId(),
+    customerId: '3',
+    customerName: 'Mike Johnson',
+    items: [
+      { id: '4', name: '8-Ball Table 1', price: 12.00, quantity: 2, subtotal: 24.00, type: 'station' }
+    ],
+    total: 24.00,
+    discount: 0,
+    paymentMethod: 'cash',
+    timestamp: Date.now() - (1000 * 60 * 60 * 24 * 3), // 3 days ago
+    notes: ''
   },
   {
-    name: 'Ananya Desai',
-    phone: '6655443322',
-    email: 'ananya.d@example.com',
-    isMember: true,
-    loyaltyPoints: 0,
-    totalSpent: 0,
-    totalPlayTime: 0,
-    membership: null
+    id: generateId(),
+    customerId: '4',
+    customerName: 'Emily Williams',
+    items: [
+      { id: '1', name: 'PS5 Station 1', price: 15.00, quantity: 4, subtotal: 60.00, type: 'station' },
+      { id: '3', name: 'Chicken Wings', price: 8.99, quantity: 2, subtotal: 17.98, type: 'product' },
+      { id: '1', name: 'Coca-Cola', price: 2.50, quantity: 2, subtotal: 5.00, type: 'product' }
+    ],
+    total: 82.98,
+    discount: 0,
+    paymentMethod: 'card',
+    timestamp: Date.now() - (1000 * 60 * 60 * 24 * 4), // 4 days ago
+    notes: ''
   },
   {
-    name: 'Rajan Verma',
-    phone: '5544332211',
-    isMember: false,
-    loyaltyPoints: 0,
-    totalSpent: 0,
-    totalPlayTime: 0,
-    membership: null
-  }
-];
-
-// Sample Indian Food and Drink Products
-export const sampleIndianProducts: Omit<Product, 'id'>[] = [
-  {
-    name: 'Masala Chai',
-    price: 30,
-    category: 'drinks',
-    stock: 50
+    id: generateId(),
+    customerId: '1',
+    customerName: 'John Doe',
+    items: [
+      { id: '5', name: '8-Ball Table 2', price: 12.00, quantity: 1, subtotal: 12.00, type: 'station' }
+    ],
+    total: 12.00,
+    discount: 0,
+    paymentMethod: 'cash',
+    timestamp: Date.now() - (1000 * 60 * 60 * 24 * 5), // 5 days ago
+    notes: ''
   },
   {
-    name: 'Samosa (2 pcs)',
-    price: 40,
-    category: 'food',
-    stock: 30
-  },
-  {
-    name: 'Vada Pav',
-    price: 35,
-    category: 'food',
-    stock: 25
-  },
-  {
-    name: 'Pav Bhaji',
-    price: 90,
-    category: 'food',
-    stock: 15
-  },
-  {
-    name: 'Masala Soda',
-    price: 45,
-    category: 'drinks',
-    stock: 20
-  },
-  {
-    name: 'Paneer Sandwich',
-    price: 70,
-    category: 'food',
-    stock: 18
-  },
-  {
-    name: 'Lassi',
-    price: 60,
-    category: 'drinks',
-    stock: 22
-  },
-  {
-    name: 'Dahi Puri',
-    price: 65,
-    category: 'food',
-    stock: 20
+    id: generateId(),
+    customerId: '5',
+    customerName: 'Alex Brown',
+    items: [
+      { id: '2', name: 'PS5 Station 2', price: 15.00, quantity: 1, subtotal: 15.00, type: 'station' },
+      { id: '2', name: 'Nachos', price: 5.99, quantity: 1, subtotal: 5.99, type: 'product' }
+    ],
+    total: 20.99,
+    discount: 0,
+    paymentMethod: 'card',
+    timestamp: Date.now() - (1000 * 60 * 60 * 24 * 6), // 6 days ago
+    notes: 'First visit'
   }
 ];

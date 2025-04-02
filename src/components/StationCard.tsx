@@ -1,191 +1,256 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Clock, Play, Square, CalendarClock, Settings, UserCheck, AlertTriangle } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Monitor, Users } from 'lucide-react';
-import { usePOS, Station, Customer } from '@/context/POSContext';
-import { CurrencyDisplay } from '@/components/ui/currency';
-import { useToast } from '@/hooks/use-toast';
+import { usePOS } from '@/context/POSContext';
+import { Station } from '@/types/pos.types';
+import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface StationCardProps {
   station: Station;
 }
 
 const StationCard: React.FC<StationCardProps> = ({ station }) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { customers, startSession, endSession, selectCustomer } = usePOS();
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
-  const [cost, setCost] = useState<number>(0);
-  const [hours, setHours] = useState<number>(0);
-  const [minutes, setMinutes] = useState<number>(0);
-  const [seconds, setSeconds] = useState<number>(0);
-
-  // Update elapsed time every second for active sessions
-  useEffect(() => {
-    if (!station.isOccupied || !station.currentSession) {
-      setElapsedTime(0);
-      setCost(0);
-      setHours(0);
-      setMinutes(0);
-      setSeconds(0);
-      return;
-    }
-
-    const startTime = new Date(station.currentSession.startTime).getTime();
-    
-    const updateElapsedTime = () => {
-      const now = new Date().getTime();
-      const elapsedMs = now - startTime;
-      
-      // Calculate time components
-      const secondsTotal = Math.floor(elapsedMs / 1000);
-      const minutesTotal = Math.floor(secondsTotal / 60);
-      const hoursTotal = Math.floor(minutesTotal / 60);
-      
-      // Set displayed time values
-      setSeconds(secondsTotal % 60);
-      setMinutes(minutesTotal % 60);
-      setHours(hoursTotal);
-      
-      // Update elapsed minutes for cost calculation
-      setElapsedTime(minutesTotal);
-      
-      // Calculate cost based on hourly rate
-      const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-      const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
-      setCost(calculatedCost);
-    };
-
-    // Initial update
-    updateElapsedTime();
-    
-    // Set interval to update every second
-    const interval = setInterval(updateElapsedTime, 1000);
-    
-    return () => clearInterval(interval);
-  }, [station]);
-
+  const { startSession, endSession, updateStation } = usePOS();
+  const [showStartDialog, setShowStartDialog] = useState(false);
+  const [customerId, setCustomerId] = useState('');
+  const [showEndDialog, setShowEndDialog] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  
+  // Calculate session duration if station is occupied
+  const sessionDuration = station.isOccupied && station.currentSession?.startTime 
+    ? Math.floor((Date.now() - station.currentSession.startTime) / (1000 * 60)) 
+    : 0;
+  
+  const hours = Math.floor(sessionDuration / 60);
+  const minutes = sessionDuration % 60;
+  
   const handleStartSession = () => {
-    if (selectedCustomerId) {
-      startSession(station.id, selectedCustomerId);
-      setSelectedCustomerId('');
+    if (customerId) {
+      startSession(station.id, customerId);
+      setShowStartDialog(false);
+      setCustomerId('');
     }
   };
-
+  
   const handleEndSession = () => {
-    if (station.isOccupied && station.currentSession) {
-      const customerId = station.currentSession.customerId;
-      
-      // End the session and get session details
-      endSession(station.id);
-      
-      // Set the customer in context and navigate to POS
-      console.log('Navigating to POS with customer ID:', customerId);
-      selectCustomer(customerId);
-      
-      toast({
-        title: "Session Ended",
-        description: "Session has been ended and added to cart. Redirecting to checkout...",
-      });
-      
-      // Navigate to POS page with a small delay to allow state updates
-      setTimeout(() => {
-        navigate('/pos');
-      }, 300);
-    }
+    endSession(station.id);
+    setShowEndDialog(false);
   };
-
-  const formatTimeDisplay = () => {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  
+  const toggleMaintenance = () => {
+    const newStatus = station.status === 'maintenance' ? 'available' : 'maintenance';
+    updateStation({
+      ...station,
+      status: newStatus,
+      isOccupied: newStatus === 'maintenance' ? false : station.isOccupied
+    });
+    setMaintenanceMode(newStatus === 'maintenance');
   };
-
-  const getCustomerName = (id: string) => {
-    const customer = customers.find(c => c.id === id);
-    return customer ? customer.name : 'Unknown Customer';
-  };
-
-  const stationIcon = station.type === 'ps5' ? <Monitor className="h-8 w-8" /> : <Clock className="h-8 w-8" />;
-
+  
   return (
-    <Card className={`card-hover ${station.isOccupied ? 'border-cuephoria-orange' : 'border-gray-200'} animate-scale-in`}>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center text-lg font-heading">
-            {stationIcon}
-            <span className="ml-2">{station.name}</span>
-          </CardTitle>
-          <Badge className={`${station.isOccupied ? 'bg-cuephoria-orange' : 'bg-green-500'} ${station.isOccupied ? 'animate-pulse' : ''}`}>
-            {station.isOccupied ? 'Occupied' : 'Available'}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Hourly Rate:</span>
-            <CurrencyDisplay amount={station.hourlyRate} />
+    <>
+      <Card className={`bg-cuephoria-darker border-0 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${
+        station.status === 'maintenance' 
+          ? 'border-l-4 border-l-yellow-500 shadow-yellow-900/20' 
+          : station.isOccupied 
+            ? 'border-l-4 border-l-green-500 shadow-green-900/20' 
+            : 'border-l-4 border-l-cuephoria-lightpurple shadow-cuephoria-lightpurple/10'
+      }`}>
+        <div className={`absolute top-0 right-0 w-24 h-24 transform translate-x-12 -translate-y-12 rotate-45 ${
+          station.status === 'maintenance' 
+            ? 'bg-yellow-500/10' 
+            : station.isOccupied 
+              ? 'bg-green-500/10' 
+              : 'bg-cuephoria-lightpurple/5'
+        }`}></div>
+        
+        <CardContent className="p-4 relative">
+          <div className="flex justify-between items-start mb-3">
+            <div>
+              <Badge 
+                className={`${
+                  station.status === 'maintenance' 
+                    ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30' 
+                    : station.isOccupied 
+                      ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30' 
+                      : 'bg-cuephoria-purple/20 text-cuephoria-lightpurple hover:bg-cuephoria-purple/30'
+                }`}
+              >
+                {station.status === 'maintenance' 
+                  ? 'Maintenance' 
+                  : station.isOccupied 
+                    ? 'Active' 
+                    : 'Available'}
+              </Badge>
+              
+              <h3 className="text-lg font-bold mt-2">{station.name}</h3>
+              <p className="text-sm text-gray-400">
+                {station.type === 'ps5' ? 'PlayStation 5' : '8-Ball Table'}
+              </p>
+            </div>
+            
+            <div className="flex flex-col items-end">
+              <p className="text-xs text-gray-400">Hourly Rate</p>
+              <p className="text-xl font-bold">${station.hourlyRate.toFixed(2)}</p>
+            </div>
           </div>
           
           {station.isOccupied && station.currentSession && (
-            <>
-              <div className="flex justify-between text-sm">
-                <span>Customer:</span>
-                <span>{getCustomerName(station.currentSession.customerId)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Duration:</span>
-                <span className="font-mono bg-black/10 px-2 py-1 rounded text-cuephoria-lightpurple font-bold">
-                  {formatTimeDisplay()}
+            <div className="mt-3 bg-cuephoria-dark/50 p-3 rounded-md">
+              <div className="flex justify-between mb-2">
+                <span className="text-xs text-gray-400 flex items-center">
+                  <Clock className="h-3 w-3 mr-1" /> Started:
+                </span>
+                <span className="text-xs">
+                  {format(new Date(station.currentSession.startTime), 'h:mm a')}
                 </span>
               </div>
-              <div className="flex justify-between text-sm font-medium mt-2">
-                <span>Current Cost:</span>
-                <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold" />
+              <div className="flex justify-between">
+                <span className="text-xs text-gray-400 flex items-center">
+                  <CalendarClock className="h-3 w-3 mr-1" /> Duration:
+                </span>
+                <span className="text-xs">
+                  {hours > 0 ? `${hours}h ` : ''}{minutes}m
+                </span>
               </div>
+              <div className="flex justify-between mt-2">
+                <span className="text-xs text-gray-400 flex items-center">
+                  <UserCheck className="h-3 w-3 mr-1" /> Customer:
+                </span>
+                <span className="text-xs">
+                  {station.currentSession.customerName || 'Guest'}
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+        
+        <CardFooter className="p-4 pt-0 flex gap-2">
+          {station.status === 'maintenance' ? (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-yellow-500/30 text-yellow-400 flex-1 hover:bg-yellow-500/20 hover:text-yellow-300"
+              onClick={toggleMaintenance}
+            >
+              <Settings className="h-4 w-4 mr-2" /> End Maintenance
+            </Button>
+          ) : station.isOccupied ? (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-red-500/30 text-red-400 flex-1 hover:bg-red-500/20 hover:text-red-300"
+              onClick={() => setShowEndDialog(true)}
+            >
+              <Square className="h-4 w-4 mr-2" /> End Session
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-green-500/30 text-green-400 flex-1 hover:bg-green-500/20 hover:text-green-300"
+                onClick={() => setShowStartDialog(true)}
+              >
+                <Play className="h-4 w-4 mr-2" /> Start Session
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 hover:text-yellow-300"
+                onClick={toggleMaintenance}
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </Button>
             </>
           )}
-        </div>
-      </CardContent>
-      <CardFooter className="flex-col space-y-2">
-        {station.isOccupied ? (
-          <Button 
-            variant="destructive" 
-            className="w-full btn-hover-effect"
-            onClick={handleEndSession}
-          >
-            End Session
-          </Button>
-        ) : (
-          <>
-            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-              <SelectTrigger className="font-quicksand">
-                <SelectValue placeholder="Select Customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id} className="font-quicksand">
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button 
-              variant="default" 
-              className="w-full bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
-              disabled={!selectedCustomerId} 
+        </CardFooter>
+      </Card>
+      
+      {/* Start Session Dialog */}
+      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 text-white">
+          <DialogHeader>
+            <DialogTitle>Start Session for {station.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm">Customer ID (optional)</label>
+              <Input
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                placeholder="Enter customer ID"
+                className="bg-cuephoria-dark border-cuephoria-lightpurple/30"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowStartDialog(false)}
+              className="border-cuephoria-lightpurple/30 text-white"
+            >
+              Cancel
+            </Button>
+            <Button
               onClick={handleStartSession}
+              className="bg-gradient-to-r from-green-500 to-green-700"
             >
               Start Session
             </Button>
-          </>
-        )}
-      </CardFooter>
-    </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* End Session Dialog */}
+      <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 text-white">
+          <DialogHeader>
+            <DialogTitle>End Session for {station.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p>Are you sure you want to end this session?</p>
+            {station.currentSession && (
+              <div className="bg-cuephoria-dark/50 p-3 rounded-md">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm">Duration:</span>
+                  <span className="text-sm font-medium">
+                    {hours > 0 ? `${hours}h ` : ''}{minutes}m
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Amount:</span>
+                  <span className="text-sm font-medium">
+                    ${((hours + (minutes / 60)) * station.hourlyRate).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEndDialog(false)}
+              className="border-cuephoria-lightpurple/30 text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEndSession}
+              className="bg-gradient-to-r from-red-500 to-red-700"
+            >
+              End Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
