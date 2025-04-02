@@ -12,7 +12,8 @@ import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { generatePDF } from './receipt/receiptUtils';
+import { generatePDF } from '@/components/receipt/receiptUtils';
+import Receipt from '@/components/Receipt';
 
 const POS = () => {
   const {
