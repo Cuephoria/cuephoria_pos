@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,8 +11,40 @@ import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
 
 const Customers = () => {
-  const { customers, addCustomer, updateCustomer, deleteCustomer, exportCustomers } = usePOS();
+  console.log('Customers component rendering');
+  
+  // Local state to handle errors
+  const [error, setError] = useState<string | null>(null);
+  const [customersData, setCustomersData] = useState<Customer[]>([]);
+  const [isContextLoaded, setIsContextLoaded] = useState(false);
+  
+  // Use a try-catch when getting the context
+  let posContext;
+  try {
+    posContext = usePOS();
+    setIsContextLoaded(true);
+  } catch (e) {
+    console.error('Error using POS context:', e);
+    setError(e instanceof Error ? e.message : 'Unknown error');
+  }
+  
   const { toast } = useToast();
+  
+  // If we have the context, extract what we need
+  const { 
+    customers = [], 
+    addCustomer = () => {}, 
+    updateCustomer = () => {}, 
+    deleteCustomer = () => {}, 
+    exportCustomers = () => {} 
+  } = isContextLoaded && posContext ? posContext : {};
+  
+  useEffect(() => {
+    // Update local state when context data changes
+    if (isContextLoaded && customers) {
+      setCustomersData(customers);
+    }
+  }, [isContextLoaded, customers]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -131,12 +163,28 @@ const Customers = () => {
 
   // Filter customers based on search query
   const filteredCustomers = searchQuery.trim() === ''
-    ? customers
-    : customers.filter(customer => 
+    ? customersData
+    : customersData.filter(customer => 
         customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         customer.phone.includes(searchQuery) ||
         (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()))
       );
+
+  // If we have an error, display it
+  if (error) {
+    return (
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
+        </div>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+          <p className="mt-2">Please try refreshing the page or contact support if the issue persists.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -146,7 +194,7 @@ const Customers = () => {
           <Button variant="outline" onClick={exportCustomers}>
             <Download className="h-4 w-4 mr-2" /> Export
           </Button>
-          <Button onClick={handleOpenDialog}>
+          <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Add Customer
           </Button>
         </div>

@@ -203,6 +203,8 @@ const initialCustomers: Customer[] = [
 ];
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('POSProvider initialized'); // Debug log
+  
   // State
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [stations, setStations] = useState<Station[]>(initialStations);
@@ -574,6 +576,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.body.removeChild(link);
   };
   
+  console.log('POSProvider rendering with context value'); // Debug log
+  
   return (
     <POSContext.Provider
       value={{
@@ -614,9 +618,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export const usePOS = () => {
+  console.log('usePOS hook called'); // Debug log
   const context = useContext(POSContext);
   if (context === undefined) {
+    console.error('usePOS must be used within a POSProvider'); // Debug log
     throw new Error('usePOS must be used within a POSProvider');
   }
+  console.log('usePOS hook returning context'); // Debug log
   return context;
 };
