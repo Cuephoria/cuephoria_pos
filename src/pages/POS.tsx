@@ -150,12 +150,13 @@ const POS = () => {
       return;
     }
     
-    const bill = completeSale(paymentMethod);
-    if (bill) {
+    const result = completeSale(paymentMethod);
+    // Check if result exists before proceeding
+    if (result) {
       setIsCheckoutDialogOpen(false);
       toast({
         title: 'Sale Completed',
-        description: `Total: ${formatCurrency(bill.total)}`,
+        description: `Total: ${formatCurrency(result.total)}`,
       });
     }
   };

@@ -6,7 +6,12 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate('/login');
+    // Use a small timeout to ensure React is fully initialized
+    const timeout = setTimeout(() => {
+      navigate('/login');
+    }, 100);
+    
+    return () => clearTimeout(timeout);
   }, [navigate]);
 
   return (
