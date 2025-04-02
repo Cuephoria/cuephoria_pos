@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users } from 'lucide-react';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Award } from 'lucide-react';
 import { 
   Sidebar, 
   SidebarContent, 
@@ -28,6 +28,7 @@ const AppSidebar: React.FC = () => {
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: ShoppingCart, label: 'POS', path: '/pos' },
     { icon: Clock, label: 'Gaming Stations', path: '/stations' },
+    { icon: Award, label: 'Memberships', path: '/memberships' },
     { icon: Package, label: 'Products', path: '/products' },
     { icon: Users, label: 'Customers', path: '/customers' },
     { icon: BarChart2, label: 'Reports', path: '/reports' },

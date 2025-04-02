@@ -1,11 +1,11 @@
 
 import React from 'react';
 import ActionButton from './ActionButton';
-import { PlayCircle, ShoppingCart, User, Package, Award } from 'lucide-react';
+import { PlayCircle, ShoppingCart, User, Package } from 'lucide-react';
 
 const ActionButtonSection: React.FC = () => {
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <ActionButton
         icon={PlayCircle}
         label="New Gaming Session"
@@ -18,13 +18,6 @@ const ActionButtonSection: React.FC = () => {
         label="New Sale"
         path="/pos"
         iconColor="text-[#9b87f5]"
-      />
-      
-      <ActionButton
-        icon={Award}
-        label="Memberships"
-        path="/memberships"
-        iconColor="text-[#F59E0B]"
       />
       
       <ActionButton

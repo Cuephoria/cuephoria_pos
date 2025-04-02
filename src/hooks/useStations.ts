@@ -11,7 +11,7 @@ export function useStations(initialStations: Station[]) {
     const storedStations = localStorage.getItem('cuephoriaStations');
     if (storedStations) {
       const parsedStations = JSON.parse(storedStations);
-      // Ensure all stations have the status property
+      // Ensure all stations have the status property with the correct type
       const updatedStations = parsedStations.map((station: any) => ({
         ...station,
         status: station.status || (station.isOccupied ? 'occupied' as StationStatus : 'available' as StationStatus)
@@ -68,7 +68,7 @@ export function useStations(initialStations: Station[]) {
     
     const sessionCartItem = {
       id: generateId(),
-      type: 'session',
+      type: 'session' as const,
       name: `${station.name} Session (${hoursUsed} hr)`,
       price: station.hourlyRate,
       quantity: hoursUsed,
