@@ -1,5 +1,5 @@
 
-import { ResetOptions, Product, Customer, Station, Bill } from '@/types/pos.types';
+import { ResetOptions, Product, Customer, Station, Bill, StationStatus } from '@/types/pos.types';
 
 export const resetToSampleData = (
   options: ResetOptions = { all: true },
@@ -39,7 +39,7 @@ export const resetToSampleData = (
       ...station,
       isOccupied: false,
       currentSession: null,
-      status: 'available'
+      status: 'available' as StationStatus
     }));
     setStations(resetStations);
     localStorage.setItem('cuephoriaStations', JSON.stringify(resetStations));

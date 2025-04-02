@@ -1,5 +1,5 @@
 
-import { Customer, Product, Bill, Station } from '@/types/pos.types';
+import { Customer, Product, Bill, Station, StationStatus } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
 // Sample Customers
@@ -166,7 +166,7 @@ export const sampleStations: Station[] = [
     hourlyRate: 15.00,
     isOccupied: false,
     currentSession: null,
-    status: 'available'
+    status: 'available' as StationStatus
   },
   {
     id: '2',
@@ -174,7 +174,7 @@ export const sampleStations: Station[] = [
     type: 'ps5',
     hourlyRate: 15.00,
     isOccupied: true,
-    status: 'occupied',
+    status: 'occupied' as StationStatus,
     currentSession: {
       startTime: Date.now() - (1000 * 60 * 45), // Started 45 minutes ago
       customerId: '1',
@@ -188,7 +188,7 @@ export const sampleStations: Station[] = [
     hourlyRate: 15.00,
     isOccupied: false,
     currentSession: null,
-    status: 'maintenance'
+    status: 'maintenance' as StationStatus
   },
   {
     id: '4',
@@ -196,7 +196,7 @@ export const sampleStations: Station[] = [
     type: '8ball',
     hourlyRate: 12.00,
     isOccupied: true,
-    status: 'occupied',
+    status: 'occupied' as StationStatus,
     currentSession: {
       startTime: Date.now() - (1000 * 60 * 120), // Started 2 hours ago
       customerId: '2',
@@ -210,7 +210,7 @@ export const sampleStations: Station[] = [
     hourlyRate: 12.00,
     isOccupied: false,
     currentSession: null,
-    status: 'available'
+    status: 'available' as StationStatus
   },
   {
     id: '6',
@@ -219,7 +219,7 @@ export const sampleStations: Station[] = [
     hourlyRate: 12.00,
     isOccupied: false,
     currentSession: null,
-    status: 'available'
+    status: 'available' as StationStatus
   }
 ];
 

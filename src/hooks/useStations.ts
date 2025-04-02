@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Station } from '@/types/pos.types';
+import { Station, StationStatus } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
 export function useStations(initialStations: Station[]) {
@@ -14,7 +14,7 @@ export function useStations(initialStations: Station[]) {
       // Ensure all stations have the status property
       const updatedStations = parsedStations.map((station: any) => ({
         ...station,
-        status: station.status || (station.isOccupied ? 'occupied' : 'available')
+        status: station.status || (station.isOccupied ? 'occupied' as StationStatus : 'available' as StationStatus)
       }));
       setStations(updatedStations);
     }
@@ -45,7 +45,7 @@ export function useStations(initialStations: Station[]) {
         return {
           ...station,
           isOccupied: true,
-          status: 'occupied',
+          status: 'occupied' as StationStatus,
           currentSession: {
             startTime: Date.now(),
             customerId: customerId || null,
@@ -81,7 +81,7 @@ export function useStations(initialStations: Station[]) {
         return {
           ...s,
           isOccupied: false,
-          status: 'available',
+          status: 'available' as StationStatus,
           currentSession: null
         };
       }

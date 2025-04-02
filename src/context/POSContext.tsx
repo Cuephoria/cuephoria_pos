@@ -7,7 +7,8 @@ import {
   CartItem, 
   Bill,
   MembershipType,
-  Station
+  Station,
+  CartItemType
 } from '@/types/pos.types';
 import { sampleProducts, sampleStations, sampleCustomers, sampleBills } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
@@ -97,9 +98,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectCustomer(customer.id);
       }
       
-      // Add the session to cart
+      // Add the session to cart - Fix: Make sure sessionCartItem.type is explicitly typed
       console.log("Adding session to cart:", sessionCartItem);
-      addToCart(sessionCartItem);
+      const typedCartItem = {
+        ...sessionCartItem,
+        type: 'session' as CartItemType // Explicitly type as a CartItemType
+      };
+      addToCart(typedCartItem);
       
       return result;
     }
@@ -204,11 +209,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportCustomers,
         resetToSampleData: handleResetToSampleData,
         addSampleIndianData: handleAddSampleIndianData,
-        // Add new membership functions
+        // Membership functions
         addMembership,
         useMembershipCredit,
         isMembershipExpired,
-        getMembershipDetails
+        getMembershipDetails,
+        sessions: [], // Added this to match the POSContextType
       }}
     >
       {children}
@@ -238,5 +244,6 @@ export type {
   MembershipType,
   Membership,
   ResetOptions,
-  POSContextType
+  POSContextType,
+  CartItemType
 } from '@/types/pos.types';

@@ -1,3 +1,4 @@
+
 import { LucideIcon } from 'lucide-react';
 
 // Product related types
@@ -35,6 +36,7 @@ export interface Customer {
 
 // Station related types
 export type StationType = 'ps5' | '8ball' | 'pool' | 'snooker' | 'console';
+export type StationStatus = 'available' | 'occupied' | 'maintenance';
 
 export interface Station {
   id: string;
@@ -43,7 +45,7 @@ export interface Station {
   hourlyRate: number;
   isOccupied: boolean;
   currentSession: any | null;
-  status: 'available' | 'occupied' | 'maintenance';
+  status: StationStatus;
 }
 
 export interface Session {
@@ -56,9 +58,11 @@ export interface Session {
 }
 
 // POS related types
+export type CartItemType = 'product' | 'session' | 'membership';
+
 export interface CartItem {
   id: string;
-  type: 'product' | 'session' | 'membership';
+  type: CartItemType;
   name: string;
   price: number;
   quantity: number;
@@ -108,6 +112,9 @@ export interface POSContextType {
   
   // Station actions
   setStations: (stations: Station[]) => void;
+  addStation: (station: Station) => void;
+  updateStation: (station: Station) => void;
+  removeStation: (id: string) => void;
   
   // Product actions
   addProduct: (product: Omit<Product, 'id'>) => void;
