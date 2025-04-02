@@ -2,12 +2,14 @@
 import { useState, useEffect } from 'react';
 import { Bill, CartItem, Customer, Product } from '@/types/pos.types';
 import { generateId, exportBillsToCSV, exportCustomersToCSV } from '@/utils/pos.utils';
+import { useToast } from '@/hooks/use-toast';
 
 export const useBills = (
   updateCustomer: (customer: Customer) => void,
   updateProduct: (product: Product) => void
 ) => {
   const [bills, setBills] = useState<Bill[]>([]);
+  const { toast } = useToast();
   
   // Load data from localStorage
   useEffect(() => {
@@ -19,6 +21,48 @@ export const useBills = (
   useEffect(() => {
     localStorage.setItem('cuephoriaBills', JSON.stringify(bills));
   }, [bills]);
+
+  const processMembershipPurchase = (
+    customer: Customer,
+    item: CartItem
+  ): { updatedCustomer: Customer; error?: string } => {
+    // Check if customer is already a member with valid membership
+    if (customer.isMember) {
+      const expiryDate = customer.membershipExpiryDate 
+        ? new Date(customer.membershipExpiryDate) 
+        : undefined;
+      
+      if (expiryDate && expiryDate > new Date()) {
+        return { 
+          updatedCustomer: customer, 
+          error: "Customer already has an active membership" 
+        };
+      }
+    }
+    
+    // Calculate new expiry date based on pass type
+    const today = new Date();
+    let expiryDate = new Date();
+    
+    // Weekly or monthly pass
+    if (item.name.toLowerCase().includes('weekly')) {
+      expiryDate.setDate(today.getDate() + 7); // 7 days from now
+    } else if (item.name.toLowerCase().includes('monthly')) {
+      expiryDate.setMonth(today.getMonth() + 1); // 1 month from now
+    } else {
+      // Default to 7 days if can't determine
+      expiryDate.setDate(today.getDate() + 7); 
+    }
+    
+    // Update customer with new membership status
+    return {
+      updatedCustomer: {
+        ...customer,
+        isMember: true,
+        membershipExpiryDate: expiryDate
+      }
+    };
+  };
   
   const completeSale = (
     cart: CartItem[], 
@@ -31,6 +75,31 @@ export const useBills = (
     products: Product[]
   ) => {
     if (!selectedCustomer || cart.length === 0) return undefined;
+    
+    // Check for membership products and handle accordingly
+    const membershipItems = cart.filter(item => {
+      const product = products.find(p => p.id === item.id);
+      return product && product.category === 'membership';
+    });
+    
+    // Process membership purchases if any
+    if (membershipItems.length > 0) {
+      for (const item of membershipItems) {
+        const { updatedCustomer, error } = processMembershipPurchase(selectedCustomer, item);
+        
+        if (error) {
+          toast({
+            title: "Membership Error",
+            description: error,
+            variant: "destructive"
+          });
+          return undefined;
+        }
+        
+        // Update the customer with new membership information
+        selectedCustomer = updatedCustomer;
+      }
+    }
     
     const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
     

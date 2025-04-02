@@ -1,12 +1,14 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges';
+  category: 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
   stock: number;
   image?: string;
+  originalPrice?: number;
+  offerPrice?: number;
+  studentPrice?: number;
 }
 
 export interface Station {
@@ -16,18 +18,6 @@ export interface Station {
   hourlyRate: number;
   isOccupied: boolean;
   currentSession: Session | null;
-}
-
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  isMember: boolean;
-  loyaltyPoints: number;
-  totalSpent: number;
-  totalPlayTime: number; // in minutes
-  createdAt: Date;
 }
 
 export interface Session {

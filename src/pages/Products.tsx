@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Package, Filter } from 'lucide-react';
+import { Plus, Package, Filter, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,9 @@ const Products = () => {
     price: '',
     category: '',
     stock: '',
+    originalPrice: '',
+    offerPrice: '',
+    studentPrice: '',
   });
 
   const resetForm = () => {
@@ -34,6 +37,9 @@ const Products = () => {
       price: '',
       category: '',
       stock: '',
+      originalPrice: '',
+      offerPrice: '',
+      studentPrice: '',
     });
     setIsEditMode(false);
     setSelectedProduct(null);
@@ -52,6 +58,9 @@ const Products = () => {
       price: product.price.toString(),
       category: product.category,
       stock: product.stock.toString(),
+      originalPrice: product.originalPrice?.toString() || '',
+      offerPrice: product.offerPrice?.toString() || '',
+      studentPrice: product.studentPrice?.toString() || '',
     });
     setIsDialogOpen(true);
   };
@@ -67,23 +76,28 @@ const Products = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { name, price, category, stock } = formState;
+    const { name, price, category, stock, originalPrice, offerPrice, studentPrice } = formState;
     
     if (!name || !price || !category || !stock) {
       toast({
         title: 'Error',
-        description: 'Please fill out all fields',
+        description: 'Please fill out all required fields',
         variant: 'destructive',
       });
       return;
     }
     
-    const productData = {
+    const productData: Omit<Product, 'id'> = {
       name,
       price: Number(price),
-      category: category as 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges',
+      category: category as 'gaming' | 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
       stock: Number(stock),
     };
+    
+    // Add pricing tiers if provided (for membership products)
+    if (originalPrice) productData.originalPrice = Number(originalPrice);
+    if (offerPrice) productData.offerPrice = Number(offerPrice);
+    if (studentPrice) productData.studentPrice = Number(studentPrice);
     
     if (isEditMode && selectedProduct) {
       updateProduct({ ...productData, id: selectedProduct.id });
@@ -118,7 +132,7 @@ const Products = () => {
     : products.filter(product => product.category === activeTab);
   
   // Get products with low stock
-  const lowStockProducts = products.filter(product => product.stock <= 10 && product.category !== 'gaming');
+  const lowStockProducts = products.filter(product => product.stock <= 10 && product.category !== 'gaming' && product.category !== 'membership');
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -173,6 +187,7 @@ const Products = () => {
                     <SelectItem value="drinks">Drinks</SelectItem>
                     <SelectItem value="tobacco">Tobacco</SelectItem>
                     <SelectItem value="challenges">Challenges</SelectItem>
+                    <SelectItem value="membership">Membership</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -187,6 +202,45 @@ const Products = () => {
                   placeholder="Enter stock quantity"
                 />
               </div>
+
+              {/* Additional fields for membership products */}
+              {formState.category === 'membership' && (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="originalPrice">Original Price (₹)</Label>
+                    <Input
+                      id="originalPrice"
+                      name="originalPrice"
+                      type="number"
+                      value={formState.originalPrice}
+                      onChange={handleChange}
+                      placeholder="Enter original price"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="offerPrice">Offer Price (₹)</Label>
+                    <Input
+                      id="offerPrice"
+                      name="offerPrice"
+                      type="number"
+                      value={formState.offerPrice}
+                      onChange={handleChange}
+                      placeholder="Enter offer price"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="studentPrice">Student Price (₹)</Label>
+                    <Input
+                      id="studentPrice"
+                      name="studentPrice"
+                      type="number"
+                      value={formState.studentPrice}
+                      onChange={handleChange}
+                      placeholder="Enter student price"
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -231,6 +285,7 @@ const Products = () => {
           <TabsTrigger value="drinks">Drinks</TabsTrigger>
           <TabsTrigger value="tobacco">Tobacco</TabsTrigger>
           <TabsTrigger value="challenges">Challenges</TabsTrigger>
+          <TabsTrigger value="membership">Membership</TabsTrigger>
         </TabsList>
         
         <TabsContent value={activeTab} className="mt-6">
