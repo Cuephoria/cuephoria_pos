@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check } from 'lucide-react';
+import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
@@ -370,6 +370,9 @@ const POS = () => {
               <TabsTrigger value="drinks" className="font-heading">Drinks</TabsTrigger>
               <TabsTrigger value="tobacco" className="font-heading">Tobacco</TabsTrigger>
               <TabsTrigger value="challenges" className="font-heading">Challenges</TabsTrigger>
+              <TabsTrigger value="membership" className="font-heading">
+                <Award className="h-4 w-4 mr-1" /> Membership
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value={activeTab} className="flex-grow overflow-auto px-6 mt-4">
@@ -579,7 +582,6 @@ const POS = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
         <DialogContent className="max-w-md animate-scale-in text-center">
           <div className="flex flex-col items-center justify-center py-6">
