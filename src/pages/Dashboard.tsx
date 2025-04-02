@@ -68,7 +68,7 @@ const Dashboard = () => {
   
   // Count low stock items
   const getLowStockCount = () => {
-    return products.filter(p => p.quantity < 5).length || 0;
+    return products.filter(p => p.stock < 5).length || 0;
   };
   
   // Get active sessions count
