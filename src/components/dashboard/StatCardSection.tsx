@@ -1,7 +1,7 @@
 
 import React from 'react';
 import StatsCard from './StatsCard';
-import { CreditCard, Users, Clock, AlertTriangle, PlayCircle } from 'lucide-react';
+import { CreditCard, Users, Clock, AlertTriangle, PlayCircle, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -22,13 +22,42 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
   newMembersCount,
   lowStockCount
 }) => {
+  // Determine whether the sales trend is positive or negative
+  const isSalesTrendPositive = salesChange.includes('+');
+  
+  // Determine color for sales trend
+  const getTrendIconAndClass = () => {
+    if (isSalesTrendPositive) {
+      return {
+        icon: TrendingUp,
+        class: 'text-green-500'
+      };
+    } else if (salesChange.includes('-')) {
+      return {
+        icon: TrendingDown,
+        class: 'text-red-500'
+      };
+    }
+    return {
+      icon: null,
+      class: ''
+    };
+  };
+  
+  const { icon: TrendIcon, class: trendClass } = getTrendIconAndClass();
+  
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <StatsCard
         title="Total Sales"
         value={`₹${totalSales.toFixed(2)}`}
         icon={CreditCard}
-        subValue={salesChange}
+        subValue={
+          <div className="flex items-center space-x-1">
+            <span>{salesChange}</span>
+            {TrendIcon && <TrendIcon className={`h-3 w-3 ${trendClass}`} />}
+          </div>
+        }
         iconColor="text-[#9b87f5]"
         iconBgColor="bg-[#6E59A5]/20"
         className="hover:shadow-purple-900/10"

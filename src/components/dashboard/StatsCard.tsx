@@ -7,7 +7,7 @@ interface StatsCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  subValue?: string;
+  subValue?: string | React.ReactNode;
   iconColor: string;
   iconBgColor: string;
   className?: string;
@@ -32,7 +32,11 @@ const StatsCard: React.FC<StatsCardProps> = ({
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold font-heading">{value}</div>
-        {subValue && <p className="text-xs text-gray-400 mt-1">{subValue}</p>}
+        {subValue && (
+          typeof subValue === 'string' 
+            ? <p className="text-xs text-gray-400 mt-1">{subValue}</p>
+            : <div className="text-xs text-gray-400 mt-1">{subValue}</div>
+        )}
       </CardContent>
     </Card>
   );
