@@ -13,11 +13,10 @@ import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 const POS = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const {
     products,
     customers,
@@ -50,56 +49,44 @@ const POS = () => {
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
   const [lastCompletedBill, setLastCompletedBill] = useState<Bill | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
-  const [processedSessionIds, setProcessedSessionIds] = useState<string[]>([]);
 
+  // Handle navigation from ending a session
   useEffect(() => {
-    console.log("POS page state:", location.state);
-    
     const state = location.state as { 
       fromSession?: boolean; 
       customerId?: string; 
       stationName?: string;
       duration?: number;
       cost?: number;
-      sessionId?: string;
     } | null;
     
-    if (state?.fromSession && 
-        state.customerId && 
-        state.stationName && 
-        state.duration !== undefined && 
-        state.cost !== undefined && 
-        state.sessionId) {
-        
-      if (processedSessionIds.includes(state.sessionId)) {
-        console.log("Session already processed, skipping:", state.sessionId);
-        return;
-      }
-        
-      console.log("Processing session data:", state);
-      
+    if (state?.fromSession && state.customerId) {
+      // Auto-select the customer from the session
       selectCustomer(state.customerId);
       
-      const sessionItem = {
-        id: state.sessionId,
-        type: 'session' as const,
-        name: `${state.stationName} (${state.duration} mins)`,
-        price: state.cost,
-        quantity: 1
-      };
+      // Add the session to the cart if we have cost data
+      if (state.stationName && state.duration && state.cost) {
+        const sessionItem = {
+          id: `session-${Date.now()}`,
+          type: 'session' as const,
+          name: `${state.stationName} (${state.duration} mins)`,
+          price: state.cost,
+          quantity: 1
+        };
+        
+        // Add the session to the cart
+        addToCart(sessionItem);
+        
+        toast({
+          title: 'Session Added to Cart',
+          description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
+        });
+      }
       
-      addToCart(sessionItem);
-      
-      setProcessedSessionIds(prev => [...prev, state.sessionId]);
-      
-      toast({
-        title: 'Session Added to Cart',
-        description: `${state.stationName} session: ${formatCurrency(state.cost)}`,
-      });
-      
-      navigate(location.pathname, { replace: true });
+      // Clear location state to prevent reapplying on refresh
+      window.history.replaceState({}, document.title);
     }
-  }, [location.state, navigate, addToCart, selectCustomer, toast, processedSessionIds]);
+  }, [location.state, selectCustomer, addToCart, toast]);
 
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
@@ -116,20 +103,24 @@ const POS = () => {
 
   useEffect(() => {
     if (selectedCustomer) {
+      // First, clear any existing gaming sessions in the cart
       const newCart = cart.filter(item => item.type !== 'session');
       if (newCart.length !== cart.length) {
         clearCart();
+        // Re-add the product items
         newCart.forEach(item => {
           addToCart(item);
         });
       }
       
+      // Then check if the customer has any active sessions
       const activeStations = stations.filter(
         station => station.isOccupied && 
         station.currentSession && 
         station.currentSession.customerId === selectedCustomer.id
       );
       
+      // If there are active sessions, add them to the cart
       if (activeStations.length > 0) {
         toast({
           title: 'Gaming Sessions Added',
