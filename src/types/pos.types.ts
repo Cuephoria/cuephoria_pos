@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;
@@ -9,6 +10,19 @@ export interface Product {
   originalPrice?: number;
   offerPrice?: number;
   studentPrice?: number;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  isMember: boolean;
+  membershipExpiryDate?: Date;
+  loyaltyPoints: number;
+  totalSpent: number;
+  totalPlayTime: number;
+  createdAt: Date;
 }
 
 export interface Station {
