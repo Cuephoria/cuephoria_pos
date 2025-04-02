@@ -38,6 +38,9 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return expiryDate > new Date();
   };
 
+  // Debug log to check customer data
+  console.log('Customer data in card:', customer);
+
   return (
     <Card>
       <CardHeader className="pb-2">

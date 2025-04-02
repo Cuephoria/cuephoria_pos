@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { usePOS, Customer } from '@/context/POSContext';
 import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Customers = () => {
   console.log('Customers component rendering');
@@ -30,6 +31,9 @@ const Customers = () => {
     phone: '',
     email: '',
     isMember: false,
+    membershipPlan: '',
+    membershipExpiryDate: '',
+    membershipHoursLeft: '',
   });
   
   const { toast } = useToast();
@@ -62,6 +66,7 @@ const Customers = () => {
   // Update local state when context data changes
   useEffect(() => {
     if (posContext && customers) {
+      console.log('Setting customer data:', customers);
       setCustomersData(customers);
       setIsContextLoaded(true);
     }
@@ -73,6 +78,9 @@ const Customers = () => {
       phone: '',
       email: '',
       isMember: false,
+      membershipPlan: '',
+      membershipExpiryDate: '',
+      membershipHoursLeft: '',
     });
     setIsEditMode(false);
     setSelectedCustomer(null);
@@ -84,13 +92,25 @@ const Customers = () => {
   };
 
   const handleEditCustomer = (customer: Customer) => {
+    console.log('Editing customer:', customer);
     setIsEditMode(true);
     setSelectedCustomer(customer);
+    
+    // Format date for input field
+    const expiryDate = customer.membershipExpiryDate 
+      ? new Date(customer.membershipExpiryDate).toISOString().split('T')[0]
+      : '';
+    
     setFormState({
       name: customer.name,
       phone: customer.phone,
       email: customer.email || '',
       isMember: customer.isMember,
+      membershipPlan: customer.membershipPlan || '',
+      membershipExpiryDate: expiryDate,
+      membershipHoursLeft: customer.membershipHoursLeft !== undefined 
+        ? customer.membershipHoursLeft.toString() 
+        : '',
     });
     setIsDialogOpen(true);
   };
@@ -106,7 +126,15 @@ const Customers = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { name, phone, email, isMember } = formState;
+    const { 
+      name, 
+      phone, 
+      email, 
+      isMember, 
+      membershipPlan, 
+      membershipExpiryDate, 
+      membershipHoursLeft 
+    } = formState;
     
     if (!name || !phone) {
       toast({
@@ -128,7 +156,8 @@ const Customers = () => {
       return;
     }
     
-    const customerData = {
+    // Create the customer data object
+    const customerData: Partial<Customer> = {
       name,
       phone,
       email: email || undefined,
@@ -138,18 +167,35 @@ const Customers = () => {
       totalPlayTime: isEditMode && selectedCustomer ? selectedCustomer.totalPlayTime : 0,
     };
     
+    // Add membership details if customer is a member
+    if (isMember) {
+      if (membershipPlan) {
+        customerData.membershipPlan = membershipPlan;
+      }
+      
+      if (membershipExpiryDate) {
+        customerData.membershipExpiryDate = new Date(membershipExpiryDate);
+      }
+      
+      if (membershipHoursLeft) {
+        customerData.membershipHoursLeft = parseInt(membershipHoursLeft, 10);
+      }
+    }
+    
+    console.log('Submitting customer data:', customerData);
+    
     if (isEditMode && selectedCustomer) {
       updateCustomer({ 
         ...customerData, 
         id: selectedCustomer.id,
         createdAt: selectedCustomer.createdAt
-      });
+      } as Customer);
       toast({
         title: 'Customer Updated',
         description: 'The customer has been updated successfully.',
       });
     } else {
-      addCustomer(customerData);
+      addCustomer(customerData as Omit<Customer, 'id' | 'createdAt'>);
       toast({
         title: 'Customer Added',
         description: 'The customer has been added successfully.',
@@ -169,6 +215,10 @@ const Customers = () => {
     setFormState(prev => ({ ...prev, isMember: checked }));
   };
 
+  const handleSelectChange = (value: string) => {
+    setFormState(prev => ({ ...prev, membershipPlan: value }));
+  };
+
   // Filter customers based on search query
   const filteredCustomers = searchQuery.trim() === ''
     ? customersData
@@ -177,6 +227,16 @@ const Customers = () => {
         customer.phone.includes(searchQuery) ||
         (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()))
       );
+
+  // Membership plan options
+  const membershipPlans = [
+    'Basic Monthly',
+    'Premium Monthly',
+    'Student Monthly',
+    'Basic Weekly',
+    'Premium Weekly',
+    'Day Pass'
+  ];
 
   // If we have an error, display it
   if (error) {
@@ -213,9 +273,13 @@ const Customers = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{isEditMode ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
+            <DialogDescription>
+              Enter customer details and membership information if applicable.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
+              {/* Basic Information */}
               <div className="grid gap-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
@@ -247,7 +311,9 @@ const Customers = () => {
                   placeholder="Enter email address"
                 />
               </div>
-              <div className="flex items-center space-x-2">
+              
+              {/* Membership Section */}
+              <div className="flex items-center space-x-2 pt-2">
                 <Switch
                   id="member"
                   checked={formState.isMember}
@@ -255,6 +321,52 @@ const Customers = () => {
                 />
                 <Label htmlFor="member">Is Member</Label>
               </div>
+              
+              {/* Conditional Membership Fields */}
+              {formState.isMember && (
+                <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                  <div className="grid gap-2">
+                    <Label htmlFor="membershipPlan">Membership Plan</Label>
+                    <Select 
+                      value={formState.membershipPlan} 
+                      onValueChange={handleSelectChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a membership plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {membershipPlans.map(plan => (
+                          <SelectItem key={plan} value={plan}>{plan}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="membershipExpiryDate">Expiry Date</Label>
+                    <Input
+                      id="membershipExpiryDate"
+                      name="membershipExpiryDate"
+                      type="date"
+                      value={formState.membershipExpiryDate}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="membershipHoursLeft">Hours Left</Label>
+                    <Input
+                      id="membershipHoursLeft"
+                      name="membershipHoursLeft"
+                      type="number"
+                      min="0"
+                      value={formState.membershipHoursLeft}
+                      onChange={handleChange}
+                      placeholder="Available hours"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
