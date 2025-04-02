@@ -11,13 +11,15 @@ const Stations = () => {
   const { stations } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
   
+  console.log("Stations data:", stations); // Debug log to check stations data
+  
   // Separate stations by type
   const ps5Stations = stations.filter(station => station.type === 'ps5');
   const ballStations = stations.filter(station => station.type === '8ball');
 
   // Count active stations
-  const activePs5 = ps5Stations.filter(s => s.isOccupied).length;
-  const activeBall = ballStations.filter(s => s.isOccupied).length;
+  const activePs5 = ps5Stations.filter(s => s.status === 'occupied').length;
+  const activeBall = ballStations.filter(s => s.status === 'occupied').length;
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -80,11 +82,15 @@ const Stations = () => {
             </span>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ps5Stations.map((station, index) => (
-              <div key={station.id} className={`animate-scale-in delay-${index * 100}`} style={{animationDelay: `${index * 100}ms`}}>
-                <StationCard station={station} />
-              </div>
-            ))}
+            {ps5Stations.length > 0 ? (
+              ps5Stations.map((station, index) => (
+                <div key={station.id} className={`animate-scale-in`} style={{animationDelay: `${index * 100}ms`}}>
+                  <StationCard station={station} />
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400 col-span-full">No PlayStation 5 stations available</p>
+            )}
           </div>
         </div>
 
@@ -96,11 +102,15 @@ const Stations = () => {
             </span>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ballStations.map((station, index) => (
-              <div key={station.id} className={`animate-scale-in delay-${index * 100 + 300}`} style={{animationDelay: `${index * 100 + 300}ms`}}>
-                <StationCard station={station} />
-              </div>
-            ))}
+            {ballStations.length > 0 ? (
+              ballStations.map((station, index) => (
+                <div key={station.id} className={`animate-scale-in`} style={{animationDelay: `${index * 100 + 300}ms`}}>
+                  <StationCard station={station} />
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400 col-span-full">No 8-Ball tables available</p>
+            )}
           </div>
         </div>
       </div>

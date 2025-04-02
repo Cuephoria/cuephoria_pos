@@ -10,36 +10,50 @@ export function useStations(initialStations: Station[]) {
   useEffect(() => {
     const storedStations = localStorage.getItem('cuephoriaStations');
     if (storedStations) {
-      const parsedStations = JSON.parse(storedStations);
-      // Ensure all stations have the status property with the correct type
-      const updatedStations = parsedStations.map((station: any) => ({
-        ...station,
-        status: station.status || (station.isOccupied ? 'occupied' as StationStatus : 'available' as StationStatus)
-      }));
-      setStations(updatedStations);
+      try {
+        const parsedStations = JSON.parse(storedStations);
+        // Ensure all stations have the status property with the correct type
+        const updatedStations = parsedStations.map((station: any) => ({
+          ...station,
+          status: station.status || (station.isOccupied ? 'occupied' as StationStatus : 'available' as StationStatus)
+        }));
+        console.log("Loaded stations from localStorage:", updatedStations);
+        setStations(updatedStations);
+      } catch (error) {
+        console.error("Error parsing stations from localStorage:", error);
+        // Fallback to initial stations
+        setStations(initialStations);
+      }
+    } else {
+      console.log("No stations in localStorage, using initial stations:", initialStations);
     }
-  }, []);
+  }, [initialStations]);
   
   // Save data to localStorage
   useEffect(() => {
     localStorage.setItem('cuephoriaStations', JSON.stringify(stations));
+    console.log("Saved stations to localStorage:", stations);
   }, [stations]);
   
   const addStation = (station: Station) => {
+    console.log("Adding station:", station);
     setStations([...stations, station]);
   };
   
   const updateStation = (updatedStation: Station) => {
+    console.log("Updating station:", updatedStation);
     setStations(stations.map(station => 
       station.id === updatedStation.id ? updatedStation : station
     ));
   };
   
   const removeStation = (id: string) => {
+    console.log("Removing station:", id);
     setStations(stations.filter(station => station.id !== id));
   };
   
   const startSession = (stationId: string, customerId?: string) => {
+    console.log("Starting session for station:", stationId, "customer:", customerId);
     setStations(stations.map(station => {
       if (station.id === stationId) {
         return {
@@ -58,6 +72,7 @@ export function useStations(initialStations: Station[]) {
   };
   
   const endSession = (stationId: string) => {
+    console.log("Ending session for station:", stationId);
     // Find the station
     const station = stations.find(s => s.id === stationId);
     if (!station || !station.currentSession) return null;

@@ -43,6 +43,7 @@ export const resetToSampleData = (
     }));
     setStations(resetStations);
     localStorage.setItem('cuephoriaStations', JSON.stringify(resetStations));
+    console.log("Reset stations to:", resetStations);
   }
   
   // Reset cart and related state

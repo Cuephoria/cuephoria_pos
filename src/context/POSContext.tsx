@@ -98,13 +98,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectCustomer(customer.id);
       }
       
-      // Add the session to cart - Fix: Make sure sessionCartItem.type is explicitly typed
+      // Add the session to cart
       console.log("Adding session to cart:", sessionCartItem);
-      const typedCartItem = {
-        ...sessionCartItem,
-        type: 'session' as CartItemType // Explicitly type as a CartItemType
-      };
-      addToCart(typedCartItem);
+      addToCart(sessionCartItem);
       
       return result;
     }
@@ -171,6 +167,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   console.log('POSProvider rendering with context value'); // Debug log
+  console.log('Stations in context:', stations); // Debug log to check stations data
   
   return (
     <POSContext.Provider
@@ -214,7 +211,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         useMembershipCredit,
         isMembershipExpired,
         getMembershipDetails,
-        sessions: [], // Added this to match the POSContextType
+        sessions: [], // This is to match the POSContextType
       }}
     >
       {children}
