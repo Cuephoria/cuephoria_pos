@@ -63,7 +63,7 @@ export const addSampleIndianData = (
     if (!('membershipTier' in customer)) {
       return {
         ...customer,
-        membershipTier: customer.isMember ? 'basic' : 'none',
+        membershipTier: customer.membershipTier || (customer.isMember ? 'basic' : 'none'),
         isStudent: false
       };
     }
