@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
  */
 export const useSessionsData = (
   initialStations: Station[],
-  setStations: (stations: Station[]) => void
+  setStations: React.Dispatch<React.SetStateAction<Station[]>>
 ) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const { toast } = useToast();
@@ -80,15 +80,15 @@ export const useSessionsData = (
               }
             });
             
-            // Fix the type error by specifying the correct return type
-            setStations(prevStations => {
-              return prevStations.map(station => {
+            // Fix the type error by using the correct type for React setState
+            setStations(prevStations => 
+              prevStations.map(station => {
                 const activeSession = activeSessionsMap.get(station.id);
                 return activeSession
                   ? { ...station, isOccupied: true, currentSession: activeSession }
                   : station;
-              });
-            });
+              })
+            );
           }
         }
       } catch (error) {
