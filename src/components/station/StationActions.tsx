@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -106,22 +105,11 @@ const StationActions: React.FC<StationActionsProps> = ({
     
     const query = searchQuery.toLowerCase().trim();
     
-    // First try to match phone number
-    if (customer.phone && customer.phone.includes(query)) {
-      return true;
-    }
-    
-    // Then try to match by name
-    if (customer.name && customer.name.toLowerCase().includes(query)) {
-      return true;
-    }
-    
-    // Finally try to match by email
-    if (customer.email && customer.email.toLowerCase().includes(query)) {
-      return true;
-    }
-    
-    return false;
+    return (
+      (customer.phone && customer.phone.includes(query)) ||
+      (customer.name && customer.name.toLowerCase().includes(query)) ||
+      (customer.email && customer.email.toLowerCase().includes(query))
+    );
   });
 
   if (station.isOccupied) {
@@ -170,7 +158,7 @@ const StationActions: React.FC<StationActionsProps> = ({
                   No customers found. Try a different search.
                 </div>
               </CommandEmpty>
-              <CommandGroup className="max-h-60 overflow-y-auto">
+              <CommandGroup>
                 {filteredCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
@@ -179,7 +167,6 @@ const StationActions: React.FC<StationActionsProps> = ({
                       setSelectedCustomerId(customer.id);
                       setOpen(false);
                     }}
-                    className="flex items-center justify-between py-2"
                   >
                     <div className="flex items-center">
                       <User className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -188,9 +175,6 @@ const StationActions: React.FC<StationActionsProps> = ({
                         <p className="text-xs text-muted-foreground">{customer.phone}</p>
                       </div>
                     </div>
-                    {selectedCustomerId === customer.id && (
-                      <Check className="h-4 w-4" />
-                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
