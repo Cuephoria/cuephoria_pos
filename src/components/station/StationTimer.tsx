@@ -4,6 +4,7 @@ import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { usePOS } from '@/context/POSContext';
 
 interface StationTimerProps {
   station: Station;
@@ -15,6 +16,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
   const { toast } = useToast();
+  const { customers } = usePOS();
 
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
@@ -24,6 +26,10 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setCost(0);
       return;
     }
+
+    // Find the customer to check if they are a member
+    const customer = customers.find(c => c.id === station.currentSession?.customerId);
+    const isMember = customer?.isMember || false;
 
     // Initial calculation based on local session data
     const updateTimerFromLocalData = () => {
@@ -42,7 +48,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         
         // Calculate cost based on hourly rate
         const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-        const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
+        let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
+        
+        // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
+        if (isMember) {
+          calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
+        }
+        
         setCost(calculatedCost);
         
         console.log("Local timer update:", {
@@ -53,6 +65,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           minutesTotal,
           hoursTotal,
           hourlyRate: station.hourlyRate,
+          isMember,
+          discountApplied: isMember,
           calculatedCost
         });
       }
@@ -97,7 +111,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           
           // Calculate cost based on hourly rate
           const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-          const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
+          let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
+          
+          // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
+          if (isMember) {
+            calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
+          }
+          
           setCost(calculatedCost);
           
           console.log("Supabase timer update:", {
@@ -107,6 +127,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
             minutesTotal,
             hoursTotal,
             hourlyRate: station.hourlyRate,
+            isMember,
+            discountApplied: isMember,
             calculatedCost
           });
         } else {
@@ -132,7 +154,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     return () => {
       clearInterval(intervalId);
     };
-  }, [station]);
+  }, [station, customers]);
 
   const formatTimeDisplay = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;

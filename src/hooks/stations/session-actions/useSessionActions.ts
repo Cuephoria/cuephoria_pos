@@ -15,7 +15,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
   
   // Get the functionality from existing hooks
   const startSessionHook = useStartSession(props);
-  const endSessionHook = useEndSession(props);
+  const endSessionHook = useEndSession({...props, updateCustomer});
   
   // Start a new session
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
@@ -128,7 +128,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
   };
   
   // End an active session
-  const endSession = async (stationId: string): Promise<SessionResult> => {
+  const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
       setIsLoading(true);
       console.log('Ending session for station:', stationId);
@@ -145,105 +145,11 @@ export const useSessionActions = (props: SessionActionsProps) => {
         throw new Error('No active session found');
       }
       
-      // Get the customer ID from the current session to pass to endSessionBase
-      const customerId = station.currentSession.customerId;
-      console.log("Customer ID from current session:", customerId);
+      // Call the original hook implementation to handle session ending
+      const result = await endSessionHook.endSession(stationId, customersList);
+      console.log("Session ended successfully, result:", result);
       
-      // Calculate session duration
-      const now = new Date();
-      const startTime = new Date(station.currentSession.startTime);
-      const durationMs = now.getTime() - startTime.getTime();
-      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
-      
-      // Update the session with end time and duration
-      const updatedSession: Session = {
-        ...station.currentSession,
-        endTime: now,
-        duration: durationMinutes
-      };
-      
-      // Check if stationId is in UUID format for Supabase
-      const isUUID = stationId.includes('-') && 
-                    stationId.split('-').length === 5 && 
-                    stationId.length >= 36;
-      
-      // Update Supabase
-      try {
-        const { error } = await supabase
-          .from('sessions')
-          .update({
-            end_time: updatedSession.endTime.toISOString(),
-            duration: updatedSession.duration
-          })
-          .eq('id', updatedSession.id);
-          
-        if (error) {
-          console.error('Error updating session in Supabase:', error);
-        }
-      } catch (error) {
-        console.error('Supabase session update error:', error);
-      }
-      
-      // Update station
-      const updatedStation = {
-        ...station,
-        isOccupied: false,
-        currentSession: null
-      };
-      
-      // Update Supabase station only if ID is in valid UUID format
-      if (isUUID) {
-        try {
-          const { error: stationError } = await supabase
-            .from('stations')
-            .update({
-              is_occupied: false
-            })
-            .eq('id', stationId);
-            
-          if (stationError) {
-            console.error('Error updating station in Supabase:', stationError);
-          }
-        } catch (error) {
-          console.error('Supabase station update error:', error);
-        }
-      }
-      
-      // Update local state
-      setStations(stations.map(s => s.id === stationId ? updatedStation : s));
-      setSessions(sessions.map(s => s.id === updatedSession.id ? updatedSession : s));
-      
-      // Calculate pricing based on hourly rate and duration - USING THE SAME CALCULATION AS StationTimer.tsx
-      const hoursPlayed = durationMs / (1000 * 60 * 60);
-      const sessionCost = Math.ceil(hoursPlayed * station.hourlyRate);
-      
-      // Create cart item for the session
-      const sessionCartItem = {
-        id: updatedSession.id,
-        type: 'session',
-        name: `${station.name} (${hoursPlayed.toFixed(1)} hours)`,
-        price: sessionCost,
-        quantity: 1,
-        total: sessionCost
-      };
-      
-      toast({
-        title: 'Session Ended',
-        description: `Session ended for station ${station.name}`,
-      });
-      
-      console.log('Session ended successfully, cart item:', sessionCartItem);
-      
-      // Call the original hook implementation to get the customer information
-      const originalResult = await endSessionHook.endSession(stationId);
-      
-      console.log("Original end session result:", originalResult);
-      
-      return {
-        updatedSession,
-        sessionCartItem,
-        customer: originalResult?.customer
-      };
+      return result;
       
     } catch (error) {
       console.error('Error in endSession:', error);
