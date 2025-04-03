@@ -93,6 +93,8 @@ export interface POSContextType {
   productsError?: string | null;
   stations: Station[];
   customers: Customer[];
+  customersLoading?: boolean;
+  customersError?: Error | null;
   sessions: Session[];
   bills: Bill[];
   cart: CartItem[];

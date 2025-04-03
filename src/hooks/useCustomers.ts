@@ -1,17 +1,20 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from '@/hooks/use-toast';
+import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
+import { toast as sonnerToast } from 'sonner';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const { toast } = useToast();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
   
   // Load data from Supabase
   useEffect(() => {
     const fetchCustomers = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
         // First check if we already have customers in localStorage (for backward compatibility)
         const storedCustomers = localStorage.getItem('cuephoriaCustomers');
@@ -52,6 +55,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           
           // Clear localStorage after migration
           localStorage.removeItem('cuephoriaCustomers');
+          setLoading(false);
           return;
         }
         
@@ -61,13 +65,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           .select('*');
           
         if (error) {
-          console.error('Error fetching customers:', error);
-          toast({
-            title: 'Database Error',
-            description: 'Failed to fetch customers from database',
-            variant: 'destructive'
-          });
-          return;
+          throw new Error(handleSupabaseError(error, 'fetching customers'));
         }
         
         // Transform data to match our Customer type
@@ -95,18 +93,20 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       } catch (error) {
         console.error('Error in fetchCustomers:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load customers',
-          variant: 'destructive'
+        setError(error instanceof Error ? error : new Error('Unknown error fetching customers'));
+        sonnerToast.error('Database Error', {
+          description: error instanceof Error ? error.message : 'Failed to load customers from database',
+          duration: 6000,
         });
         // Fallback to initialCustomers
         setCustomers(initialCustomers);
+      } finally {
+        setLoading(false);
       }
     };
     
     fetchCustomers();
-  }, [initialCustomers, toast]);
+  }, [initialCustomers]);
   
   // Check for expired memberships
   useEffect(() => {
@@ -136,10 +136,22 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         // Update expired memberships in Supabase
         for (const customer of updatedCustomers) {
           if (!customer.isMember) {
-            await supabase
-              .from('customers')
-              .update({ is_member: false })
-              .eq('id', customer.id);
+            try {
+              const { error } = await supabase
+                .from('customers')
+                .update({ is_member: false })
+                .eq('id', customer.id);
+                
+              if (error) {
+                throw new Error(handleSupabaseError(error, 'updating membership status'));
+              }
+            } catch (error) {
+              console.error('Error updating expired membership:', error);
+              sonnerToast.error('Database Error', {
+                description: error instanceof Error ? error.message : 'Failed to update expired membership',
+                duration: 4000,
+              });
+            }
           }
         }
       }
@@ -173,10 +185,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       const { isDuplicate, existingCustomer } = isDuplicateCustomer(customer.phone, customer.email);
       
       if (isDuplicate && existingCustomer) {
-        toast({
-          title: 'Duplicate Customer',
+        sonnerToast.error('Duplicate Customer', {
           description: `A customer with this ${existingCustomer.phone === customer.phone ? 'phone number' : 'email'} already exists.`,
-          variant: 'destructive'
+          duration: 4000,
         });
         return existingCustomer; // Return existing customer instead of null
       }
@@ -202,13 +213,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         .single();
         
       if (error) {
-        console.error('Error adding customer:', error);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to add customer to database',
-          variant: 'destructive'
-        });
-        return null;
+        throw new Error(handleSupabaseError(error, 'adding customer'));
       }
       
       if (data) {
@@ -233,9 +238,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         // Update local state
         setCustomers(prev => [...prev, newCustomer]);
         
-        toast({
-          title: 'Success',
+        sonnerToast.success('Customer Added', {
           description: 'Customer added successfully',
+          duration: 3000,
         });
         
         return newCustomer;
@@ -243,10 +248,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       return null;
     } catch (error) {
       console.error('Error in addCustomer:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add customer',
-        variant: 'destructive'
+      sonnerToast.error('Database Error', {
+        description: error instanceof Error ? error.message : 'Failed to add customer',
+        duration: 4000,
       });
       return null;
     }
@@ -308,10 +312,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           // Phone number has changed, check if the new one is already used
           const duplicatePhone = customers.find(c => c.id !== customer.id && c.phone === customer.phone);
           if (duplicatePhone) {
-            toast({
-              title: 'Duplicate Phone Number',
+            sonnerToast.error('Duplicate Phone Number', {
               description: 'This phone number is already used by another customer',
-              variant: 'destructive'
+              duration: 4000,
             });
             return null;
           }
@@ -321,10 +324,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           // Email has changed, check if the new one is already used
           const duplicateEmail = customers.find(c => c.id !== customer.id && c.email === customer.email);
           if (duplicateEmail) {
-            toast({
-              title: 'Duplicate Email',
+            sonnerToast.error('Duplicate Email', {
               description: 'This email is already used by another customer',
-              variant: 'destructive'
+              duration: 4000,
             });
             return null;
           }
@@ -351,13 +353,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         .eq('id', customer.id);
         
       if (error) {
-        console.error('Error updating customer:', error);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to update customer in database',
-          variant: 'destructive'
-        });
-        return null;
+        throw new Error(handleSupabaseError(error, 'updating customer'));
       }
       
       // Update local state
@@ -368,18 +364,17 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         setSelectedCustomer(customer);
       }
       
-      toast({
-        title: 'Success',
+      sonnerToast.success('Customer Updated', {
         description: 'Customer updated successfully',
+        duration: 3000,
       });
       
       return customer;
     } catch (error) {
       console.error('Error in updateCustomer:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update customer',
-        variant: 'destructive'
+      sonnerToast.error('Database Error', {
+        description: error instanceof Error ? error.message : 'Failed to update customer',
+        duration: 4000,
       });
       return null;
     }
@@ -393,13 +388,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         .eq('id', id);
         
       if (error) {
-        console.error('Error deleting customer:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to delete customer',
-          variant: 'destructive'
-        });
-        return;
+        throw new Error(handleSupabaseError(error, 'deleting customer'));
       }
       
       setCustomers(customers.filter(c => c.id !== id));
@@ -408,12 +397,16 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       if (selectedCustomer && selectedCustomer.id === id) {
         setSelectedCustomer(null);
       }
+      
+      sonnerToast.success('Customer Deleted', {
+        description: 'Customer has been removed successfully',
+        duration: 3000,
+      });
     } catch (error) {
       console.error('Error in deleteCustomer:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete customer',
-        variant: 'destructive'
+      sonnerToast.error('Database Error', {
+        description: error instanceof Error ? error.message : 'Failed to delete customer',
+        duration: 4000,
       });
     }
   };
@@ -540,6 +533,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     deleteCustomer,
     selectCustomer,
     checkMembershipValidity,
-    deductMembershipHours
+    deductMembershipHours,
+    loading,
+    error
   };
 };

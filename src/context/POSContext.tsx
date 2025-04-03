@@ -15,7 +15,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
-import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -23,6 +23,8 @@ const POSContext = createContext<POSContextType>({
   productsError: null,
   stations: [],
   customers: [],
+  customersLoading: false,
+  customersError: null,
   sessions: [],
   bills: [],
   cart: [],
@@ -92,7 +94,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteCustomer, 
     selectCustomer,
     checkMembershipValidity,
-    deductMembershipHours
+    deductMembershipHours,
+    loading: customersLoading,
+    error: customersError
   } = useCustomers([]);
   
   const { 
@@ -375,7 +379,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // This function is no longer needed but kept for API compatibility
   const handleAddSampleIndianData = () => {
     // Use imported toast from use-toast
-    const { toast } = useToast();
+    const { toast } = sonnerToast;
     toast({
       title: "Info",
       description: "Sample data has been disabled. Please add products manually or through database import.",
@@ -396,6 +400,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         productsError,
         stations,
         customers,
+        customersLoading,
+        customersError,
         sessions,
         bills,
         cart,

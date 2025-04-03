@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, User, Search, Download } from 'lucide-react';
+import { Plus, User, Search, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { usePOS, Customer } from '@/context/POSContext';
 import CustomerCard from '@/components/CustomerCard';
-import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; 
 
 const Customers = () => {
   console.log('Customers component rendering');
@@ -17,6 +17,7 @@ const Customers = () => {
   const [error, setError] = useState<string | null>(null);
   const [customersData, setCustomersData] = useState<Customer[]>([]);
   const [isContextLoaded, setIsContextLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // State for component functionality
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -35,9 +36,6 @@ const Customers = () => {
     membershipExpiryDate: '',
     membershipHoursLeft: ''
   });
-  const {
-    toast
-  } = useToast();
 
   // Use a try-catch when getting the context - but only once, not on every render
   let posContext;
@@ -69,8 +67,21 @@ const Customers = () => {
       console.log('Setting customer data:', customers);
       setCustomersData(customers);
       setIsContextLoaded(true);
+      setIsLoading(false);
     }
   }, [posContext, customers]);
+
+  // If no customers are loaded after 5 seconds, show an error
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoading && customersData.length === 0) {
+        setError('Taking too long to load customers. Please check your internet connection.');
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [isLoading, customersData.length]);
 
   const resetForm = () => {
     setFormState({
@@ -112,7 +123,7 @@ const Customers = () => {
 
   const handleDeleteCustomer = (id: string) => {
     deleteCustomer(id);
-    toast({
+    sonnerToast({
       title: 'Customer Deleted',
       description: 'The customer has been removed successfully.'
     });
@@ -164,7 +175,7 @@ const Customers = () => {
     } = formState;
     
     if (!name || !phone) {
-      toast({
+      sonnerToast({
         title: 'Error',
         description: 'Name and phone are required',
         variant: 'destructive'
@@ -218,13 +229,13 @@ const Customers = () => {
         id: selectedCustomer.id,
         createdAt: selectedCustomer.createdAt
       } as Customer);
-      toast({
+      sonnerToast({
         title: 'Customer Updated',
         description: 'The customer has been updated successfully.'
       });
     } else {
       addCustomer(customerData as Omit<Customer, 'id' | 'createdAt'>);
-      toast({
+      sonnerToast({
         title: 'Customer Added',
         description: 'The customer has been added successfully.'
       });
@@ -257,16 +268,42 @@ const Customers = () => {
 
   // If we have an error, display it
   if (error) {
-    return <div className="flex-1 space-y-4 p-8 pt-6">
+    return (
+      <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
         </div>
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Error: </strong>
-          <span className="block sm:inline">{error}</span>
-          <p className="mt-2">Please try refreshing the page or contact support if the issue persists.</p>
+        <Alert variant="destructive">
+          <AlertTitle>Error loading customers</AlertTitle>
+          <AlertDescription>
+            {error}
+            <div className="mt-2">
+              <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                Retry
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // If we're loading, display a loading state
+  if (isLoading) {
+    return (
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
         </div>
-      </div>;
+        <div className="flex flex-col items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+          <h3 className="text-xl font-medium">Loading Customers</h3>
+          <p className="text-muted-foreground mt-2">
+            Please wait while we fetch customer data from the database...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return <div className="flex-1 space-y-4 p-8 pt-6">
