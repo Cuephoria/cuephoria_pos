@@ -12,7 +12,8 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setStations,
     stationsLoading,
     stationsError,
-    refreshStations
+    refreshStations,
+    deleteStation
   } = useStationsData(initialStations);
   
   const {
@@ -77,6 +78,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setSessions,
     startSession,
     endSession,
+    deleteStation,
     stationsLoading,
     stationsError,
     sessionsLoading,

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -6,6 +7,7 @@ import {
   CartItem, 
   Bill,
   Product,
+  Station,
   Session,
   SessionResult
 } from '@/types/pos.types';
@@ -56,7 +58,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sessions, 
     setSessions, 
     startSession: startSessionBase, 
-    endSession: endSessionBase 
+    endSession: endSessionBase,
+    deleteStation
   } = useStations(initialStations, updateCustomer);
   
   const { 
@@ -346,6 +349,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProduct,
         startSession,
         endSession,
+        deleteStation, // Add the new deleteStation function
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,

@@ -96,6 +96,55 @@ export const useStationsData = (initialStations: Station[]) => {
     }
   };
   
+  const deleteStation = async (stationId: string) => {
+    try {
+      // Check if the station is occupied first
+      const station = stations.find(s => s.id === stationId);
+      if (station?.isOccupied) {
+        toast({
+          title: 'Cannot Delete',
+          description: 'Cannot delete an occupied station. End the current session first.',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('stations')
+        .delete()
+        .eq('id', stationId);
+        
+      if (error) {
+        console.error('Error deleting station:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to delete station from database',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
+      setStations(prev => prev.filter(station => station.id !== stationId));
+      
+      toast({
+        title: 'Station Deleted',
+        description: 'The station has been removed successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in deleteStation:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete station',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+  
   useEffect(() => {
     refreshStations();
   }, [initialStations]);
@@ -105,6 +154,7 @@ export const useStationsData = (initialStations: Station[]) => {
     setStations,
     stationsLoading,
     stationsError,
-    refreshStations
+    refreshStations,
+    deleteStation
   };
 };
