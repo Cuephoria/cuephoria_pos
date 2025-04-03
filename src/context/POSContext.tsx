@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState } from 'react';
-import { toast } from "sonner";
 import { 
   POSContextType, 
   ResetOptions, 
@@ -16,7 +15,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
-import { toast as sonnerToast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -24,8 +23,6 @@ const POSContext = createContext<POSContextType>({
   productsError: null,
   stations: [],
   customers: [],
-  customersLoading: false,
-  customersError: null,
   sessions: [],
   bills: [],
   cart: [],
@@ -41,8 +38,6 @@ const POSContext = createContext<POSContextType>({
   deleteProduct: () => {},
   startSession: async () => {},
   endSession: async () => {},
-  deleteSession: async () => false,
-  refreshSessions: async () => {},
   deleteStation: async () => false,
   addCustomer: () => ({}),
   updateCustomer: () => ({}),
@@ -95,9 +90,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteCustomer, 
     selectCustomer,
     checkMembershipValidity,
-    deductMembershipHours,
-    loading: customersLoading,
-    error: customersError
+    deductMembershipHours
   } = useCustomers([]);
   
   const { 
@@ -107,8 +100,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSessions, 
     startSession: startSessionBase, 
     endSession: endSessionBase,
-    deleteSession: deleteSessionBase,
-    refreshSessions: refreshSessionsBase,
     deleteStation
   } = useStations([], updateCustomer);
   
@@ -184,16 +175,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // Add deleteSession function
-  const deleteSession = async (sessionId: string): Promise<boolean> => {
-    return await deleteSessionBase(sessionId);
-  };
-
-  // Add refreshSessions function
-  const refreshSessions = async (): Promise<void> => {
-    await refreshSessionsBase();
-  };
-  
   // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
   const updateCustomerMembershipWrapper = (
     customerId: string, 
@@ -231,6 +212,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
   
+  // Modified to handle async operations but return synchronously
   const completeSale = (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
     try {
       // Apply student price for membership items if student discount is enabled
@@ -377,9 +359,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // Fix the handleAddSampleIndianData function to use toast correctly
+  // This function is no longer needed but kept for API compatibility
   const handleAddSampleIndianData = () => {
-    toast("Info", {
+    // Use imported toast from use-toast
+    const { toast } = useToast();
+    toast({
+      title: "Info",
       description: "Sample data has been disabled. Please add products manually or through database import.",
     });
   };
@@ -398,8 +383,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         productsError,
         stations,
         customers,
-        customersLoading,
-        customersError,
         sessions,
         bills,
         cart,
@@ -415,8 +398,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProduct,
         startSession,
         endSession,
-        deleteSession,
-        refreshSessions,
         deleteStation,
         addCustomer,
         updateCustomer,

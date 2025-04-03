@@ -68,75 +68,6 @@ export const useSessionsData = () => {
     }
   };
   
-  const deleteSession = async (sessionId: string): Promise<boolean> => {
-    setSessionsLoading(true);
-    try {
-      // First, get the session to check if it's active
-      const session = sessions.find(s => s.id === sessionId);
-      
-      if (!session) {
-        toast({
-          title: 'Error',
-          description: 'Session not found',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // If the session is active (no endTime), update the station status first
-      if (!session.endTime) {
-        try {
-          const { error: stationError } = await supabase
-            .from('stations')
-            .update({ is_occupied: false })
-            .eq('id', session.stationId);
-            
-          if (stationError) {
-            console.error('Error updating station status:', stationError);
-          }
-        } catch (error) {
-          console.error('Error updating station status:', error);
-        }
-      }
-      
-      // Delete the session from Supabase
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('id', sessionId);
-        
-      if (error) {
-        console.error('Error deleting session:', error);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to delete session from database',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Update local state
-      setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionId));
-      
-      toast({
-        title: 'Success',
-        description: 'Session deleted successfully',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error in deleteSession:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete session',
-        variant: 'destructive'
-      });
-      return false;
-    } finally {
-      setSessionsLoading(false);
-    }
-  };
-  
   useEffect(() => {
     refreshSessions();
     
@@ -167,7 +98,6 @@ export const useSessionsData = () => {
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions,
-    deleteSession
+    refreshSessions
   };
 };

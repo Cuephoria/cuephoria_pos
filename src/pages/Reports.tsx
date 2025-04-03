@@ -14,7 +14,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Download, Trash2, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Popover,
@@ -27,7 +27,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Select,
@@ -36,22 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, sessions, products, exportBills, exportCustomers, deleteSession } = usePOS();
+  const { customers, bills, sessions, products, exportBills, exportCustomers } = usePOS();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
@@ -59,7 +47,6 @@ const ReportsPage: React.FC = () => {
   const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
-  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   
   // Handle date range selection from dropdown
   const handleDateRangeChange = (value: string) => {
@@ -163,21 +150,6 @@ const ReportsPage: React.FC = () => {
     
     return true;
   });
-  
-  // Handle session deletion
-  const handleDeleteSession = async (sessionId: string) => {
-    setIsDeleting(true);
-    try {
-      const success = await deleteSession(sessionId);
-      if (!success) {
-        console.error("Failed to delete session");
-      }
-    } catch (error) {
-      console.error("Error deleting session:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
   
   // Calculate business summary metrics
   const calculateSummaryMetrics = () => {
@@ -544,127 +516,79 @@ const ReportsPage: React.FC = () => {
         )}
         
         {activeTab === 'sessions' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Session History</h2>
+          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-1">Session History</h2>
+              <p className="text-gray-400">
+                View all game sessions and their details
+                {date?.from && date?.to ? 
+                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
+                  ''
+                }
+              </p>
             </div>
-            
-            <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
-              <div className="p-6">
-                <p className="text-gray-400">
-                  View all game sessions and their details
-                  {date?.from && date?.to ? 
-                    ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
-                    ''
-                  }
-                </p>
-              </div>
-              <div className="rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Station</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>End Time</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSessions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-gray-400">
-                          No sessions found in selected date range.
+            <div className="rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Station</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Start Time</TableHead>
+                    <TableHead>End Time</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSessions.map(session => {
+                    const customer = customers.find(c => c.id === session.customerId);
+                    
+                    // Calculate session duration properly
+                    let durationDisplay = "0h 1m"; // Default duration
+                    if (session.endTime) {
+                      const startMs = new Date(session.startTime).getTime();
+                      const endMs = new Date(session.endTime).getTime();
+                      const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+                      const hours = Math.floor(durationMinutes / 60);
+                      const minutes = durationMinutes % 60;
+                      durationDisplay = `${hours}h ${minutes}m`;
+                    } else if (session.duration) {
+                      const hours = Math.floor(session.duration / 60);
+                      const minutes = session.duration % 60;
+                      durationDisplay = `${hours}h ${minutes}m`;
+                    }
+                        
+                    return (
+                      <TableRow key={session.id}>
+                        <TableCell className="text-white font-medium">{session.stationId}</TableCell>
+                        <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
+                        <TableCell className="text-white">
+                          <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
+                          <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
+                        </TableCell>
+                        <TableCell className="text-white">
+                          {session.endTime ? (
+                            <>
+                              <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
+                              <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
+                            </>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-white">{durationDisplay}</TableCell>
+                        <TableCell>
+                          <Badge className={
+                            !session.endTime
+                              ? "bg-green-900/30 text-green-400 border-green-800"
+                              : "bg-gray-700 text-gray-300"
+                          }>
+                            {session.endTime ? 'Completed' : 'Active'}
+                          </Badge>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      filteredSessions.map(session => {
-                        const customer = customers.find(c => c.id === session.customerId);
-                        
-                        // Calculate session duration properly
-                        let durationDisplay = "0h 1m"; // Default duration
-                        if (session.endTime) {
-                          const startMs = new Date(session.startTime).getTime();
-                          const endMs = new Date(session.endTime).getTime();
-                          const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
-                          const hours = Math.floor(durationMinutes / 60);
-                          const minutes = durationMinutes % 60;
-                          durationDisplay = `${hours}h ${minutes}m`;
-                        } else if (session.duration) {
-                          const hours = Math.floor(session.duration / 60);
-                          const minutes = session.duration % 60;
-                          durationDisplay = `${hours}h ${minutes}m`;
-                        }
-                            
-                        return (
-                          <TableRow key={session.id}>
-                            <TableCell className="text-white font-medium">{session.stationId}</TableCell>
-                            <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
-                            <TableCell className="text-white">
-                              <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
-                              <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
-                            </TableCell>
-                            <TableCell className="text-white">
-                              {session.endTime ? (
-                                <>
-                                  <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
-                                  <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
-                                </>
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell className="text-white">{durationDisplay}</TableCell>
-                            <TableCell>
-                              <Badge className={
-                                !session.endTime
-                                  ? "bg-green-900/30 text-green-400 border-green-800"
-                                  : "bg-gray-700 text-gray-300"
-                              }>
-                                {session.endTime ? 'Completed' : 'Active'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-950/30">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="bg-gray-900 border-gray-800 text-white">
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-red-400">Delete Session?</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-gray-300">
-                                      This will permanently delete this session record. This action cannot be undone.
-                                      {!session.endTime && (
-                                        <p className="text-red-400 mt-2 font-semibold">
-                                          Warning: This is an active session! Deleting it will free up the station.
-                                        </p>
-                                      )}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700">
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      className="bg-red-600 hover:bg-red-700 text-white" 
-                                      onClick={() => handleDeleteSession(session.id)}
-                                      disabled={isDeleting}
-                                    >
-                                      {isDeleting ? "Deleting..." : "Delete"}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

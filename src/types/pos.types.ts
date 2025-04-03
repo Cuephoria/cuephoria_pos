@@ -93,8 +93,6 @@ export interface POSContextType {
   productsError?: string | null;
   stations: Station[];
   customers: Customer[];
-  customersLoading?: boolean;
-  customersError?: Error | null;
   sessions: Session[];
   bills: Bill[];
   cart: CartItem[];
@@ -116,11 +114,7 @@ export interface POSContextType {
   // Station functions
   startSession: (stationId: string, customerId: string) => Promise<void>;
   endSession: (stationId: string) => Promise<void>;
-  deleteStation: (stationId: string) => Promise<boolean>; 
-  
-  // Session management functions
-  deleteSession: (sessionId: string) => Promise<boolean>;
-  refreshSessions: () => Promise<void>;
+  deleteStation: (stationId: string) => Promise<boolean>; // Add this new function
   
   // Customer functions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;

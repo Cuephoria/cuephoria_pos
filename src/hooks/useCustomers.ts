@@ -1,20 +1,17 @@
+
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
-import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from '@/hooks/use-toast';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
   
   // Load data from Supabase
   useEffect(() => {
     const fetchCustomers = async () => {
-      setLoading(true);
-      setError(null);
-      
       try {
         // First check if we already have customers in localStorage (for backward compatibility)
         const storedCustomers = localStorage.getItem('cuephoriaCustomers');
@@ -55,7 +52,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           
           // Clear localStorage after migration
           localStorage.removeItem('cuephoriaCustomers');
-          setLoading(false);
           return;
         }
         
@@ -65,7 +61,13 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           .select('*');
           
         if (error) {
-          throw new Error(handleSupabaseError(error, 'fetching customers'));
+          console.error('Error fetching customers:', error);
+          toast({
+            title: 'Database Error',
+            description: 'Failed to fetch customers from database',
+            variant: 'destructive'
+          });
+          return;
         }
         
         // Transform data to match our Customer type
@@ -93,20 +95,18 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       } catch (error) {
         console.error('Error in fetchCustomers:', error);
-        setError(error instanceof Error ? error : new Error('Unknown error fetching customers'));
-        toast("Database Error", {
-          description: error instanceof Error ? error.message : 'Failed to load customers from database',
-          duration: 6000,
+        toast({
+          title: 'Error',
+          description: 'Failed to load customers',
+          variant: 'destructive'
         });
         // Fallback to initialCustomers
         setCustomers(initialCustomers);
-      } finally {
-        setLoading(false);
       }
     };
     
     fetchCustomers();
-  }, [initialCustomers]);
+  }, [initialCustomers, toast]);
   
   // Check for expired memberships
   useEffect(() => {
@@ -136,22 +136,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         // Update expired memberships in Supabase
         for (const customer of updatedCustomers) {
           if (!customer.isMember) {
-            try {
-              const { error } = await supabase
-                .from('customers')
-                .update({ is_member: false })
-                .eq('id', customer.id);
-                
-              if (error) {
-                throw new Error(handleSupabaseError(error, 'updating membership status'));
-              }
-            } catch (error) {
-              console.error('Error updating expired membership:', error);
-              toast("Database Error", {
-                description: error instanceof Error ? error.message : 'Failed to update expired membership',
-                duration: 4000,
-              });
-            }
+            await supabase
+              .from('customers')
+              .update({ is_member: false })
+              .eq('id', customer.id);
           }
         }
       }
@@ -185,9 +173,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       const { isDuplicate, existingCustomer } = isDuplicateCustomer(customer.phone, customer.email);
       
       if (isDuplicate && existingCustomer) {
-        toast("Duplicate Customer", {
+        toast({
+          title: 'Duplicate Customer',
           description: `A customer with this ${existingCustomer.phone === customer.phone ? 'phone number' : 'email'} already exists.`,
-          duration: 4000,
+          variant: 'destructive'
         });
         return existingCustomer; // Return existing customer instead of null
       }
@@ -213,7 +202,13 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         .single();
         
       if (error) {
-        throw new Error(handleSupabaseError(error, 'adding customer'));
+        console.error('Error adding customer:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to add customer to database',
+          variant: 'destructive'
+        });
+        return null;
       }
       
       if (data) {
@@ -238,9 +233,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         // Update local state
         setCustomers(prev => [...prev, newCustomer]);
         
-        toast("Customer Added", {
+        toast({
+          title: 'Success',
           description: 'Customer added successfully',
-          duration: 3000,
         });
         
         return newCustomer;
@@ -248,9 +243,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       return null;
     } catch (error) {
       console.error('Error in addCustomer:', error);
-      toast("Database Error", {
-        description: error instanceof Error ? error.message : 'Failed to add customer',
-        duration: 4000,
+      toast({
+        title: 'Error',
+        description: 'Failed to add customer',
+        variant: 'destructive'
       });
       return null;
     }
@@ -293,8 +289,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const result = await updateCustomer(updatedCustomer);
     
     // Notify user about the membership update
-    toast("Membership Updated", {
-      description: `${customer.name}'s membership has been updated successfully.`
+    toast({
+      title: "Membership Updated",
+      description: `${customer.name}'s membership has been updated successfully.`,
+      variant: "default"
     });
     
     return result;
@@ -310,9 +308,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           // Phone number has changed, check if the new one is already used
           const duplicatePhone = customers.find(c => c.id !== customer.id && c.phone === customer.phone);
           if (duplicatePhone) {
-            toast("Duplicate Phone Number", {
+            toast({
+              title: 'Duplicate Phone Number',
               description: 'This phone number is already used by another customer',
-              duration: 4000,
+              variant: 'destructive'
             });
             return null;
           }
@@ -322,9 +321,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           // Email has changed, check if the new one is already used
           const duplicateEmail = customers.find(c => c.id !== customer.id && c.email === customer.email);
           if (duplicateEmail) {
-            toast("Duplicate Email", {
+            toast({
+              title: 'Duplicate Email',
               description: 'This email is already used by another customer',
-              duration: 4000,
+              variant: 'destructive'
             });
             return null;
           }
@@ -351,7 +351,13 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         .eq('id', customer.id);
         
       if (error) {
-        throw new Error(handleSupabaseError(error, 'updating customer'));
+        console.error('Error updating customer:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to update customer in database',
+          variant: 'destructive'
+        });
+        return null;
       }
       
       // Update local state
@@ -362,17 +368,18 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         setSelectedCustomer(customer);
       }
       
-      toast("Customer Updated", {
+      toast({
+        title: 'Success',
         description: 'Customer updated successfully',
-        duration: 3000,
       });
       
       return customer;
     } catch (error) {
       console.error('Error in updateCustomer:', error);
-      toast("Database Error", {
-        description: error instanceof Error ? error.message : 'Failed to update customer',
-        duration: 4000,
+      toast({
+        title: 'Error',
+        description: 'Failed to update customer',
+        variant: 'destructive'
       });
       return null;
     }
@@ -386,7 +393,13 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         .eq('id', id);
         
       if (error) {
-        throw new Error(handleSupabaseError(error, 'deleting customer'));
+        console.error('Error deleting customer:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete customer',
+          variant: 'destructive'
+        });
+        return;
       }
       
       setCustomers(customers.filter(c => c.id !== id));
@@ -395,16 +408,12 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       if (selectedCustomer && selectedCustomer.id === id) {
         setSelectedCustomer(null);
       }
-      
-      toast("Customer Deleted", {
-        description: 'Customer has been removed successfully',
-        duration: 3000,
-      });
     } catch (error) {
       console.error('Error in deleteCustomer:', error);
-      toast("Database Error", {
-        description: error instanceof Error ? error.message : 'Failed to delete customer',
-        duration: 4000,
+      toast({
+        title: 'Error',
+        description: 'Failed to delete customer',
+        variant: 'destructive'
       });
     }
   };
@@ -423,7 +432,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         const expiryDate = new Date(customer.membershipExpiryDate);
         
         if (expiryDate < new Date()) {
-          toast("Membership Expired", {
+          toast({
+            title: "Membership Expired",
             description: `${customer.name}'s membership has expired on ${expiryDate.toLocaleDateString()}`,
             variant: "destructive"
           });
@@ -440,7 +450,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
         
         if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
-          toast("No Hours Remaining", {
+          toast({
+            title: "Membership Hours Depleted",
             description: `${customer.name} has no remaining hours on their membership plan`,
             variant: "destructive"
           });
@@ -463,7 +474,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     if (customer.membershipExpiryDate) {
       const expiryDate = new Date(customer.membershipExpiryDate);
       if (expiryDate < new Date()) {
-        toast("Membership Expired", {
+        toast({
+          title: "Membership Expired",
           description: `${customer.name}'s membership has expired on ${expiryDate.toLocaleDateString()}`,
           variant: "destructive"
         });
@@ -480,7 +492,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     
     // Check hours remaining
     if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
-      toast("No Hours Remaining", {
+      toast({
+        title: "No Hours Remaining",
         description: `${customer.name} has used all allocated hours in their membership plan`,
         variant: "destructive"
       });
@@ -498,8 +511,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     }
     
     if (customer.membershipHoursLeft < hours) {
-      toast("Insufficient Hours", {
-        description: `Customer only has ${customer.membershipHoursLeft} hours remaining`
+      toast({
+        title: "Insufficient Hours",
+        description: `Customer only has ${customer.membershipHoursLeft} hours remaining`,
+        variant: "destructive"
       });
       return false;
     }
@@ -525,8 +540,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     deleteCustomer,
     selectCustomer,
     checkMembershipValidity,
-    deductMembershipHours,
-    loading,
-    error
+    deductMembershipHours
   };
 };

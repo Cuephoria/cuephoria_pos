@@ -1,23 +1,11 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 
 const ActiveSessions = () => {
-  const { stations, customers, refreshSessions } = usePOS();
-  
-  // Refresh sessions data when component mounts
-  useEffect(() => {
-    // Check if refreshSessions is a function before calling it
-    if (typeof refreshSessions === 'function') {
-      refreshSessions().catch(error => {
-        console.error('Error refreshing sessions:', error);
-      });
-    } else {
-      console.error('refreshSessions is not a function', refreshSessions);
-    }
-  }, [refreshSessions]);
+  const { stations, customers } = usePOS();
   
   // Get occupied stations with sessions
   const activeStations = stations.filter(station => station.isOccupied && station.currentSession);

@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 import { Session, SessionResult, Customer } from '@/types/pos.types';
 import { isMembershipActive } from '@/utils/membership.utils';
-import { toast as sonnerToast } from 'sonner';
 
 export const useSessionActions = (props: SessionActionsProps) => {
   const { stations, setStations, sessions, setSessions, updateCustomer } = props;
@@ -29,19 +28,11 @@ export const useSessionActions = (props: SessionActionsProps) => {
       const station = stations.find(s => s.id === stationId);
       if (!station) {
         console.error('Station not found:', stationId);
-        sonnerToast.error('Error', {
-          description: 'Station not found',
-          duration: 5000,
-        });
         throw new Error('Station not found');
       }
       
       if (station.isOccupied) {
         console.error('Station is already occupied:', stationId);
-        sonnerToast.error('Error', {
-          description: 'Station is already occupied',
-          duration: 5000,
-        });
         throw new Error('Station is already occupied');
       }
       
@@ -81,23 +72,12 @@ export const useSessionActions = (props: SessionActionsProps) => {
           
         if (error) {
           console.error('Error inserting session into Supabase:', error);
-          sonnerToast.error('Database Error', {
-            description: `Failed to save session: ${error.message}`,
-            duration: 5000,
-          });
           console.log('Continuing with local state updates only');
         } else {
           console.log('Session inserted into Supabase:', data);
-          sonnerToast.success('Session Started', {
-            description: `Session started for station ${station.name}`,
-          });
         }
       } catch (error) {
         console.error('Supabase insert error:', error);
-        sonnerToast.error('Database Error', {
-          description: 'Failed to save session to database',
-          duration: 5000,
-        });
         console.log('Continuing with local state updates only');
       }
       
@@ -120,17 +100,9 @@ export const useSessionActions = (props: SessionActionsProps) => {
             
           if (stationError) {
             console.error('Error updating station in Supabase:', stationError);
-            sonnerToast.error('Database Error', {
-              description: `Failed to update station: ${stationError.message}`,
-              duration: 5000,
-            });
           }
         } catch (error) {
           console.error('Supabase station update error:', error);
-          sonnerToast.error('Database Error', {
-            description: 'Failed to update station in database',
-            duration: 5000,
-          });
         }
       }
       
@@ -138,13 +110,19 @@ export const useSessionActions = (props: SessionActionsProps) => {
       setStations(stations.map(s => s.id === stationId ? updatedStation : s));
       setSessions([...sessions, newSession]);
       
+      toast({
+        title: 'Session Started',
+        description: `Session started for station ${station.name}`,
+      });
+      
       console.log('Session started successfully');
       
     } catch (error) {
       console.error('Error in startSession:', error);
-      sonnerToast.error('Error', {
+      toast({
+        title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to start session',
-        duration: 5000,
+        variant: 'destructive'
       });
       throw error;
     } finally {
@@ -162,19 +140,11 @@ export const useSessionActions = (props: SessionActionsProps) => {
       const station = stations.find(s => s.id === stationId);
       if (!station) {
         console.error('Station not found:', stationId);
-        sonnerToast.error('Error', {
-          description: 'Station not found',
-          duration: 5000,
-        });
         throw new Error('Station not found');
       }
       
       if (!station.isOccupied || !station.currentSession) {
         console.error('No active session found for this station:', stationId);
-        sonnerToast.error('Error', {
-          description: 'No active session found for this station',
-          duration: 5000,
-        });
         throw new Error('No active session found');
       }
       
@@ -186,9 +156,10 @@ export const useSessionActions = (props: SessionActionsProps) => {
       
     } catch (error) {
       console.error('Error in endSession:', error);
-      sonnerToast.error('Error', {
+      toast({
+        title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to end session',
-        duration: 5000,
+        variant: 'destructive'
       });
       throw error;
     } finally {
