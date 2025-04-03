@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -356,7 +355,62 @@ export const useBills = (
       return undefined;
     }
   };
-  
+
+  const deleteBill = async (billId: string) => {
+    try {
+      // First, delete all bill items associated with this bill
+      const { error: itemsError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', billId);
+        
+      if (itemsError) {
+        console.error('Error deleting bill items:', itemsError);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete bill items: ' + itemsError.message,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Then delete the bill itself
+      const { error: billError } = await supabase
+        .from('bills')
+        .delete()
+        .eq('id', billId);
+        
+      if (billError) {
+        console.error('Error deleting bill:', billError);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete bill: ' + billError.message,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update the local state by removing the deleted bill
+      setBills(prevBills => prevBills.filter(bill => bill.id !== billId));
+      
+      toast({
+        title: 'Success',
+        description: 'Sale entry has been deleted',
+        variant: 'default'
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in deleteBill:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred while deleting the bill',
+        variant: 'destructive'
+      });
+      return false;
+    }
+  };
+
   const exportBills = (customers: Customer[]) => {
     if (bills.length === 0) {
       console.log("No bills to export.");
@@ -435,6 +489,7 @@ export const useBills = (
     bills,
     setBills,
     completeSale,
+    deleteBill,
     exportBills,
     exportCustomers
   };
