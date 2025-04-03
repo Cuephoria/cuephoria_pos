@@ -20,16 +20,19 @@ const Products = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleOpenDialog = () => {
     setIsEditMode(false);
     setSelectedProduct(null);
+    setFormError(null);
     setIsDialogOpen(true);
   };
 
   const handleEditProduct = (product: Product) => {
     setIsEditMode(true);
     setSelectedProduct(product);
+    setFormError(null);
     setIsDialogOpen(true);
   };
 
@@ -55,6 +58,7 @@ const Products = () => {
     
     try {
       setIsSubmitting(true);
+      setFormError(null);
       
       const { name, price, category, stock, originalPrice, offerPrice, studentPrice, duration, membershipHours } = formData;
       
@@ -92,22 +96,29 @@ const Products = () => {
           title: 'Product Updated',
           description: 'The product has been updated successfully.',
         });
+        setIsDialogOpen(false);
       } else {
         await addProduct(productData);
         toast({
           title: 'Product Added',
           description: 'The product has been added successfully.',
         });
+        setIsDialogOpen(false);
       }
-      
-      setIsDialogOpen(false);
     } catch (error) {
       console.error('Form submission error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save product. Please try again.',
-        variant: 'destructive',
-      });
+      
+      // Check if it's a duplicate product error
+      if (error instanceof Error && error.message.includes('already exists')) {
+        setFormError(error.message);
+      } else {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to save product. Please try again.',
+          variant: 'destructive',
+        });
+        setIsDialogOpen(false);
+      }
     } finally {
       setIsSubmitting(false);
     }

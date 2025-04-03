@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DialogFooter } from '@/components/ui/dialog';
 import { Product } from '@/types/pos.types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface ProductFormProps {
   isEditMode: boolean;
@@ -45,6 +47,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
     duration: '',
     membershipHours: '',
   });
+  
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isEditMode && selectedProduct) {
@@ -72,38 +76,120 @@ const ProductForm: React.FC<ProductFormProps> = ({
         membershipHours: '',
       });
     }
+    // Clear validation errors when selected product changes
+    setValidationErrors({});
   }, [isEditMode, selectedProduct]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormState(prev => ({ ...prev, [name]: value }));
+    
+    // Clear validation error for this field when it changes
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormState(prev => ({ ...prev, [name]: value }));
+    
+    // Clear validation error for this field when it changes
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    // Required fields validation
+    if (!formState.name.trim()) {
+      errors.name = 'Product name is required';
+    }
+    
+    if (!formState.price) {
+      errors.price = 'Price is required';
+    } else if (parseFloat(formState.price) < 0) {
+      errors.price = 'Price cannot be negative';
+    }
+    
+    if (!formState.category) {
+      errors.category = 'Category is required';
+    }
+    
+    if (!formState.stock) {
+      errors.stock = 'Stock is required';
+    } else if (parseInt(formState.stock) < 0) {
+      errors.stock = 'Stock cannot be negative';
+    }
+    
+    // Membership specific validations
+    if (formState.category === 'membership') {
+      if (formState.duration === '') {
+        errors.duration = 'Duration is required for membership products';
+      }
+      
+      if (!formState.membershipHours) {
+        errors.membershipHours = 'Membership hours are required';
+      } else if (parseInt(formState.membershipHours) <= 0) {
+        errors.membershipHours = 'Membership hours must be greater than 0';
+      }
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(e, formState);
+    
+    if (validateForm()) {
+      onSubmit(e, formState);
+    }
   };
 
   return (
     <form onSubmit={handleFormSubmit}>
       <div className="grid gap-4 py-4">
+        {Object.keys(validationErrors).length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please correct the errors below before submitting
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid gap-2">
-          <Label htmlFor="name">Product Name*</Label>
+          <Label htmlFor="name" className={validationErrors.name ? 'text-destructive' : ''}>
+            Product Name*
+          </Label>
           <Input
             id="name"
             name="name"
             value={formState.name}
             onChange={handleChange}
             placeholder="Enter product name"
+            className={validationErrors.name ? 'border-destructive' : ''}
             required
           />
+          {validationErrors.name && (
+            <p className="text-xs text-destructive mt-1">{validationErrors.name}</p>
+          )}
         </div>
+        
         <div className="grid gap-2">
-          <Label htmlFor="price">Price (₹)*</Label>
+          <Label htmlFor="price" className={validationErrors.price ? 'text-destructive' : ''}>
+            Price (₹)*
+          </Label>
           <Input
             id="price"
             name="price"
@@ -111,18 +197,25 @@ const ProductForm: React.FC<ProductFormProps> = ({
             value={formState.price}
             onChange={handleChange}
             placeholder="Enter price in INR"
+            className={validationErrors.price ? 'border-destructive' : ''}
             min="0"
             required
           />
+          {validationErrors.price && (
+            <p className="text-xs text-destructive mt-1">{validationErrors.price}</p>
+          )}
         </div>
+        
         <div className="grid gap-2">
-          <Label htmlFor="category">Category*</Label>
+          <Label htmlFor="category" className={validationErrors.category ? 'text-destructive' : ''}>
+            Category*
+          </Label>
           <Select
             value={formState.category}
             onValueChange={(value) => handleSelectChange('category', value)}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger className={validationErrors.category ? 'border-destructive' : ''}>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
@@ -133,9 +226,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <SelectItem value="membership">Membership</SelectItem>
             </SelectContent>
           </Select>
+          {validationErrors.category && (
+            <p className="text-xs text-destructive mt-1">{validationErrors.category}</p>
+          )}
         </div>
+        
         <div className="grid gap-2">
-          <Label htmlFor="stock">Stock*</Label>
+          <Label htmlFor="stock" className={validationErrors.stock ? 'text-destructive' : ''}>
+            Stock*
+          </Label>
           <Input
             id="stock"
             name="stock"
@@ -143,9 +242,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
             value={formState.stock}
             onChange={handleChange}
             placeholder="Enter stock quantity"
+            className={validationErrors.stock ? 'border-destructive' : ''}
             min="0"
             required
           />
+          {validationErrors.stock && (
+            <p className="text-xs text-destructive mt-1">{validationErrors.stock}</p>
+          )}
         </div>
 
         {formState.category === 'membership' && (
@@ -187,12 +290,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="duration">Duration</Label>
+              <Label 
+                htmlFor="duration" 
+                className={validationErrors.duration ? 'text-destructive' : ''}
+              >
+                Duration*
+              </Label>
               <Select
                 value={formState.duration}
                 onValueChange={(value) => handleSelectChange('duration', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className={validationErrors.duration ? 'border-destructive' : ''}>
                   <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
                 <SelectContent>
@@ -200,9 +308,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
+              {validationErrors.duration && (
+                <p className="text-xs text-destructive mt-1">{validationErrors.duration}</p>
+              )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="membershipHours">Membership Hours</Label>
+              <Label 
+                htmlFor="membershipHours"
+                className={validationErrors.membershipHours ? 'text-destructive' : ''}
+              >
+                Membership Hours*
+              </Label>
               <Input
                 id="membershipHours"
                 name="membershipHours"
@@ -210,8 +326,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 value={formState.membershipHours}
                 onChange={handleChange}
                 placeholder="Enter membership hours"
+                className={validationErrors.membershipHours ? 'border-destructive' : ''}
                 min="0"
               />
+              {validationErrors.membershipHours && (
+                <p className="text-xs text-destructive mt-1">{validationErrors.membershipHours}</p>
+              )}
             </div>
           </>
         )}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -147,8 +148,26 @@ export const useProducts = () => {
     console.log('Products by category:', countByCategory);
   }, []);
   
+  // Check if product with the same name already exists
+  const isProductDuplicate = (productName: string, excludeId?: string): boolean => {
+    return products.some(p => 
+      p.name.toLowerCase() === productName.toLowerCase() && 
+      (!excludeId || p.id !== excludeId)
+    );
+  };
+  
   const addProduct = (product: Omit<Product, 'id'>) => {
     try {
+      // Check for duplicate product name
+      if (isProductDuplicate(product.name)) {
+        toast({
+          title: 'Error',
+          description: `A product with name "${product.name}" already exists`,
+          variant: 'destructive'
+        });
+        throw new Error(`Product "${product.name}" already exists`);
+      }
+      
       const newProductId = generateId();
       const newProduct: Product = {
         ...product,
@@ -164,6 +183,7 @@ export const useProducts = () => {
           .then(({ error }) => {
             if (error) {
               console.error('Error adding product to DB:', error);
+              setError(`Failed to add product to database: ${error.message}`);
             } else {
               console.log('Product added to DB:', newProduct.name);
             }
@@ -178,11 +198,17 @@ export const useProducts = () => {
       return newProduct;
     } catch (error) {
       console.error('Error adding product:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add product',
-        variant: 'destructive'
-      });
+      
+      // Only show toast if it's not a duplicate product error (already handled)
+      if (!(error instanceof Error && error.message.includes('already exists'))) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to add product',
+          variant: 'destructive'
+        });
+      }
+      
+      setError(error instanceof Error ? error.message : 'Unknown error adding product');
       throw error;
     }
   };
@@ -197,6 +223,16 @@ export const useProducts = () => {
         return product;
       }
       
+      // Check for duplicate product name (excluding the current product being updated)
+      if (isProductDuplicate(product.name, product.id)) {
+        toast({
+          title: 'Error',
+          description: `Another product with name "${product.name}" already exists`,
+          variant: 'destructive'
+        });
+        throw new Error(`Another product named "${product.name}" already exists`);
+      }
+      
       setProducts(prev => prev.map(p => p.id === product.id ? product : p));
       
       supabase
@@ -206,6 +242,7 @@ export const useProducts = () => {
         .then(({ error }) => {
           if (error) {
             console.error('Error updating product in DB:', error);
+            setError(`Failed to update product in database: ${error.message}`);
             return supabase
               .from('products')
               .insert(convertToSupabaseProduct(product));
@@ -214,6 +251,7 @@ export const useProducts = () => {
         .then(result => {
           if (result?.error) {
             console.error('Error inserting product after update failure:', result.error);
+            setError(`Failed to insert product after update failure: ${result.error.message}`);
           } else {
             console.log('Product updated in DB:', product.name);
           }
@@ -227,11 +265,17 @@ export const useProducts = () => {
       return product;
     } catch (error) {
       console.error('Error updating product:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update product',
-        variant: 'destructive'
-      });
+      
+      // Only show toast if it's not a duplicate product error (already handled)
+      if (!(error instanceof Error && error.message.includes('already exists'))) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to update product',
+          variant: 'destructive'
+        });
+      }
+      
+      setError(error instanceof Error ? error.message : 'Unknown error updating product');
       throw error;
     }
   };
@@ -255,6 +299,7 @@ export const useProducts = () => {
         .then(({ error }) => {
           if (error) {
             console.error('Error deleting product from DB:', error);
+            setError(`Failed to delete product from database: ${error.message}`);
           } else {
             console.log('Product deleted from DB:', id);
           }
@@ -268,9 +313,10 @@ export const useProducts = () => {
       console.error('Error deleting product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete product',
+        description: error instanceof Error ? error.message : 'Failed to delete product',
         variant: 'destructive'
       });
+      setError(error instanceof Error ? error.message : 'Unknown error deleting product');
       throw error;
     }
   };
@@ -278,6 +324,7 @@ export const useProducts = () => {
   const resetToInitialProducts = () => {
     const allProducts = [...initialProducts, ...membershipProducts];
     setProducts(allProducts);
+    setError(null);
     console.log('Reset to initial products:', allProducts.length);
     return allProducts;
   };
@@ -285,10 +332,12 @@ export const useProducts = () => {
   const refreshFromDB = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase.from('products').select('*');
       
       if (error) {
         console.error('Error fetching products:', error);
+        setError(`Failed to fetch products: ${error.message}`);
         toast({
           title: 'Error',
           description: 'Failed to fetch products from database',
@@ -303,7 +352,40 @@ export const useProducts = () => {
         const membershipIds = new Set(membershipProducts.map(p => p.id));
         const nonMembershipDbProducts = dbProducts.filter(p => !membershipIds.has(p.id));
         
-        const allProducts = [...nonMembershipDbProducts, ...membershipProducts];
+        // Check for duplicate product names and deduplicate
+        const uniqueProducts = new Map<string, Product>();
+        const duplicates: string[] = [];
+        
+        // First add membership products (these have precedence)
+        membershipProducts.forEach(product => {
+          uniqueProducts.set(product.name.toLowerCase(), product);
+        });
+        
+        // Then add database products, tracking duplicates
+        nonMembershipDbProducts.forEach(product => {
+          const lowerName = product.name.toLowerCase();
+          if (uniqueProducts.has(lowerName)) {
+            duplicates.push(product.name);
+          } else {
+            uniqueProducts.set(lowerName, product);
+          }
+        });
+        
+        // Show warning if duplicates were found
+        if (duplicates.length > 0) {
+          const duplicateNames = duplicates.slice(0, 3).join(', ') + 
+            (duplicates.length > 3 ? ` and ${duplicates.length - 3} more` : '');
+          
+          toast({
+            title: 'Warning',
+            description: `Duplicate product names found and resolved: ${duplicateNames}`,
+            variant: 'warning'
+          });
+          
+          console.warn('Duplicate products removed:', duplicates);
+        }
+        
+        const allProducts = Array.from(uniqueProducts.values());
         setProducts(allProducts);
         console.log('Refreshed from DB:', allProducts.length);
         return allProducts;
@@ -313,6 +395,7 @@ export const useProducts = () => {
       }
     } catch (error) {
       console.error('Error refreshing products:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error refreshing products');
       toast({
         title: 'Error',
         description: 'An error occurred while refreshing products',
