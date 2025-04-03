@@ -207,6 +207,10 @@ const POS = () => {
   }
   const total = calculateTotal();
 
+  const formatSessionQuantity = (quantity: number) => {
+    return Number(quantity.toFixed(2));
+  };
+
   return (
     <div className="flex-1 p-8 pt-6">
       <div className="flex items-center justify-between mb-6 animate-slide-down">
@@ -241,13 +245,19 @@ const POS = () => {
                   <div key={item.id} className={`flex items-center justify-between border-b pb-3 animate-fade-in`} style={{animationDelay: `${index * 50}ms`}}>
                     <div className="flex-1">
                       <p className="font-medium font-quicksand">{item.name}</p>
-                      <p className="text-sm text-muted-foreground indian-rupee">
-                        {item.price.toLocaleString('en-IN')} each
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
                       {item.type !== 'session' && (
-                        <>
+                        <p className="text-sm text-muted-foreground indian-rupee">
+                          {item.price.toLocaleString('en-IN')} each
+                        </p>
+                      )}
+                    </div>
+                    {item.type === 'session' ? (
+                      <div className="w-20 text-right indian-rupee font-mono">
+                        {item.total.toLocaleString('en-IN')}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -256,7 +266,9 @@ const POS = () => {
                           >
                             -
                           </Button>
-                          <span className="w-8 text-center">{item.quantity}</span>
+                          <span className="w-8 text-center">
+                            {item.quantity}
+                          </span>
                           <Button
                             variant="outline"
                             size="sm"
@@ -265,20 +277,30 @@ const POS = () => {
                           >
                             +
                           </Button>
-                        </>
-                      )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:bg-red-500/10"
+                            onClick={() => handleRemoveItem(item.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="w-20 text-right indian-rupee font-mono">
+                          {item.total.toLocaleString('en-IN')}
+                        </div>
+                      </>
+                    )}
+                    {item.type === 'session' && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 text-destructive hover:bg-red-500/10"
+                        className="h-7 w-7 p-0 text-destructive hover:bg-red-500/10 ml-2"
                         onClick={() => handleRemoveItem(item.id)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
-                    <div className="w-20 text-right indian-rupee font-mono">
-                      {item.total.toLocaleString('en-IN')}
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

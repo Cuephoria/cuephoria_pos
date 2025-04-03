@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { CartItem } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
@@ -11,41 +12,25 @@ export const useCart = () => {
   
   const addToCart = (item: Omit<CartItem, 'total'>) => {
     try {
-      const processedItem = item.type === 'session' 
-        ? { ...item, quantity: 1 } 
-        : item;
-      
-      const existingItem = cart.find(i => 
-        i.id === processedItem.id && 
-        i.type === processedItem.type
-      );
+      const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
       
       if (existingItem) {
         const updatedCart = cart.map(i => 
-          i.id === processedItem.id && i.type === processedItem.type
-            ? processedItem.type === 'session'
-              ? processedItem  // Replace session item completely
-              : { 
-                  ...i, 
-                  quantity: i.quantity + processedItem.quantity, 
-                  total: (i.quantity + processedItem.quantity) * i.price 
-                }
+          i.id === item.id && i.type === item.type
+            ? { ...i, quantity: i.quantity + item.quantity, total: (i.quantity + item.quantity) * i.price }
             : i
         );
         setCart(updatedCart);
         toast({
           title: "Item Updated",
-          description: `Updated ${processedItem.name}`,
+          description: `Increased quantity of ${item.name}`,
         });
       } else {
-        const newItem = { 
-          ...processedItem, 
-          total: processedItem.quantity * processedItem.price 
-        };
+        const newItem = { ...item, total: item.quantity * item.price };
         setCart([...cart, newItem]);
         toast({
           title: "Item Added",
-          description: `Added ${processedItem.name} to cart`,
+          description: `Added ${item.name} to cart`,
         });
       }
     } catch (error) {
@@ -81,9 +66,6 @@ export const useCart = () => {
   
   const updateCartItem = (id: string, quantity: number) => {
     try {
-      const itemToUpdate = cart.find(i => i.id === id);
-      if (itemToUpdate?.type === 'session') return;
-      
       if (quantity <= 0) {
         removeFromCart(id);
         return;
