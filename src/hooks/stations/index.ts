@@ -21,7 +21,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions,
+    refreshSessions: refreshSessionsFromData,
     deleteSession,
     deleteAllSessions
   } = useSessionsData();
@@ -83,6 +83,12 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setSessions,
     updateCustomer
   });
+
+  // Wrap the refreshSessions function to ensure it's properly defined
+  const refreshSessions = async (): Promise<void> => {
+    console.log("refreshSessions called from useStations");
+    return await refreshSessionsFromData();
+  };
 
   // Return all hooks combined
   return {

@@ -9,8 +9,15 @@ const ActiveSessions = () => {
   
   // Refresh sessions data when component mounts
   useEffect(() => {
-    refreshSessions();
-  }, []);
+    // Check if refreshSessions is a function before calling it
+    if (typeof refreshSessions === 'function') {
+      refreshSessions().catch(error => {
+        console.error('Error refreshing sessions:', error);
+      });
+    } else {
+      console.error('refreshSessions is not a function', refreshSessions);
+    }
+  }, [refreshSessions]);
   
   // Get occupied stations with sessions
   const activeStations = stations.filter(station => station.isOccupied && station.currentSession);
