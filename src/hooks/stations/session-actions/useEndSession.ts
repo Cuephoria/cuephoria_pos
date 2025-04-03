@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import React from 'react';
+import { generateId } from '@/utils/pos.utils';
 
 /**
  * Hook to provide session end functionality
@@ -49,7 +50,7 @@ export const useEndSession = ({
         console.error('Error updating session:', error);
         toast({
           title: 'Database Error',
-          description: 'Failed to end session',
+          description: 'Failed to end session: ' + error.message,
           variant: 'destructive'
         });
         return undefined;
@@ -88,13 +89,14 @@ export const useEndSession = ({
         });
       }
       
-      // Create a cart item for the session
+      // Create a cart item for the session with valid ID
+      const cartItemId = generateId();
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMinutes / 60;
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       const sessionCartItem: CartItem = {
-        id: updatedSession.id,
+        id: cartItemId,
         type: 'session',
         name: `${station.name} (${durationMinutes} mins)`,
         price: sessionCost,

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import React from 'react';
+import { generateId } from '@/utils/pos.utils';
 
 /**
  * Hook to provide session start functionality
@@ -28,11 +29,13 @@ export const useStartSession = ({
       }
       
       const startTime = new Date();
+      const sessionId = generateId();
       
-      // Create session in Supabase
+      // Create session in Supabase with UUID in the correct format
       const { data, error } = await supabase
         .from('sessions')
         .insert({
+          id: sessionId,
           station_id: stationId,
           customer_id: customerId,
           start_time: startTime.toISOString()
@@ -44,7 +47,7 @@ export const useStartSession = ({
         console.error('Error creating session:', error);
         toast({
           title: 'Database Error',
-          description: 'Failed to start session',
+          description: 'Failed to start session: ' + error.message,
           variant: 'destructive'
         });
         throw error;
@@ -52,13 +55,13 @@ export const useStartSession = ({
       
       if (data) {
         const newSession: Session = {
-          id: data.id,
+          id: sessionId,
           stationId,
           customerId,
           startTime
         };
         
-        // Update sessions state with the correct type
+        // Use function form of setState to prevent stale state issues
         setSessions(prev => [...prev, newSession]);
         
         // Update station state with the correct type

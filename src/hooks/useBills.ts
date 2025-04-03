@@ -198,7 +198,9 @@ export const useBills = (
       // Calculate loyalty points earned (1 point per 100 rupees spent)
       const loyaltyPointsEarned = Math.floor(total / 100);
       
+      // Generate a proper UUID for the bill
       const billId = generateId();
+      console.log("Generated bill ID:", billId);
       
       // Create bill in Supabase
       const { data: billData, error: billError } = await supabase
@@ -222,7 +224,7 @@ export const useBills = (
         console.error('Error creating bill:', billError);
         toast({
           title: 'Error',
-          description: 'Failed to complete sale',
+          description: 'Failed to complete sale: ' + billError.message,
           variant: 'destructive'
         });
         return undefined;
@@ -230,9 +232,13 @@ export const useBills = (
       
       // Create bill items
       for (const item of cart) {
+        // Generate unique ID for each bill item
+        const billItemId = generateId();
+        
         const { error: itemError } = await supabase
           .from('bill_items')
           .insert({
+            id: billItemId,
             bill_id: billId,
             item_id: item.id,
             item_type: item.type,
@@ -244,6 +250,16 @@ export const useBills = (
           
         if (itemError) {
           console.error('Error creating bill item:', itemError);
+          console.log('Failed item data:', {
+            id: billItemId,
+            bill_id: billId,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          });
         }
       }
       
@@ -264,7 +280,7 @@ export const useBills = (
       };
       
       // Update bills state
-      setBills([bill, ...bills]);
+      setBills(prevBills => [bill, ...prevBills]);
       
       // Update customer data
       const updatedCustomer = {
@@ -328,6 +344,7 @@ export const useBills = (
         }
       }
       
+      console.log("Sale completed successfully with bill ID:", billId);
       return bill;
     } catch (error) {
       console.error('Error in completeSale:', error);
