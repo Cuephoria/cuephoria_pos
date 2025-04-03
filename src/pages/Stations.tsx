@@ -20,9 +20,9 @@ const Stations = () => {
   const activeBall = ballStations.filter(s => s.isOccupied).length;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div className="flex-1 space-y-4 p-8 pt-6 bg-gray-950 min-h-screen">
       <div className="flex items-center justify-between animate-slide-down">
-        <h2 className="text-3xl font-bold tracking-tight gradient-text font-heading">Gaming Stations</h2>
+        <h2 className="text-3xl font-bold tracking-tight gradient-text font-heading text-white">Gaming Stations</h2>
         <div className="flex space-x-2">
           <Button 
             className="bg-cuephoria-purple hover:bg-cuephoria-purple/80"
@@ -40,10 +40,10 @@ const Stations = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
-        <Card className="bg-gradient-to-r from-cuephoria-purple/20 to-cuephoria-lightpurple/20 border-0 animate-fade-in">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="bg-gray-900 border-0 animate-fade-in">
+          <CardContent className="p-4 flex items-center justify-between text-white">
             <div>
-              <p className="text-sm text-muted-foreground">PlayStation 5</p>
+              <p className="text-sm text-gray-400">PlayStation 5</p>
               <p className="text-2xl font-bold">{activePs5} / {ps5Stations.length} Active</p>
             </div>
             <div className="rounded-full bg-cuephoria-purple/20 p-3">
@@ -55,10 +55,10 @@ const Stations = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-r from-cuephoria-orange/20 to-cuephoria-orange/10 border-0 animate-fade-in delay-100">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="bg-gray-900 border-0 animate-fade-in delay-100">
+          <CardContent className="p-4 flex items-center justify-between text-white">
             <div>
-              <p className="text-sm text-muted-foreground">8-Ball Tables</p>
+              <p className="text-sm text-gray-400">8-Ball Tables</p>
               <p className="text-2xl font-bold">{activeBall} / {ballStations.length} Active</p>
             </div>
             <div className="rounded-full bg-cuephoria-orange/20 p-3">
@@ -74,8 +74,8 @@ const Stations = () => {
       <div className="space-y-6">
         <div className="animate-slide-up delay-200">
           <div className="flex items-center mb-4">
-            <h3 className="text-xl font-semibold font-heading">PlayStation 5 Consoles</h3>
-            <span className="ml-2 bg-cuephoria-purple/20 text-cuephoria-lightpurple text-xs px-2 py-1 rounded-full">
+            <h3 className="text-xl font-semibold font-heading text-white">PlayStation 5 Consoles</h3>
+            <span className="ml-2 bg-purple-900/40 text-purple-400 text-xs px-2 py-1 rounded-full">
               {activePs5} active
             </span>
           </div>
@@ -90,8 +90,8 @@ const Stations = () => {
 
         <div className="animate-slide-up delay-300">
           <div className="flex items-center mb-4">
-            <h3 className="text-xl font-semibold font-heading">8-Ball Tables</h3>
-            <span className="ml-2 bg-cuephoria-orange/20 text-cuephoria-orange text-xs px-2 py-1 rounded-full">
+            <h3 className="text-xl font-semibold font-heading text-white">8-Ball Tables</h3>
+            <span className="ml-2 bg-orange-900/40 text-orange-400 text-xs px-2 py-1 rounded-full">
               {activeBall} active
             </span>
           </div>
