@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Customer } from '@/context/POSContext';
 import { CalendarCheck, Award, Clock, Calendar, AlertTriangle } from 'lucide-react';
+import { isMembershipActive, getHoursLeftColor } from '@/utils/membership.utils';
 
 interface CustomerInfoProps {
   customer: Customer;
@@ -14,12 +14,6 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
     // Handle both string and Date objects
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString();
-  };
-  
-  const isMembershipActive = () => {
-    if (!customer.isMember || !customer.membershipExpiryDate) return false;
-    const expiryDate = new Date(customer.membershipExpiryDate);
-    return expiryDate > new Date();
   };
 
   const getMembershipType = () => {
@@ -38,14 +32,6 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
     return customer.membershipDuration === 'weekly' ? 'Weekly' : 'Monthly';
   };
 
-  const getHoursLeftColor = () => {
-    if (customer.membershipHoursLeft === undefined) return '';
-    
-    if (customer.membershipHoursLeft <= 0) return 'text-red-600';
-    if (customer.membershipHoursLeft < 2) return 'text-orange-500';
-    return 'text-green-600';
-  };
-
   return (
     <div className="mb-4">
       <p className="font-medium text-sm">Customer: {customer.name}</p>
@@ -55,8 +41,8 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
         <p className="text-xs flex items-center">
           <Award className="h-3 w-3 mr-1" />
           <span className="font-medium">Status:</span> 
-          <span className={`ml-1 ${isMembershipActive() ? 'text-green-600' : 'text-red-600'}`}>
-            {isMembershipActive() ? getMembershipType() : 'Inactive'}
+          <span className={`ml-1 ${isMembershipActive(customer) ? 'text-green-600' : 'text-red-600'}`}>
+            {isMembershipActive(customer) ? getMembershipType() : 'Inactive'}
           </span>
         </p>
         
@@ -84,7 +70,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
         )}
         
         {customer.membershipHoursLeft !== undefined && (
-          <p className={`text-xs flex items-center mt-1 ${getHoursLeftColor()}`}>
+          <p className={`text-xs flex items-center mt-1 ${getHoursLeftColor(customer.membershipHoursLeft)}`}>
             <Clock className="h-3 w-3 mr-1" />
             <span className="font-medium">Hours Left:</span>
             <span className="ml-1">{customer.membershipHoursLeft}</span>
