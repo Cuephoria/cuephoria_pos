@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, User, Search } from "lucide-react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StationActionsProps {
@@ -105,14 +106,17 @@ const StationActions: React.FC<StationActionsProps> = ({
     
     const query = searchQuery.toLowerCase().trim();
     
+    // First try to match phone number
     if (customer.phone && customer.phone.includes(query)) {
       return true;
     }
     
+    // Then try to match by name
     if (customer.name && customer.name.toLowerCase().includes(query)) {
       return true;
     }
     
+    // Finally try to match by email
     if (customer.email && customer.email.toLowerCase().includes(query)) {
       return true;
     }
@@ -154,16 +158,13 @@ const StationActions: React.FC<StationActionsProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0">
           <Command>
-            <div className="flex items-center border-b px-3">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <CommandInput 
-                placeholder="Search by phone, name or email..." 
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-                className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-none"
-              />
-            </div>
-            <CommandList className="max-h-[300px] overflow-y-auto">
+            <CommandInput 
+              placeholder="Search by phone, name or email..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              className="w-full border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+            <CommandList>
               <CommandEmpty>
                 <div className="p-2 text-center text-sm">
                   No customers found. Try a different search.
