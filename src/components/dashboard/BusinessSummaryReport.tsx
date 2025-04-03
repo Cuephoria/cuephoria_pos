@@ -169,6 +169,11 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   const { ps5Sales, poolSales } = calculateGameSales();
   const { foodSales, beverageSales, tobaccoSales, totalCanteenSales } = calculateCanteenSales();
   
+  // Debug logs to trace the issue
+  console.log('Canteen sales calculation:', { foodSales, beverageSales, tobaccoSales, totalCanteenSales });
+  console.log('Products available:', products.length);
+  console.log('Bills available:', bills.length);
+  
   return (
     <Card className="w-full">
       <CardHeader>
