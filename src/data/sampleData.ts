@@ -1,8 +1,154 @@
-
 import { Product, Station, Customer } from '@/types/pos.types';
 
 // Sample data
 export const initialProducts: Product[] = [
+  // Challenges Category
+  { 
+    id: 'ch1', 
+    name: 'PS5 Gaming (1 Hour)', 
+    price: 300,
+    category: 'challenges',
+    stock: 9999 
+  },
+  { 
+    id: 'ch2', 
+    name: '8-Ball (1 Hour)', 
+    price: 200,
+    category: 'challenges',
+    stock: 9999 
+  },
+  { 
+    id: 'ch3', 
+    name: 'MetaShot Challenge 1', 
+    price: 149, 
+    category: 'challenges', 
+    stock: 9999 
+  },
+  { 
+    id: 'ch4', 
+    name: 'MetaShot Challenge 2', 
+    price: 199, 
+    category: 'challenges', 
+    stock: 9999 
+  },
+  { 
+    id: 'ch5', 
+    name: 'MetaShot Challenge 3', 
+    price: 249, 
+    category: 'challenges', 
+    stock: 9999 
+  },
+  
+  // Food Category 
+  { 
+    id: 'f1', 
+    name: 'Samosa (2 pcs)', 
+    price: 40, 
+    category: 'food', 
+    stock: 50 
+  },
+  { 
+    id: 'f2', 
+    name: 'Vada Pav', 
+    price: 35, 
+    category: 'food', 
+    stock: 40 
+  },
+  { 
+    id: 'f3', 
+    name: 'Pav Bhaji', 
+    price: 80, 
+    category: 'food', 
+    stock: 30 
+  },
+  { 
+    id: 'f4', 
+    name: 'Paneer Tikka', 
+    price: 120, 
+    category: 'food', 
+    stock: 25 
+  },
+  { 
+    id: 'f5', 
+    name: 'Lay\'s Masala Magic', 
+    price: 30, 
+    category: 'food', 
+    stock: 60 
+  },
+  
+  // Drinks Category
+  { 
+    id: 'd1', 
+    name: 'Masala Chai', 
+    price: 25, 
+    category: 'drinks', 
+    stock: 100 
+  },
+  { 
+    id: 'd2', 
+    name: 'Mango Lassi', 
+    price: 60, 
+    category: 'drinks', 
+    stock: 50 
+  },
+  { 
+    id: 'd3', 
+    name: 'Thums Up', 
+    price: 40, 
+    category: 'drinks', 
+    stock: 75 
+  },
+  { 
+    id: 'd4', 
+    name: 'Nimbu Pani', 
+    price: 30, 
+    category: 'drinks', 
+    stock: 80 
+  },
+  { 
+    id: 'd5', 
+    name: 'Red Bull', 
+    price: 110, 
+    category: 'drinks', 
+    stock: 40 
+  },
+  
+  // Tobacco Category
+  { 
+    id: 't1', 
+    name: 'Classic Milds (Pack)', 
+    price: 350, 
+    category: 'tobacco', 
+    stock: 30 
+  },
+  { 
+    id: 't2', 
+    name: 'Gold Flake Kings (Pack)', 
+    price: 340, 
+    category: 'tobacco', 
+    stock: 35 
+  },
+  { 
+    id: 't3', 
+    name: 'Marlboro Red (Pack)', 
+    price: 360, 
+    category: 'tobacco', 
+    stock: 25 
+  },
+  { 
+    id: 't4', 
+    name: 'Benson & Hedges (Pack)', 
+    price: 370, 
+    category: 'tobacco', 
+    stock: 20 
+  },
+  { 
+    id: 't5', 
+    name: 'Wills Navy Cut (Pack)', 
+    price: 320, 
+    category: 'tobacco', 
+    stock: 30 
+  },
   { 
     id: 'p1', 
     name: 'PS5 Session', 
@@ -213,4 +359,3 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     totalPlayTime: 120
   }
 ];
-
