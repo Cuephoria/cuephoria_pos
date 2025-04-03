@@ -16,8 +16,40 @@ import SalesChart from '@/components/dashboard/SalesChart';
 import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart';
 import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
 
+// Sample data for the sales chart
+const generateSampleSalesData = (period: string) => {
+  if (period === 'hourly') {
+    return Array.from({ length: 12 }, (_, i) => ({
+      name: `${i + 9}:00`,
+      amount: Math.floor(Math.random() * 5000) + 1000,
+    }));
+  } else if (period === 'daily') {
+    return Array.from({ length: 7 }, (_, i) => {
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return {
+        name: days[i],
+        amount: Math.floor(Math.random() * 10000) + 5000,
+      };
+    });
+  } else if (period === 'weekly') {
+    return Array.from({ length: 4 }, (_, i) => ({
+      name: `Week ${i + 1}`,
+      amount: Math.floor(Math.random() * 50000) + 20000,
+    }));
+  } else {
+    return Array.from({ length: 12 }, (_, i) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return {
+        name: months[i],
+        amount: Math.floor(Math.random() * 100000) + 50000,
+      };
+    });
+  }
+};
+
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('summary');
+  const [salesChartTab, setSalesChartTab] = useState('daily');
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // First day of current month
     to: new Date()
@@ -33,6 +65,9 @@ const Reports = () => {
   const handlePrintReport = () => {
     window.print();
   };
+
+  // Generate sample data based on the active tab
+  const salesData = generateSampleSalesData(salesChartTab);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6 print:p-0">
@@ -106,7 +141,11 @@ const Reports = () => {
             <CardDescription>View your sales data over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <SalesChart />
+            <SalesChart 
+              data={salesData} 
+              activeTab={salesChartTab} 
+              setActiveTab={setSalesChartTab} 
+            />
           </CardContent>
         </Card>
       </div>
