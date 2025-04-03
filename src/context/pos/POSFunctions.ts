@@ -1,4 +1,3 @@
-
 import { 
   Product, Station, Customer, Session, CartItem, Bill, 
   ResetOptions, SessionResult 
@@ -163,16 +162,16 @@ export const createPOSFunctions = (
   };
   
   // Membership functions
-  const checkMembershipValidity = (customerId: string): boolean => {
+  const checkMembershipValidityLocal = (customerId: string): boolean => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return false;
-    return checkMembershipValidityInternal(customer);
+    return checkMembershipValidity(customer);
   };
   
-  const deductMembershipHours = (customerId: string, hours: number): boolean => {
+  const deductMembershipHoursLocal = (customerId: string, hours: number): boolean => {
     const updatedCustomers = customers.map(customer => {
       if (customer.id === customerId) {
-        return deductMembershipHoursInternal(customer, hours);
+        return deductMembershipHours(customer, hours);
       }
       return customer;
     });
@@ -180,7 +179,7 @@ export const createPOSFunctions = (
     return true;
   };
   
-  const updateCustomerMembership = (
+  const updateCustomerMembershipLocal = (
     customerId: string,
     membershipData: {
       membershipPlan?: string;
@@ -188,7 +187,7 @@ export const createPOSFunctions = (
       membershipHoursLeft?: number;
     }
   ): Customer | null => {
-    const updatedCustomer = updateCustomerMembershipInternal(customers, customerId, membershipData);
+    const updatedCustomer = updateCustomerMembership(customers, customerId, membershipData);
     if (updatedCustomer) {
       setCustomers(prevCustomers =>
         prevCustomers.map(c => (c.id === customerId ? updatedCustomer : c))
@@ -358,13 +357,13 @@ export const createPOSFunctions = (
     // Customer functions
     addCustomer,
     updateCustomer,
-    updateCustomerMembership,
+    updateCustomerMembership: updateCustomerMembershipLocal,
     deleteCustomer,
     selectCustomer,
     
     // Membership functions
-    checkMembershipValidity,
-    deductMembershipHours,
+    checkMembershipValidity: checkMembershipValidityLocal,
+    deductMembershipHours: deductMembershipHoursLocal,
     
     // Cart functions
     addToCart,
