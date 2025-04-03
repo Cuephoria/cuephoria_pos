@@ -29,6 +29,9 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   const { expenses, businessSummary } = useExpenses();
   const { bills, products } = usePOS();
   
+  // Current date for display
+  const currentDate = new Date();
+  
   // Filter expenses based on date range if provided
   const filteredExpenses = expenses.filter(expense => {
     if (!startDate && !endDate) return true;
@@ -115,7 +118,51 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     return { ps5Sales, poolSales };
   };
   
+  // Calculate canteen sales (food and beverages)
+  const calculateCanteenSales = () => {
+    // Filter bills based on date range
+    const filteredBills = bills.filter(bill => {
+      if (!startDate && !endDate) return true;
+      
+      const billDate = new Date(bill.createdAt);
+      
+      if (startDate && endDate) {
+        return billDate >= startDate && billDate <= endDate;
+      } else if (startDate) {
+        return billDate >= startDate;
+      } else if (endDate) {
+        return billDate <= endDate;
+      }
+      
+      return true;
+    });
+    
+    let foodSales = 0;
+    let beverageSales = 0;
+    
+    filteredBills.forEach(bill => {
+      bill.items.forEach(item => {
+        // Check if the item is a product
+        if (item.type === 'product') {
+          // Find the product to check its category
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+            const category = product.category.toLowerCase();
+            if (category === 'food' || category === 'snacks') {
+              foodSales += item.total;
+            } else if (category === 'beverage' || category === 'drinks') {
+              beverageSales += item.total;
+            }
+          }
+        }
+      });
+    });
+    
+    return { foodSales, beverageSales, totalCanteenSales: foodSales + beverageSales };
+  };
+  
   const { ps5Sales, poolSales } = calculateGameSales();
+  const { foodSales, beverageSales, totalCanteenSales } = calculateCanteenSales();
   
   return (
     <Card>
@@ -128,7 +175,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               ? `From ${format(startDate, 'PP')}`
               : endDate
                 ? `Until ${format(endDate, 'PP')}`
-                : 'All time summary'
+                : `${format(currentDate, 'MMMM yyyy')}`
           }
         </CardDescription>
       </CardHeader>
@@ -226,6 +273,50 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               </TableBody>
             </Table>
           </div>
+        </div>
+        
+        <div className="mb-6">
+          <h3 className="font-semibold text-base mb-2">Canteen Sales</h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category</TableHead>
+                <TableHead>Revenue</TableHead>
+                <TableHead>% of Canteen Revenue</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>Food & Snacks</TableCell>
+                <TableCell>
+                  <CurrencyDisplay amount={foodSales} />
+                </TableCell>
+                <TableCell>
+                  {totalCanteenSales > 0 
+                    ? ((foodSales / totalCanteenSales) * 100).toFixed(1) 
+                    : '0.0'}%
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Beverages & Drinks</TableCell>
+                <TableCell>
+                  <CurrencyDisplay amount={beverageSales} />
+                </TableCell>
+                <TableCell>
+                  {totalCanteenSales > 0 
+                    ? ((beverageSales / totalCanteenSales) * 100).toFixed(1) 
+                    : '0.0'}%
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-semibold">Total Canteen</TableCell>
+                <TableCell className="font-semibold">
+                  <CurrencyDisplay amount={totalCanteenSales} />
+                </TableCell>
+                <TableCell>100.0%</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
