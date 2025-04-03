@@ -11,6 +11,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
 
 interface BusinessSummaryReportProps {
@@ -25,7 +26,6 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   onDownload 
 }) => {
   const { expenses, businessSummary } = useExpenses();
-  const { grossIncome, totalExpenses, netProfit, categoryTotals } = businessSummary;
   
   // Filter expenses based on date range if provided
   const filteredExpenses = expenses.filter(expense => {
@@ -43,6 +43,22 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     
     return true;
   });
+  
+  // Group expenses by category
+  const expensesByCategory = filteredExpenses.reduce((acc, expense) => {
+    const { category } = expense;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(expense);
+    return acc;
+  }, {} as Record<string, Expense[]>);
+  
+  // Calculate total per category
+  const categoryTotals = Object.entries(expensesByCategory).map(([category, expenses]) => {
+    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    return { category, total };
+  }).sort((a, b) => b.total - a.total);
   
   // Format category name
   const formatCategory = (category: string) => {
@@ -68,7 +84,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               ? `From ${format(startDate, 'PP')}`
               : endDate
                 ? `Until ${format(endDate, 'PP')}`
-                : 'Monthly Financial Summary'
+                : 'All time summary'
           }
         </CardDescription>
       </CardHeader>
@@ -77,19 +93,19 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Gross Income</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={grossIncome} />
+              <CurrencyDisplay amount={businessSummary.grossIncome} />
             </p>
           </div>
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Total Expenses</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={totalExpenses} />
+              <CurrencyDisplay amount={businessSummary.totalExpenses} />
             </p>
           </div>
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Net Profit</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={netProfit} />
+              <CurrencyDisplay amount={businessSummary.netProfit} />
             </p>
           </div>
         </div>
@@ -104,14 +120,16 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {categoryTotals.map(({ category, amount, percentage }) => (
+            {categoryTotals.map(({ category, total }) => (
               <TableRow key={category}>
                 <TableCell>{formatCategory(category)}</TableCell>
                 <TableCell>
-                  <CurrencyDisplay amount={amount} />
+                  <CurrencyDisplay amount={total} />
                 </TableCell>
                 <TableCell>
-                  {percentage.toFixed(1)}%
+                  {businessSummary.totalExpenses 
+                    ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
+                    : '0.0'}%
                 </TableCell>
               </TableRow>
             ))}

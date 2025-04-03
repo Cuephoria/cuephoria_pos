@@ -10,7 +10,7 @@ const BusinessSummarySection = () => {
   const { businessSummary } = useExpenses();
   const { grossIncome, totalExpenses, netProfit, profitMargin } = businessSummary;
   
-  // Calculate progress percentage for visualizing profit margin (clamped between 0-100)
+  // Calculate progress percentage for visualizing profit margin
   const profitPercentage = Math.max(0, Math.min(100, profitMargin));
   
   // Format profitMargin to 2 decimal places
@@ -35,7 +35,7 @@ const BusinessSummarySection = () => {
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
           <Wallet className="h-4 w-4 text-orange-500" />
         </CardHeader>
         <CardContent>

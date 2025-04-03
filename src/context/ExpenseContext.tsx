@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Expense, BusinessSummary, ExpenseCategory } from '@/types/expense.types';
+import { Expense, BusinessSummary } from '@/types/expense.types';
+import { supabase } from '@/integrations/supabase/client';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
@@ -26,9 +27,6 @@ export const useExpenses = () => {
   return context;
 };
 
-// Local storage key
-const EXPENSES_STORAGE_KEY = 'business_expenses';
-
 export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,35 +35,41 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     grossIncome: 0,
     totalExpenses: 0,
     netProfit: 0,
-    profitMargin: 0,
-    monthlyExpenses: {},
-    categoryTotals: []
+    profitMargin: 0
   });
-  
   const { bills } = usePOS();
   const { toast } = useToast();
 
-  // Fetch expenses from localStorage
   const fetchExpenses = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const storedExpenses = localStorage.getItem(EXPENSES_STORAGE_KEY);
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+        
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        setError(`Failed to fetch expenses: ${error.message}`);
+        return;
+      }
       
-      if (storedExpenses) {
-        const parsedExpenses = JSON.parse(storedExpenses);
-        // Convert string dates to Date objects
-        const transformedExpenses: Expense[] = parsedExpenses.map((item: any) => ({
-          ...item,
-          date: new Date(item.date)
+      if (data) {
+        const transformedExpenses: Expense[] = data.map(item => ({
+          id: item.id,
+          name: item.name,
+          amount: item.amount,
+          category: item.category,
+          frequency: item.frequency,
+          date: new Date(item.date),
+          isRecurring: item.is_recurring,
+          notes: item.notes
         }));
         
         setExpenses(transformedExpenses);
-        console.log(`Loaded ${transformedExpenses.length} expenses from localStorage`);
-      } else {
-        setExpenses([]);
-        console.log('No expenses found in localStorage');
+        console.log(`Loaded ${transformedExpenses.length} expenses`);
       }
     } catch (err) {
       console.error('Error in fetchExpenses:', err);
@@ -75,144 +79,38 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Save expenses to localStorage
-  const saveExpenses = (updatedExpenses: Expense[]) => {
-    try {
-      localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(updatedExpenses));
-    } catch (err) {
-      console.error('Error saving expenses to localStorage:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to save expenses',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Calculate the business summary with improved logic
   const calculateBusinessSummary = () => {
-    // Calculate total revenue from all bills
     const grossIncome = bills.reduce((sum, bill) => sum + bill.total, 0);
     
-    // Calculate monthly expense equivalent for recurring expenses
-    const calculateMonthlyEquivalent = (expense: Expense): number => {
-      if (!expense.isRecurring) {
-        return 0; // One-time expenses handled separately
+    const totalExpenses = expenses.reduce((sum, expense) => {
+      if (expense.isRecurring) {
+        switch(expense.frequency) {
+          case 'monthly':
+            return sum + expense.amount;
+          case 'quarterly':
+            return sum + (expense.amount / 3);
+          case 'yearly':
+            return sum + (expense.amount / 12);
+          default:
+            return sum + expense.amount;
+        }
+      } else {
+        return sum + expense.amount;
       }
-      
-      switch(expense.frequency) {
-        case 'monthly':
-          return expense.amount;
-        case 'quarterly':
-          return expense.amount / 3;
-        case 'yearly':
-          return expense.amount / 12;
-        default:
-          return 0;
-      }
-    };
+    }, 0);
     
-    // Calculate one-time expenses in the current month
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
+    const netProfit = grossIncome - totalExpenses;
     
-    const oneTimeExpensesThisMonth = expenses
-      .filter(expense => !expense.isRecurring)
-      .filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate.getMonth() === currentMonth && 
-               expenseDate.getFullYear() === currentYear;
-      })
-      .reduce((sum, expense) => sum + expense.amount, 0);
-    
-    // Calculate recurring monthly expenses
-    const recurringMonthlyExpenses = expenses
-      .filter(expense => expense.isRecurring)
-      .reduce((sum, expense) => sum + calculateMonthlyEquivalent(expense), 0);
-    
-    // Total monthly expenses
-    const totalMonthlyExpenses = oneTimeExpensesThisMonth + recurringMonthlyExpenses;
-    
-    // Calculate expenses by category
-    const categoryExpenses = expenses.reduce((acc, expense) => {
-      const category = expense.category;
-      const monthlyAmount = expense.isRecurring 
-        ? calculateMonthlyEquivalent(expense)
-        : (new Date(expense.date).getMonth() === currentMonth && 
-           new Date(expense.date).getFullYear() === currentYear) 
-          ? expense.amount 
-          : 0;
-          
-      acc[category] = (acc[category] || 0) + monthlyAmount;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    // Calculate category totals with percentages
-    const categoryTotals = Object.entries(categoryExpenses)
-      .map(([category, amount]) => ({
-        category,
-        amount,
-        percentage: totalMonthlyExpenses > 0 
-          ? (amount / totalMonthlyExpenses) * 100 
-          : 0
-      }))
-      .sort((a, b) => b.amount - a.amount);
-    
-    // Calculate net profit and profit margin
-    const netProfit = grossIncome - totalMonthlyExpenses;
     const profitMargin = grossIncome > 0 ? (netProfit / grossIncome) * 100 : 0;
-    
-    // Organize expenses by month (for trending/charts)
-    const monthlyExpenseTrend: Record<string, number> = {};
-    const last6Months = Array.from({ length: 6 }, (_, i) => {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      return date;
-    });
-    
-    last6Months.forEach(date => {
-      const month = date.getMonth();
-      const year = date.getFullYear();
-      const key = `${year}-${month + 1}`;
-      
-      // Calculate recurring expenses for this month
-      const recurringForMonth = expenses
-        .filter(expense => expense.isRecurring)
-        .reduce((sum, expense) => sum + calculateMonthlyEquivalent(expense), 0);
-      
-      // Calculate one-time expenses for this month
-      const oneTimeForMonth = expenses
-        .filter(expense => !expense.isRecurring)
-        .filter(expense => {
-          const expenseDate = new Date(expense.date);
-          return expenseDate.getMonth() === month && 
-                 expenseDate.getFullYear() === year;
-        })
-        .reduce((sum, expense) => sum + expense.amount, 0);
-      
-      monthlyExpenseTrend[key] = recurringForMonth + oneTimeForMonth;
-    });
     
     setBusinessSummary({
       grossIncome,
-      totalExpenses: totalMonthlyExpenses,
+      totalExpenses,
       netProfit,
-      profitMargin,
-      monthlyExpenses: monthlyExpenseTrend,
-      categoryTotals
-    });
-    
-    console.log('Business summary calculated:', {
-      grossIncome,
-      totalExpenses: totalMonthlyExpenses,
-      netProfit,
-      profitMargin,
-      categories: categoryTotals
+      profitMargin
     });
   };
 
-  // Add a new expense
   const addExpense = async (expenseData: Omit<Expense, 'id'>): Promise<boolean> => {
     try {
       console.log('Adding expense with data:', expenseData);
@@ -223,6 +121,22 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (expenseData.date instanceof Date) {
         dateObj = expenseData.date;
+      } else if (expenseData.date && typeof expenseData.date === 'object' && expenseData.date._type === 'Date') {
+        // Handle serialized date object
+        try {
+          dateObj = new Date(expenseData.date.value.iso);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date format');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expenseData.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
       } else {
         try {
           dateObj = new Date(expenseData.date as any);
@@ -240,6 +154,33 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
+      // Format date for storage as ISO string
+      const dateToStore = dateObj.toISOString();
+      console.log('Formatted date to store:', dateToStore);
+      
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .insert({
+          id,
+          name: expenseData.name,
+          amount: expenseData.amount,
+          category: expenseData.category,
+          frequency: expenseData.frequency,
+          date: dateToStore,
+          is_recurring: expenseData.isRecurring,
+          notes: expenseData.notes || ''
+        });
+        
+      if (supabaseError) {
+        console.error('Error adding expense:', supabaseError);
+        toast({
+          title: 'Error',
+          description: `Failed to add expense: ${supabaseError.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
       // Create a proper expense object for the state
       const newExpense: Expense = {
         id,
@@ -252,17 +193,12 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         notes: expenseData.notes || ''
       };
       
-      const updatedExpenses = [newExpense, ...expenses];
-      setExpenses(updatedExpenses);
-      saveExpenses(updatedExpenses);
+      setExpenses(prev => [newExpense, ...prev]);
       
       toast({
         title: 'Success',
         description: 'Expense added successfully'
       });
-      
-      // Recalculate business summary
-      calculateBusinessSummary();
       
       return true;
     } catch (err) {
@@ -276,7 +212,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Update an existing expense
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
       // Ensure date is a valid Date object
@@ -284,6 +219,22 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (expense.date instanceof Date) {
         dateObj = expense.date;
+      } else if (expense.date && typeof expense.date === 'object' && expense.date._type === 'Date') {
+        // Handle serialized date object
+        try {
+          dateObj = new Date(expense.date.value.iso);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date format');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expense.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
       } else {
         try {
           dateObj = new Date(expense.date as any);
@@ -301,26 +252,47 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
+      // Format date for storage as ISO string
+      const dateToStore = dateObj.toISOString();
+      console.log('Formatted date to update:', dateToStore);
+      
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .update({
+          name: expense.name,
+          amount: expense.amount,
+          category: expense.category,
+          frequency: expense.frequency,
+          date: dateToStore,
+          is_recurring: expense.isRecurring,
+          notes: expense.notes || ''
+        })
+        .eq('id', expense.id);
+        
+      if (supabaseError) {
+        console.error('Error updating expense:', supabaseError);
+        toast({
+          title: 'Error',
+          description: `Failed to update expense: ${supabaseError.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
       // Update the expense with the correct date object
       const updatedExpense = {
         ...expense,
         date: dateObj
       };
       
-      const updatedExpenses = expenses.map(item => 
-        item.id === expense.id ? updatedExpense : item
+      setExpenses(prev => 
+        prev.map(item => item.id === expense.id ? updatedExpense : item)
       );
-      
-      setExpenses(updatedExpenses);
-      saveExpenses(updatedExpenses);
       
       toast({
         title: 'Success',
         description: 'Expense updated successfully'
       });
-      
-      // Recalculate business summary
-      calculateBusinessSummary();
       
       return true;
     } catch (err) {
@@ -334,20 +306,29 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Delete an expense
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
-      const updatedExpenses = expenses.filter(item => item.id !== id);
-      setExpenses(updatedExpenses);
-      saveExpenses(updatedExpenses);
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('Error deleting expense:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to delete expense: ${error.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      setExpenses(prev => prev.filter(item => item.id !== id));
       
       toast({
         title: 'Success',
         description: 'Expense deleted successfully'
       });
-      
-      // Recalculate business summary
-      calculateBusinessSummary();
       
       return true;
     } catch (err) {
@@ -361,12 +342,10 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Initial load of expenses
   useEffect(() => {
     fetchExpenses();
   }, []);
 
-  // Recalculate business summary when bills or expenses change
   useEffect(() => {
     calculateBusinessSummary();
   }, [bills, expenses]);

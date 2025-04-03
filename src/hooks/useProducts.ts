@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -378,7 +379,7 @@ export const useProducts = () => {
           toast({
             title: 'Warning',
             description: `Duplicate product names found and resolved: ${duplicateNames}`,
-            variant: 'destructive'
+            variant: 'warning'
           });
           
           console.warn('Duplicate products removed:', duplicates);

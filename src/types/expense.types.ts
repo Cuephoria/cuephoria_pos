@@ -18,6 +18,4 @@ export interface BusinessSummary {
   totalExpenses: number;
   netProfit: number;
   profitMargin: number;
-  monthlyExpenses: Record<string, number>;
-  categoryTotals: Array<{category: string, amount: number, percentage: number}>;
 }
