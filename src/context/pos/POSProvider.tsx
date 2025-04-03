@@ -4,7 +4,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { POSContextType, Product, Station, Customer, Session, Bill, CartItem, ResetOptions } from "@/types/pos.types";
 import { createPOSFunctions } from "./POSFunctions";
 import { generateSampleData } from "@/data/sampleData";
-import { useStations, useSessionActions } from "@/hooks/stations";
+import { useStations } from "@/hooks/stations";
 
 // Create the context with a default value
 const POSContext = createContext<POSContextType | undefined>(undefined);
@@ -45,7 +45,7 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
     setStations,
     startSession: startSessionHook,
     endSession: endSessionHook
-  } = useStations(stationsLocal, updateCustomer);
+  } = useStations();
   
   // Create POS functions with all the necessary dependencies
   const posFunctions = createPOSFunctions(

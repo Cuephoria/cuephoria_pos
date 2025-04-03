@@ -3,6 +3,58 @@ import { Bill, Customer, Product, ResetOptions, CartItem } from '@/types/pos.typ
 import { generateId } from '@/utils/pos.utils';
 import { indianCustomers, indianProducts } from '@/data/sampleData';
 
+// Function to export data to CSV
+export const exportToCSV = (data: any[], filename: string) => {
+  if (data.length === 0) {
+    console.warn('No data to export');
+    return;
+  }
+  
+  // Get headers from the first item
+  const headers = Object.keys(data[0]);
+  
+  // Create CSV content
+  let csvContent = "data:text/csv;charset=utf-8,";
+  
+  // Add header row
+  csvContent += headers.join(',') + '\n';
+  
+  // Add data rows
+  data.forEach(item => {
+    const row = headers.map(header => {
+      let cell = item[header];
+      
+      // Handle dates
+      if (cell instanceof Date) {
+        cell = cell.toISOString();
+      }
+      
+      // Handle objects and arrays
+      if (typeof cell === 'object' && cell !== null) {
+        cell = JSON.stringify(cell);
+      }
+      
+      // Escape commas and quotes
+      if (typeof cell === 'string') {
+        cell = `"${cell.replace(/"/g, '""')}"`;
+      }
+      
+      return cell;
+    }).join(',');
+    
+    csvContent += row + '\n';
+  });
+  
+  // Create download link
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', `${filename}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 // Function to add sample Indian data
 export const addSampleIndianData = (
   products: Product[], 

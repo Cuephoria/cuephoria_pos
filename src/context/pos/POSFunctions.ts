@@ -9,6 +9,7 @@ import {
   updateCustomerMembershipInternal
 } from "@/utils/membership.utils";
 import { exportToCSV } from "@/services/dataOperations";
+import { generateSampleData } from "@/data/sampleData";
 
 // Create a type for the functions object
 export type POSFunctionsType = ReturnType<typeof createPOSFunctions>;
@@ -42,7 +43,7 @@ export const createPOSFunctions = (
   
   // Dependencies
   startSessionFn?: (stationId: string, customerId: string) => Promise<Session | undefined>,
-  endSessionFn?: (stationId: string, customers: Customer[]) => Promise<{
+  endSessionFn?: (stationId: string) => Promise<{
     sessionCartItem?: CartItem;
     customer?: Customer;
   } | undefined>
@@ -79,7 +80,7 @@ export const createPOSFunctions = (
     if (endSessionFn) {
       return async (stationId: string): Promise<void> => {
         try {
-          const result = await endSessionFn(stationId, customers);
+          const result = await endSessionFn(stationId);
           if (result?.sessionCartItem) {
             addToCart({
               id: result.sessionCartItem.id,
