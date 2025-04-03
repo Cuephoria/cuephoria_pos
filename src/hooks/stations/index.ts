@@ -54,4 +54,3 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
 export { useSessionsData } from './useSessionsData';
 export { useStationsData } from './useStationsData';
 export { useSessionActions } from './session-actions';
-export * from './session-actions';
