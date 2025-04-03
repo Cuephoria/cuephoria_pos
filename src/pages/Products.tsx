@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCw, RotateCcw } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePOS, Product } from '@/context/POSContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import ProductTabs from '@/components/product/ProductTabs';
 import { ProductFormState } from '@/components/product/ProductForm';
 
 const Products = () => {
-  const { products, addProduct, updateProduct, deleteProduct, resetToInitialProducts, refreshFromDB } = usePOS();
+  const { products, addProduct, updateProduct, deleteProduct } = usePOS();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -18,8 +18,6 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleOpenDialog = () => {
@@ -124,50 +122,6 @@ const Products = () => {
     }
   };
 
-  const handleResetProducts = () => {
-    try {
-      setIsResetting(true);
-      
-      const resetProducts = resetToInitialProducts ? resetToInitialProducts() : [];
-      
-      toast({
-        title: 'Products Reset',
-        description: `Reset to ${resetProducts.length} initial products`,
-      });
-    } catch (error) {
-      console.error('Reset error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reset products',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  const handleRefreshProducts = async () => {
-    try {
-      setIsRefreshing(true);
-      
-      const refreshedProducts = refreshFromDB ? await refreshFromDB() : [];
-      
-      toast({
-        title: 'Products Refreshed',
-        description: `Loaded ${refreshedProducts.length} products from database`,
-      });
-    } catch (error) {
-      console.error('Refresh error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh products',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   const getCategoryCounts = () => {
     const counts: Record<string, number> = { all: products.length };
     products.forEach(product => {
@@ -187,14 +141,6 @@ const Products = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
         <div className="flex space-x-2">
-          <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
-            Refresh DB
-          </Button>
-          <Button onClick={handleResetProducts} variant="outline" disabled={isResetting}>
-            <RotateCcw className={`h-4 w-4 mr-2 ${isResetting ? 'animate-spin' : ''}`} /> 
-            Reset
-          </Button>
           <Button onClick={handleOpenDialog}>
             <Plus className="h-4 w-4 mr-2" /> Add Product
           </Button>

@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary, ExpenseCategory } from '@/types/expense.types';
-import { supabase } from '@/integrations/supabase/client';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +26,9 @@ export const useExpenses = () => {
   return context;
 };
 
+// Local storage key
+const EXPENSES_STORAGE_KEY = 'business_expenses';
+
 export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,43 +45,47 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { bills } = usePOS();
   const { toast } = useToast();
 
-  // Fetch expenses from the database
+  // Fetch expenses from localStorage
   const fetchExpenses = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching expenses:', error);
-        setError(`Failed to fetch expenses: ${error.message}`);
-        return;
-      }
+      const storedExpenses = localStorage.getItem(EXPENSES_STORAGE_KEY);
       
-      if (data) {
-        const transformedExpenses: Expense[] = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          amount: item.amount,
-          category: item.category,
-          frequency: item.frequency,
-          date: new Date(item.date),
-          isRecurring: item.is_recurring,
-          notes: item.notes
+      if (storedExpenses) {
+        const parsedExpenses = JSON.parse(storedExpenses);
+        // Convert string dates to Date objects
+        const transformedExpenses: Expense[] = parsedExpenses.map((item: any) => ({
+          ...item,
+          date: new Date(item.date)
         }));
         
         setExpenses(transformedExpenses);
-        console.log(`Loaded ${transformedExpenses.length} expenses`);
+        console.log(`Loaded ${transformedExpenses.length} expenses from localStorage`);
+      } else {
+        setExpenses([]);
+        console.log('No expenses found in localStorage');
       }
     } catch (err) {
       console.error('Error in fetchExpenses:', err);
       setError('An unexpected error occurred while fetching expenses');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Save expenses to localStorage
+  const saveExpenses = (updatedExpenses: Expense[]) => {
+    try {
+      localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(updatedExpenses));
+    } catch (err) {
+      console.error('Error saving expenses to localStorage:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to save expenses',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -234,33 +240,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
-      // Format date for storage as ISO string
-      const dateToStore = dateObj.toISOString();
-      console.log('Formatted date to store:', dateToStore);
-      
-      const { error: supabaseError } = await supabase
-        .from('expenses')
-        .insert({
-          id,
-          name: expenseData.name,
-          amount: expenseData.amount,
-          category: expenseData.category,
-          frequency: expenseData.frequency,
-          date: dateToStore,
-          is_recurring: expenseData.isRecurring,
-          notes: expenseData.notes || ''
-        });
-        
-      if (supabaseError) {
-        console.error('Error adding expense:', supabaseError);
-        toast({
-          title: 'Error',
-          description: `Failed to add expense: ${supabaseError.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
       // Create a proper expense object for the state
       const newExpense: Expense = {
         id,
@@ -273,7 +252,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         notes: expenseData.notes || ''
       };
       
-      setExpenses(prev => [newExpense, ...prev]);
+      const updatedExpenses = [newExpense, ...expenses];
+      setExpenses(updatedExpenses);
+      saveExpenses(updatedExpenses);
       
       toast({
         title: 'Success',
@@ -320,42 +301,18 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
-      // Format date for storage as ISO string
-      const dateToStore = dateObj.toISOString();
-      console.log('Formatted date to update:', dateToStore);
-      
-      const { error: supabaseError } = await supabase
-        .from('expenses')
-        .update({
-          name: expense.name,
-          amount: expense.amount,
-          category: expense.category,
-          frequency: expense.frequency,
-          date: dateToStore,
-          is_recurring: expense.isRecurring,
-          notes: expense.notes || ''
-        })
-        .eq('id', expense.id);
-        
-      if (supabaseError) {
-        console.error('Error updating expense:', supabaseError);
-        toast({
-          title: 'Error',
-          description: `Failed to update expense: ${supabaseError.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
       // Update the expense with the correct date object
       const updatedExpense = {
         ...expense,
         date: dateObj
       };
       
-      setExpenses(prev => 
-        prev.map(item => item.id === expense.id ? updatedExpense : item)
+      const updatedExpenses = expenses.map(item => 
+        item.id === expense.id ? updatedExpense : item
       );
+      
+      setExpenses(updatedExpenses);
+      saveExpenses(updatedExpenses);
       
       toast({
         title: 'Success',
@@ -380,22 +337,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Delete an expense
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id);
-        
-      if (error) {
-        console.error('Error deleting expense:', error);
-        toast({
-          title: 'Error',
-          description: `Failed to delete expense: ${error.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      setExpenses(prev => prev.filter(item => item.id !== id));
+      const updatedExpenses = expenses.filter(item => item.id !== id);
+      setExpenses(updatedExpenses);
+      saveExpenses(updatedExpenses);
       
       toast({
         title: 'Success',

@@ -35,7 +35,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addProduct, 
     updateProduct, 
     deleteProduct 
-  } = useProducts(initialProducts);
+  } = useProducts();
   
   const { 
     customers, 
