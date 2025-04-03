@@ -340,14 +340,14 @@ export const useBills = (
         return false;
       }
       
-      const customer = await supabase
+      const { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('*')
         .eq('id', customerId)
         .single();
         
-      if (customer.error) {
-        console.error('Error fetching customer:', customer.error);
+      if (customerError) {
+        console.error('Error fetching customer:', customerError);
         toast({
           title: 'Error',
           description: 'Failed to fetch customer data',
@@ -388,8 +388,8 @@ export const useBills = (
       
       setBills(prevBills => prevBills.filter(bill => bill.id !== billId));
       
-      if (customer.data) {
-        const customerData = customer.data;
+      if (customer) {
+        const customerData = customer;
         const updatedCustomer = {
           ...customerData,
           loyalty_points: Math.max(0, customerData.loyalty_points - billToDelete.loyaltyPointsEarned + billToDelete.loyaltyPointsUsed),
@@ -405,7 +405,7 @@ export const useBills = (
           console.error('Error updating customer:', customerUpdateError);
         }
         
-        const localCustomer = {
+        const localCustomer: Customer = {
           id: customerData.id,
           name: customerData.name,
           phone: customerData.phone,
@@ -415,7 +415,7 @@ export const useBills = (
           membershipStartDate: customerData.membership_start_date ? new Date(customerData.membership_start_date) : undefined,
           membershipPlan: customerData.membership_plan,
           membershipHoursLeft: customerData.membership_hours_left,
-          membershipDuration: customerData.membership_duration,
+          membershipDuration: (customerData.membership_duration as 'weekly' | 'monthly' | undefined),
           loyaltyPoints: updatedCustomer.loyalty_points,
           totalSpent: updatedCustomer.total_spent,
           totalPlayTime: customerData.total_play_time,
@@ -425,14 +425,30 @@ export const useBills = (
         updateCustomer(localCustomer);
       }
       
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('*');
+      
+      const products = productsData || [];
+      
       for (const item of billToDelete.items) {
         if (item.type === 'product') {
           const product = products.find(p => p.id === item.id);
           if (product && product.category !== 'membership') {
-            updateProduct({
-              ...product,
-              stock: product.stock + item.quantity
-            });
+            const productToUpdate: Product = {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              category: product.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
+              stock: product.stock + item.quantity,
+              image: product.image,
+              originalPrice: product.original_price,
+              offerPrice: product.offer_price,
+              studentPrice: product.student_price,
+              duration: product.duration as 'weekly' | 'monthly' | undefined,
+              membershipHours: product.membership_hours
+            };
+            updateProduct(productToUpdate);
           }
         }
       }
