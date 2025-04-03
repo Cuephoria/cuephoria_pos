@@ -20,20 +20,31 @@ export const getMembershipBadgeText = (customer: Customer): string => {
                    (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'Weekly' : 
                     customer.membershipPlan?.toLowerCase().includes('monthly') ? 'Monthly' : '');
   
-  let planType = '';
+  let tier = '';
   if (customer.membershipPlan) {
-    if (customer.membershipPlan.includes('PS5')) {
-      planType = 'PS5';
-    } else if (customer.membershipPlan.includes('8-Ball')) {
-      planType = '8-Ball';
-    } else if (customer.membershipPlan.includes('Combo')) {
-      planType = 'Combo';
-    } else if (customer.membershipPlan.includes('Ultimate')) {
-      planType = 'Ultimate';
+    if (customer.membershipPlan.includes('Silver')) {
+      tier = 'Silver';
+    } else if (customer.membershipPlan.includes('Gold')) {
+      tier = 'Gold';
+    } else if (customer.membershipPlan.includes('Platinum')) {
+      tier = 'Platinum';
     }
   }
   
-  return `${duration} ${planType}`;
+  let type = '';
+  if (customer.membershipPlan) {
+    if (customer.membershipPlan.includes('PS5')) {
+      type = 'PS5';
+    } else if (customer.membershipPlan.includes('8-Ball')) {
+      type = '8-Ball';
+    } else if (customer.membershipPlan.includes('Combo')) {
+      type = 'Combo';
+    } else if (customer.membershipPlan.includes('Ultimate')) {
+      type = 'Ultimate';
+    }
+  }
+  
+  return `${tier} ${type} ${duration}`;
 };
 
 /**

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
@@ -5,7 +6,7 @@ import { generateId } from '@/utils/pos.utils';
 const membershipProducts: Product[] = [
   { 
     id: 'mem1', 
-    name: "Silver - Weekly PS5 Pass (2 PAX)",
+    name: "Silver - PS5 Weekly Pass (2 PAX)",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
@@ -17,7 +18,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem2', 
-    name: "Silver - Weekly PS5 Pass (4 PAX)", 
+    name: "Gold - PS5 Weekly Pass (4 PAX)", 
     originalPrice: 1199,
     offerPrice: 599,
     studentPrice: 499,
@@ -29,7 +30,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem3', 
-    name: "Silver - Weekly 8-Ball Pass (2 PAX)",
+    name: "Silver - 8-Ball Weekly Pass (2 PAX)",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
@@ -41,7 +42,19 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem4', 
-    name: "Combo - Weekly Pass",
+    name: "Gold - 8-Ball Weekly Pass (4 PAX)",
+    originalPrice: 999,
+    offerPrice: 599,
+    studentPrice: 499,
+    price: 599,
+    category: 'membership', 
+    stock: 9999,
+    duration: 'weekly',
+    membershipHours: 4
+  },
+  { 
+    id: 'mem5', 
+    name: "Platinum - Combo Weekly Pass",
     originalPrice: 1799,
     offerPrice: 899,
     studentPrice: 799,
@@ -52,20 +65,8 @@ const membershipProducts: Product[] = [
     membershipHours: 6
   },
   { 
-    id: 'mem5', 
-    name: "Silver - Monthly 8-Ball Pass (2 PAX)",
-    originalPrice: 1999,
-    offerPrice: 1499,
-    studentPrice: 1199,
-    price: 1499,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'monthly',
-    membershipHours: 16
-  },
-  { 
     id: 'mem6', 
-    name: "Silver - Monthly PS5 Pass",
+    name: "Silver - 8-Ball Monthly Pass (2 PAX)",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
@@ -77,7 +78,43 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem7', 
-    name: "Ultimate - Monthly Pass",
+    name: "Silver - PS5 Monthly Pass (2 PAX)",
+    originalPrice: 1999,
+    offerPrice: 1499,
+    studentPrice: 1199,
+    price: 1499,
+    category: 'membership', 
+    stock: 9999,
+    duration: 'monthly',
+    membershipHours: 16
+  },
+  { 
+    id: 'mem8', 
+    name: "Gold - PS5 Monthly Pass (4 PAX)",
+    originalPrice: 3999,
+    offerPrice: 2499,
+    studentPrice: 1999,
+    price: 2499,
+    category: 'membership', 
+    stock: 9999,
+    duration: 'monthly',
+    membershipHours: 16
+  },
+  { 
+    id: 'mem9', 
+    name: "Gold - 8-Ball Monthly Pass (4 PAX)",
+    originalPrice: 3999,
+    offerPrice: 2499,
+    studentPrice: 1999,
+    price: 2499,
+    category: 'membership', 
+    stock: 9999,
+    duration: 'monthly',
+    membershipHours: 16
+  },
+  { 
+    id: 'mem10', 
+    name: "Platinum - Ultimate Monthly Pass",
     originalPrice: 5999,
     offerPrice: 3499,
     studentPrice: 2999,

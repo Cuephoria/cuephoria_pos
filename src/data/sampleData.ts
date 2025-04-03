@@ -62,7 +62,7 @@ export const initialCustomers: Customer[] = [
     phone: '9876543210', 
     email: 'raj.sharma@example.com', 
     isMember: true, 
-    membershipPlan: 'Silver - Weekly PS5 Pass (2 PAX)',
+    membershipPlan: 'Silver - PS5 Weekly Pass (2 PAX)',
     membershipDuration: 'weekly',
     membershipStartDate: new Date(2023, 5, 25),
     membershipExpiryDate: new Date(2023, 6, 2),
@@ -88,7 +88,7 @@ export const initialCustomers: Customer[] = [
     phone: '7654321098', 
     email: 'vikram@example.com', 
     isMember: true, 
-    membershipPlan: 'Silver - Monthly 8-Ball Pass (2 PAX)',
+    membershipPlan: 'Silver - 8-Ball Monthly Pass (2 PAX)',
     membershipDuration: 'monthly',
     membershipStartDate: new Date(2023, 4, 1),
     membershipExpiryDate: new Date(2023, 5, 1),
@@ -159,7 +159,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     phone: '9876543210',
     email: 'rajesh.kumar@gmail.com',
     isMember: true,
-    membershipPlan: 'Silver - Weekly PS5 Pass (2 PAX)',
+    membershipPlan: 'Silver - PS5 Weekly Pass (2 PAX)',
     membershipDuration: 'weekly',
     membershipStartDate: new Date(2023, 6, 10),
     membershipExpiryDate: new Date(2023, 6, 17),
@@ -173,7 +173,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     phone: '8765432109',
     email: 'priya.singh@gmail.com',
     isMember: true,
-    membershipPlan: 'Ultimate - Monthly Pass',
+    membershipPlan: 'Platinum - Ultimate Monthly Pass',
     membershipDuration: 'monthly',
     membershipStartDate: new Date(2023, 5, 15),
     membershipExpiryDate: new Date(2023, 6, 15),
@@ -195,7 +195,7 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     phone: '6543210987',
     email: 'sneha.sharma@yahoo.com',
     isMember: true,
-    membershipPlan: 'Combo - Weekly Pass',
+    membershipPlan: 'Platinum - Combo Weekly Pass',
     membershipDuration: 'weekly',
     membershipStartDate: new Date(2023, 6, 5),
     membershipExpiryDate: new Date(2023, 6, 12),
@@ -213,3 +213,4 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
     totalPlayTime: 120
   }
 ];
+
