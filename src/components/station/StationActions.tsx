@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -101,19 +102,26 @@ const StationActions: React.FC<StationActionsProps> = ({
   };
 
   const filteredCustomers = customers.filter(customer => {
-    if (!searchQuery) return true;
+    if (!searchQuery.trim()) return true;
     
     const query = searchQuery.toLowerCase().trim();
     
-    if (/^\d+$/.test(query)) {
-      return customer.phone && customer.phone.includes(query);
+    // First try to match phone number
+    if (customer.phone && customer.phone.includes(query)) {
+      return true;
     }
     
-    return (
-      (customer.phone && customer.phone.includes(query)) ||
-      (customer.name && customer.name.toLowerCase().includes(query)) ||
-      (customer.email && customer.email.toLowerCase().includes(query))
-    );
+    // Then try to match by name
+    if (customer.name && customer.name.toLowerCase().includes(query)) {
+      return true;
+    }
+    
+    // Finally try to match by email
+    if (customer.email && customer.email.toLowerCase().includes(query)) {
+      return true;
+    }
+    
+    return false;
   });
 
   if (station.isOccupied) {
@@ -151,7 +159,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         <PopoverContent className="w-[300px] p-0">
           <Command>
             <CommandInput 
-              placeholder="Search by phone number..." 
+              placeholder="Search by phone, name or email..." 
               value={searchQuery}
               onValueChange={setSearchQuery}
               className="w-full border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
