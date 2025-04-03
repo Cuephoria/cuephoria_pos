@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePOS, Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { ShoppingCart, Edit, Trash, Tag, Clock } from 'lucide-react';
+import { ShoppingCart, Edit, Trash, Tag, Clock, GraduationCap } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -20,7 +20,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onEdit, 
   onDelete 
 }) => {
-  const { addToCart } = usePOS();
+  const { addToCart, isStudentDiscount, setIsStudentDiscount } = usePOS();
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -47,6 +47,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
       price: product.price,
       quantity: 1
     });
+    
+    // If this is a membership product and it has student price, show student discount option
+    if (product.category === 'membership' && product.studentPrice) {
+      setIsStudentDiscount(true);
+    }
   };
 
   const getDurationText = () => {
@@ -60,6 +65,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
       return 'Valid for 7 days';
     } else if (product.name.includes('Monthly')) {
       return 'Valid for 30 days';
+    }
+    
+    return '';
+  };
+
+  const getMembershipHours = () => {
+    if (product.category !== 'membership') return '';
+    
+    if (product.membershipHours) {
+      return `${product.membershipHours} hours credit`;
     }
     
     return '';
@@ -100,7 +115,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               )}
               {product.studentPrice && (
                 <div className="flex justify-between text-sm text-blue-600">
-                  <span>Student Price:</span>
+                  <span><GraduationCap className="h-3 w-3 inline mr-1" />Student Price:</span>
                   <CurrencyDisplay amount={product.studentPrice} />
                 </div>
               )}
@@ -108,6 +123,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 <Clock className="h-3 w-3 inline mr-1" />
                 {getDurationText()}
               </div>
+              {product.membershipHours && (
+                <div className="text-xs text-gray-500 pt-1 flex items-center">
+                  <Clock className="h-3 w-3 inline mr-1" />
+                  {getMembershipHours()}
+                </div>
+              )}
             </>
           )}
           

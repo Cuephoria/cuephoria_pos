@@ -157,7 +157,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           if (product) {
             // Default values
-            let membershipHours = 20; // Default hours
+            let membershipHours = product.membershipHours || 4; // Default hours from product or fallback to 4
             let membershipDuration: 'weekly' | 'monthly' = 'weekly';
             
             // Set duration based on product
@@ -167,15 +167,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               membershipDuration = 'weekly';
             } else if (product.name.toLowerCase().includes('monthly')) {
               membershipDuration = 'monthly';
-            }
-            
-            // Adjust hours based on plan type
-            if (product.name.includes('8-Ball')) {
-              membershipHours = membershipDuration === 'weekly' ? 20 : 80;
-            } else if (product.name.includes('PS5')) {
-              membershipHours = membershipDuration === 'weekly' ? 15 : 60;
-            } else if (product.name.includes('Combo') || product.name.includes('Ultimate')) {
-              membershipHours = membershipDuration === 'weekly' ? 30 : 120;
             }
             
             // Update customer's membership

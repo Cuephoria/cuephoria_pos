@@ -10,6 +10,7 @@ export interface Product {
   offerPrice?: number;
   studentPrice?: number;
   duration?: 'weekly' | 'monthly';
+  membershipHours?: number;
 }
 
 export interface Customer {

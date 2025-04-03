@@ -14,7 +14,8 @@ const membershipProducts: Product[] = [
     price: 399, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'weekly'
+    duration: 'weekly',
+    membershipHours: 4
   },
   { 
     id: 'mem2', 
@@ -25,7 +26,8 @@ const membershipProducts: Product[] = [
     price: 599, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'weekly'
+    duration: 'weekly',
+    membershipHours: 4
   },
   { 
     id: 'mem3', 
@@ -36,7 +38,8 @@ const membershipProducts: Product[] = [
     price: 399, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'weekly'
+    duration: 'weekly',
+    membershipHours: 4
   },
   { 
     id: 'mem4', 
@@ -47,7 +50,8 @@ const membershipProducts: Product[] = [
     price: 899, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'weekly'
+    duration: 'weekly',
+    membershipHours: 6
   },
   { 
     id: 'mem5', 
@@ -58,7 +62,8 @@ const membershipProducts: Product[] = [
     price: 1499, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'monthly'
+    duration: 'monthly',
+    membershipHours: 16
   },
   { 
     id: 'mem6', 
@@ -69,7 +74,8 @@ const membershipProducts: Product[] = [
     price: 1499, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'monthly'
+    duration: 'monthly',
+    membershipHours: 16
   },
   { 
     id: 'mem7', 
@@ -80,7 +86,8 @@ const membershipProducts: Product[] = [
     price: 3499, // Default to offer price
     category: 'membership', 
     stock: 9999,
-    duration: 'monthly'
+    duration: 'monthly',
+    membershipHours: 24
   }
 ];
 
