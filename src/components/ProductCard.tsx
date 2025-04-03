@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onDelete,
   className = ''
 }) => {
-  const { addToCart, isStudentDiscount, setIsStudentDiscount } = usePOS();
+  const { addToCart, isStudentDiscount, setIsStudentDiscount, cart } = usePOS();
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -42,15 +41,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleAddToCart = () => {
+    if (product.category !== 'membership') {
+      const existingCartItem = cart.find(item => item.id === product.id && item.type === 'product');
+      const cartQuantity = existingCartItem ? existingCartItem.quantity : 0;
+      
+      if (cartQuantity >= product.stock) {
+        return;
+      }
+    }
+    
     addToCart({
       id: product.id,
       type: 'product',
       name: product.name,
       price: product.price,
-      quantity: 1
-    });
+      quantity: 1,
+      category: product.category
+    }, product.stock);
     
-    // If this is a membership product and it has student price, show student discount option
     if (product.category === 'membership' && product.studentPrice) {
       setIsStudentDiscount(true);
     }
@@ -81,6 +89,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
     
     return '';
   };
+
+  const getRemainingStock = () => {
+    if (product.category === 'membership') return Infinity;
+    
+    const existingCartItem = cart.find(item => item.id === product.id && item.type === 'product');
+    const cartQuantity = existingCartItem ? existingCartItem.quantity : 0;
+    return product.stock - cartQuantity;
+  };
+
+  const remainingStock = getRemainingStock();
+  const isOutOfStock = product.category !== 'membership' && remainingStock <= 0;
 
   return (
     <Card className={`flex flex-col h-full ${className}`}>
@@ -136,8 +155,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           {product.category !== 'membership' && (
             <div className="flex justify-between text-sm">
-              <span>Stock:</span>
-              <span className={product.stock <= 10 ? 'text-red-500' : ''}>{product.stock}</span>
+              <span>Available:</span>
+              <span className={remainingStock <= 10 ? 'text-red-500' : ''}>
+                {remainingStock} / {product.stock}
+              </span>
             </div>
           )}
         </div>
@@ -166,10 +187,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <Button 
             variant="default" 
             className={`w-full ${product.category === 'membership' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700' : ''}`}
-            disabled={product.stock <= 0}
+            disabled={isOutOfStock}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+            {isOutOfStock ? (
+              "Out of Stock"
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+              </>
+            )}
           </Button>
         )}
       </CardFooter>

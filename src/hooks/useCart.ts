@@ -10,8 +10,39 @@ export const useCart = () => {
   const [loyaltyPointsUsed, setLoyaltyPointsUsedAmount] = useState<number>(0);
   const { toast } = useToast();
   
-  const addToCart = (item: Omit<CartItem, 'total'>) => {
+  const addToCart = (item: Omit<CartItem, 'total'>, availableStock?: number) => {
     try {
+      // For non-membership products, check available stock
+      if (item.type === 'product' && item.category !== 'membership' && typeof availableStock === 'number') {
+        const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
+        const currentCartQuantity = existingItem ? existingItem.quantity : 0;
+        const totalRequestedQuantity = currentCartQuantity + item.quantity;
+        
+        // Check if we have enough stock
+        if (totalRequestedQuantity > availableStock) {
+          // If not enough stock, adjust quantity or show error
+          if (availableStock <= currentCartQuantity) {
+            toast({
+              title: "Insufficient Stock",
+              description: `Only ${availableStock} units of ${item.name} available (${currentCartQuantity} already in cart)`,
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          // Adjust quantity to match available stock
+          const adjustedQuantity = availableStock - currentCartQuantity;
+          toast({
+            title: "Stock Limited",
+            description: `Only added ${adjustedQuantity} units of ${item.name} (stock limit reached)`,
+            variant: "destructive"
+          });
+          
+          // Update item quantity to what's available
+          item = { ...item, quantity: adjustedQuantity };
+        }
+      }
+      
       const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
       
       if (existingItem) {

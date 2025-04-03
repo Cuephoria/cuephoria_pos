@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;
@@ -55,6 +56,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   total: number;
+  category?: 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
 }
 
 export interface Bill {
