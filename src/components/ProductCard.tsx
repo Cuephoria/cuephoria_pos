@@ -144,22 +144,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </CardContent>
       <CardFooter className="mt-auto">
         {isAdmin ? (
-          <>
+          <div className="flex w-full space-x-2">
             <Button 
               variant="outline" 
               size="sm" 
+              className="flex-1 justify-start"
               onClick={() => onEdit && onEdit(product)}
             >
-              <Edit className="h-4 w-4 mr-1" /> Edit
+              <Edit className="h-4 w-4 mr-2" /> Edit
             </Button>
             <Button 
               variant="destructive" 
               size="sm" 
+              className="flex-1 justify-start"
               onClick={() => onDelete && onDelete(product.id)}
             >
-              <Trash className="h-4 w-4 mr-1" /> Delete
+              <Trash className="h-4 w-4 mr-2" /> Delete
             </Button>
-          </>
+          </div>
         ) : (
           <Button 
             variant="default" 
