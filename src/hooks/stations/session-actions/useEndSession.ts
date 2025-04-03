@@ -116,8 +116,7 @@ export const useEndSession = ({
       // Calculate session cost
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMinutes / 60;
-      // Ensure minimum cost of 1
-      const sessionCost = Math.max(Math.ceil(hoursPlayed * stationRate), 1);
+      const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       console.log("Session cost calculation:", { 
         stationRate, 

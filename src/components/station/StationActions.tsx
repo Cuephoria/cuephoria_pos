@@ -91,7 +91,7 @@ const StationActions: React.FC<StationActionsProps> = ({
     return (
       <Button 
         variant="destructive" 
-        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3"
+        className="w-full btn-hover-effect"
         onClick={handleEndSession}
         disabled={isLoading}
       >
@@ -103,10 +103,10 @@ const StationActions: React.FC<StationActionsProps> = ({
   return (
     <>
       <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoading}>
-        <SelectTrigger className="font-quicksand mb-2 bg-gray-800 border-gray-700 text-white">
+        <SelectTrigger className="font-quicksand">
           <SelectValue placeholder="Select Customer" />
         </SelectTrigger>
-        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+        <SelectContent>
           {customers.length === 0 ? (
             <SelectItem value="no-customers" disabled>No customers available</SelectItem>
           ) : (
@@ -120,7 +120,7 @@ const StationActions: React.FC<StationActionsProps> = ({
       </Select>
       <Button 
         variant="default" 
-        className="w-full bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity py-3"
+        className="w-full bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
         disabled={!selectedCustomerId || isLoading} 
         onClick={handleStartSession}
       >

@@ -71,7 +71,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       
       // Calculate cost based on hourly rate
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-      const calculatedCost = Math.max(Math.ceil(hoursElapsed * station.hourlyRate), 1);
+      const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       setCost(calculatedCost);
       
       console.log("Timer update from Supabase:", {
@@ -133,16 +133,16 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex justify-between text-sm">
-        <span className="text-gray-300">Duration:</span>
-        <span className="font-mono bg-gray-800 px-3 py-1 rounded text-purple-400 font-bold">
+        <span>Duration:</span>
+        <span className="font-mono bg-black/10 px-2 py-1 rounded text-cuephoria-lightpurple font-bold">
           {formatTimeDisplay()}
         </span>
       </div>
-      <div className="flex justify-between text-sm font-medium">
-        <span className="text-gray-300">Current Cost:</span>
-        <CurrencyDisplay amount={cost} className="text-orange-500 font-bold" />
+      <div className="flex justify-between text-sm font-medium mt-2">
+        <span>Current Cost:</span>
+        <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold" />
       </div>
     </div>
   );
