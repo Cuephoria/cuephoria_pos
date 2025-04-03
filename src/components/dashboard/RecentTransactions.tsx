@@ -82,21 +82,19 @@ const RecentTransactions: React.FC = () => {
   return (
     <>
       <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
-              <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
-            </div>
-            <div className="relative flex w-full max-w-sm items-center">
-              <Input
-                placeholder="Search by ID, name or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-8 bg-gray-800 border-gray-700 text-white"
-              />
-              <Search className="absolute right-2 h-4 w-4 text-gray-400" />
-            </div>
+        <CardHeader className="space-y-4">
+          <div>
+            <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
+            <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
+          </div>
+          <div className="relative flex w-full items-center">
+            <Input
+              placeholder="Search by ID, name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-8 bg-gray-800 border-gray-700 text-white"
+            />
+            <Search className="absolute right-2 h-4 w-4 text-gray-400" />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -171,3 +169,4 @@ const RecentTransactions: React.FC = () => {
 };
 
 export default RecentTransactions;
+
