@@ -123,8 +123,7 @@ const Customers = () => {
 
   const handleDeleteCustomer = (id: string) => {
     deleteCustomer(id);
-    sonnerToast({
-      title: 'Customer Deleted',
+    toast("Customer Deleted", {
       description: 'The customer has been removed successfully.'
     });
   };
@@ -175,10 +174,8 @@ const Customers = () => {
     } = formState;
     
     if (!name || !phone) {
-      sonnerToast({
-        title: 'Error',
-        description: 'Name and phone are required',
-        variant: 'destructive'
+      toast("Error", {
+        description: 'Name and phone are required'
       });
       return;
     }
@@ -229,14 +226,12 @@ const Customers = () => {
         id: selectedCustomer.id,
         createdAt: selectedCustomer.createdAt
       } as Customer);
-      sonnerToast({
-        title: 'Customer Updated',
+      toast("Customer Updated", {
         description: 'The customer has been updated successfully.'
       });
     } else {
       addCustomer(customerData as Omit<Customer, 'id' | 'createdAt'>);
-      sonnerToast({
-        title: 'Customer Added',
+      toast("Customer Added", {
         description: 'The customer has been added successfully.'
       });
     }

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { toast } from "sonner";
 import { 
   POSContextType, 
   ResetOptions, 
@@ -376,12 +377,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // This function is no longer needed but kept for API compatibility
+  // Fix the handleAddSampleIndianData function to use toast correctly
   const handleAddSampleIndianData = () => {
-    // Use imported toast from use-toast
-    const { toast } = sonnerToast;
-    toast({
-      title: "Info",
+    toast("Info", {
       description: "Sample data has been disabled. Please add products manually or through database import.",
     });
   };
