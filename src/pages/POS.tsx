@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -363,7 +364,7 @@ const POS = () => {
             </div>
           </CardHeader>
           
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="animate-scale-in">
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow animate-scale-in">
             <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
               <TabsTrigger value="all" className="font-heading flex-grow basis-0">All</TabsTrigger>
               <TabsTrigger value="food" className="font-heading flex-grow basis-0">Food</TabsTrigger>
@@ -377,14 +378,14 @@ const POS = () => {
             
             <TabsContent value={activeTab} className="flex-grow overflow-auto px-6 mt-4">
               {searchedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
                   {searchedProducts.map((product, index) => (
                     <div 
                       key={product.id} 
-                      className={`animate-scale-in delay-${index % 5}`} 
+                      className="animate-scale-in h-full"
                       style={{animationDelay: `${(index % 5) * 100}ms`}}
                     >
-                      <ProductCard product={product} />
+                      <ProductCard product={product} className="h-full" />
                     </div>
                   ))}
                 </div>

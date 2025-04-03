@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Package, Filter, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -282,13 +281,15 @@ const Products = () => {
           {filteredProducts.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  isAdmin={true}
-                  onEdit={handleEditProduct}
-                  onDelete={handleDeleteProduct}
-                />
+                <div key={product.id} className="h-full">
+                  <ProductCard
+                    product={product}
+                    isAdmin={true}
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteProduct}
+                    className="h-full"
+                  />
+                </div>
               ))}
             </div>
           ) : (

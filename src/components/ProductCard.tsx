@@ -12,13 +12,15 @@ interface ProductCardProps {
   isAdmin?: boolean;
   onEdit?: (product: Product) => void;
   onDelete?: (id: string) => void;
+  className?: string;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   isAdmin = false, 
   onEdit, 
-  onDelete 
+  onDelete,
+  className = ''
 }) => {
   const { addToCart, isStudentDiscount, setIsStudentDiscount } = usePOS();
 
@@ -81,16 +83,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <Card>
+    <Card className={`flex flex-col h-full ${className}`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">{product.name}</CardTitle>
+          <CardTitle className="text-lg text-ellipsis overflow-hidden">{product.name}</CardTitle>
           <Badge className={getCategoryColor(product.category)}>
             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-grow">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between text-sm font-medium">
             <span>Price:</span>
@@ -140,7 +142,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="mt-auto">
         {isAdmin ? (
           <>
             <Button 
