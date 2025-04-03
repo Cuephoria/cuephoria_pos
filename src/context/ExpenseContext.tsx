@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary } from '@/types/expense.types';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,7 +62,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: item.amount,
           category: item.category,
           frequency: item.frequency,
-          date: new Date(item.date),
+          date: item.date,
           isRecurring: item.is_recurring,
           notes: item.notes
         }));
@@ -116,47 +115,24 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log('Adding expense with data:', expenseData);
       const id = generateId();
       
-      // Ensure date is a valid Date object
-      let dateObj: Date;
+      // Ensure date is a valid string
+      let dateStr: string;
       
-      if (expenseData.date instanceof Date) {
-        dateObj = expenseData.date;
-      } else if (expenseData.date && typeof expenseData.date === 'object' && expenseData.date._type === 'Date') {
-        // Handle serialized date object
-        try {
-          dateObj = new Date(expenseData.date.value.iso);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date format');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', expenseData.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format',
-            variant: 'destructive'
-          });
-          return false;
-        }
+      if (typeof expenseData.date === 'string') {
+        dateStr = expenseData.date;
+      } else if (expenseData.date instanceof Date) {
+        dateStr = expenseData.date.toISOString();
       } else {
-        try {
-          dateObj = new Date(expenseData.date as any);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', expenseData.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format',
-            variant: 'destructive'
-          });
-          return false;
-        }
+        console.error('Invalid date format:', expenseData.date);
+        toast({
+          title: 'Error',
+          description: 'Invalid date format',
+          variant: 'destructive'
+        });
+        return false;
       }
       
-      // Format date for storage as ISO string
-      const dateToStore = dateObj.toISOString();
-      console.log('Formatted date to store:', dateToStore);
+      console.log('Formatted date to store:', dateStr);
       
       const { error: supabaseError } = await supabase
         .from('expenses')
@@ -166,7 +142,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: expenseData.amount,
           category: expenseData.category,
           frequency: expenseData.frequency,
-          date: dateToStore,
+          date: dateStr,
           is_recurring: expenseData.isRecurring,
           notes: expenseData.notes || ''
         });
@@ -188,7 +164,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         amount: expenseData.amount,
         category: expenseData.category,
         frequency: expenseData.frequency,
-        date: dateObj,
+        date: dateStr,
         isRecurring: expenseData.isRecurring,
         notes: expenseData.notes || ''
       };
@@ -214,47 +190,24 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      // Ensure date is a valid Date object
-      let dateObj: Date;
+      // Ensure date is a valid string
+      let dateStr: string;
       
-      if (expense.date instanceof Date) {
-        dateObj = expense.date;
-      } else if (expense.date && typeof expense.date === 'object' && expense.date._type === 'Date') {
-        // Handle serialized date object
-        try {
-          dateObj = new Date(expense.date.value.iso);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date format');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', expense.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format',
-            variant: 'destructive'
-          });
-          return false;
-        }
+      if (typeof expense.date === 'string') {
+        dateStr = expense.date;
+      } else if (expense.date instanceof Date) {
+        dateStr = expense.date.toISOString();
       } else {
-        try {
-          dateObj = new Date(expense.date as any);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', expense.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format',
-            variant: 'destructive'
-          });
-          return false;
-        }
+        console.error('Invalid date format:', expense.date);
+        toast({
+          title: 'Error',
+          description: 'Invalid date format',
+          variant: 'destructive'
+        });
+        return false;
       }
       
-      // Format date for storage as ISO string
-      const dateToStore = dateObj.toISOString();
-      console.log('Formatted date to update:', dateToStore);
+      console.log('Formatted date to update:', dateStr);
       
       const { error: supabaseError } = await supabase
         .from('expenses')
@@ -263,7 +216,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: expense.amount,
           category: expense.category,
           frequency: expense.frequency,
-          date: dateToStore,
+          date: dateStr,
           is_recurring: expense.isRecurring,
           notes: expense.notes || ''
         })
@@ -279,10 +232,10 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Update the expense with the correct date object
+      // Update the expense with the correct date 
       const updatedExpense = {
         ...expense,
-        date: dateObj
+        date: dateStr
       };
       
       setExpenses(prev => 

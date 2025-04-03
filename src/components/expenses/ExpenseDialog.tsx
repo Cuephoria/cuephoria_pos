@@ -25,18 +25,24 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
   const { addExpense, updateExpense } = useExpenses();
   const { toast } = useToast();
 
-  const handleSubmit = async (data: Omit<Expense, 'id'>) => {
+  const handleSubmit = async (formData: any) => {
     try {
-      console.log('Submitting expense data:', data);
+      console.log('Submitting expense data:', formData);
+      
+      // Convert Date object to ISO string for storage
+      const expenseData = {
+        ...formData,
+        date: formData.date instanceof Date ? formData.date.toISOString() : formData.date
+      };
       
       let success = false;
       
       if (expense) {
         // Update existing expense
-        success = await updateExpense({ ...data, id: expense.id });
+        success = await updateExpense({ ...expenseData, id: expense.id });
       } else {
         // Add new expense
-        success = await addExpense(data);
+        success = await addExpense(expenseData);
       }
       
       console.log('Expense operation result:', success);
@@ -85,7 +91,10 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
         </DialogHeader>
         <ExpenseForm 
           onSubmit={handleSubmit} 
-          initialData={expense} 
+          initialData={expense ? {
+            ...expense,
+            date: new Date(expense.date) // Convert ISO string back to Date for form
+          } : undefined} 
           onCancel={() => setOpen(false)}
         />
       </DialogContent>

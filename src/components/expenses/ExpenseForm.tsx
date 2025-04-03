@@ -63,9 +63,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     // Handle different date formats that might come from the API or context
     if (initialData.date instanceof Date) {
       initialDate = initialData.date;
-    } else {
+    } else if (typeof initialData.date === 'string') {
       try {
-        initialDate = new Date(initialData.date as any);
+        initialDate = new Date(initialData.date);
         if (isNaN(initialDate.getTime())) {
           initialDate = today; // Fallback to current date if invalid
         }
@@ -214,7 +214,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                       className="pl-3 text-left font-normal"
                     >
                       {field.value ? (
-                        format(new Date(field.value), "PPP")
+                        format(field.value, "PPP")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -226,14 +226,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={(date) => {
-                      console.log('Calendar date selected:', date);
-                      if (date) {
-                        field.onChange(date);
-                      }
-                    }}
+                    onSelect={field.onChange}
                     initialFocus
-                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
