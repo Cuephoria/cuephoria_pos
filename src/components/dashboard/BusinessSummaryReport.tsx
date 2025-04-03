@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -30,37 +30,94 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   const { bills, products } = usePOS();
   
   // Filter expenses based on date range if provided
-  const filteredExpenses = expenses.filter(expense => {
-    if (!startDate && !endDate) return true;
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(expense => {
+      if (!startDate && !endDate) return true;
+      
+      const expenseDate = new Date(expense.date);
+      
+      if (startDate && endDate) {
+        return expenseDate >= startDate && expenseDate <= endDate;
+      } else if (startDate) {
+        return expenseDate >= startDate;
+      } else if (endDate) {
+        return expenseDate <= endDate;
+      }
+      
+      return true;
+    });
+  }, [expenses, startDate, endDate]);
+  
+  // Calculate filtered summary data
+  const filteredSummary = useMemo(() => {
+    // Filter bills based on date range
+    const filteredBills = bills.filter(bill => {
+      if (!startDate && !endDate) return true;
+      
+      const billDate = new Date(bill.createdAt);
+      
+      if (startDate && endDate) {
+        return billDate >= startDate && billDate <= endDate;
+      } else if (startDate) {
+        return billDate >= startDate;
+      } else if (endDate) {
+        return billDate <= endDate;
+      }
+      
+      return true;
+    });
     
-    const expenseDate = new Date(expense.date);
+    // Calculate gross income from filtered bills
+    const grossIncome = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
     
-    if (startDate && endDate) {
-      return expenseDate >= startDate && expenseDate <= endDate;
-    } else if (startDate) {
-      return expenseDate >= startDate;
-    } else if (endDate) {
-      return expenseDate <= endDate;
-    }
+    // Calculate total expenses from filtered expenses
+    const totalExpenses = filteredExpenses.reduce((sum, expense) => {
+      if (expense.isRecurring) {
+        switch(expense.frequency) {
+          case 'monthly':
+            return sum + expense.amount;
+          case 'quarterly':
+            return sum + (expense.amount / 3);
+          case 'yearly':
+            return sum + (expense.amount / 12);
+          default:
+            return sum + expense.amount;
+        }
+      } else {
+        return sum + expense.amount;
+      }
+    }, 0);
     
-    return true;
-  });
+    const netProfit = grossIncome - totalExpenses;
+    const profitMargin = grossIncome > 0 ? (netProfit / grossIncome) * 100 : 0;
+    
+    return {
+      grossIncome,
+      totalExpenses,
+      netProfit,
+      profitMargin
+    };
+  }, [bills, filteredExpenses, startDate, endDate]);
   
   // Group expenses by category
-  const expensesByCategory = filteredExpenses.reduce((acc, expense) => {
-    const { category } = expense;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(expense);
-    return acc;
-  }, {} as Record<string, Expense[]>);
+  const expensesByCategory = useMemo(() => {
+    return filteredExpenses.reduce((acc, expense) => {
+      const { category } = expense;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(expense);
+      return acc;
+    }, {} as Record<string, Expense[]>);
+  }, [filteredExpenses]);
   
   // Calculate total per category
-  const categoryTotals = Object.entries(expensesByCategory).map(([category, expenses]) => {
-    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    return { category, total };
-  }).sort((a, b) => b.total - a.total);
+  const categoryTotals = useMemo(() => {
+    return Object.entries(expensesByCategory).map(([category, expenses]) => {
+      const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      return { category, total };
+    }).sort((a, b) => b.total - a.total);
+  }, [expensesByCategory]);
   
   // Format category name
   const formatCategory = (category: string) => {
@@ -76,7 +133,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   };
   
   // Calculate PS5 and 8-Ball sales
-  const calculateGameSales = () => {
+  const { ps5Sales, poolSales } = useMemo(() => {
     // Filter bills based on date range
     const filteredBills = bills.filter(bill => {
       if (!startDate && !endDate) return true;
@@ -113,9 +170,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     });
     
     return { ps5Sales, poolSales };
-  };
-  
-  const { ps5Sales, poolSales } = calculateGameSales();
+  }, [bills, startDate, endDate]);
   
   return (
     <Card>
@@ -137,19 +192,19 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Gross Income</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={businessSummary.grossIncome} />
+              <CurrencyDisplay amount={filteredSummary.grossIncome} />
             </p>
           </div>
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Total Expenses</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={businessSummary.totalExpenses} />
+              <CurrencyDisplay amount={filteredSummary.totalExpenses} />
             </p>
           </div>
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Net Profit</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={businessSummary.netProfit} />
+              <CurrencyDisplay amount={filteredSummary.netProfit} />
             </p>
           </div>
         </div>
@@ -173,8 +228,8 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                       <CurrencyDisplay amount={total} />
                     </TableCell>
                     <TableCell>
-                      {businessSummary.totalExpenses 
-                        ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
+                      {filteredSummary.totalExpenses 
+                        ? ((total / filteredSummary.totalExpenses) * 100).toFixed(1) 
                         : '0.0'}%
                     </TableCell>
                   </TableRow>
