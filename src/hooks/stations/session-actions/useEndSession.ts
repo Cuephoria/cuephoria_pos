@@ -125,7 +125,7 @@ export const useEndSession = ({
         price: stationRate,
         quantity: hoursPlayed,
         total: sessionCost,
-        itemType: 'session',
+        type: 'session',  // Changed from itemType to type to match the CartItem interface
         itemId: session.id
       };
       
