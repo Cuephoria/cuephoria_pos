@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
@@ -90,14 +89,24 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const updatedCustomer = {
       ...customer,
       isMember: true,
-      membershipPlan: membershipData.membershipPlan,
-      membershipDuration: membershipData.membershipDuration,
-      membershipHoursLeft: membershipData.membershipHoursLeft,
+      membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
+      membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
+      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
+        ? membershipData.membershipHoursLeft 
+        : customer.membershipHoursLeft,
       membershipStartDate,
       membershipExpiryDate
     };
     
     updateCustomer(updatedCustomer);
+    
+    // Notify user about the membership update
+    toast({
+      title: "Membership Updated",
+      description: `${customer.name}'s membership has been updated successfully.`,
+      variant: "default"
+    });
+    
     return updatedCustomer;
   };
   

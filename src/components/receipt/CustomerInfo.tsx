@@ -40,7 +40,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
       <div className="mt-2 border-t pt-2">
         <p className="text-xs flex items-center">
           <Award className="h-3 w-3 mr-1" />
-          <span className="font-medium">Membership Status:</span> 
+          <span className="font-medium">Status:</span> 
           <span className={`ml-1 ${isMembershipActive() ? 'text-green-600' : 'text-red-600'}`}>
             {isMembershipActive() ? getMembershipType() : 'Inactive'}
           </span>
@@ -48,7 +48,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
         
         {customer.membershipPlan && (
           <p className="text-xs flex items-center mt-1">
-            <span className="font-medium">Plan Name:</span>
+            <span className="font-medium">Plan:</span>
             <span className="ml-1">{customer.membershipPlan}</span>
           </p>
         )}
@@ -56,7 +56,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
         {customer.membershipStartDate && (
           <p className="text-xs flex items-center mt-1">
             <Calendar className="h-3 w-3 mr-1" />
-            <span className="font-medium">Start Date:</span>
+            <span className="font-medium">Start:</span>
             <span className="ml-1">{formatDate(customer.membershipStartDate)}</span>
           </p>
         )}
@@ -64,7 +64,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
         {customer.membershipExpiryDate && (
           <p className="text-xs flex items-center mt-1">
             <CalendarCheck className="h-3 w-3 mr-1" />
-            <span className="font-medium">End Date:</span>
+            <span className="font-medium">End:</span>
             <span className="ml-1">{formatDate(customer.membershipExpiryDate)}</span>
           </p>
         )}
@@ -72,7 +72,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
         {customer.membershipHoursLeft !== undefined && (
           <p className="text-xs flex items-center mt-1">
             <Clock className="h-3 w-3 mr-1" />
-            <span className="font-medium">Hours Remaining:</span>
+            <span className="font-medium">Hours Left:</span>
             <span className="ml-1">{customer.membershipHoursLeft}</span>
           </p>
         )}

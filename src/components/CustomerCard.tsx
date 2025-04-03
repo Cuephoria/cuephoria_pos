@@ -44,10 +44,21 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     if (!isMembershipActive()) return 'Expired';
     
     const duration = customer.membershipDuration || 
-                     (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'weekly' : 
-                      customer.membershipPlan?.toLowerCase().includes('monthly') ? 'monthly' : '');
+                     (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'Weekly' : 
+                      customer.membershipPlan?.toLowerCase().includes('monthly') ? 'Monthly' : '');
     
-    return duration.charAt(0).toUpperCase() + duration.slice(1) + ' Member';
+    let planType = '';
+    if (customer.membershipPlan) {
+      if (customer.membershipPlan.includes('8-Ball')) {
+        planType = 'Pool';
+      } else if (customer.membershipPlan.includes('PS5')) {
+        planType = 'Gaming';
+      } else if (customer.membershipPlan.includes('Combo') || customer.membershipPlan.includes('Ultimate')) {
+        planType = 'Combo';
+      }
+    }
+    
+    return `${duration} ${planType}`;
   };
 
   return (
@@ -90,7 +101,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
               {customer.membershipStartDate && (
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" /> Start Date:
+                    <Calendar className="h-4 w-4 mr-1" /> Start:
                   </span>
                   <span>{formatDate(customer.membershipStartDate)}</span>
                 </div>
@@ -99,7 +110,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
               {customer.membershipExpiryDate && (
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center">
-                    <CalendarCheck className="h-4 w-4 mr-1" /> End Date:
+                    <CalendarCheck className="h-4 w-4 mr-1" /> End:
                   </span>
                   <span>{formatDate(customer.membershipExpiryDate)}</span>
                 </div>

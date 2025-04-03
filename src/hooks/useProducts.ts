@@ -7,7 +7,7 @@ import { generateId } from '@/utils/pos.utils';
 const membershipProducts: Product[] = [
   { 
     id: 'mem1', 
-    name: "Weekly 8-Ball (2P)",
+    name: "8-Ball Weekly (2P)",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
@@ -18,7 +18,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem2', 
-    name: "Weekly 8-Ball (4P)",
+    name: "8-Ball Weekly (4P)",
     originalPrice: 1199,
     offerPrice: 599,
     studentPrice: 499,
@@ -29,7 +29,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem3', 
-    name: "Weekly PS5 Gaming",
+    name: "PS5 Weekly",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
@@ -40,7 +40,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem4', 
-    name: "Weekly Combo Pass",
+    name: "Combo Weekly",
     originalPrice: 1799,
     offerPrice: 899,
     studentPrice: 799,
@@ -51,7 +51,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem5', 
-    name: "Monthly 8-Ball (2P)",
+    name: "8-Ball Monthly (2P)",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
@@ -62,7 +62,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem6', 
-    name: "Monthly PS5 Gaming",
+    name: "PS5 Monthly",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
@@ -73,7 +73,7 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem7', 
-    name: "Monthly Ultimate Combo",
+    name: "Ultimate Monthly",
     originalPrice: 5999,
     offerPrice: 3499,
     studentPrice: 2999,

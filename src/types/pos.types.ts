@@ -89,6 +89,8 @@ export interface POSContextType {
   discount: number;
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
+  isStudentDiscount: boolean;
+  setIsStudentDiscount: (value: boolean) => void;
   
   // Station state setter
   setStations: (stations: Station[]) => void;

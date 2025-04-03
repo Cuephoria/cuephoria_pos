@@ -1,10 +1,11 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
   ResetOptions, 
   Customer, 
   CartItem, 
-  Bill
+  Bill,
+  Product
 } from '@/types/pos.types';
 import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
@@ -18,6 +19,9 @@ const POSContext = createContext<POSContextType | undefined>(undefined);
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('POSProvider initialized'); // Debug log
+  
+  // State for student discount
+  const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
   
   // Initialize all hooks
   const { 
@@ -111,6 +115,24 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const completeSale = (paymentMethod: 'cash' | 'upi') => {
     try {
+      // Apply student price for membership items if student discount is enabled
+      if (isStudentDiscount) {
+        const updatedCart = cart.map(item => {
+          const product = products.find(p => p.id === item.id) as Product;
+          if (product && product.category === 'membership' && product.studentPrice) {
+            return {
+              ...item,
+              price: product.studentPrice,
+              total: product.studentPrice * item.quantity
+            };
+          }
+          return item;
+        });
+        
+        // Temporarily update cart with student prices
+        setCart(updatedCart);
+      }
+      
       // Look for membership products in cart
       const membershipItems = cart.filter(item => {
         const product = products.find(p => p.id === item.id);
@@ -152,7 +174,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               membershipHours = membershipDuration === 'weekly' ? 20 : 80;
             } else if (product.name.includes('PS5')) {
               membershipHours = membershipDuration === 'weekly' ? 15 : 60;
-            } else if (product.name.includes('Combo')) {
+            } else if (product.name.includes('Combo') || product.name.includes('Ultimate')) {
               membershipHours = membershipDuration === 'weekly' ? 30 : 120;
             }
             
@@ -173,6 +195,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearCart();
         // Reset selected customer
         setSelectedCustomer(null);
+        // Reset student discount
+        setIsStudentDiscount(false);
       }
       
       return bill;
@@ -235,6 +259,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discount,
         discountType,
         loyaltyPointsUsed,
+        isStudentDiscount,
+        setIsStudentDiscount,
         setStations,
         addProduct,
         updateProduct,
