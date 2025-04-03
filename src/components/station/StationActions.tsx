@@ -70,10 +70,10 @@ const StationActions: React.FC<StationActionsProps> = ({
           description: "Session has been ended and added to cart. Redirecting to checkout...",
         });
         
-        // Short delay before redirecting to ensure state updates complete
+        // Longer delay before redirecting to ensure state updates complete
         setTimeout(() => {
           navigate('/pos');
-        }, 1000);
+        }, 2000);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({

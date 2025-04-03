@@ -118,6 +118,13 @@ export const useEndSession = ({
       const hoursPlayed = durationMinutes / 60;
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
+      console.log("Session cost calculation:", { 
+        stationRate, 
+        durationMinutes, 
+        hoursPlayed, 
+        sessionCost 
+      });
+      
       // Create cart item for the session
       const sessionCartItem: CartItem = {
         id: cartItemId,

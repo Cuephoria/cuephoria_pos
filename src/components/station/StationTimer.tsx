@@ -45,6 +45,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       
       setElapsedTime(minutesTotal);
       
+      // Calculate cost based on hourly rate
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       setCost(calculatedCost);
@@ -54,6 +55,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         secondsTotal,
         minutesTotal,
         hoursTotal,
+        hourlyRate: station.hourlyRate,
+        hoursElapsed,
         calculatedCost
       });
     };
