@@ -34,7 +34,10 @@ const expenseSchema = z.object({
   amount: z.coerce.number().positive({ message: 'Amount must be positive' }),
   category: z.enum(['rent', 'utilities', 'salary', 'restock', 'misc']),
   frequency: z.enum(['one-time', 'monthly', 'quarterly', 'yearly']),
-  date: z.date(),
+  date: z.date({
+    required_error: 'Please select a date',
+    invalid_type_error: 'That\'s not a date!',
+  }),
   isRecurring: z.boolean(),
   notes: z.string().optional(),
 });
@@ -52,6 +55,24 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   initialData,
   onCancel
 }) => {
+  // Ensure initialData.date is a Date object
+  let initialDate: Date;
+  
+  if (initialData?.date) {
+    if (initialData.date instanceof Date) {
+      initialDate = initialData.date;
+    } else {
+      initialDate = new Date(initialData.date);
+      if (isNaN(initialDate.getTime())) {
+        initialDate = new Date(); // Fallback to current date if invalid
+      }
+    }
+  } else {
+    initialDate = new Date(); // Default to current date
+  }
+  
+  console.log('Form initializing with date:', initialDate);
+  
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
@@ -59,7 +80,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       amount: initialData?.amount || 0,
       category: initialData?.category || 'misc',
       frequency: initialData?.frequency || 'one-time',
-      date: initialData?.date || new Date(),
+      date: initialDate,
       isRecurring: initialData?.isRecurring || false,
       notes: initialData?.notes || '',
     },
@@ -67,9 +88,17 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   const isRecurring = form.watch('isRecurring');
 
+  console.log('Current form values:', form.getValues());
+
+  const handleFormSubmit = (data: ExpenseFormData) => {
+    console.log('Form submitting with data:', data);
+    console.log('Date type:', data.date instanceof Date ? 'Date object' : typeof data.date);
+    onSubmit(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -195,7 +224,10 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={field.onChange}
+                    onSelect={(date) => {
+                      console.log('Calendar date selected:', date);
+                      field.onChange(date);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>

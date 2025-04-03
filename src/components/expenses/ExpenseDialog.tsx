@@ -29,22 +29,27 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
     try {
       console.log('Submitting expense data:', data);
       
-      // Ensure we have a proper Date object
-      const formattedData = {
-        ...data,
-        date: data.date instanceof Date ? data.date : new Date(data.date)
-      };
+      // Ensure we have a proper Date object - date should already be a Date object from the form
+      if (!(data.date instanceof Date) || isNaN(data.date.getTime())) {
+        console.error('Invalid date received from form:', data.date);
+        toast({
+          title: 'Error',
+          description: 'Invalid date format. Please select a valid date.',
+          variant: 'destructive',
+        });
+        return;
+      }
       
-      console.log('Formatted data with date:', formattedData);
+      console.log('Valid date confirmed:', data.date);
       
       let success = false;
       
       if (expense) {
         // Update existing expense
-        success = await updateExpense({ ...formattedData, id: expense.id });
+        success = await updateExpense({ ...data, id: expense.id });
       } else {
         // Add new expense
-        success = await addExpense(formattedData);
+        success = await addExpense(data);
       }
       
       console.log('Expense operation result:', success);
