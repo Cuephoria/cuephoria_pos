@@ -56,11 +56,11 @@ export const useSessionActions = (
           startTime
         };
         
-        // Update sessions state
-        setSessions(prev => [...prev, newSession]);
+        // Update sessions state - fix the type error
+        setSessions((prev: Session[]) => [...prev, newSession]);
         
-        // Update station state
-        setStations(prev => prev.map(s => 
+        // Update station state - fix the type error
+        setStations((prev: Station[]) => prev.map(s => 
           s.id === stationId 
             ? { ...s, isOccupied: true, currentSession: newSession } 
             : s
@@ -129,19 +129,19 @@ export const useSessionActions = (
         return undefined;
       }
       
-      // Update the session in state
+      // Update the session in state - fix the type error
       const updatedSession = {
         ...station.currentSession,
         endTime,
         duration: durationMinutes
       };
       
-      setSessions(prev => prev.map(s => 
+      setSessions((prev: Session[]) => prev.map(s => 
         s.id === updatedSession.id ? updatedSession : s
       ));
       
-      // Update the station in state
-      setStations(prev => prev.map(s => 
+      // Update the station in state - fix the type error
+      setStations((prev: Station[]) => prev.map(s => 
         s.id === stationId 
           ? { ...s, isOccupied: false, currentSession: null } 
           : s

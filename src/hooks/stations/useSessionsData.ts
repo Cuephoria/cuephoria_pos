@@ -80,14 +80,15 @@ export const useSessionsData = (
               }
             });
             
-            setStations(prevStations => 
-              prevStations.map(station => {
+            // Fix the type error by specifying the correct return type
+            setStations(prevStations => {
+              return prevStations.map(station => {
                 const activeSession = activeSessionsMap.get(station.id);
                 return activeSession
                   ? { ...station, isOccupied: true, currentSession: activeSession }
                   : station;
-              })
-            );
+              });
+            });
           }
         }
       } catch (error) {
