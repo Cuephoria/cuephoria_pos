@@ -121,9 +121,25 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (expenseData.date instanceof Date) {
         dateObj = expenseData.date;
+      } else if (expenseData.date && typeof expenseData.date === 'object' && expenseData.date._type === 'Date') {
+        // Handle serialized date object
+        try {
+          dateObj = new Date(expenseData.date.value.iso);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date format');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expenseData.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
       } else {
         try {
-          dateObj = new Date(expenseData.date);
+          dateObj = new Date(expenseData.date as any);
           if (isNaN(dateObj.getTime())) {
             throw new Error('Invalid date');
           }
@@ -138,11 +154,11 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
-      // Format date for storage in ISO format
+      // Format date for storage as ISO string
       const dateToStore = dateObj.toISOString();
       console.log('Formatted date to store:', dateToStore);
       
-      const { error } = await supabase
+      const { error: supabaseError } = await supabase
         .from('expenses')
         .insert({
           id,
@@ -155,11 +171,11 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           notes: expenseData.notes || ''
         });
         
-      if (error) {
-        console.error('Error adding expense:', error);
+      if (supabaseError) {
+        console.error('Error adding expense:', supabaseError);
         toast({
           title: 'Error',
-          description: `Failed to add expense: ${error.message}`,
+          description: `Failed to add expense: ${supabaseError.message}`,
           variant: 'destructive'
         });
         return false;
@@ -203,9 +219,25 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (expense.date instanceof Date) {
         dateObj = expense.date;
+      } else if (expense.date && typeof expense.date === 'object' && expense.date._type === 'Date') {
+        // Handle serialized date object
+        try {
+          dateObj = new Date(expense.date.value.iso);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date format');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expense.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
       } else {
         try {
-          dateObj = new Date(expense.date);
+          dateObj = new Date(expense.date as any);
           if (isNaN(dateObj.getTime())) {
             throw new Error('Invalid date');
           }
@@ -220,11 +252,11 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
       
-      // Format date for storage in ISO format
+      // Format date for storage as ISO string
       const dateToStore = dateObj.toISOString();
       console.log('Formatted date to update:', dateToStore);
       
-      const { error } = await supabase
+      const { error: supabaseError } = await supabase
         .from('expenses')
         .update({
           name: expense.name,
@@ -237,11 +269,11 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         })
         .eq('id', expense.id);
         
-      if (error) {
-        console.error('Error updating expense:', error);
+      if (supabaseError) {
+        console.error('Error updating expense:', supabaseError);
         toast({
           title: 'Error',
-          description: `Failed to update expense: ${error.message}`,
+          description: `Failed to update expense: ${supabaseError.message}`,
           variant: 'destructive'
         });
         return false;

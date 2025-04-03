@@ -61,10 +61,17 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   if (initialData?.date) {
     if (initialData.date instanceof Date) {
       initialDate = initialData.date;
+    } else if (typeof initialData.date === 'object' && initialData.date._type === 'Date') {
+      // Handle serialized date object
+      initialDate = new Date(initialData.date.value.iso);
     } else {
-      initialDate = new Date(initialData.date);
-      if (isNaN(initialDate.getTime())) {
-        initialDate = new Date(); // Fallback to current date if invalid
+      try {
+        initialDate = new Date(initialData.date as any);
+        if (isNaN(initialDate.getTime())) {
+          initialDate = new Date(); // Fallback to current date if invalid
+        }
+      } catch (e) {
+        initialDate = new Date(); // Fallback to current date
       }
     }
   } else {
@@ -92,8 +99,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   const handleFormSubmit = (data: ExpenseFormData) => {
     console.log('Form submitting with data:', data);
-    console.log('Date type:', data.date instanceof Date ? 'Date object' : typeof data.date);
-    onSubmit(data);
+    // Ensure the date is a clean Date object before submitting
+    const cleanData = {
+      ...data,
+      date: data.date instanceof Date ? data.date : new Date(data.date as any)
+    };
+    onSubmit(cleanData);
   };
 
   return (
@@ -212,7 +223,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                       className="pl-3 text-left font-normal"
                     >
                       {field.value ? (
-                        format(field.value, "PPP")
+                        format(new Date(field.value), "PPP")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -223,12 +234,16 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value}
+                    selected={field.value instanceof Date ? field.value : new Date(field.value as any)}
                     onSelect={(date) => {
                       console.log('Calendar date selected:', date);
-                      field.onChange(date);
+                      if (date) {
+                        // Ensure we're passing a clean Date object
+                        field.onChange(new Date(date));
+                      }
                     }}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
