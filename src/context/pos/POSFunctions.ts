@@ -1,12 +1,13 @@
+
 import { 
   Product, Station, Customer, Session, CartItem, Bill, 
   ResetOptions, SessionResult 
 } from "@/types/pos.types";
 import { generateId } from "@/utils/pos.utils";
 import { 
-  checkMembershipValidity as checkMembershipValidityInternal, 
-  deductMembershipHours as deductMembershipHoursInternal,
-  updateCustomerMembership as updateCustomerMembershipInternal
+  checkMembershipValidityInternal,
+  deductMembershipHoursInternal,
+  updateCustomerMembershipInternal
 } from "@/utils/membership.utils";
 import { exportToCSV } from "@/services/dataOperations";
 import { generateSampleData } from "@/data/sampleData";

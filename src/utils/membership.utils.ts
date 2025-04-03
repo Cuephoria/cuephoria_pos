@@ -1,3 +1,4 @@
+
 import { Customer } from '@/types/pos.types';
 
 /**
@@ -58,7 +59,7 @@ export const getHoursLeftColor = (hoursLeft: number | undefined): string => {
 };
 
 /**
- * Internal function to check membership validity
+ * Check membership validity
  */
 export const checkMembershipValidityInternal = (customer: Customer): boolean => {
   if (!customer.isMember) return false;
@@ -78,7 +79,7 @@ export const checkMembershipValidityInternal = (customer: Customer): boolean => 
 };
 
 /**
- * Internal function to deduct hours from membership
+ * Deduct hours from membership
  */
 export const deductMembershipHoursInternal = (customer: Customer, hours: number): Customer => {
   if (!customer.isMember || customer.membershipHoursLeft === undefined) {
