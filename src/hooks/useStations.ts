@@ -62,7 +62,7 @@ export const useStations = (
           const transformedStations: Station[] = data.map(item => ({
             id: item.id,
             name: item.name,
-            type: (item.type as 'ps5' | '8ball'), // Force the correct type
+            type: item.type as 'ps5' | '8ball', // Cast to the correct type
             hourlyRate: item.hourly_rate,
             isOccupied: item.is_occupied,
             currentSession: null
@@ -99,8 +99,8 @@ export const useStations = (
                 id: session.id,
                 station_id: session.stationId,
                 customer_id: session.customerId,
-                start_time: session.startTime,
-                end_time: session.endTime,
+                start_time: new Date(session.startTime).toISOString(),
+                end_time: session.endTime ? new Date(session.endTime).toISOString() : null,
                 duration: session.duration
               },
               { onConflict: 'id' }
@@ -176,7 +176,9 @@ export const useStations = (
   const startSession = async (stationId: string, customerId: string) => {
     try {
       const station = stations.find(s => s.id === stationId);
-      if (!station || station.isOccupied) return;
+      if (!station || station.isOccupied) {
+        throw new Error("Station not available or already occupied");
+      }
       
       const startTime = new Date();
       
@@ -198,7 +200,7 @@ export const useStations = (
           description: 'Failed to start session',
           variant: 'destructive'
         });
-        return;
+        throw error;
       }
       
       if (data) {
@@ -210,10 +212,10 @@ export const useStations = (
         };
         
         // Update sessions state
-        setSessions([...sessions, newSession]);
+        setSessions(prev => [...prev, newSession]);
         
         // Update station state
-        setStations(stations.map(s => 
+        setStations(prev => prev.map(s => 
           s.id === stationId 
             ? { ...s, isOccupied: true, currentSession: newSession } 
             : s
@@ -229,6 +231,8 @@ export const useStations = (
           title: 'Success',
           description: 'Session started successfully',
         });
+        
+        return newSession;
       }
     } catch (error) {
       console.error('Error in startSession:', error);
@@ -237,16 +241,17 @@ export const useStations = (
         description: 'Failed to start session',
         variant: 'destructive'
       });
+      throw error;
     }
   };
   
-  const endSession = async (stationId: string, customers: Customer[]) => {
+  const endSession = async (stationId: string, customers: Customer[] = []) => {
     try {
       console.log("Ending session for station:", stationId);
       const station = stations.find(s => s.id === stationId);
       if (!station || !station.isOccupied || !station.currentSession) {
         console.log("No active session found for this station");
-        return;
+        return undefined;
       }
       
       const endTime = new Date();
@@ -272,7 +277,7 @@ export const useStations = (
           description: 'Failed to end session',
           variant: 'destructive'
         });
-        return;
+        return undefined;
       }
       
       // Update the session in state
@@ -282,12 +287,12 @@ export const useStations = (
         duration: durationMinutes
       };
       
-      setSessions(sessions.map(s => 
+      setSessions(prev => prev.map(s => 
         s.id === updatedSession.id ? updatedSession : s
       ));
       
       // Update the station in state
-      setStations(stations.map(s => 
+      setStations(prev => prev.map(s => 
         s.id === stationId 
           ? { ...s, isOccupied: false, currentSession: null } 
           : s

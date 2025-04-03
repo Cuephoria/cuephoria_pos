@@ -70,33 +70,63 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     return () => clearInterval(interval);
   }, [station]);
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (selectedCustomerId) {
-      startSession(station.id, selectedCustomerId);
-      setSelectedCustomerId('');
+      try {
+        await startSession(station.id, selectedCustomerId);
+        setSelectedCustomerId('');
+        toast({
+          title: "Session Started",
+          description: `Session started successfully for station ${station.name}`,
+        });
+      } catch (error) {
+        console.error("Error starting session:", error);
+        toast({
+          title: "Error",
+          description: "Failed to start session. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
     if (station.isOccupied && station.currentSession) {
-      const customerId = station.currentSession.customerId;
-      
-      // End the session and get session details
-      endSession(station.id);
-      
-      // Set the customer in context and navigate to POS
-      console.log('Navigating to POS with customer ID:', customerId);
-      selectCustomer(customerId);
-      
-      toast({
-        title: "Session Ended",
-        description: "Session has been ended and added to cart. Redirecting to checkout...",
-      });
-      
-      // Navigate to POS page with a small delay to allow state updates
-      setTimeout(() => {
-        navigate('/pos');
-      }, 300);
+      try {
+        const customerId = station.currentSession.customerId;
+        
+        // End the session and get session details
+        const result = await endSession(station.id);
+        
+        if (result) {
+          // Set the customer in context and navigate to POS
+          console.log('Navigating to POS with customer ID:', customerId);
+          selectCustomer(customerId);
+          
+          toast({
+            title: "Session Ended",
+            description: "Session has been ended and added to cart. Redirecting to checkout...",
+          });
+          
+          // Navigate to POS page with a small delay to allow state updates
+          setTimeout(() => {
+            navigate('/pos');
+          }, 300);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to end session. Please try again.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Error ending session:", error);
+        toast({
+          title: "Error",
+          description: "Failed to end session. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
