@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,13 +88,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex justify-between items-center">
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap max-w-[200px]">
+              <TooltipTrigger>
+                <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap max-w-[200px] cursor-default">
                   {product.name}
                 </CardTitle>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>{product.name}</p>
+              <TooltipContent side="top">
+                <p className="px-2 py-1">{product.name}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
