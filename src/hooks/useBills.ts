@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
@@ -107,13 +106,7 @@ export const useBills = (
         }
         
         updatedCustomer.isMember = true;
-        updatedCustomer.membershipPlan = membershipProduct.name; // Use the full product name
         updatedCustomer.membershipExpiryDate = expiryDate;
-        
-        // Set membership hours based on the product
-        if (membershipProduct.membershipHours) {
-          updatedCustomer.membershipHoursLeft = membershipProduct.membershipHours;
-        }
       }
     }
     
