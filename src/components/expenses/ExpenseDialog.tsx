@@ -28,14 +28,21 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
   const handleSubmit = async (data: Omit<Expense, 'id'>) => {
     try {
       console.log('Submitting expense data:', data);
-      let success;
+      
+      // Ensure we have a valid date object
+      const formattedData = {
+        ...data,
+        date: data.date instanceof Date ? data.date : new Date()
+      };
+      
+      let success = false;
       
       if (expense) {
         // Update existing expense
-        success = await updateExpense({ ...data, id: expense.id });
+        success = await updateExpense({ ...formattedData, id: expense.id });
       } else {
         // Add new expense
-        success = await addExpense(data);
+        success = await addExpense(formattedData);
       }
       
       console.log('Expense operation result:', success);

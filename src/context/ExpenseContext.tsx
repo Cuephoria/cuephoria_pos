@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary } from '@/types/expense.types';
 import { supabase } from '@/integrations/supabase/client';
@@ -115,11 +116,21 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log('Adding expense with data:', expenseData);
       const id = generateId();
       
-      const dateString = expenseData.date instanceof Date 
-        ? expenseData.date.toISOString() 
-        : new Date(expenseData.date).toISOString();
+      // Ensure date is properly formatted for Supabase
+      let dateString: string;
       
-      const { error, data } = await supabase
+      if (expenseData.date instanceof Date) {
+        dateString = expenseData.date.toISOString();
+      } else if (typeof expenseData.date === 'string') {
+        dateString = new Date(expenseData.date).toISOString();
+      } else if (expenseData.date && typeof expenseData.date === 'object' && expenseData.date._type === 'Date') {
+        // Handle React-Hook-Form date object
+        dateString = new Date(expenseData.date.value.iso).toISOString();
+      } else {
+        dateString = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
         .from('expenses')
         .insert({
           id,
@@ -130,8 +141,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           date: dateString,
           is_recurring: expenseData.isRecurring,
           notes: expenseData.notes || ''
-        })
-        .select();
+        });
         
       if (error) {
         console.error('Error adding expense:', error);
@@ -143,11 +153,16 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      console.log('Expense added successfully:', data);
-      
+      // Create a proper expense object for the state
       const newExpense: Expense = {
         id,
-        ...expenseData
+        name: expenseData.name,
+        amount: expenseData.amount,
+        category: expenseData.category,
+        frequency: expenseData.frequency,
+        date: new Date(dateString),
+        isRecurring: expenseData.isRecurring,
+        notes: expenseData.notes || ''
       };
       
       setExpenses(prev => [newExpense, ...prev]);
@@ -171,9 +186,19 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      const dateString = expense.date instanceof Date 
-        ? expense.date.toISOString() 
-        : new Date(expense.date).toISOString();
+      // Ensure date is properly formatted for Supabase
+      let dateString: string;
+      
+      if (expense.date instanceof Date) {
+        dateString = expense.date.toISOString();
+      } else if (typeof expense.date === 'string') {
+        dateString = new Date(expense.date).toISOString();
+      } else if (expense.date && typeof expense.date === 'object' && expense.date._type === 'Date') {
+        // Handle React-Hook-Form date object
+        dateString = new Date(expense.date.value.iso).toISOString();
+      } else {
+        dateString = new Date().toISOString();
+      }
       
       const { error } = await supabase
         .from('expenses')
@@ -198,8 +223,14 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
+      // Update the expense with the correct date object
+      const updatedExpense = {
+        ...expense,
+        date: new Date(dateString)
+      };
+      
       setExpenses(prev => 
-        prev.map(item => item.id === expense.id ? expense : item)
+        prev.map(item => item.id === expense.id ? updatedExpense : item)
       );
       
       toast({

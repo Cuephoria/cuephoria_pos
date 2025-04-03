@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Loader2 } from 'lucide-react';
 import ExpenseDialog from './ExpenseDialog';
 import { 
   AlertDialog,
@@ -28,10 +28,19 @@ import { format } from 'date-fns';
 import { CurrencyDisplay } from '@/components/ui/currency';
 
 const ExpenseList = () => {
-  const { expenses, deleteExpense, loading } = useExpenses();
+  const { expenses, deleteExpense, loading, refreshExpenses } = useExpenses();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
-    await deleteExpense(id);
+    setDeletingId(id);
+    try {
+      const success = await deleteExpense(id);
+      if (success) {
+        refreshExpenses();
+      }
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const getCategoryLabel = (category: string) => {
@@ -56,7 +65,12 @@ const ExpenseList = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center py-8">Loading expenses...</div>;
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading expenses...</span>
+      </div>
+    );
   }
 
   return (
@@ -88,7 +102,11 @@ const ExpenseList = () => {
                   <TableCell className="font-medium">{expense.name}</TableCell>
                   <TableCell><CurrencyDisplay amount={expense.amount} /></TableCell>
                   <TableCell>{getCategoryLabel(expense.category)}</TableCell>
-                  <TableCell>{format(new Date(expense.date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    {expense.date instanceof Date 
+                      ? format(expense.date, 'MMM dd, yyyy')
+                      : 'Invalid date'}
+                  </TableCell>
                   <TableCell>
                     {expense.isRecurring 
                       ? getFrequencyLabel(expense.frequency) 
@@ -120,8 +138,16 @@ const ExpenseList = () => {
                             <AlertDialogAction 
                               onClick={() => handleDelete(expense.id)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              disabled={deletingId === expense.id}
                             >
-                              Delete
+                              {deletingId === expense.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Deleting...
+                                </>
+                              ) : (
+                                'Delete'
+                              )}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
