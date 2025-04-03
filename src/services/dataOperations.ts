@@ -33,6 +33,7 @@ export const resetToSampleData = (
   if (resetOpts.sales) {
     setBills([]);
     localStorage.removeItem('cuephoriaBills');
+    console.log('Cleared all sales/transaction data');
   }
   
   if (resetOpts.sessions) {
@@ -47,6 +48,7 @@ export const resetToSampleData = (
     
     localStorage.removeItem('cuephoriaSessions');
     localStorage.removeItem('cuephoriaStations');
+    console.log('Cleared all session data and reset station statuses');
   }
   
   if (resetOpts.products && refreshFromDB) {

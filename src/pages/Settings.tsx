@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, User, DollarSign, Receipt, AlertTriangle, Database, Plus } from 'lucide-react';
+import { Shield, User, DollarSign, Receipt, AlertTriangle, Database, Plus, RefreshCw } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import {
   AlertDialog,
@@ -50,8 +50,8 @@ const Settings = () => {
   });
   
   const [resetOptions, setResetOptions] = useState({
-    products: true,
-    customers: true,
+    products: false,
+    customers: false,
     sales: true,
     sessions: true,
   });
@@ -102,6 +102,21 @@ const Settings = () => {
     });
   };
   
+  const handleQuickReset = () => {
+    // Reset only transactions and sessions
+    resetToSampleData({
+      products: false,
+      customers: false,
+      sales: true,
+      sessions: true
+    });
+    
+    toast({
+      title: 'Fresh Start',
+      description: 'All transactions and sessions have been cleared',
+    });
+  };
+  
   const handleAddSampleData = () => {
     // Call function to add sample Indian data
     addSampleIndianData();
@@ -116,6 +131,14 @@ const Settings = () => {
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+        <Button 
+          onClick={handleQuickReset}
+          variant="outline"
+          className="gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Clear All Sessions & Transactions
+        </Button>
       </div>
       
       <Tabs defaultValue="general">
@@ -301,6 +324,23 @@ const Settings = () => {
                 <div className="flex space-x-2">
                   <Button variant="outline">Export Backup</Button>
                   <Button variant="outline">Import Backup</Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2 pt-4 border-t">
+                <h3 className="text-lg font-medium">Quick Actions</h3>
+                <p className="text-sm text-muted-foreground">
+                  Common operations to manage your application data
+                </p>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={handleQuickReset}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Clear All Sessions & Transactions
+                  </Button>
                 </div>
               </div>
               
