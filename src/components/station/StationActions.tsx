@@ -25,32 +25,35 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleStartSession = async () => {
-    if (selectedCustomerId) {
-      try {
-        setIsLoading(true);
-        console.log("Starting session for station", station.id, "and customer", selectedCustomerId);
-        await onStartSession(station.id, selectedCustomerId);
-        setSelectedCustomerId('');
-        toast({
-          title: "Session Started",
-          description: `Session started successfully for station ${station.name}`,
-        });
-      } catch (error) {
-        console.error("Error starting session:", error);
-        toast({
-          title: "Error",
-          description: "Failed to start session. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
+    if (!selectedCustomerId) {
       toast({
         title: "Selection Required",
         description: "Please select a customer to start the session",
         variant: "destructive"
       });
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      console.log(`Starting session - Station ID: ${station.id} (${typeof station.id}), Customer ID: ${selectedCustomerId} (${typeof selectedCustomerId})`);
+      
+      await onStartSession(station.id, selectedCustomerId);
+      
+      setSelectedCustomerId('');
+      toast({
+        title: "Session Started",
+        description: `Session started successfully for station ${station.name}`,
+      });
+    } catch (error) {
+      console.error("Error starting session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start session. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,6 +62,7 @@ const StationActions: React.FC<StationActionsProps> = ({
       try {
         setIsLoading(true);
         console.log('Ending session for station:', station.id);
+        
         await onEndSession(station.id);
         
         toast({

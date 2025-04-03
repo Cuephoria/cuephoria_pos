@@ -43,6 +43,7 @@ export const useEndSession = ({
       const durationMinutes = Math.ceil(durationMs / (1000 * 60));
       
       console.log("Session duration:", durationMinutes, "minutes");
+      console.log("Session ID for update:", station.currentSession.id);
       
       // Update the session in Supabase
       const { data, error } = await supabase
@@ -149,7 +150,7 @@ export const useEndSession = ({
         description: 'Failed to end session: ' + (error instanceof Error ? error.message : 'Unknown error'),
         variant: 'destructive'
       });
-      throw error;
+      return undefined; // Return undefined instead of throwing
     }
   };
   

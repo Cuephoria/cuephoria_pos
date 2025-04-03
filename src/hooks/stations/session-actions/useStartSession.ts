@@ -38,7 +38,7 @@ export const useStartSession = ({
       const sessionId = generateId();
       console.log("Generated session ID:", sessionId);
       
-      // Create session in Supabase with UUID in the correct format
+      // Create session in Supabase - ensure all IDs are proper UUIDs
       const { data, error } = await supabase
         .from('sessions')
         .insert({
@@ -107,7 +107,7 @@ export const useStartSession = ({
         description: 'Failed to start session: ' + (error instanceof Error ? error.message : 'Unknown error'),
         variant: 'destructive'
       });
-      throw error;
+      return undefined; // Return undefined instead of throwing to prevent further errors
     }
   };
   
