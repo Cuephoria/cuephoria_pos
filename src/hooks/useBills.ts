@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +45,7 @@ export const useBills = (
                 loyalty_points_earned: bill.loyaltyPointsEarned,
                 total: bill.total,
                 payment_method: bill.paymentMethod,
-                created_at: bill.createdAt
+                created_at: bill.createdAt.toISOString()
               }, { onConflict: 'id' })
               .select()
               .single();
@@ -86,6 +87,11 @@ export const useBills = (
           return;
         }
         
+        if (!billsData) {
+          console.log('No bills found in database');
+          return;
+        }
+        
         const transformedBills: Bill[] = [];
         
         for (const billData of billsData) {
@@ -97,6 +103,11 @@ export const useBills = (
             
           if (itemsError) {
             console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
+            continue;
+          }
+          
+          if (!itemsData) {
+            console.log(`No items found for bill ${billData.id}`);
             continue;
           }
           
@@ -249,7 +260,7 @@ export const useBills = (
         loyaltyPointsEarned,
         total,
         paymentMethod,
-        createdAt: new Date(billData.created_at)
+        createdAt: new Date(billData?.created_at || Date.now())
       };
       
       // Update bills state

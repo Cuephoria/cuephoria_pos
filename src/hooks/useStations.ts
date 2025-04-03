@@ -51,16 +51,20 @@ export const useStations = (
         }
         
         // Transform data to match our Station type
-        const transformedStations = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          type: item.type,
-          hourlyRate: item.hourly_rate,
-          isOccupied: item.is_occupied,
-          currentSession: null
-        }));
-        
-        setStations(transformedStations.length > 0 ? transformedStations : initialStations);
+        if (data) {
+          const transformedStations = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            hourlyRate: item.hourly_rate,
+            isOccupied: item.is_occupied,
+            currentSession: null
+          }));
+          
+          setStations(transformedStations.length > 0 ? transformedStations : initialStations);
+        } else {
+          setStations(initialStations);
+        }
       } catch (error) {
         console.error('Error in fetchStations:', error);
         // Fallback to initialStations
@@ -107,34 +111,36 @@ export const useStations = (
         }
         
         // Transform data to match our Session type
-        const transformedSessions = data.map(item => ({
-          id: item.id,
-          stationId: item.station_id,
-          customerId: item.customer_id,
-          startTime: new Date(item.start_time),
-          endTime: item.end_time ? new Date(item.end_time) : undefined,
-          duration: item.duration
-        }));
-        
-        setSessions(transformedSessions);
-        
-        // Update stations with active sessions
-        if (transformedSessions.length > 0) {
-          const activeSessionsMap = new Map<string, Session>();
-          transformedSessions.forEach(session => {
-            if (!session.endTime) {
-              activeSessionsMap.set(session.stationId, session);
-            }
-          });
+        if (data) {
+          const transformedSessions = data.map(item => ({
+            id: item.id,
+            stationId: item.station_id,
+            customerId: item.customer_id,
+            startTime: new Date(item.start_time),
+            endTime: item.end_time ? new Date(item.end_time) : undefined,
+            duration: item.duration
+          }));
           
-          setStations(prevStations => 
-            prevStations.map(station => {
-              const activeSession = activeSessionsMap.get(station.id);
-              return activeSession
-                ? { ...station, isOccupied: true, currentSession: activeSession }
-                : station;
-            })
-          );
+          setSessions(transformedSessions);
+          
+          // Update stations with active sessions
+          if (transformedSessions.length > 0) {
+            const activeSessionsMap = new Map<string, Session>();
+            transformedSessions.forEach(session => {
+              if (!session.endTime) {
+                activeSessionsMap.set(session.stationId, session);
+              }
+            });
+            
+            setStations(prevStations => 
+              prevStations.map(station => {
+                const activeSession = activeSessionsMap.get(station.id);
+                return activeSession
+                  ? { ...station, isOccupied: true, currentSession: activeSession }
+                  : station;
+              })
+            );
+          }
         }
       } catch (error) {
         console.error('Error in fetchSessions:', error);
@@ -168,28 +174,30 @@ export const useStations = (
         return;
       }
       
-      const newSession: Session = {
-        id: data.id,
-        stationId,
-        customerId,
-        startTime
-      };
-      
-      // Update sessions state
-      setSessions([...sessions, newSession]);
-      
-      // Update station state
-      setStations(stations.map(s => 
-        s.id === stationId 
-          ? { ...s, isOccupied: true, currentSession: newSession } 
-          : s
-      ));
-      
-      // Update station in Supabase
-      await supabase
-        .from('stations')
-        .update({ is_occupied: true })
-        .eq('id', stationId);
+      if (data) {
+        const newSession: Session = {
+          id: data.id,
+          stationId,
+          customerId,
+          startTime
+        };
+        
+        // Update sessions state
+        setSessions([...sessions, newSession]);
+        
+        // Update station state
+        setStations(stations.map(s => 
+          s.id === stationId 
+            ? { ...s, isOccupied: true, currentSession: newSession } 
+            : s
+        ));
+        
+        // Update station in Supabase
+        await supabase
+          .from('stations')
+          .update({ is_occupied: true })
+          .eq('id', stationId);
+      }
     } catch (error) {
       console.error('Error in startSession:', error);
     }
@@ -268,7 +276,8 @@ export const useStations = (
         type: 'session' as const,
         name: `${station.name} (${durationMinutes} mins)`,
         price: sessionCost,
-        quantity: 1
+        quantity: 1,
+        total: sessionCost
       };
       
       return { updatedSession, sessionCartItem, customer };

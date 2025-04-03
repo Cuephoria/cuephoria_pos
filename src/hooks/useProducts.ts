@@ -175,72 +175,79 @@ export const useProducts = (initialProducts: Product[]) => {
         }
         
         // Transform data to match our Product type
-        const transformedProducts = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          category: item.category,
-          stock: item.stock,
-          image: item.image,
-          originalPrice: item.original_price,
-          offerPrice: item.offer_price,
-          studentPrice: item.student_price,
-          duration: item.duration,
-          membershipHours: item.membership_hours
-        }));
-        
-        // Check if we need to add membership products
-        const hasMembershipProducts = transformedProducts.some(
-          (p: Product) => p.category === 'membership'
-        );
-        
-        if (!hasMembershipProducts && transformedProducts.length > 0) {
-          // Add membership products to database
-          for (const product of membershipProducts) {
-            const { error } = await supabase.from('products').insert({
-              name: product.name,
-              price: product.price,
-              category: product.category,
-              stock: product.stock,
-              original_price: product.originalPrice,
-              offer_price: product.offerPrice,
-              student_price: product.studentPrice,
-              duration: product.duration,
-              membership_hours: product.membershipHours
-            });
-            
-            if (error) {
-              console.error('Error adding membership product:', error);
-            }
-          }
-          
-          // Fetch products again to get the newly added membership products
-          const { data: updatedData, error: updatedError } = await supabase
-            .from('products')
-            .select('*');
-            
-          if (updatedError) {
-            console.error('Error fetching updated products:', updatedError);
-            return;
-          }
-          
-          const updatedProducts = updatedData.map(item => ({
+        if (data) {
+          const transformedProducts = data.map(item => ({
             id: item.id,
             name: item.name,
             price: item.price,
-            category: item.category,
+            category: item.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
             stock: item.stock,
-            image: item.image,
-            originalPrice: item.original_price,
-            offerPrice: item.offer_price,
-            studentPrice: item.student_price,
-            duration: item.duration,
-            membershipHours: item.membership_hours
+            image: item.image || undefined,
+            originalPrice: item.original_price || undefined,
+            offerPrice: item.offer_price || undefined,
+            studentPrice: item.student_price || undefined,
+            duration: item.duration as 'weekly' | 'monthly' | undefined,
+            membershipHours: item.membership_hours || undefined
           }));
           
-          setProducts(updatedProducts);
+          // Check if we need to add membership products
+          const hasMembershipProducts = transformedProducts.some(
+            (p: Product) => p.category === 'membership'
+          );
+          
+          if (!hasMembershipProducts && transformedProducts.length > 0) {
+            // Add membership products to database
+            for (const product of membershipProducts) {
+              const { error } = await supabase.from('products').insert({
+                name: product.name,
+                price: product.price,
+                category: product.category,
+                stock: product.stock,
+                original_price: product.originalPrice,
+                offer_price: product.offerPrice,
+                student_price: product.studentPrice,
+                duration: product.duration,
+                membership_hours: product.membershipHours
+              });
+              
+              if (error) {
+                console.error('Error adding membership product:', error);
+              }
+            }
+            
+            // Fetch products again to get the newly added membership products
+            const { data: updatedData, error: updatedError } = await supabase
+              .from('products')
+              .select('*');
+              
+            if (updatedError) {
+              console.error('Error fetching updated products:', updatedError);
+              return;
+            }
+            
+            if (updatedData) {
+              const updatedProducts = updatedData.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                category: item.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
+                stock: item.stock,
+                image: item.image || undefined,
+                originalPrice: item.original_price || undefined,
+                offerPrice: item.offer_price || undefined,
+                studentPrice: item.student_price || undefined,
+                duration: item.duration as 'weekly' | 'monthly' | undefined,
+                membershipHours: item.membership_hours || undefined
+              }));
+              
+              setProducts(updatedProducts);
+            }
+          } else {
+            setProducts(transformedProducts.length > 0 ? transformedProducts : [...initialProducts, ...membershipProducts]);
+          }
         } else {
-          setProducts(transformedProducts.length > 0 ? transformedProducts : [...initialProducts, ...membershipProducts]);
+          // Fallback to initialProducts + membershipProducts
+          setProducts([...initialProducts, ...membershipProducts]);
         }
       } catch (error) {
         console.error('Error in fetchProducts:', error);
@@ -281,21 +288,23 @@ export const useProducts = (initialProducts: Product[]) => {
         return;
       }
       
-      const newProduct: Product = {
-        id: data.id,
-        name: data.name,
-        price: data.price,
-        category: data.category,
-        stock: data.stock,
-        image: data.image,
-        originalPrice: data.original_price,
-        offerPrice: data.offer_price,
-        studentPrice: data.student_price,
-        duration: data.duration,
-        membershipHours: data.membership_hours
-      };
-      
-      setProducts([...products, newProduct]);
+      if (data) {
+        const newProduct: Product = {
+          id: data.id,
+          name: data.name,
+          price: data.price,
+          category: data.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
+          stock: data.stock,
+          image: data.image || undefined,
+          originalPrice: data.original_price || undefined,
+          offerPrice: data.offer_price || undefined,
+          studentPrice: data.student_price || undefined,
+          duration: data.duration as 'weekly' | 'monthly' | undefined,
+          membershipHours: data.membership_hours || undefined
+        };
+        
+        setProducts([...products, newProduct]);
+      }
     } catch (error) {
       console.error('Error in addProduct:', error);
       toast({

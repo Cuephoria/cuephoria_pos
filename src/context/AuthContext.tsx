@@ -1,5 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
 
 interface AdminUser {
   id: string;

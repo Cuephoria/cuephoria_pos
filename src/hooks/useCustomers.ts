@@ -66,24 +66,28 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
         
         // Transform data to match our Customer type
-        const transformedCustomers = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          phone: item.phone,
-          email: item.email,
-          isMember: item.is_member,
-          membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
-          membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
-          membershipPlan: item.membership_plan,
-          membershipHoursLeft: item.membership_hours_left,
-          membershipDuration: item.membership_duration,
-          loyaltyPoints: item.loyalty_points,
-          totalSpent: item.total_spent,
-          totalPlayTime: item.total_play_time,
-          createdAt: new Date(item.created_at)
-        }));
-        
-        setCustomers(transformedCustomers.length > 0 ? transformedCustomers : initialCustomers);
+        if (data) {
+          const transformedCustomers = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            phone: item.phone,
+            email: item.email || undefined,
+            isMember: item.is_member,
+            membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
+            membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
+            membershipPlan: item.membership_plan || undefined,
+            membershipHoursLeft: item.membership_hours_left || undefined,
+            membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
+            loyaltyPoints: item.loyalty_points,
+            totalSpent: item.total_spent,
+            totalPlayTime: item.total_play_time,
+            createdAt: new Date(item.created_at)
+          }));
+          
+          setCustomers(transformedCustomers.length > 0 ? transformedCustomers : initialCustomers);
+        } else {
+          setCustomers(initialCustomers);
+        }
       } catch (error) {
         console.error('Error in fetchCustomers:', error);
         // Fallback to initialCustomers
@@ -165,25 +169,28 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return null;
       }
       
-      const newCustomer: Customer = {
-        id: data.id,
-        name: data.name,
-        phone: data.phone,
-        email: data.email,
-        isMember: data.is_member,
-        membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
-        membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
-        membershipPlan: data.membership_plan,
-        membershipHoursLeft: data.membership_hours_left,
-        membershipDuration: data.membership_duration,
-        loyaltyPoints: data.loyalty_points,
-        totalSpent: data.total_spent,
-        totalPlayTime: data.total_play_time,
-        createdAt: new Date(data.created_at)
-      };
-      
-      setCustomers([...customers, newCustomer]);
-      return newCustomer;
+      if (data) {
+        const newCustomer: Customer = {
+          id: data.id,
+          name: data.name,
+          phone: data.phone,
+          email: data.email || undefined,
+          isMember: data.is_member,
+          membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
+          membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
+          membershipPlan: data.membership_plan || undefined,
+          membershipHoursLeft: data.membership_hours_left || undefined,
+          membershipDuration: data.membership_duration as 'weekly' | 'monthly' | undefined,
+          loyaltyPoints: data.loyalty_points,
+          totalSpent: data.total_spent,
+          totalPlayTime: data.total_play_time,
+          createdAt: new Date(data.created_at)
+        };
+        
+        setCustomers([...customers, newCustomer]);
+        return newCustomer;
+      }
+      return null;
     } catch (error) {
       console.error('Error in addCustomer:', error);
       toast({
