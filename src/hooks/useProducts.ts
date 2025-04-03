@@ -298,6 +298,7 @@ export const useProducts = (initialProducts: Product[]) => {
         return;
       }
       
+      // Convert to Supabase format
       const supabaseProduct = convertToSupabaseProduct(product);
       
       // Check if the product exists in Supabase first
@@ -325,6 +326,9 @@ export const useProducts = (initialProducts: Product[]) => {
           setLoading(false);
           return;
         }
+        
+        // Product successfully created
+        console.log('Product successfully created in Supabase');
       } else {
         // Product exists, update it
         const { error: updateError } = await supabase
@@ -343,10 +347,12 @@ export const useProducts = (initialProducts: Product[]) => {
           setLoading(false);
           return;
         }
+        
+        // Product successfully updated
+        console.log('Product successfully updated in Supabase');
       }
       
-      console.log('Product updated in state');
-      
+      // Update the product in the state
       setProducts(prevProducts => 
         prevProducts.map(p => p.id === product.id ? product : p)
       );
