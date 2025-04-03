@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary } from '@/types/expense.types';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +39,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { bills } = usePOS();
   const { toast } = useToast();
 
-  // Load expenses from Supabase
   const fetchExpenses = async () => {
     setLoading(true);
     setError(null);
@@ -80,14 +78,10 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Calculate business summary based on bills and expenses
   const calculateBusinessSummary = () => {
-    // Calculate gross income from bills
     const grossIncome = bills.reduce((sum, bill) => sum + bill.total, 0);
     
-    // Calculate total expenses
     const totalExpenses = expenses.reduce((sum, expense) => {
-      // For recurring expenses, calculate based on frequency
       if (expense.isRecurring) {
         switch(expense.frequency) {
           case 'monthly':
@@ -104,10 +98,8 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }, 0);
     
-    // Calculate net profit
     const netProfit = grossIncome - totalExpenses;
     
-    // Calculate profit margin
     const profitMargin = grossIncome > 0 ? (netProfit / grossIncome) * 100 : 0;
     
     setBusinessSummary({
@@ -118,13 +110,16 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Add a new expense
   const addExpense = async (expenseData: Omit<Expense, 'id'>): Promise<boolean> => {
     try {
+      console.log('Adding expense with data:', expenseData);
       const id = generateId();
       
-      // Insert into Supabase
-      const { error } = await supabase
+      const dateString = expenseData.date instanceof Date 
+        ? expenseData.date.toISOString() 
+        : new Date(expenseData.date).toISOString();
+      
+      const { error, data } = await supabase
         .from('expenses')
         .insert({
           id,
@@ -132,10 +127,11 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: expenseData.amount,
           category: expenseData.category,
           frequency: expenseData.frequency,
-          date: expenseData.date.toISOString(),
+          date: dateString,
           is_recurring: expenseData.isRecurring,
-          notes: expenseData.notes
-        });
+          notes: expenseData.notes || ''
+        })
+        .select();
         
       if (error) {
         console.error('Error adding expense:', error);
@@ -147,7 +143,8 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Update local state
+      console.log('Expense added successfully:', data);
+      
       const newExpense: Expense = {
         id,
         ...expenseData
@@ -172,10 +169,12 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Update an existing expense
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      // Update in Supabase
+      const dateString = expense.date instanceof Date 
+        ? expense.date.toISOString() 
+        : new Date(expense.date).toISOString();
+      
       const { error } = await supabase
         .from('expenses')
         .update({
@@ -183,9 +182,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: expense.amount,
           category: expense.category,
           frequency: expense.frequency,
-          date: expense.date.toISOString(),
+          date: dateString,
           is_recurring: expense.isRecurring,
-          notes: expense.notes
+          notes: expense.notes || ''
         })
         .eq('id', expense.id);
         
@@ -199,7 +198,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Update local state
       setExpenses(prev => 
         prev.map(item => item.id === expense.id ? expense : item)
       );
@@ -221,10 +219,8 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Delete an expense
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
-      // Delete from Supabase
       const { error } = await supabase
         .from('expenses')
         .delete()
@@ -240,7 +236,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
-      // Update local state
       setExpenses(prev => prev.filter(item => item.id !== id));
       
       toast({
@@ -260,12 +255,10 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Effect to fetch expenses on mount
   useEffect(() => {
     fetchExpenses();
   }, []);
 
-  // Effect to recalculate business summary when bills or expenses change
   useEffect(() => {
     calculateBusinessSummary();
   }, [bills, expenses]);

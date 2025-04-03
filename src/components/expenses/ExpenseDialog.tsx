@@ -13,6 +13,7 @@ import { Expense } from '@/types/expense.types';
 import ExpenseForm from './ExpenseForm';
 import { PlusCircle } from 'lucide-react';
 import { useExpenses } from '@/context/ExpenseContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ExpenseDialogProps {
   expense?: Expense;
@@ -22,20 +23,37 @@ interface ExpenseDialogProps {
 const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
   const [open, setOpen] = React.useState(false);
   const { addExpense, updateExpense } = useExpenses();
+  const { toast } = useToast();
 
   const handleSubmit = async (data: Omit<Expense, 'id'>) => {
-    let success;
-    
-    if (expense) {
-      // Update existing expense
-      success = await updateExpense({ ...data, id: expense.id });
-    } else {
-      // Add new expense
-      success = await addExpense(data);
-    }
-    
-    if (success) {
-      setOpen(false);
+    try {
+      console.log('Submitting expense data:', data);
+      let success;
+      
+      if (expense) {
+        // Update existing expense
+        success = await updateExpense({ ...data, id: expense.id });
+      } else {
+        // Add new expense
+        success = await addExpense(data);
+      }
+      
+      console.log('Expense operation result:', success);
+      
+      if (success) {
+        setOpen(false);
+        toast({
+          title: expense ? 'Expense Updated' : 'Expense Added',
+          description: expense ? 'The expense has been updated successfully.' : 'New expense has been added successfully.',
+        });
+      }
+    } catch (error) {
+      console.error('Error in expense dialog submit:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to ${expense ? 'update' : 'add'} expense. Please try again.`,
+        variant: 'destructive',
+      });
     }
   };
 
