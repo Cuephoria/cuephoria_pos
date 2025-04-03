@@ -73,7 +73,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         // Short delay before redirecting to ensure state updates complete
         setTimeout(() => {
           navigate('/pos');
-        }, 500);
+        }, 1000);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({

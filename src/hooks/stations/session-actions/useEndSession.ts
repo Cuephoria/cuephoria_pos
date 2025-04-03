@@ -125,8 +125,7 @@ export const useEndSession = ({
         price: stationRate,
         quantity: hoursPlayed,
         total: sessionCost,
-        type: 'session',  // Changed from itemType to type to match the CartItem interface
-        itemId: session.id
+        type: 'session',  // Using type instead of itemType to match CartItem interface
       };
       
       console.log("Created cart item for ended session:", sessionCartItem);
