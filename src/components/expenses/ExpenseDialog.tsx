@@ -33,7 +33,7 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
       
       if (expense) {
         // Update existing expense by combining current expense with form data
-        // Convert Date to ISO string for storage
+        // and converting the Date object to an ISO string for storage
         success = await updateExpense({
           ...expense,
           name: formData.name,
@@ -46,11 +46,15 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
         });
       } else {
         // Add new expense - convert Date to ISO string
-        const newExpense = {
-          ...formData,
+        success = await addExpense({
+          name: formData.name,
+          amount: formData.amount,
+          category: formData.category,
+          frequency: formData.frequency,
+          isRecurring: formData.isRecurring,
+          notes: formData.notes,
           date: formData.date.toISOString() // Convert Date to string for storage
-        };
-        success = await addExpense(newExpense);
+        });
       }
       
       console.log('Expense operation result:', success);

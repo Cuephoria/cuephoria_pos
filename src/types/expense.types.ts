@@ -26,7 +26,7 @@ export interface ExpenseFormData {
   amount: number;
   category: ExpenseCategory;
   frequency: ExpenseFrequency;
-  date: Date;
+  date: Date; // Use Date object for form handling
   isRecurring: boolean;
   notes?: string;
 }

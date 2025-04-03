@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary, ExpenseFormData } from '@/types/expense.types';
 import { usePOS } from './POSContext';
@@ -8,8 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 interface ExpenseContextType {
   expenses: Expense[];
   businessSummary: BusinessSummary;
-  addExpense: (expense: ExpenseFormData) => Promise<boolean>;
-  updateExpense: (expense: Expense & { date: Date }) => Promise<boolean>;
+  addExpense: (expense: Omit<ExpenseFormData, 'date'> & { date: string }) => Promise<boolean>;
+  updateExpense: (expense: Expense) => Promise<boolean>;
   deleteExpense: (id: string) => Promise<boolean>;
   refreshExpenses: () => Promise<void>;
   loading: boolean;
@@ -111,18 +110,18 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const addExpense = async (formData: ExpenseFormData): Promise<boolean> => {
+  const addExpense = async (formData: Omit<ExpenseFormData, 'date'> & { date: string }): Promise<boolean> => {
     try {
       const id = generateId();
       
-      // Convert Date to ISO string for storage
+      // The date is already an ISO string from ExpenseDialog
       const newExpense: Expense = {
         id,
         name: formData.name,
         amount: formData.amount,
         category: formData.category,
         frequency: formData.frequency,
-        date: formData.date.toISOString(),
+        date: formData.date, // Already a string from ExpenseDialog
         isRecurring: formData.isRecurring,
         notes: formData.notes
       };
@@ -148,16 +147,11 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const updateExpense = async (expense: Expense & { date: Date }): Promise<boolean> => {
+  const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      // Convert Date to ISO string for storage
-      const updatedExpense: Expense = {
-        ...expense,
-        date: expense.date.toISOString()
-      };
-      
+      // The date is already an ISO string from ExpenseDialog
       const updatedExpenses = expenses.map(item => 
-        item.id === expense.id ? updatedExpense : item
+        item.id === expense.id ? expense : item
       );
       
       setExpenses(updatedExpenses);
