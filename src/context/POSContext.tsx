@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -93,30 +92,55 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return startSessionBase(stationId, customerId);
   };
   
-  const endSession = async (stationId: string) => {
+  // This is a key fix - we're making endSession return synchronously but handle the async operation
+  const endSession = (stationId: string) => {
     try {
-      const result = await endSessionBase(stationId, customers);
-      if (result) {
-        const { sessionCartItem, customer, updatedSession } = result;
-        
-        // Clear cart before adding the new session
-        clearCart();
-        
-        // Auto-select customer
-        if (customer) {
-          console.log("Auto-selecting customer:", customer.name);
-          selectCustomer(customer.id);
-        }
-        
-        // Add the session to cart
-        console.log("Adding session to cart:", sessionCartItem);
-        addToCart(sessionCartItem);
-        
-        return updatedSession;
+      // Get the current station to prepare synchronous response
+      const station = stations.find(s => s.id === stationId);
+      if (!station || !station.isOccupied || !station.currentSession) {
+        console.log("No active session found for this station in wrapper");
+        return undefined;
       }
-      return undefined;
+      
+      // Start the async operation
+      endSessionBase(stationId, customers)
+        .then(result => {
+          if (result) {
+            const { sessionCartItem, customer, updatedSession } = result;
+            
+            // Clear cart before adding the new session
+            clearCart();
+            
+            // Auto-select customer
+            if (customer) {
+              console.log("Auto-selecting customer:", customer.name);
+              selectCustomer(customer.id);
+            }
+            
+            // Add the session to cart
+            console.log("Adding session to cart:", sessionCartItem);
+            addToCart(sessionCartItem);
+          }
+        })
+        .catch(error => {
+          console.error('Error in endSession wrapper:', error);
+        });
+      
+      // Return a placeholder session result for synchronous code
+      return {
+        updatedSession: station.currentSession,
+        sessionCartItem: {
+          id: station.currentSession.id,
+          type: 'session' as const,
+          name: `${station.name}`,
+          price: 0, // Will be calculated properly in the async handler
+          quantity: 1,
+          total: 0
+        },
+        customer: customers.find(c => c.id === station.currentSession.customerId)
+      };
     } catch (error) {
-      console.error('Error in endSession wrapper:', error);
+      console.error('Error in endSession synchronous wrapper:', error);
       return undefined;
     }
   };
@@ -158,7 +182,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
   
-  // Modified to return a Bill object synchronously
+  // Modified to handle async operations but return synchronously
   const completeSale = (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
     try {
       // Apply student price for membership items if student discount is enabled
@@ -185,7 +209,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return product && product.category === 'membership';
       });
       
-      // This is async but we're returning a synchronous Bill for POSContext interface
+      // This is async but we're handling it internally and returning a synchronous Bill
       completeSaleBase(
         cart, 
         selectedCustomer, 
@@ -235,9 +259,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Reset student discount
           setIsStudentDiscount(false);
         }
+      }).catch(error => {
+        console.error("Error in completeSale async:", error);
       });
       
-      // Since we need to return a synchronous Bill, we'll create a new Bill
+      // Return a synchronous bill for the UI
       if (selectedCustomer) {
         const placeholderBill: Bill = {
           id: `temp-${new Date().getTime()}`,

@@ -62,11 +62,16 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           
         if (error) {
           console.error('Error fetching customers:', error);
+          toast({
+            title: 'Database Error',
+            description: 'Failed to fetch customers from database',
+            variant: 'destructive'
+          });
           return;
         }
         
         // Transform data to match our Customer type
-        if (data) {
+        if (data && data.length > 0) {
           const transformedCustomers = data.map(item => ({
             id: item.id,
             name: item.name,
@@ -84,19 +89,24 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             createdAt: new Date(item.created_at)
           }));
           
-          setCustomers(transformedCustomers.length > 0 ? transformedCustomers : initialCustomers);
+          setCustomers(transformedCustomers);
         } else {
           setCustomers(initialCustomers);
         }
       } catch (error) {
         console.error('Error in fetchCustomers:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load customers',
+          variant: 'destructive'
+        });
         // Fallback to initialCustomers
         setCustomers(initialCustomers);
       }
     };
     
     fetchCustomers();
-  }, [initialCustomers]);
+  }, [initialCustomers, toast]);
   
   // Check for expired memberships
   useEffect(() => {
@@ -140,6 +150,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const addCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'>) => {
     try {
+      // Create a new customer in Supabase
       const { data, error } = await supabase
         .from('customers')
         .insert({
@@ -162,14 +173,15 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       if (error) {
         console.error('Error adding customer:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to add customer',
+          title: 'Database Error',
+          description: 'Failed to add customer to database',
           variant: 'destructive'
         });
         return null;
       }
       
       if (data) {
+        // Transform response to our Customer type
         const newCustomer: Customer = {
           id: data.id,
           name: data.name,
@@ -187,7 +199,14 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           createdAt: new Date(data.created_at)
         };
         
-        setCustomers([...customers, newCustomer]);
+        // Update local state
+        setCustomers(prev => [...prev, newCustomer]);
+        
+        toast({
+          title: 'Success',
+          description: 'Customer added successfully',
+        });
+        
         return newCustomer;
       }
       return null;
@@ -210,6 +229,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return null;
     
+    // Calculate membership dates
     const now = new Date();
     const membershipStartDate = now;
     let membershipExpiryDate = new Date(now);
@@ -221,6 +241,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       membershipExpiryDate.setMonth(membershipExpiryDate.getMonth() + 1);
     }
     
+    // Prepare updated customer data
     const updatedCustomer = {
       ...customer,
       isMember: true,
@@ -233,6 +254,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       membershipExpiryDate
     };
     
+    // Update in database
     const result = await updateCustomer(updatedCustomer);
     
     // Notify user about the membership update
@@ -247,6 +269,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const updateCustomer = async (customer: Customer) => {
     try {
+      // Update customer in Supabase
       const { error } = await supabase
         .from('customers')
         .update({
@@ -268,19 +291,25 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       if (error) {
         console.error('Error updating customer:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to update customer',
+          title: 'Database Error',
+          description: 'Failed to update customer in database',
           variant: 'destructive'
         });
         return null;
       }
       
+      // Update local state
       setCustomers(customers.map(c => c.id === customer.id ? customer : c));
       
       // If we're updating the currently selected customer, update that too
       if (selectedCustomer && selectedCustomer.id === customer.id) {
         setSelectedCustomer(customer);
       }
+      
+      toast({
+        title: 'Success',
+        description: 'Customer updated successfully',
+      });
       
       return customer;
     } catch (error) {

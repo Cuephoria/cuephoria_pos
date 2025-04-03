@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Station, Session, Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { generateId } from '@/utils/pos.utils';
+import { useToast } from '@/hooks/use-toast';
 
 export const useStations = (
   initialStations: Station[], 
@@ -10,6 +11,7 @@ export const useStations = (
 ) => {
   const [stations, setStations] = useState<Station[]>(initialStations);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const { toast } = useToast();
   
   // Load data from Supabase
   useEffect(() => {
@@ -47,26 +49,36 @@ export const useStations = (
           
         if (error) {
           console.error('Error fetching stations:', error);
+          toast({
+            title: 'Database Error',
+            description: 'Failed to fetch stations from database',
+            variant: 'destructive'
+          });
           return;
         }
         
         // Transform data to match our Station type
-        if (data) {
+        if (data && data.length > 0) {
           const transformedStations: Station[] = data.map(item => ({
             id: item.id,
             name: item.name,
-            type: item.type as 'ps5' | '8ball',  // Cast to appropriate type
+            type: (item.type as 'ps5' | '8ball'), // Force the correct type
             hourlyRate: item.hourly_rate,
             isOccupied: item.is_occupied,
             currentSession: null
           }));
           
-          setStations(transformedStations.length > 0 ? transformedStations : initialStations);
+          setStations(transformedStations);
         } else {
           setStations(initialStations);
         }
       } catch (error) {
         console.error('Error in fetchStations:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load stations',
+          variant: 'destructive'
+        });
         // Fallback to initialStations
         setStations(initialStations);
       }
@@ -107,11 +119,16 @@ export const useStations = (
           
         if (error) {
           console.error('Error fetching sessions:', error);
+          toast({
+            title: 'Database Error',
+            description: 'Failed to fetch sessions from database',
+            variant: 'destructive'
+          });
           return;
         }
         
         // Transform data to match our Session type
-        if (data) {
+        if (data && data.length > 0) {
           const transformedSessions = data.map(item => ({
             id: item.id,
             stationId: item.station_id,
@@ -144,12 +161,17 @@ export const useStations = (
         }
       } catch (error) {
         console.error('Error in fetchSessions:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load sessions',
+          variant: 'destructive'
+        });
       }
     };
     
     fetchStations();
     fetchSessions();
-  }, [initialStations]);
+  }, [initialStations, toast]);
   
   const startSession = async (stationId: string, customerId: string) => {
     try {
@@ -171,6 +193,11 @@ export const useStations = (
         
       if (error) {
         console.error('Error creating session:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to start session',
+          variant: 'destructive'
+        });
         return;
       }
       
@@ -197,9 +224,19 @@ export const useStations = (
           .from('stations')
           .update({ is_occupied: true })
           .eq('id', stationId);
+        
+        toast({
+          title: 'Success',
+          description: 'Session started successfully',
+        });
       }
     } catch (error) {
       console.error('Error in startSession:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start session',
+        variant: 'destructive'
+      });
     }
   };
   
@@ -230,6 +267,11 @@ export const useStations = (
         
       if (error) {
         console.error('Error updating session:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to end session',
+          variant: 'destructive'
+        });
         return;
       }
       
@@ -262,7 +304,7 @@ export const useStations = (
       if (customer) {
         updateCustomer({
           ...customer,
-          totalPlayTime: customer.totalPlayTime + durationMinutes
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
         });
       }
       
@@ -280,9 +322,19 @@ export const useStations = (
         total: sessionCost
       };
       
+      toast({
+        title: 'Success',
+        description: 'Session ended successfully',
+      });
+      
       return { updatedSession, sessionCartItem, customer };
     } catch (error) {
       console.error('Error in endSession:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to end session',
+        variant: 'destructive'
+      });
       return undefined;
     }
   };
