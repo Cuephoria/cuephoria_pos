@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StationCard from '@/components/StationCard';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AddStationDialog from '@/components/AddStationDialog';
 
@@ -20,7 +20,7 @@ const Stations = () => {
   const activeBall = ballStations.filter(s => s.isOccupied).length;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 bg-gray-950 text-white">
+    <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between animate-slide-down">
         <h2 className="text-3xl font-bold tracking-tight gradient-text font-heading">Gaming Stations</h2>
         <div className="flex space-x-2">
@@ -40,10 +40,10 @@ const Stations = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
-        <Card className="bg-gray-900 border-0 animate-fade-in">
+        <Card className="bg-gradient-to-r from-cuephoria-purple/20 to-cuephoria-lightpurple/20 border-0 animate-fade-in">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">PlayStation 5</p>
+              <p className="text-sm text-muted-foreground">PlayStation 5</p>
               <p className="text-2xl font-bold">{activePs5} / {ps5Stations.length} Active</p>
             </div>
             <div className="rounded-full bg-cuephoria-purple/20 p-3">
@@ -55,10 +55,10 @@ const Stations = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-gray-900 border-0 animate-fade-in delay-100">
+        <Card className="bg-gradient-to-r from-cuephoria-orange/20 to-cuephoria-orange/10 border-0 animate-fade-in delay-100">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">8-Ball Tables</p>
+              <p className="text-sm text-muted-foreground">8-Ball Tables</p>
               <p className="text-2xl font-bold">{activeBall} / {ballStations.length} Active</p>
             </div>
             <div className="rounded-full bg-cuephoria-orange/20 p-3">
@@ -81,7 +81,7 @@ const Stations = () => {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {ps5Stations.map((station, index) => (
-              <div key={station.id} className="animate-scale-in" style={{animationDelay: `${index * 100}ms`}}>
+              <div key={station.id} className={`animate-scale-in delay-${index * 100}`} style={{animationDelay: `${index * 100}ms`}}>
                 <StationCard station={station} />
               </div>
             ))}
@@ -97,7 +97,7 @@ const Stations = () => {
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {ballStations.map((station, index) => (
-              <div key={station.id} className="animate-scale-in" style={{animationDelay: `${index * 100 + 300}ms`}}>
+              <div key={station.id} className={`animate-scale-in delay-${index * 100 + 300}`} style={{animationDelay: `${index * 100 + 300}ms`}}>
                 <StationCard station={station} />
               </div>
             ))}

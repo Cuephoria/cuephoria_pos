@@ -133,15 +133,15 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex justify-between text-sm">
-        <span className="font-medium">Duration:</span>
-        <span className="font-mono text-indigo-400 font-bold">
+        <span>Duration:</span>
+        <span className="font-mono bg-black/10 px-2 py-1 rounded text-cuephoria-lightpurple font-bold">
           {formatTimeDisplay()}
         </span>
       </div>
-      <div className="flex justify-between text-sm">
-        <span className="font-medium">Current Cost:</span>
+      <div className="flex justify-between text-sm font-medium mt-2">
+        <span>Current Cost:</span>
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold" />
       </div>
     </div>
