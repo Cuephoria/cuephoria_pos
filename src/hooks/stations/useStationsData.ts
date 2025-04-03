@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -7,8 +8,8 @@ import { generateId } from '@/utils/pos.utils';
 /**
  * Hook to load and manage station data from Supabase
  */
-export const useStationsData = () => {
-  const [stations, setStations] = useState<Station[]>([]);
+export const useStationsData = (initialStations: Station[]) => {
+  const [stations, setStations] = useState<Station[]>(initialStations);
   const [stationsLoading, setStationsLoading] = useState<boolean>(false);
   const [stationsError, setStationsError] = useState<Error | null>(null);
   const { toast } = useToast();
@@ -31,8 +32,8 @@ export const useStationsData = () => {
           description: 'Failed to fetch stations from database',
           variant: 'destructive'
         });
-        // Use empty array if error
-        setStations([]);
+        // Fallback to initialStations
+        setStations(initialStations);
         return;
       }
       
@@ -50,12 +51,40 @@ export const useStationsData = () => {
         setStations(transformedStations);
         console.log("Loaded stations from Supabase:", transformedStations);
       } else {
-        console.log("No stations found in Supabase");
-        toast({
-          title: 'Info',
-          description: 'No stations found in database. Please add stations.',
-        });
-        setStations([]);
+        console.log("No stations found in Supabase, using initial stations:", initialStations);
+        // Fallback to initialStations
+        setStations(initialStations);
+        
+        // Try to create the initial stations in Supabase
+        for (const station of initialStations) {
+          // Generate a proper UUID for each station if it doesn't have one
+          const dbStationId = crypto.randomUUID();
+          
+          try {
+            const { error } = await supabase
+              .from('stations')
+              .insert({
+                id: dbStationId,
+                name: station.name,
+                type: station.type,
+                hourly_rate: station.hourlyRate,
+                is_occupied: station.isOccupied
+              });
+              
+            if (error) {
+              console.error(`Error creating station ${station.name} in Supabase:`, error);
+            } else {
+              console.log(`Created station ${station.name} in Supabase with ID ${dbStationId}`);
+              
+              // Update the local state with the new UUID
+              setStations(prev => prev.map(s => 
+                s.id === station.id ? { ...s, id: dbStationId } : s
+              ));
+            }
+          } catch (error) {
+            console.error(`Error in station creation for ${station.name}:`, error);
+          }
+        }
       }
     } catch (error) {
       console.error('Error in fetchStations:', error);
@@ -65,8 +94,8 @@ export const useStationsData = () => {
         description: 'Failed to load stations',
         variant: 'destructive'
       });
-      // Use empty array if error
-      setStations([]);
+      // Fallback to initialStations
+      setStations(initialStations);
     } finally {
       setStationsLoading(false);
     }
@@ -141,7 +170,7 @@ export const useStationsData = () => {
   
   useEffect(() => {
     refreshStations();
-  }, []);
+  }, [initialStations]);
   
   return {
     stations,

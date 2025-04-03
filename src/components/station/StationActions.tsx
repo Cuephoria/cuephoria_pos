@@ -99,6 +99,32 @@ const StationActions: React.FC<StationActionsProps> = ({
       }
     }
   };
+  
+  // Filter customers function - preserved from the current implementation
+  const filterCustomers = (searchValue: string) => {
+    return customers.filter(customer => {
+      if (!searchValue.trim()) return true;
+      
+      const query = searchValue.toLowerCase().trim();
+      
+      // Search by phone number
+      if (customer.phone && customer.phone.includes(query)) {
+        return true;
+      }
+      
+      // Search by name
+      if (customer.name && customer.name.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      // Search by email
+      if (customer.email && customer.email.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
 
   if (station.isOccupied) {
     return (
@@ -122,12 +148,11 @@ const StationActions: React.FC<StationActionsProps> = ({
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between mb-3"
-            disabled={customers.length === 0}
           >
             {selectedCustomerId ? (
               customers.find((customer) => customer.id === selectedCustomerId)?.name
             ) : (
-              customers.length === 0 ? "No customers available" : "Select customer..."
+              "Select customer..."
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -171,10 +196,10 @@ const StationActions: React.FC<StationActionsProps> = ({
       <Button 
         variant="default" 
         className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
-        disabled={!selectedCustomerId || isLoading || customers.length === 0} 
+        disabled={!selectedCustomerId || isLoading} 
         onClick={handleStartSession}
       >
-        {isLoading ? "Starting..." : customers.length === 0 ? "No Customers Available" : "Start Session"}
+        {isLoading ? "Starting..." : "Start Session"}
       </Button>
     </>
   );

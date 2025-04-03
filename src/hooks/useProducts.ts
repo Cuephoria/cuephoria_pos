@@ -3,6 +3,7 @@ import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
+import { initialProducts } from '@/data/sampleData';
 
 const membershipProducts: Product[] = [
   { 
@@ -128,7 +129,7 @@ const membershipProducts: Product[] = [
 ];
 
 export const useProducts = () => {
-  const [products, setProducts] = useState<Product[]>(membershipProducts);
+  const [products, setProducts] = useState<Product[]>([...initialProducts, ...membershipProducts]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -137,8 +138,16 @@ export const useProducts = () => {
   
   useEffect(() => {
     console.log('useProducts initialized with', products.length, 'products');
+    console.log('Initial sample data products:', initialProducts.length);
     console.log('Membership products:', membershipProducts.length);
     
+    const countByCategory = products.reduce((acc, product) => {
+      acc[product.category] = (acc[product.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    console.log('Products by category:', countByCategory);
+
     refreshFromDB().catch(err => {
       console.error('Error loading products from DB:', err);
     });
@@ -328,10 +337,11 @@ export const useProducts = () => {
   };
   
   const resetToInitialProducts = () => {
-    setProducts(membershipProducts);
+    const allProducts = [...initialProducts, ...membershipProducts];
+    setProducts(allProducts);
     setError(null);
-    console.log('Reset to membership products only:', membershipProducts.length);
-    return membershipProducts;
+    console.log('Reset to initial products:', allProducts.length);
+    return allProducts;
   };
   
   const refreshFromDB = async () => {
@@ -399,11 +409,30 @@ export const useProducts = () => {
         
         return allProducts;
       } else {
-        console.log('No products in DB, using only membership products');
-        toast({
-          title: 'Info',
-          description: 'No products found in database. Only membership products are available.',
-        });
+        console.log('No products in DB, using initial data and syncing to DB');
+        
+        const initialNonMembershipProducts = initialProducts.filter(p => p.category !== 'membership');
+        
+        if (initialNonMembershipProducts.length > 0) {
+          const { error: insertError } = await supabase
+            .from('products')
+            .insert(initialNonMembershipProducts.map(convertToSupabaseProduct));
+            
+          if (insertError) {
+            console.error('Error initializing products in DB:', insertError);
+            toast({
+              title: 'Warning',
+              description: 'Failed to save initial products to database',
+              variant: 'destructive'
+            });
+          } else {
+            console.log('Initialized DB with sample products');
+            toast({
+              title: 'Success',
+              description: 'Initialized database with sample products',
+            });
+          }
+        }
         
         return resetToInitialProducts();
       }
