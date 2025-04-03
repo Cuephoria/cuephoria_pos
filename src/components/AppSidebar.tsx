@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users } from 'lucide-react';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, CircleOff } from 'lucide-react';
 import { 
   Sidebar, 
   SidebarContent, 
@@ -37,8 +37,8 @@ const AppSidebar: React.FC = () => {
   return (
     <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
       <SidebarHeader className="p-4 flex items-center gap-2">
-        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-gradient-to-r from-[#6E59A5] to-[#9b87f5] shadow-lg animate-pulse-glow">
-          <span className="text-white font-bold font-heading">CQ</span>
+        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-gradient-to-r from-green-600 to-green-800 shadow-lg animate-pulse-glow relative">
+          <CircleOff className="h-5 w-5 text-white absolute animate-bounce" />
         </div>
         <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
       </SidebarHeader>
@@ -79,3 +79,4 @@ const AppSidebar: React.FC = () => {
 };
 
 export default AppSidebar;
+
