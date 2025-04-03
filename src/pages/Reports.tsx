@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -52,7 +51,7 @@ import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport'
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, sessions, products, exportBills, exportCustomers, deleteSession, deleteAllSessions } = usePOS();
+  const { customers, bills, sessions, products, exportBills, exportCustomers, deleteSession } = usePOS();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
@@ -175,21 +174,6 @@ const ReportsPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Error deleting session:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-  
-  // Handle deleting all sessions
-  const handleDeleteAllSessions = async () => {
-    setIsDeleting(true);
-    try {
-      const success = await deleteAllSessions();
-      if (!success) {
-        console.error("Failed to delete all sessions");
-      }
-    } catch (error) {
-      console.error("Error deleting all sessions:", error);
     } finally {
       setIsDeleting(false);
     }
@@ -563,43 +547,6 @@ const ReportsPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">Session History</h2>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="gap-2" disabled={isDeleting || filteredSessions.length === 0}>
-                    <Trash2 className="h-4 w-4" />
-                    Delete All Sessions
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-gray-900 border-gray-800 text-white">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-red-400 flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5" />
-                      Delete all sessions?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="text-gray-300">
-                      This will permanently delete all session records. This action cannot be undone.
-                      {sessions.filter(s => !s.endTime).length > 0 && (
-                        <p className="text-red-400 mt-2 font-semibold">
-                          Warning: {sessions.filter(s => !s.endTime).length} active session(s) will be terminated!
-                        </p>
-                      )}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction 
-                      className="bg-red-600 hover:bg-red-700 text-white" 
-                      onClick={handleDeleteAllSessions}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? "Deleting..." : "Delete All"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </div>
             
             <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
