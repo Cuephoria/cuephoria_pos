@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -90,11 +89,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Wrapper functions that combine functionality from multiple hooks
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
-    // Check membership validity before allowing session
-    if (!checkMembershipValidity(customerId)) {
-      throw new Error("Membership not valid or expired");
-    }
-    
     await startSessionBase(stationId, customerId);
   };
   
@@ -349,7 +343,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProduct,
         startSession,
         endSession,
-        deleteStation, // Add the new deleteStation function
+        deleteStation,
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,
