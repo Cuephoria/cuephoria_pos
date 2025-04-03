@@ -147,10 +147,6 @@ export const useProducts = () => {
     }, {} as Record<string, number>);
     
     console.log('Products by category:', countByCategory);
-
-    refreshFromDB().catch(err => {
-      console.error('Error loading products from DB:', err);
-    });
   }, []);
   
   const isProductDuplicate = (productName: string, excludeId?: string): boolean => {
@@ -187,11 +183,6 @@ export const useProducts = () => {
             if (error) {
               console.error('Error adding product to DB:', error);
               setError(`Failed to add product to database: ${error.message}`);
-              toast({
-                title: 'Database Error',
-                description: `Product added locally but failed to sync with database: ${error.message}`,
-                variant: 'destructive'
-              });
             } else {
               console.log('Product added to DB:', newProduct.name);
             }
@@ -249,22 +240,17 @@ export const useProducts = () => {
           if (error) {
             console.error('Error updating product in DB:', error);
             setError(`Failed to update product in database: ${error.message}`);
-            toast({
-              title: 'Database Sync Error',
-              description: `Product updated locally but failed to sync with database: ${error.message}`,
-              variant: 'destructive'
-            });
             return supabase
               .from('products')
               .insert(convertToSupabaseProduct(product));
-          } else {
-            console.log('Product updated in DB:', product.name);
           }
         })
         .then(result => {
           if (result?.error) {
             console.error('Error inserting product after update failure:', result.error);
             setError(`Failed to insert product after update failure: ${result.error.message}`);
+          } else {
+            console.log('Product updated in DB:', product.name);
           }
         });
       
@@ -310,11 +296,6 @@ export const useProducts = () => {
           if (error) {
             console.error('Error deleting product from DB:', error);
             setError(`Failed to delete product from database: ${error.message}`);
-            toast({
-              title: 'Database Sync Error',
-              description: `Product deleted locally but failed to sync with database: ${error.message}`,
-              variant: 'destructive'
-            });
           } else {
             console.log('Product deleted from DB:', id);
           }
@@ -364,27 +345,22 @@ export const useProducts = () => {
       if (data && data.length > 0) {
         const dbProducts = data.map(convertFromSupabaseProduct);
         
-        const uniqueProductsById = new Map<string, Product>();
+        const membershipIds = new Set(membershipProducts.map(p => p.id));
+        const nonMembershipDbProducts = dbProducts.filter(p => !membershipIds.has(p.id));
+        
+        const uniqueProducts = new Map<string, Product>();
         const duplicates: string[] = [];
         
         membershipProducts.forEach(product => {
-          uniqueProductsById.set(product.id, product);
+          uniqueProducts.set(product.name.toLowerCase(), product);
         });
         
-        dbProducts.forEach(product => {
-          if (!uniqueProductsById.has(product.id)) {
-            const productNameLower = product.name.toLowerCase();
-            const duplicateByName = Array.from(uniqueProductsById.values()).find(
-              p => p.name.toLowerCase() === productNameLower && p.id !== product.id
-            );
-            
-            if (duplicateByName) {
-              duplicates.push(`${product.name} (ID: ${product.id})`);
-            } else {
-              uniqueProductsById.set(product.id, product);
-            }
-          } else if (!product.id.startsWith('mem')) {
-            duplicates.push(`${product.name} (ID: ${product.id})`);
+        nonMembershipDbProducts.forEach(product => {
+          const lowerName = product.name.toLowerCase();
+          if (uniqueProducts.has(lowerName)) {
+            duplicates.push(product.name);
+          } else {
+            uniqueProducts.set(lowerName, product);
           }
         });
         
@@ -393,47 +369,20 @@ export const useProducts = () => {
             (duplicates.length > 3 ? ` and ${duplicates.length - 3} more` : '');
           
           toast({
-            title: 'Duplicate Products Removed',
-            description: `${duplicates.length} duplicate products were found and removed: ${duplicateNames}`,
-            variant: "default"
+            title: 'Warning',
+            description: `Duplicate product names found and resolved: ${duplicateNames}`,
+            variant: "destructive"
           });
           
           console.warn('Duplicate products removed:', duplicates);
         }
         
-        const allProducts = Array.from(uniqueProductsById.values());
+        const allProducts = Array.from(uniqueProducts.values());
         setProducts(allProducts);
         console.log('Refreshed from DB:', allProducts.length);
-        
-        localStorage.setItem('cuephoriaProducts', JSON.stringify(allProducts));
-        
         return allProducts;
       } else {
-        console.log('No products in DB, using initial data and syncing to DB');
-        
-        const initialNonMembershipProducts = initialProducts.filter(p => p.category !== 'membership');
-        
-        if (initialNonMembershipProducts.length > 0) {
-          const { error: insertError } = await supabase
-            .from('products')
-            .insert(initialNonMembershipProducts.map(convertToSupabaseProduct));
-            
-          if (insertError) {
-            console.error('Error initializing products in DB:', insertError);
-            toast({
-              title: 'Warning',
-              description: 'Failed to save initial products to database',
-              variant: 'destructive'
-            });
-          } else {
-            console.log('Initialized DB with sample products');
-            toast({
-              title: 'Success',
-              description: 'Initialized database with sample products',
-            });
-          }
-        }
-        
+        console.log('No products in DB, using initial');
         return resetToInitialProducts();
       }
     } catch (error) {
