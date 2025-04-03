@@ -20,6 +20,7 @@ export const useStartSession = ({
    */
   const startSession = async (stationId: string, customerId: string): Promise<Session | undefined> => {
     try {
+      console.log("Starting session for station:", stationId);
       const station = stations.find(s => s.id === stationId);
       if (!station || station.isOccupied) {
         throw new Error("Station not available or already occupied");
