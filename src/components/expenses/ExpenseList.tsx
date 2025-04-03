@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { format } from 'date-fns';
 import { Expense } from '@/types/expense.types';
@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DateFilter from './DateFilter';
 
 const getCategoryColor = (category: string) => {
   switch (category) {
@@ -45,21 +44,7 @@ const getCategoryColor = (category: string) => {
   }
 };
 
-interface ExpenseListProps {
-  startDate?: Date;
-  endDate?: Date;
-  onStartDateChange?: (date: Date | undefined) => void;
-  onEndDateChange?: (date: Date | undefined) => void;
-  onDateReset?: () => void;
-}
-
-const ExpenseList: React.FC<ExpenseListProps> = ({
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-  onDateReset
-}) => {
+const ExpenseList: React.FC = () => {
   const { expenses, deleteExpense } = useExpenses();
   
   const formatErrorMessage = (error: unknown): string => {
@@ -77,55 +62,21 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     }
   };
   
-  // Filter expenses based on date range
-  const filteredExpenses = expenses.filter(expense => {
-    if (!startDate && !endDate) return true;
-    
-    const expenseDate = new Date(expense.date);
-    
-    if (startDate && endDate) {
-      return expenseDate >= startDate && expenseDate <= endDate;
-    } else if (startDate) {
-      return expenseDate >= startDate;
-    } else if (endDate) {
-      return expenseDate <= endDate;
-    }
-    
-    return true;
-  });
-  
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Recent Expenses</CardTitle>
-        <div className="flex items-center gap-2">
-          {/* Only render date filter controls if the parent component didn't provide them */}
-          {!onStartDateChange && !onEndDateChange && (
-            <div className="mr-4">
-              <DateFilter
-                startDate={startDate}
-                endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
-                onReset={() => {
-                  setStartDate(undefined);
-                  setEndDate(undefined);
-                }}
-              />
-            </div>
-          )}
-          <ExpenseDialog>
-            <Button variant="default" className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add Expense
-            </Button>
-          </ExpenseDialog>
-        </div>
+        <ExpenseDialog>
+          <Button variant="default" className="flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" />
+            Add Expense
+          </Button>
+        </ExpenseDialog>
       </CardHeader>
       <CardContent>
-        {filteredExpenses.length === 0 ? (
+        {expenses.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No expenses found for the selected date range. Try adjusting your filters or add your first expense by clicking the button above.
+            No expenses found. Add your first expense by clicking the button above.
           </div>
         ) : (
           <div className="rounded-md border">
@@ -141,7 +92,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredExpenses.map((expense) => (
+                {expenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>{expense.name}</TableCell>
                     <TableCell>

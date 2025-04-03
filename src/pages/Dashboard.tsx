@@ -11,8 +11,6 @@ import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart'
 import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
 import ExpenseList from '@/components/expenses/ExpenseList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DateFilter from '@/components/expenses/DateFilter';
-import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 
 const Dashboard = () => {
   const { customers, bills, stations, sessions, products } = usePOS();
@@ -28,9 +26,6 @@ const Dashboard = () => {
     lowStockCount: 0,
     lowStockItems: []
   });
-
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   
   useEffect(() => {
     setChartData(generateChartData());
@@ -47,11 +42,6 @@ const Dashboard = () => {
       lowStockItems: lowStockItems
     });
   }, [bills, customers, stations, sessions, products, activeTab]);
-
-  const handleDateReset = () => {
-    setStartDate(undefined);
-    setEndDate(undefined);
-  };
   
   const generateChartData = () => {
     if (activeTab === 'hourly') {
@@ -290,29 +280,9 @@ const Dashboard = () => {
         </TabsContent>
         
         <TabsContent value="finances" className="space-y-6">
-          <div className="mb-4">
-            <DateFilter
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              onReset={handleDateReset}
-            />
-          </div>
-
-          <BusinessSummaryReport 
-            startDate={startDate} 
-            endDate={endDate}
-            onDownload={() => {}} // This is just a placeholder
-          />
+          <BusinessSummarySection />
           
-          <ExpenseList 
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-            onDateReset={handleDateReset}
-          />
+          <ExpenseList />
         </TabsContent>
       </Tabs>
     </div>
