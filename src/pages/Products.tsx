@@ -203,23 +203,41 @@ const ProductsPage: React.FC = () => {
   }, [products]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-        <div className="flex space-x-2">
-          <Button onClick={handleSyncToSupabase} variant="outline" disabled={isSyncing}>
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <h2 className="text-3xl font-bold tracking-tight flex-grow">Products</h2>
+        <div className="flex flex-wrap justify-end gap-2 w-full md:w-auto">
+          <Button 
+            onClick={handleSyncToSupabase} 
+            variant="outline" 
+            disabled={isSyncing}
+            className="flex items-center justify-center w-full md:w-auto"
+          >
             <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} /> 
             Sync to Supabase
           </Button>
-          <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
+          <Button 
+            onClick={handleRefreshProducts} 
+            variant="outline" 
+            disabled={isRefreshing}
+            className="flex items-center justify-center w-full md:w-auto"
+          >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
             Refresh DB
           </Button>
-          <Button onClick={handleResetProducts} variant="outline" disabled={isResetting}>
+          <Button 
+            onClick={handleResetProducts} 
+            variant="outline" 
+            disabled={isResetting}
+            className="flex items-center justify-center w-full md:w-auto"
+          >
             <RotateCcw className={`h-4 w-4 mr-2 ${isResetting ? 'animate-spin' : ''}`} /> 
             Reset
           </Button>
-          <Button onClick={handleOpenDialog}>
+          <Button 
+            onClick={handleOpenDialog} 
+            className="flex items-center justify-center w-full md:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" /> Add Product
           </Button>
         </div>
