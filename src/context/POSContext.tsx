@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -10,8 +11,6 @@ import {
   Session,
   SessionResult
 } from '@/types/pos.types';
-import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
-import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
@@ -91,7 +90,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     selectCustomer,
     checkMembershipValidity,
     deductMembershipHours
-  } = useCustomers(initialCustomers);
+  } = useCustomers([]);
   
   const { 
     stations, 
@@ -101,7 +100,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startSession: startSessionBase, 
     endSession: endSessionBase,
     deleteStation
-  } = useStations(initialStations, updateCustomer);
+  } = useStations([], updateCustomer);
   
   const { 
     cart, 
@@ -331,34 +330,46 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomersBase(customers);
   };
   
-  // Wrapper for sample data functions
+  // Simplified reset function - only resets local state
   const handleResetToSampleData = (options?: ResetOptions) => {
-    resetToSampleData(
-      options,
-      initialProducts,
-      initialCustomers,
-      initialStations,
-      setProducts,
-      setCustomers,
-      setBills,
-      setSessions,
-      setStations,
-      setCart,
-      setDiscountAmount,
-      setLoyaltyPointsUsedAmount,
-      setSelectedCustomer
-    );
+    // Clear all data except for products (maintained by Supabase sync)
+    if (options?.customers || !options) {
+      setCustomers([]);
+      localStorage.removeItem('cuephoriaCustomers');
+    }
+    
+    if (options?.sales || !options) {
+      setBills([]);
+      localStorage.removeItem('cuephoriaBills');
+    }
+    
+    if (options?.sessions || !options) {
+      setSessions([]);
+      setStations(stations.map(station => ({
+        ...station,
+        isOccupied: false,
+        currentSession: null
+      })));
+      localStorage.removeItem('cuephoriaSessions');
+      localStorage.removeItem('cuephoriaStations');
+    }
+    
+    // Clear cart regardless
+    setCart([]);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    setSelectedCustomer(null);
+    
+    // Refresh products from DB
+    products[0].refreshFromDB?.();
   };
   
+  // This function is no longer needed but kept for API compatibility
   const handleAddSampleIndianData = () => {
-    addSampleIndianData(
-      products,
-      customers,
-      bills,
-      setProducts,
-      setCustomers,
-      setBills
-    );
+    toast({
+      title: "Info",
+      description: "Sample data has been disabled. Please add products manually or through database import.",
+    });
   };
   
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
