@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePOS, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { User, Edit, Trash, Clock, CreditCard, Star, Award, CalendarCheck, Calendar } from 'lucide-react';
@@ -41,7 +41,6 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
 
   const getMembershipBadgeText = () => {
     if (!customer.isMember) return 'Non-Member';
-    if (!isMembershipActive()) return 'Expired';
     
     const duration = customer.membershipDuration || 
                      (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'Weekly' : 
@@ -49,12 +48,14 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     
     let planType = '';
     if (customer.membershipPlan) {
-      if (customer.membershipPlan.includes('8-Ball')) {
-        planType = 'Pool';
-      } else if (customer.membershipPlan.includes('PS5')) {
-        planType = 'Gaming';
-      } else if (customer.membershipPlan.includes('Combo') || customer.membershipPlan.includes('Ultimate')) {
+      if (customer.membershipPlan.includes('PS5')) {
+        planType = 'PS5';
+      } else if (customer.membershipPlan.includes('8-Ball')) {
+        planType = '8-Ball';
+      } else if (customer.membershipPlan.includes('Combo')) {
         planType = 'Combo';
+      } else if (customer.membershipPlan.includes('Ultimate')) {
+        planType = 'Ultimate';
       }
     }
     
@@ -162,6 +163,15 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
           </Button>
         ) : (
           <>
+            {onEdit && (
+              <Dialog>
+                <DialogContent className="bg-background">
+                  <DialogHeader>
+                    <DialogTitle>Edit Customer</DialogTitle>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
+            )}
             <Button 
               variant="outline" 
               size="sm" 

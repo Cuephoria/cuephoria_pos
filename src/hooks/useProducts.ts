@@ -1,17 +1,15 @@
-
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-// Define the membership products with shorter names
 const membershipProducts: Product[] = [
   { 
     id: 'mem1', 
-    name: "8-Ball Weekly (2P)",
+    name: "Silver - Weekly PS5 Pass (2 PAX)",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
-    price: 399, // Default to offer price
+    price: 399,
     category: 'membership', 
     stock: 9999,
     duration: 'weekly',
@@ -19,11 +17,11 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem2', 
-    name: "8-Ball Weekly (4P)",
+    name: "Silver - Weekly PS5 Pass (4 PAX)", 
     originalPrice: 1199,
     offerPrice: 599,
     studentPrice: 499,
-    price: 599, // Default to offer price
+    price: 599,
     category: 'membership', 
     stock: 9999,
     duration: 'weekly',
@@ -31,11 +29,11 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem3', 
-    name: "PS5 Weekly",
+    name: "Silver - Weekly 8-Ball Pass (2 PAX)",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
-    price: 399, // Default to offer price
+    price: 399,
     category: 'membership', 
     stock: 9999,
     duration: 'weekly',
@@ -43,11 +41,11 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem4', 
-    name: "Combo Weekly",
+    name: "Combo - Weekly Pass",
     originalPrice: 1799,
     offerPrice: 899,
     studentPrice: 799,
-    price: 899, // Default to offer price
+    price: 899,
     category: 'membership', 
     stock: 9999,
     duration: 'weekly',
@@ -55,11 +53,11 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem5', 
-    name: "8-Ball Monthly (2P)",
+    name: "Silver - Monthly 8-Ball Pass (2 PAX)",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
-    price: 1499, // Default to offer price
+    price: 1499,
     category: 'membership', 
     stock: 9999,
     duration: 'monthly',
@@ -67,11 +65,11 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem6', 
-    name: "PS5 Monthly",
+    name: "Silver - Monthly PS5 Pass",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
-    price: 1499, // Default to offer price
+    price: 1499,
     category: 'membership', 
     stock: 9999,
     duration: 'monthly',
@@ -79,11 +77,11 @@ const membershipProducts: Product[] = [
   },
   { 
     id: 'mem7', 
-    name: "Ultimate Monthly",
+    name: "Ultimate - Monthly Pass",
     originalPrice: 5999,
     offerPrice: 3499,
     studentPrice: 2999,
-    price: 3499, // Default to offer price
+    price: 3499,
     category: 'membership', 
     stock: 9999,
     duration: 'monthly',
@@ -94,31 +92,26 @@ const membershipProducts: Product[] = [
 export const useProducts = (initialProducts: Product[]) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   
-  // Load data from localStorage
   useEffect(() => {
     const storedProducts = localStorage.getItem('cuephoriaProducts');
     
     if (storedProducts) {
       const parsedProducts = JSON.parse(storedProducts);
       
-      // Check if we need to add membership products
       const hasMembershipProducts = parsedProducts.some(
         (p: Product) => p.category === 'membership'
       );
       
       if (!hasMembershipProducts) {
-        // If no membership products, add them to the stored products
         setProducts([...parsedProducts, ...membershipProducts]);
       } else {
         setProducts(parsedProducts);
       }
     } else {
-      // If no stored products, add membership products to initial products
       setProducts([...initialProducts, ...membershipProducts]);
     }
   }, [initialProducts]);
   
-  // Save data to localStorage
   useEffect(() => {
     localStorage.setItem('cuephoriaProducts', JSON.stringify(products));
   }, [products]);
