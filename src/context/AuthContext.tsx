@@ -1,14 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
-interface User {
+interface AdminUser {
   id: string;
   username: string;
   isAdmin: boolean;
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AdminUser | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -17,23 +18,23 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('cuephoriaUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const storedAdmin = localStorage.getItem('cuephoriaAdmin');
+    if (storedAdmin) {
+      setUser(JSON.parse(storedAdmin));
     }
     setIsLoading(false);
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Simple authentication for now - in a real system this would validate against a backend
+    // Simple admin-only authentication
     if (username === 'admin' && password === 'admin123') {
-      const user = { id: '1', username: 'admin', isAdmin: true };
-      setUser(user);
-      localStorage.setItem('cuephoriaUser', JSON.stringify(user));
+      const adminUser = { id: '1', username: 'admin', isAdmin: true };
+      setUser(adminUser);
+      localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
       return true;
     }
     return false;
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('cuephoriaUser');
+    localStorage.removeItem('cuephoriaAdmin');
   };
 
   return (
