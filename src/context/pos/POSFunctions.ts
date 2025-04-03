@@ -4,9 +4,9 @@ import {
 } from "@/types/pos.types";
 import { generateId } from "@/utils/pos.utils";
 import { 
-  checkMembershipValidityInternal, 
-  deductMembershipHoursInternal,
-  updateCustomerMembershipInternal
+  checkMembershipValidity as checkMembershipValidityInternal, 
+  deductMembershipHours as deductMembershipHoursInternal,
+  updateCustomerMembership as updateCustomerMembershipInternal
 } from "@/utils/membership.utils";
 import { exportToCSV } from "@/services/dataOperations";
 import { generateSampleData } from "@/data/sampleData";
@@ -318,9 +318,6 @@ export const createPOSFunctions = (
     if (!options || options.products) {
       setProducts(sampleData.products);
     }
-    if (!options || options.stations) {
-      setStations(sampleData.stations);
-    }
     if (!options || options.customers) {
       setCustomers(sampleData.customers);
     }
@@ -329,6 +326,11 @@ export const createPOSFunctions = (
     }
     if (!options || options.sessions) {
       setSessions([]);
+      setStations(sampleData.stations.map(station => ({
+        ...station,
+        isOccupied: false,
+        currentSession: null
+      })));
     }
     clearCart();
     setSelectedCustomer(null);

@@ -45,7 +45,7 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
     setStations,
     startSession: startSessionHook,
     endSession: endSessionHook
-  } = useStations();
+  } = useStations([], updateCustomer);
   
   // Create POS functions with all the necessary dependencies
   const posFunctions = createPOSFunctions(
@@ -64,7 +64,7 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
     
     // State values
     products,
-    stations,
+    stations || [],
     customers,
     sessions,
     bills,
@@ -83,13 +83,14 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialize with sample data if empty
   useEffect(() => {
     const initSampleData = () => {
+      // Use safe checks to avoid "undefined" errors
+      const productsEmpty = !products || products.length === 0;
+      const stationsEmpty = !stations || stations.length === 0;
+      const customersEmpty = !customers || customers.length === 0;
+      const billsEmpty = !bills || bills.length === 0;
+      
       // Only initialize if all data arrays are empty
-      if (
-        products.length === 0 &&
-        stations.length === 0 &&
-        customers.length === 0 &&
-        bills.length === 0
-      ) {
+      if (productsEmpty && stationsEmpty && customersEmpty && billsEmpty) {
         const sampleData = generateSampleData();
         
         // Set initial data
@@ -97,7 +98,7 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
         setStationsLocal(sampleData.stations);
         setCustomers(sampleData.customers);
         setBills(sampleData.bills);
-      } else if (stations.length === 0) {
+      } else if (stationsEmpty) {
         // If only stations are empty (common when using localStorage)
         const sampleData = generateSampleData();
         setStationsLocal(sampleData.stations);
@@ -105,11 +106,11 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
     };
     
     initSampleData();
-  }, []);
+  }, [products, stations, customers, bills, setProducts, setCustomers, setBills]);
   
   // Update local stations when stations from the hook change
   useEffect(() => {
-    if (stations.length > 0) {
+    if (stations && stations.length > 0) {
       setStationsLocal(stations);
     }
   }, [stations]);
@@ -118,7 +119,7 @@ export const POSProvider = ({ children }: { children: React.ReactNode }) => {
   const contextValue: POSContextType = {
     // States
     products,
-    stations,
+    stations: stations || [],
     customers,
     sessions,
     bills,
