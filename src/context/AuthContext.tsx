@@ -1,16 +1,14 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from '@/integrations/supabase/types';
 
-interface AdminUser {
+interface User {
   id: string;
   username: string;
   isAdmin: boolean;
 }
 
 interface AuthContextType {
-  user: AdminUser | null;
+  user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -19,83 +17,31 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AdminUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const checkExistingUser = async () => {
-      try {
-        const storedAdmin = localStorage.getItem('cuephoriaAdmin');
-        if (storedAdmin) {
-          setUser(JSON.parse(storedAdmin));
-          setIsLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('id, username, is_admin')
-          .single();
-        
-        if (error) {
-          console.error('Error fetching admin user:', error);
-          setIsLoading(false);
-          return;
-        }
-
-        if (data) {
-          const adminUser = {
-            id: data.id,
-            username: data.username,
-            isAdmin: data.is_admin
-          };
-          setUser(adminUser);
-          localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
-        }
-      } catch (error) {
-        console.error('Error checking existing user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkExistingUser();
+    const storedUser = localStorage.getItem('cuephoriaUser');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('id, username, is_admin, password')
-        .eq('username', username)
-        .single();
-
-      if (error || !data) {
-        console.error('Login error:', error);
-        return false;
-      }
-
-      if (data.password === password) {
-        const adminUser = {
-          id: data.id,
-          username: data.username,
-          isAdmin: data.is_admin
-        };
-        setUser(adminUser);
-        localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
+    // Simple authentication for now - in a real system this would validate against a backend
+    if (username === 'admin' && password === 'admin123') {
+      const user = { id: '1', username: 'admin', isAdmin: true };
+      setUser(user);
+      localStorage.setItem('cuephoriaUser', JSON.stringify(user));
+      return true;
     }
+    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('cuephoriaAdmin');
+    localStorage.removeItem('cuephoriaUser');
   };
 
   return (

@@ -7,7 +7,6 @@ import ReceiptTitle from './receipt/ReceiptTitle';
 import ReceiptContent from './receipt/ReceiptContent';
 import ReceiptActions from './receipt/ReceiptActions';
 import SuccessMessage from './receipt/SuccessMessage';
-import { useToast } from '@/hooks/use-toast';
 
 interface ReceiptProps {
   bill: Bill;
@@ -20,7 +19,6 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
-  const { toast } = useToast();
 
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) return;
@@ -29,17 +27,8 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
     
     try {
       await generatePDF(receiptRef.current, bill.id);
-      toast({
-        title: "Success",
-        description: "Receipt downloaded successfully",
-      });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast({
-        title: "Error",
-        description: "Failed to download receipt",
-        variant: "destructive"
-      });
     } finally {
       setIsDownloading(false);
     }
@@ -48,24 +37,11 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   const handlePrintReceipt = () => {
     setIsPrinting(true);
     
-    try {
-      if (receiptRef.current) {
-        handlePrint(receiptRef.current.innerHTML);
-        toast({
-          title: "Print",
-          description: "Print dialog opened",
-        });
-      }
-    } catch (error) {
-      console.error('Error printing receipt:', error);
-      toast({
-        title: "Error",
-        description: "Failed to print receipt",
-        variant: "destructive"
-      });
-    } finally {
-      setIsPrinting(false);
+    if (receiptRef.current) {
+      handlePrint(receiptRef.current.innerHTML);
     }
+    
+    setIsPrinting(false);
   };
 
   const handleCloseSuccessMsg = () => {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ const Login = () => {
   const [animationClass, setAnimationClass] = useState('');
 
   useEffect(() => {
+    // Add animation class after a short delay for entrance effect
     const timer = setTimeout(() => {
       setAnimationClass('animate-scale-in');
     }, 100);
@@ -41,13 +43,13 @@ const Login = () => {
       if (success) {
         toast({
           title: 'Success',
-          description: 'Admin logged in successfully!',
+          description: 'Logged in successfully!',
         });
         navigate('/dashboard');
       } else {
         toast({
           title: 'Error',
-          description: 'Invalid admin credentials',
+          description: 'Invalid username or password',
           variant: 'destructive',
         });
       }
@@ -64,11 +66,14 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative">
+      {/* Animated background elements */}
       <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Animated gradients */}
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent animate-pulse-glow"></div>
         <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent animate-pulse-glow delay-200"></div>
         <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent animate-pulse-glow delay-300"></div>
         
+        {/* Floating particles and elements */}
         <div className="absolute top-[10%] left-[10%] text-cuephoria-lightpurple opacity-20 animate-float">
           <Gamepad size={36} />
         </div>
@@ -79,14 +84,17 @@ const Login = () => {
           <Stars size={24} />
         </div>
         
+        {/* Light beams */}
         <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent animate-pulse-glow"></div>
         <div className="absolute top-0 left-1/2 h-full w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent animate-pulse-glow delay-200"></div>
         
+        {/* Animated dots grid */}
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
       </div>
       
       <div className={`w-full max-w-md z-10 ${animationClass}`}>
         <div className="mb-8 text-center">
+          {/* Logo with enhanced visuals */}
           <div className="relative mx-auto w-64 h-64">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 animate-pulse-glow blur-lg"></div>
             <img 
@@ -101,8 +109,8 @@ const Login = () => {
         <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-cuephoria-lightpurple/5 to-accent/5 opacity-50 rounded-xl"></div>
           <CardHeader className="text-center relative z-10">
-            <CardTitle className="text-2xl gradient-text font-bold">Admin Sign In</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium">Enter admin credentials to access the system</CardDescription>
+            <CardTitle className="text-2xl gradient-text font-bold">Sign In</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium">Enter your credentials to access the system</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4 relative z-10">
@@ -114,7 +122,7 @@ const Login = () => {
                 <Input
                   id="username"
                   type="text"
-                  placeholder="admin"
+                  placeholder="Enter your username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50"
@@ -128,14 +136,11 @@ const Login = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50"
                 />
-              </div>
-              <div className="text-xs text-accent/80">
-                <p>Default credentials: admin / admin123</p>
               </div>
             </CardContent>
             <CardFooter className="relative z-10">
