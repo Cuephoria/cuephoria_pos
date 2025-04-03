@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -149,4 +148,7 @@ export interface POSContextType {
   // Reset and sample data functions
   resetToSampleData: (options?: ResetOptions) => void;
   addSampleIndianData: () => void;
+  
+  // Delete bill function
+  deleteBill: (billId: string, customerId: string) => Promise<boolean>;
 }

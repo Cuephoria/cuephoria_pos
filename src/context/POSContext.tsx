@@ -55,6 +55,7 @@ const POSContext = createContext<POSContextType>({
   setLoyaltyPointsUsed: () => {},
   calculateTotal: () => 0,
   completeSale: () => undefined,
+  deleteBill: async () => false,
   exportBills: () => {},
   exportCustomers: () => {},
   resetToSampleData: () => {},
@@ -124,6 +125,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     bills, 
     setBills, 
     completeSale: completeSaleBase, 
+    deleteBill: deleteBillBase,
     exportBills: exportBillsBase, 
     exportCustomers: exportCustomersBase 
   } = useBills(updateCustomer, updateProduct);
@@ -359,6 +361,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
   
+  const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
+    return await deleteBillBase(billId, customerId);
+  };
+  
   console.log('POSProvider rendering with context value'); // Debug log
   
   return (
@@ -400,6 +406,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoyaltyPointsUsed,
         calculateTotal,
         completeSale,
+        deleteBill,
         exportBills,
         exportCustomers,
         resetToSampleData: handleResetToSampleData,

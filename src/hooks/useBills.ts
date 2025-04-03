@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -12,16 +11,13 @@ export const useBills = (
   const [bills, setBills] = useState<Bill[]>([]);
   const { toast } = useToast();
 
-  // Load data from Supabase
   useEffect(() => {
     const fetchBills = async () => {
       try {
-        // First check if we already have bills in localStorage (for backward compatibility)
         const storedBills = localStorage.getItem('cuephoriaBills');
         if (storedBills) {
           const parsedBills = JSON.parse(storedBills);
           
-          // Convert date strings to actual Date objects
           const billsWithDates = parsedBills.map((bill: any) => ({
             ...bill,
             createdAt: new Date(bill.createdAt)
@@ -29,9 +25,7 @@ export const useBills = (
           
           setBills(billsWithDates);
           
-          // Migrate localStorage data to Supabase
           for (const bill of billsWithDates) {
-            // Insert bill
             const { data: billData, error: billError } = await supabase
               .from('bills')
               .upsert({
@@ -55,7 +49,6 @@ export const useBills = (
               continue;
             }
             
-            // Insert bill items
             for (const item of bill.items) {
               await supabase
                 .from('bill_items')
@@ -71,12 +64,10 @@ export const useBills = (
             }
           }
           
-          // Clear localStorage after migration
           localStorage.removeItem('cuephoriaBills');
           return;
         }
         
-        // Fetch bills from Supabase
         const { data: billsData, error: billsError } = await supabase
           .from('bills')
           .select('*')
@@ -95,7 +86,6 @@ export const useBills = (
         const transformedBills: Bill[] = [];
         
         for (const billData of billsData) {
-          // Fetch bill items for each bill
           const { data: itemsData, error: itemsError } = await supabase
             .from('bill_items')
             .select('*')
@@ -157,20 +147,17 @@ export const useBills = (
   ) => {
     if (!selectedCustomer) return undefined;
     
-    // Check if customer is trying to buy a membership when already a member
     const membershipItems = cart.filter(item => {
       const product = products.find(p => p.id === item.id && p.category === 'membership');
       return product !== undefined;
     });
     
     if (membershipItems.length > 0 && selectedCustomer.isMember) {
-      // Get current date and membership expiry date
       const currentDate = new Date();
       const membershipExpiryDate = selectedCustomer.membershipExpiryDate 
         ? new Date(selectedCustomer.membershipExpiryDate) 
         : null;
       
-      // Only allow membership purchase if current membership has expired
       if (membershipExpiryDate && membershipExpiryDate > currentDate) {
         console.error("Customer already has an active membership that hasn't expired yet");
         toast({
@@ -184,7 +171,6 @@ export const useBills = (
     }
     
     try {
-      // Create bill
       const total = calculateTotal();
       const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
       
@@ -195,14 +181,11 @@ export const useBills = (
         discountValue = discount;
       }
       
-      // Calculate loyalty points earned (1 point per 100 rupees spent)
       const loyaltyPointsEarned = Math.floor(total / 100);
       
-      // Generate a proper UUID for the bill
       const billId = generateId();
       console.log("Generated bill ID:", billId);
       
-      // Create bill in Supabase
       const { data: billData, error: billError } = await supabase
         .from('bills')
         .insert({
@@ -230,9 +213,7 @@ export const useBills = (
         return undefined;
       }
       
-      // Create bill items
       for (const item of cart) {
-        // Generate unique ID for each bill item
         const billItemId = generateId();
         
         const { error: itemError } = await supabase
@@ -263,7 +244,6 @@ export const useBills = (
         }
       }
       
-      // Construct the bill object
       const bill: Bill = {
         id: billId,
         customerId: selectedCustomer.id,
@@ -279,32 +259,26 @@ export const useBills = (
         createdAt: new Date(billData?.created_at || Date.now())
       };
       
-      // Update bills state
       setBills(prevBills => [bill, ...prevBills]);
       
-      // Update customer data
       const updatedCustomer = {
         ...selectedCustomer,
         loyaltyPoints: selectedCustomer.loyaltyPoints - loyaltyPointsUsed + loyaltyPointsEarned,
         totalSpent: selectedCustomer.totalSpent + total
       };
       
-      // Handle membership purchase
       if (membershipItems.length > 0) {
         const membershipProduct = products.find(p => 
           p.id === membershipItems[0].id && p.category === 'membership'
         );
         
         if (membershipProduct) {
-          // Set membership expiry date based on product name
           const currentDate = new Date();
           let expiryDate = new Date();
           
           if (membershipProduct.name.toLowerCase().includes("weekly")) {
-            // Add 7 days for weekly pass
             expiryDate.setDate(currentDate.getDate() + 7);
           } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
-            // Add 30 days for monthly pass
             expiryDate.setDate(currentDate.getDate() + 30);
           }
           
@@ -312,12 +286,10 @@ export const useBills = (
           updatedCustomer.membershipExpiryDate = expiryDate;
           updatedCustomer.membershipPlan = membershipProduct.name;
           
-          // Set membership hours if available in the product
           if (membershipProduct.membershipHours) {
             updatedCustomer.membershipHoursLeft = membershipProduct.membershipHours;
           }
           
-          // Set membership type based on product name
           if (membershipProduct.duration) {
             updatedCustomer.membershipDuration = membershipProduct.duration;
           } else if (membershipProduct.name.toLowerCase().includes("weekly")) {
@@ -328,10 +300,8 @@ export const useBills = (
         }
       }
       
-      // Update customer in database
       updateCustomer(updatedCustomer);
       
-      // Update product stock
       for (const item of cart) {
         if (item.type === 'product') {
           const product = products.find(p => p.id === item.id);
@@ -354,6 +324,134 @@ export const useBills = (
         variant: 'destructive'
       });
       return undefined;
+    }
+  };
+  
+  const deleteBill = async (billId: string, customerId: string) => {
+    try {
+      const billToDelete = bills.find(bill => bill.id === billId);
+      if (!billToDelete) {
+        console.error('Bill not found:', billId);
+        toast({
+          title: 'Error',
+          description: 'Bill not found',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      const customer = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+        
+      if (customer.error) {
+        console.error('Error fetching customer:', customer.error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch customer data',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      const { error: itemsDeleteError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', billId);
+        
+      if (itemsDeleteError) {
+        console.error('Error deleting bill items:', itemsDeleteError);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete bill items',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      const { error: billDeleteError } = await supabase
+        .from('bills')
+        .delete()
+        .eq('id', billId);
+        
+      if (billDeleteError) {
+        console.error('Error deleting bill:', billDeleteError);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete bill',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      setBills(prevBills => prevBills.filter(bill => bill.id !== billId));
+      
+      if (customer.data) {
+        const customerData = customer.data;
+        const updatedCustomer = {
+          ...customerData,
+          loyalty_points: Math.max(0, customerData.loyalty_points - billToDelete.loyaltyPointsEarned + billToDelete.loyaltyPointsUsed),
+          total_spent: Math.max(0, customerData.total_spent - billToDelete.total)
+        };
+        
+        const { error: customerUpdateError } = await supabase
+          .from('customers')
+          .update(updatedCustomer)
+          .eq('id', customerId);
+          
+        if (customerUpdateError) {
+          console.error('Error updating customer:', customerUpdateError);
+        }
+        
+        const localCustomer = {
+          id: customerData.id,
+          name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email,
+          isMember: customerData.is_member,
+          membershipExpiryDate: customerData.membership_expiry_date ? new Date(customerData.membership_expiry_date) : undefined,
+          membershipStartDate: customerData.membership_start_date ? new Date(customerData.membership_start_date) : undefined,
+          membershipPlan: customerData.membership_plan,
+          membershipHoursLeft: customerData.membership_hours_left,
+          membershipDuration: customerData.membership_duration,
+          loyaltyPoints: updatedCustomer.loyalty_points,
+          totalSpent: updatedCustomer.total_spent,
+          totalPlayTime: customerData.total_play_time,
+          createdAt: new Date(customerData.created_at)
+        };
+        
+        updateCustomer(localCustomer);
+      }
+      
+      for (const item of billToDelete.items) {
+        if (item.type === 'product') {
+          const product = products.find(p => p.id === item.id);
+          if (product && product.category !== 'membership') {
+            updateProduct({
+              ...product,
+              stock: product.stock + item.quantity
+            });
+          }
+        }
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Bill deleted successfully',
+        variant: 'default'
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in deleteBill:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete bill',
+        variant: 'destructive'
+      });
+      return false;
     }
   };
   
@@ -435,6 +533,7 @@ export const useBills = (
     bills,
     setBills,
     completeSale,
+    deleteBill,
     exportBills,
     exportCustomers
   };
