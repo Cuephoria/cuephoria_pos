@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Station, Session } from '@/types/pos.types';
+import { Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 
@@ -45,9 +44,7 @@ export const useSessionsData = () => {
           duration: item.duration
         }));
         
-        // Filter out sessions with end time - this ensures that all sessions
-        // (including those from past sessions that weren't properly ended due to page close)
-        // are still properly tracked until manually ended
+        // Keep all sessions, including those with end time, to maintain history
         setSessions(transformedSessions);
         
         // Log active sessions (those without end_time)
@@ -56,6 +53,7 @@ export const useSessionsData = () => {
         activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
+        // Don't clear sessions if no data, as it might be a network issue
       }
     } catch (error) {
       console.error('Error in fetchSessions:', error);
@@ -83,8 +81,15 @@ export const useSessionsData = () => {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
+    // Set up a regular polling interval to refresh sessions even when page is visible
+    const intervalId = setInterval(() => {
+      console.log('Periodic session refresh');
+      refreshSessions();
+    }, 60000); // Refresh every minute
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
     };
   }, []);
   
