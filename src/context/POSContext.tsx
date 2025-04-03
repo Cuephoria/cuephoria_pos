@@ -28,6 +28,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Initialize all hooks
   const { 
     products, 
+    loading: productsLoading,
+    error: productsError,
     setProducts, 
     addProduct, 
     updateProduct, 
@@ -325,6 +327,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <POSContext.Provider
       value={{
         products,
+        productsLoading,
+        productsError,
         stations,
         customers,
         sessions,

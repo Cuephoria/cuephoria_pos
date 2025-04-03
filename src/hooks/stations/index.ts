@@ -1,43 +1,56 @@
 
-import { useState } from 'react';
-import { Station, Session, Customer, SessionResult } from '@/types/pos.types';
-import { useStationsData } from './useStationsData';
+// This file exports the useStations hook
 import { useSessionsData } from './useSessionsData';
-import { useSessionActions } from './useSessionActions';
+import { useStationsData } from './useStationsData';
+import { useSessionActions } from './session-actions';
+import { Station, Session, Customer, SessionResult } from '@/types/pos.types';
+import { useState, useEffect } from 'react';
 
-/**
- * Main stations hook that combines data and actions
- */
-export const useStations = (
-  initialStations: Station[], 
-  updateCustomer: (customer: Customer) => void
-) => {
-  // Initialize stations data
-  const { stations, setStations } = useStationsData(initialStations);
+export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => void) => {
+  const { 
+    stations, 
+    setStations,
+    stationsLoading,
+    stationsError,
+    refreshStations
+  } = useStationsData(initialStations);
   
-  // Initialize sessions data
-  const { sessions, setSessions } = useSessionsData(initialStations, setStations);
+  const {
+    sessions,
+    setSessions,
+    sessionsLoading,
+    sessionsError,
+    refreshSessions
+  } = useSessionsData();
   
-  // Initialize session actions
-  const { startSession, endSession } = useSessionActions(
+  const {
+    startSession,
+    endSession
+  } = useSessionActions({
     stations,
     setStations,
     sessions,
     setSessions,
     updateCustomer
-  );
-  
+  });
+
+  // Return all hooks combined
   return {
     stations,
     setStations,
     sessions,
     setSessions,
     startSession,
-    endSession
+    endSession,
+    stationsLoading,
+    stationsError,
+    sessionsLoading,
+    sessionsError,
+    refreshStations,
+    refreshSessions
   };
 };
 
-// Export everything from the internal hooks for direct access if needed
-export * from './useStationsData';
-export * from './useSessionsData';
-export * from './useSessionActions';
+export { useSessionsData } from './useSessionsData';
+export { useStationsData } from './useStationsData';
+export { useSessionActions } from './session-actions';

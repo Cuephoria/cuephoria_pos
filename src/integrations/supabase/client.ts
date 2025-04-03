@@ -25,3 +25,54 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     }
   }
 });
+
+// Helper function to log and format errors from Supabase
+export const handleSupabaseError = (error: any, operation: string): string => {
+  console.error(`Supabase ${operation} error:`, error);
+  
+  // Format the error message
+  if (error.code === '23505') {
+    return 'This item already exists. Please try another one.';
+  } else if (error.code === '23503') {
+    return 'This operation references an item that doesn\'t exist.';
+  } else if (error.code === '42P01') {
+    return 'Database table not found. Please contact support.';
+  } else if (error.message) {
+    return error.message;
+  } else {
+    return `Error during ${operation}. Please try again.`;
+  }
+};
+
+// Helper functions for data conversion
+export const convertFromSupabaseProduct = (item: any): any => {
+  return {
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    category: item.category,
+    stock: item.stock,
+    image: item.image || undefined,
+    originalPrice: item.original_price || undefined,
+    offerPrice: item.offer_price || undefined,
+    studentPrice: item.student_price || undefined,
+    duration: item.duration || undefined,
+    membershipHours: item.membership_hours || undefined
+  };
+};
+
+export const convertToSupabaseProduct = (product: any): any => {
+  return {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    category: product.category,
+    stock: product.stock,
+    image: product.image,
+    original_price: product.originalPrice,
+    offer_price: product.offerPrice,
+    student_price: product.studentPrice,
+    duration: product.duration,
+    membership_hours: product.membershipHours
+  };
+};

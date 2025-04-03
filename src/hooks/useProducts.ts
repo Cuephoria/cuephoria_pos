@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
+import { generateId } from '@/utils/pos.utils';
 
 const membershipProducts: Product[] = [
   { 
@@ -128,41 +129,16 @@ const membershipProducts: Product[] = [
 
 export const useProducts = (initialProducts: Product[]) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // First check if we already have products in localStorage (for backward compatibility)
-        const storedProducts = localStorage.getItem('cuephoriaProducts');
-        if (storedProducts) {
-          const parsedProducts = JSON.parse(storedProducts);
-          setProducts(parsedProducts);
-          
-          // Migrate localStorage data to Supabase
-          for (const product of parsedProducts) {
-            await supabase.from('products').upsert(
-              {
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                category: product.category,
-                stock: product.stock,
-                image: product.image,
-                original_price: product.originalPrice,
-                offer_price: product.offerPrice,
-                student_price: product.studentPrice,
-                duration: product.duration,
-                membership_hours: product.membershipHours
-              },
-              { onConflict: 'id' }
-            );
-          }
-          
-          // Clear localStorage after migration
-          localStorage.removeItem('cuephoriaProducts');
-          return;
-        }
+        setLoading(true);
+        setError(null);
+        console.log('Fetching products...');
         
         // Fetch products from Supabase
         const { data, error } = await supabase
@@ -170,89 +146,65 @@ export const useProducts = (initialProducts: Product[]) => {
           .select('*');
           
         if (error) {
+          const errorMessage = handleSupabaseError(error, 'fetching products');
+          setError(errorMessage);
           console.error('Error fetching products:', error);
+          // Fallback to initialProducts + membershipProducts
+          setProducts([...initialProducts, ...membershipProducts]);
+          setLoading(false);
           return;
         }
         
         // Transform data to match our Product type
-        if (data) {
-          const transformedProducts = data.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            category: item.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
-            stock: item.stock,
-            image: item.image || undefined,
-            originalPrice: item.original_price || undefined,
-            offerPrice: item.offer_price || undefined,
-            studentPrice: item.student_price || undefined,
-            duration: item.duration as 'weekly' | 'monthly' | undefined,
-            membershipHours: item.membership_hours || undefined
-          }));
+        if (data && data.length > 0) {
+          console.log('Retrieved', data.length, 'products from Supabase');
+          const transformedProducts = data.map(convertFromSupabaseProduct);
           
-          // Check if we need to add membership products
-          const hasMembershipProducts = transformedProducts.some(
-            (p: Product) => p.category === 'membership'
-          );
-          
-          if (!hasMembershipProducts && transformedProducts.length > 0) {
-            // Add membership products to database
-            for (const product of membershipProducts) {
-              const { error } = await supabase.from('products').insert({
-                name: product.name,
-                price: product.price,
-                category: product.category,
-                stock: product.stock,
-                original_price: product.originalPrice,
-                offer_price: product.offerPrice,
-                student_price: product.studentPrice,
-                duration: product.duration,
-                membership_hours: product.membershipHours
-              });
-              
-              if (error) {
-                console.error('Error adding membership product:', error);
-              }
-            }
-            
-            // Fetch products again to get the newly added membership products
-            const { data: updatedData, error: updatedError } = await supabase
-              .from('products')
-              .select('*');
-              
-            if (updatedError) {
-              console.error('Error fetching updated products:', updatedError);
-              return;
-            }
-            
-            if (updatedData) {
-              const updatedProducts = updatedData.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: item.price,
-                category: item.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
-                stock: item.stock,
-                image: item.image || undefined,
-                originalPrice: item.original_price || undefined,
-                offerPrice: item.offer_price || undefined,
-                studentPrice: item.student_price || undefined,
-                duration: item.duration as 'weekly' | 'monthly' | undefined,
-                membershipHours: item.membership_hours || undefined
-              }));
-              
-              setProducts(updatedProducts);
-            }
-          } else {
-            setProducts(transformedProducts.length > 0 ? transformedProducts : [...initialProducts, ...membershipProducts]);
-          }
+          setProducts(transformedProducts);
         } else {
-          // Fallback to initialProducts + membershipProducts
-          setProducts([...initialProducts, ...membershipProducts]);
+          console.log('No products found in Supabase, initializing with default products');
+          // Add default products to Supabase
+          const allDefaultProducts = [...initialProducts, ...membershipProducts];
+          
+          for (const product of allDefaultProducts) {
+            const supabaseProduct = convertToSupabaseProduct({
+              ...product,
+              id: product.id || generateId()
+            });
+            
+            const { error: insertError } = await supabase
+              .from('products')
+              .insert(supabaseProduct);
+              
+            if (insertError) {
+              console.error('Error adding default product to Supabase:', insertError);
+            }
+          }
+          
+          // Fetch the products again after adding
+          const { data: updatedData, error: fetchError } = await supabase
+            .from('products')
+            .select('*');
+            
+          if (fetchError) {
+            console.error('Error fetching updated products:', fetchError);
+            setProducts(allDefaultProducts);
+          } else if (updatedData) {
+            const updatedProducts = updatedData.map(convertFromSupabaseProduct);
+            setProducts(updatedProducts);
+          } else {
+            setProducts(allDefaultProducts);
+          }
         }
+        
+        setLoading(false);
+        
       } catch (error) {
-        console.error('Error in fetchProducts:', error);
+        console.error('Unexpected error in fetchProducts:', error);
+        setError('Failed to load products. Please try again later.');
         // Fallback to initialProducts + membershipProducts
         setProducts([...initialProducts, ...membershipProducts]);
+        setLoading(false);
       }
     };
     
@@ -261,129 +213,155 @@ export const useProducts = (initialProducts: Product[]) => {
   
   const addProduct = async (product: Omit<Product, 'id'>) => {
     try {
+      setLoading(true);
+      setError(null);
+      console.log('Adding product:', product);
+      
+      const newProductId = generateId();
+      const supabaseProduct = convertToSupabaseProduct({
+        ...product,
+        id: newProductId
+      });
+      
       const { data, error } = await supabase
         .from('products')
-        .insert({
-          name: product.name,
-          price: product.price,
-          category: product.category,
-          stock: product.stock,
-          image: product.image,
-          original_price: product.originalPrice,
-          offer_price: product.offerPrice,
-          student_price: product.studentPrice,
-          duration: product.duration,
-          membership_hours: product.membershipHours
-        })
-        .select()
-        .single();
+        .insert(supabaseProduct)
+        .select();
         
       if (error) {
-        console.error('Error adding product:', error);
+        const errorMessage = handleSupabaseError(error, 'adding product');
+        setError(errorMessage);
         toast({
           title: 'Error',
-          description: 'Failed to add product',
+          description: errorMessage,
           variant: 'destructive'
         });
+        setLoading(false);
         return;
       }
       
-      if (data) {
-        const newProduct: Product = {
-          id: data.id,
-          name: data.name,
-          price: data.price,
-          category: data.category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
-          stock: data.stock,
-          image: data.image || undefined,
-          originalPrice: data.original_price || undefined,
-          offerPrice: data.offer_price || undefined,
-          studentPrice: data.student_price || undefined,
-          duration: data.duration as 'weekly' | 'monthly' | undefined,
-          membershipHours: data.membership_hours || undefined
-        };
-        
-        setProducts([...products, newProduct]);
-      }
+      console.log('Product added to Supabase:', data);
+      
+      const newProduct: Product = {
+        id: newProductId,
+        ...product
+      };
+      
+      setProducts(prevProducts => [...prevProducts, newProduct]);
+      
+      toast({
+        title: 'Success',
+        description: 'Product added successfully',
+      });
+      
     } catch (error) {
-      console.error('Error in addProduct:', error);
+      console.error('Unexpected error in addProduct:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add product',
+        description: 'Failed to add product. Please try again later.',
         variant: 'destructive'
       });
+    } finally {
+      setLoading(false);
     }
   };
   
   const updateProduct = async (product: Product) => {
     try {
+      setLoading(true);
+      setError(null);
+      console.log('Updating product:', product);
+      
+      const supabaseProduct = convertToSupabaseProduct(product);
+      
       const { error } = await supabase
         .from('products')
-        .update({
-          name: product.name,
-          price: product.price,
-          category: product.category,
-          stock: product.stock,
-          image: product.image,
-          original_price: product.originalPrice,
-          offer_price: product.offerPrice,
-          student_price: product.studentPrice,
-          duration: product.duration,
-          membership_hours: product.membershipHours
-        })
+        .update(supabaseProduct)
         .eq('id', product.id);
         
       if (error) {
-        console.error('Error updating product:', error);
+        const errorMessage = handleSupabaseError(error, 'updating product');
+        setError(errorMessage);
         toast({
           title: 'Error',
-          description: 'Failed to update product',
+          description: errorMessage,
           variant: 'destructive'
         });
+        setLoading(false);
         return;
       }
       
-      setProducts(products.map(p => p.id === product.id ? product : p));
+      console.log('Product updated in Supabase');
+      
+      setProducts(prevProducts => 
+        prevProducts.map(p => p.id === product.id ? product : p)
+      );
+      
+      toast({
+        title: 'Success',
+        description: 'Product updated successfully',
+      });
+      
     } catch (error) {
-      console.error('Error in updateProduct:', error);
+      console.error('Unexpected error in updateProduct:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update product',
+        description: 'Failed to update product. Please try again later.',
         variant: 'destructive'
       });
+    } finally {
+      setLoading(false);
     }
   };
   
   const deleteProduct = async (id: string) => {
     try {
+      setLoading(true);
+      setError(null);
+      console.log('Deleting product with ID:', id);
+      
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('id', id);
         
       if (error) {
-        console.error('Error deleting product:', error);
+        const errorMessage = handleSupabaseError(error, 'deleting product');
+        setError(errorMessage);
         toast({
           title: 'Error',
-          description: 'Failed to delete product',
+          description: errorMessage,
           variant: 'destructive'
         });
+        setLoading(false);
         return;
       }
       
-      setProducts(products.filter(p => p.id !== id));
+      console.log('Product deleted from Supabase');
+      
+      setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
+      
+      toast({
+        title: 'Success',
+        description: 'Product deleted successfully',
+      });
+      
     } catch (error) {
-      console.error('Error in deleteProduct:', error);
+      console.error('Unexpected error in deleteProduct:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete product',
+        description: 'Failed to delete product. Please try again later.',
         variant: 'destructive'
       });
+    } finally {
+      setLoading(false);
     }
   };
   
   return {
     products,
+    loading,
+    error,
     setProducts,
     addProduct,
     updateProduct,

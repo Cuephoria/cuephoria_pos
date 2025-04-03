@@ -88,6 +88,8 @@ export interface SessionResult {
 
 export interface POSContextType {
   products: Product[];
+  productsLoading?: boolean;
+  productsError?: string | null;
   stations: Station[];
   customers: Customer[];
   sessions: Session[];

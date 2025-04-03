@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Plus, Package, Filter, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,6 +19,7 @@ const Products = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formState, setFormState] = useState({
     name: '',
@@ -27,6 +29,8 @@ const Products = () => {
     originalPrice: '',
     offerPrice: '',
     studentPrice: '',
+    duration: '',
+    membershipHours: '',
   });
 
   const resetForm = () => {
@@ -38,6 +42,8 @@ const Products = () => {
       originalPrice: '',
       offerPrice: '',
       studentPrice: '',
+      duration: '',
+      membershipHours: '',
     });
     setIsEditMode(false);
     setSelectedProduct(null);
@@ -59,59 +65,91 @@ const Products = () => {
       originalPrice: product.originalPrice?.toString() || '',
       offerPrice: product.offerPrice?.toString() || '',
       studentPrice: product.studentPrice?.toString() || '',
+      duration: product.duration || '',
+      membershipHours: product.membershipHours?.toString() || '',
     });
     setIsDialogOpen(true);
   };
 
   const handleDeleteProduct = (id: string) => {
-    deleteProduct(id);
-    toast({
-      title: 'Product Deleted',
-      description: 'The product has been removed successfully.',
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const { name, price, category, stock, originalPrice, offerPrice, studentPrice } = formState;
-    
-    if (!name || !price || !category || !stock) {
+    try {
+      deleteProduct(id);
+      toast({
+        title: 'Product Deleted',
+        description: 'The product has been removed successfully.',
+      });
+    } catch (error) {
+      console.error('Delete product error:', error);
       toast({
         title: 'Error',
-        description: 'Please fill out all required fields',
+        description: 'Failed to delete product. Please try again.',
         variant: 'destructive',
       });
-      return;
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    const productData: Omit<Product, 'id'> = {
-      name,
-      price: Number(price),
-      category: category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
-      stock: Number(stock),
-    };
-    
-    if (originalPrice) productData.originalPrice = Number(originalPrice);
-    if (offerPrice) productData.offerPrice = Number(offerPrice);
-    if (studentPrice) productData.studentPrice = Number(studentPrice);
-    
-    if (isEditMode && selectedProduct) {
-      updateProduct({ ...productData, id: selectedProduct.id });
+    try {
+      setIsSubmitting(true);
+      
+      const { name, price, category, stock, originalPrice, offerPrice, studentPrice, duration, membershipHours } = formState;
+      
+      if (!name || !price || !category || !stock) {
+        toast({
+          title: 'Error',
+          description: 'Please fill out all required fields',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const productData: Omit<Product, 'id'> = {
+        name,
+        price: Number(price),
+        category: category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
+        stock: Number(stock),
+      };
+      
+      if (originalPrice) productData.originalPrice = Number(originalPrice);
+      if (offerPrice) productData.offerPrice = Number(offerPrice);
+      if (studentPrice) productData.studentPrice = Number(studentPrice);
+      
+      if (category === 'membership') {
+        if (duration) productData.duration = duration as 'weekly' | 'monthly';
+        if (membershipHours) productData.membershipHours = Number(membershipHours);
+      }
+      
+      console.log('Submitting product data:', productData);
+      
+      if (isEditMode && selectedProduct) {
+        await updateProduct({ ...productData, id: selectedProduct.id });
+        toast({
+          title: 'Product Updated',
+          description: 'The product has been updated successfully.',
+        });
+      } else {
+        await addProduct(productData);
+        toast({
+          title: 'Product Added',
+          description: 'The product has been added successfully.',
+        });
+      }
+      
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Form submission error:', error);
       toast({
-        title: 'Product Updated',
-        description: 'The product has been updated successfully.',
+        title: 'Error',
+        description: 'Failed to save product. Please try again.',
+        variant: 'destructive',
       });
-    } else {
-      addProduct(productData);
-      toast({
-        title: 'Product Added',
-        description: 'The product has been added successfully.',
-      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,17 +184,18 @@ const Products = () => {
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Product Name</Label>
+                <Label htmlFor="name">Product Name*</Label>
                 <Input
                   id="name"
                   name="name"
                   value={formState.name}
                   onChange={handleChange}
                   placeholder="Enter product name"
+                  required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="price">Price (₹)</Label>
+                <Label htmlFor="price">Price (₹)*</Label>
                 <Input
                   id="price"
                   name="price"
@@ -164,13 +203,16 @@ const Products = () => {
                   value={formState.price}
                   onChange={handleChange}
                   placeholder="Enter price in INR"
+                  min="0"
+                  required
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Category*</Label>
                 <Select
                   value={formState.category}
                   onValueChange={(value) => handleSelectChange('category', value)}
+                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
@@ -185,7 +227,7 @@ const Products = () => {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="stock">Stock</Label>
+                <Label htmlFor="stock">Stock*</Label>
                 <Input
                   id="stock"
                   name="stock"
@@ -193,6 +235,8 @@ const Products = () => {
                   value={formState.stock}
                   onChange={handleChange}
                   placeholder="Enter stock quantity"
+                  min="0"
+                  required
                 />
               </div>
 
@@ -207,6 +251,7 @@ const Products = () => {
                       value={formState.originalPrice}
                       onChange={handleChange}
                       placeholder="Enter original price"
+                      min="0"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -218,6 +263,7 @@ const Products = () => {
                       value={formState.offerPrice}
                       onChange={handleChange}
                       placeholder="Enter offer price"
+                      min="0"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -229,17 +275,45 @@ const Products = () => {
                       value={formState.studentPrice}
                       onChange={handleChange}
                       placeholder="Enter student price"
+                      min="0"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="duration">Duration</Label>
+                    <Select
+                      value={formState.duration}
+                      onValueChange={(value) => handleSelectChange('duration', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="membershipHours">Membership Hours</Label>
+                    <Input
+                      id="membershipHours"
+                      name="membershipHours"
+                      type="number"
+                      value={formState.membershipHours}
+                      onChange={handleChange}
+                      placeholder="Enter membership hours"
+                      min="0"
                     />
                   </div>
                 </>
               )}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit">
-                {isEditMode ? 'Update Product' : 'Add Product'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEditMode ? 'Update Product' : 'Add Product'}
               </Button>
             </DialogFooter>
           </form>
