@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -16,6 +15,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
+import { useToast } from '@/hooks/use-toast';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -75,7 +75,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts, 
     addProduct, 
     updateProduct, 
-    deleteProduct 
+    deleteProduct,
+    refreshFromDB
   } = useProducts();
   
   const { 
@@ -360,12 +361,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoyaltyPointsUsedAmount(0);
     setSelectedCustomer(null);
     
-    // Refresh products from DB
-    products[0].refreshFromDB?.();
+    // Refresh products from DB if possible
+    if (refreshFromDB) {
+      refreshFromDB();
+    }
   };
   
   // This function is no longer needed but kept for API compatibility
   const handleAddSampleIndianData = () => {
+    // Use imported toast from use-toast
+    const { toast } = useToast();
     toast({
       title: "Info",
       description: "Sample data has been disabled. Please add products manually or through database import.",
