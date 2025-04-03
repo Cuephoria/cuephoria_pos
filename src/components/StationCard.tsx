@@ -23,18 +23,16 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     : '';
 
   return (
-    <Card className={`card-hover ${station.isOccupied ? 'border-cuephoria-orange' : 'border-gray-200'} animate-scale-in`}>
-      <CardHeader className="pb-2">
+    <Card className={`${station.isOccupied ? 'border-cuephoria-orange' : 'border-gray-200'} bg-gray-900 text-white shadow-lg animate-scale-in`}>
+      <CardHeader className="pb-2 border-b border-gray-800">
         <StationInfo station={station} customerName={customerName} />
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col space-y-2">
-          {station.isOccupied && station.currentSession && (
-            <StationTimer station={station} />
-          )}
-        </div>
+      <CardContent className="pt-4">
+        {station.isOccupied && station.currentSession && (
+          <StationTimer station={station} />
+        )}
       </CardContent>
-      <CardFooter className="flex-col space-y-2">
+      <CardFooter className="pt-4 border-t border-gray-800">
         <StationActions 
           station={station}
           customers={customers}
