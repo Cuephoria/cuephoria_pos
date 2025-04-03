@@ -29,11 +29,13 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
     try {
       console.log('Submitting expense data:', data);
       
-      // Make sure we have a proper Date object
+      // Ensure we have a proper Date object
       const formattedData = {
         ...data,
         date: data.date instanceof Date ? data.date : new Date(data.date)
       };
+      
+      console.log('Formatted data with date:', formattedData);
       
       let success = false;
       
