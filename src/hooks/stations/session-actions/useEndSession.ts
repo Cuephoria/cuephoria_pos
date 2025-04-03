@@ -120,9 +120,9 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost
+      // Calculate session cost - USING THE SAME CALCULATION AS StationTimer.tsx
       const stationRate = station.hourlyRate;
-      const hoursPlayed = durationMinutes / 60;
+      const hoursPlayed = durationMs / (1000 * 60 * 60);
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       console.log("Session cost calculation:", { 
@@ -136,10 +136,10 @@ export const useEndSession = ({
       const sessionCartItem: CartItem = {
         id: cartItemId,
         name: `${station.name} (${customer?.name || 'Unknown Customer'})`,
-        price: stationRate,
-        quantity: hoursPlayed,
+        price: sessionCost,
+        quantity: 1,
         total: sessionCost,
-        type: 'session',  // Using type instead of itemType to match CartItem interface
+        type: 'session',
       };
       
       console.log("Created cart item for ended session:", sessionCartItem);

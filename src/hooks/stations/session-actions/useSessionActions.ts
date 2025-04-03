@@ -209,8 +209,8 @@ export const useSessionActions = (props: SessionActionsProps) => {
       setStations(stations.map(s => s.id === stationId ? updatedStation : s));
       setSessions(sessions.map(s => s.id === updatedSession.id ? updatedSession : s));
       
-      // Calculate pricing based on hourly rate and duration
-      const hoursPlayed = durationMinutes / 60;
+      // Calculate pricing based on hourly rate and duration - USING THE SAME CALCULATION AS StationTimer.tsx
+      const hoursPlayed = durationMs / (1000 * 60 * 60);
       const sessionCost = Math.ceil(hoursPlayed * station.hourlyRate);
       
       // Create cart item for the session
