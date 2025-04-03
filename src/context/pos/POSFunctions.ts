@@ -1,12 +1,13 @@
+
 import { 
   Product, Station, Customer, Session, CartItem, Bill, 
   ResetOptions, SessionResult 
 } from "@/types/pos.types";
 import { generateId } from "@/utils/pos.utils";
 import { 
-  checkMembershipValidity as checkMembershipValidityUtil,
-  deductMembershipHours as deductMembershipHoursUtil,
-  updateCustomerMembership as updateCustomerMembershipUtil
+  checkMembershipValidity,
+  deductMembershipHours,
+  updateCustomerMembership
 } from "@/utils/membership.utils";
 import { exportToCSV } from "@/services/dataOperations";
 import { generateSampleData } from "@/data/sampleData";
@@ -165,13 +166,13 @@ export const createPOSFunctions = (
   const checkMembershipValidity = (customerId: string): boolean => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return false;
-    return checkMembershipValidityUtil(customer);
+    return checkMembershipValidityInternal(customer);
   };
   
   const deductMembershipHours = (customerId: string, hours: number): boolean => {
     const updatedCustomers = customers.map(customer => {
       if (customer.id === customerId) {
-        return deductMembershipHoursUtil(customer, hours);
+        return deductMembershipHoursInternal(customer, hours);
       }
       return customer;
     });
@@ -187,7 +188,7 @@ export const createPOSFunctions = (
       membershipHoursLeft?: number;
     }
   ): Customer | null => {
-    const updatedCustomer = updateCustomerMembershipUtil(customers, customerId, membershipData);
+    const updatedCustomer = updateCustomerMembershipInternal(customers, customerId, membershipData);
     if (updatedCustomer) {
       setCustomers(prevCustomers =>
         prevCustomers.map(c => (c.id === customerId ? updatedCustomer : c))
