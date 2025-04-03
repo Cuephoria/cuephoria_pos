@@ -2,7 +2,7 @@
 import React from 'react';
 import { Station } from '@/context/POSContext';
 import { Badge } from '@/components/ui/badge';
-import { Gamepad2, PoolTable } from 'lucide-react';
+import { Gamepad2, CircleOff } from 'lucide-react';
 import { CurrencyDisplay } from '@/components/ui/currency';
 
 interface StationInfoProps {
@@ -21,7 +21,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
           {isPoolTable ? (
             <div className="relative w-10 h-10 flex items-center justify-center">
               <div className="absolute inset-0 bg-gradient-to-br from-green-800 to-green-900 rounded-md"></div>
-              <PoolTable className="h-6 w-6 text-green-300 z-10" />
+              <CircleOff className="h-6 w-6 text-green-300 z-10" />
               <div className="absolute inset-0 border-2 border-green-700 rounded-md"></div>
             </div>
           ) : (

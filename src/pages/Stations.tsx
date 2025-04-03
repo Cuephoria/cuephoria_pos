@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StationCard from '@/components/StationCard';
 import { Card, CardContent } from '@/components/ui/card';
-import { Gamepad2, Plus, PoolTable } from 'lucide-react';
+import { Gamepad2, Plus, CircleOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AddStationDialog from '@/components/AddStationDialog';
 
@@ -59,7 +59,7 @@ const Stations = () => {
               <p className="text-2xl font-bold">{activeBall} / {ballStations.length} Active</p>
             </div>
             <div className="rounded-full bg-green-900/30 p-3">
-              <PoolTable className="h-6 w-6 text-green-500" />
+              <CircleOff className="h-6 w-6 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -85,7 +85,7 @@ const Stations = () => {
 
         <div className="animate-slide-up delay-300">
           <div className="flex items-center mb-4">
-            <PoolTable className="h-5 w-5 text-green-500 mr-2" />
+            <CircleOff className="h-5 w-5 text-green-500 mr-2" />
             <h3 className="text-xl font-semibold font-heading">8-Ball Tables</h3>
             <span className="ml-2 bg-green-800/30 text-green-400 text-xs px-2 py-1 rounded-full">
               {activeBall} active
