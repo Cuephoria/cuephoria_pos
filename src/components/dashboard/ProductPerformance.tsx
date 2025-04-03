@@ -54,8 +54,6 @@ const ProductPerformance: React.FC = () => {
         return '#10B981'; // Green
       case 'membership':
         return '#8B5CF6'; // Vivid Purple
-      case 'session':
-        return '#D946EF'; // Magenta Pink
       default:
         return '#888888'; // Gray
     }
@@ -140,8 +138,12 @@ const ProductPerformance: React.FC = () => {
               <Bar 
                 dataKey="sales" 
                 name="Revenue"
-                fill={(data) => getProductColor(data.name)}
+                fill="#F97316"
+                fillOpacity={0.9}
+                stroke="#F97316"
                 radius={[0, 4, 4, 0]}
+                getStroke={(data) => getProductColor(data.name)}
+                style={{ fill: (data) => getProductColor(data.name) }}
               />
             </BarChart>
           </ResponsiveContainer>
