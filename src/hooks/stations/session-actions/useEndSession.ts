@@ -40,7 +40,7 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes
+      // Calculate duration in minutes - local calculation
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
       const durationMinutes = Math.ceil(durationMs / (1000 * 60));
@@ -54,42 +54,37 @@ export const useEndSession = ({
       
       console.log("Updated session with end time and duration:", updatedSession);
       
-      // Update session in Supabase
-      const { error: sessionError } = await supabase
-        .from('sessions')
-        .update({
-          end_time: endTime.toISOString(),
-          duration: durationMinutes
-        })
-        .eq('id', session.id);
+      // Try to update session in Supabase, but don't let it block us if it fails
+      try {
+        const { error: sessionError } = await supabase
+          .from('sessions')
+          .update({
+            end_time: endTime.toISOString(),
+            duration: durationMinutes
+          })
+          .eq('id', session.id);
+          
+        if (sessionError) {
+          console.error('Error updating session in Supabase:', sessionError);
+          // Don't throw here, just log the error and continue
+        }
         
-      if (sessionError) {
-        console.error('Error updating session in Supabase:', sessionError);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to end session: ' + sessionError.message,
-          variant: 'destructive'
-        });
-        throw sessionError;
+        // Try to update station in Supabase
+        const { error: stationError } = await supabase
+          .from('stations')
+          .update({ is_occupied: false })
+          .eq('id', stationId);
+        
+        if (stationError) {
+          console.error('Error updating station in Supabase:', stationError);
+          // Don't throw here, just log the error and continue
+        }
+      } catch (error) {
+        console.error('Supabase connection error:', error);
+        // Continue with local state updates even if Supabase fails
       }
       
-      // Update station in Supabase
-      const { error: stationError } = await supabase
-        .from('stations')
-        .update({ is_occupied: false })
-        .eq('id', stationId);
-      
-      if (stationError) {
-        console.error('Error updating station in Supabase:', stationError);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to update station: ' + stationError.message,
-          variant: 'destructive'
-        });
-        throw stationError;
-      }
-      
-      // Update local state
+      // Update local state regardless of Supabase connectivity
       setSessions(prev => prev.map(s => 
         s.id === session.id ? updatedSession : s
       ));
@@ -113,7 +108,7 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost
+      // Calculate session cost - local calculation
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMinutes / 60;
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
@@ -143,7 +138,14 @@ export const useEndSession = ({
           ...customer,
           totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
         };
-        updateCustomer(updatedCustomer);
+        
+        // Try to update customer, but continue even if it fails
+        try {
+          updateCustomer(updatedCustomer);
+        } catch (error) {
+          console.error("Error updating customer:", error);
+          // Continue even if customer update fails
+        }
       }
       
       toast({

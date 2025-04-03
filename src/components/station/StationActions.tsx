@@ -38,7 +38,12 @@ const StationActions: React.FC<StationActionsProps> = ({
       setIsLoading(true);
       console.log(`Starting session - Station ID: ${station.id} (${typeof station.id}), Customer ID: ${selectedCustomerId} (${typeof selectedCustomerId})`);
       
-      await onStartSession(station.id, selectedCustomerId);
+      // Try to start session, but don't let Supabase issues block the UI
+      await onStartSession(station.id, selectedCustomerId)
+        .catch(error => {
+          console.error("Error communicating with Supabase:", error);
+          // Continue with local state updates even if Supabase fails
+        });
       
       setSelectedCustomerId('');
       toast({
@@ -63,7 +68,12 @@ const StationActions: React.FC<StationActionsProps> = ({
         setIsLoading(true);
         console.log('Ending session for station:', station.id);
         
-        await onEndSession(station.id);
+        // Attempt to end session, but continue even if Supabase connection fails
+        await onEndSession(station.id)
+          .catch(error => {
+            console.error("Error communicating with Supabase:", error);
+            // Continue with UI updates even if Supabase fails
+          });
         
         toast({
           title: "Session Ended",
@@ -73,7 +83,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         // Longer delay before redirecting to ensure state updates complete
         setTimeout(() => {
           navigate('/pos');
-        }, 2000);
+        }, 3000);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({
@@ -86,6 +96,16 @@ const StationActions: React.FC<StationActionsProps> = ({
       }
     }
   };
+
+  // Helper function to filter eligible customers who have valid memberships
+  const getEligibleCustomers = () => {
+    return customers.filter(customer => 
+      customer.isMember && 
+      (customer.membershipHoursLeft === undefined || customer.membershipHoursLeft > 0)
+    );
+  };
+
+  const eligibleCustomers = getEligibleCustomers();
 
   if (station.isOccupied) {
     return (
@@ -107,12 +127,12 @@ const StationActions: React.FC<StationActionsProps> = ({
           <SelectValue placeholder="Select Customer" />
         </SelectTrigger>
         <SelectContent>
-          {customers.length === 0 ? (
-            <SelectItem value="no-customers" disabled>No customers available</SelectItem>
+          {eligibleCustomers.length === 0 ? (
+            <SelectItem value="no-customers" disabled>No eligible customers available</SelectItem>
           ) : (
-            customers.map((customer) => (
+            eligibleCustomers.map((customer) => (
               <SelectItem key={customer.id} value={customer.id} className="font-quicksand">
-                {customer.name}
+                {customer.name} {customer.membershipHoursLeft !== undefined ? `(${customer.membershipHoursLeft}h left)` : ''}
               </SelectItem>
             ))
           )}
