@@ -145,6 +145,10 @@ export const useSessionActions = (props: SessionActionsProps) => {
         throw new Error('No active session found');
       }
       
+      // Get the customer ID from the current session to pass to endSessionBase
+      const customerId = station.currentSession.customerId;
+      console.log("Customer ID from current session:", customerId);
+      
       // Calculate session duration
       const now = new Date();
       const startTime = new Date(station.currentSession.startTime);
@@ -230,8 +234,10 @@ export const useSessionActions = (props: SessionActionsProps) => {
       
       console.log('Session ended successfully, cart item:', sessionCartItem);
       
-      // Also call the original hook implementation for backward compatibility
+      // Call the original hook implementation to get the customer information
       const originalResult = await endSessionHook.endSession(stationId);
+      
+      console.log("Original end session result:", originalResult);
       
       return {
         updatedSession,

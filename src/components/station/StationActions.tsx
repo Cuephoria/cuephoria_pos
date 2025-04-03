@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Station, Customer } from '@/context/POSContext';
 import { useToast } from '@/hooks/use-toast';
+import { usePOS } from '@/context/POSContext';
 
 interface StationActionsProps {
   station: Station;
@@ -23,6 +24,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const { toast } = useToast();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const { selectCustomer } = usePOS();
 
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
@@ -61,7 +63,17 @@ const StationActions: React.FC<StationActionsProps> = ({
     if (station.isOccupied && station.currentSession) {
       try {
         setIsLoading(true);
-        console.log('Ending session for station:', station.id);
+        
+        // Get the customer ID before ending the session
+        const customerId = station.currentSession.customerId;
+        console.log('Ending session for station:', station.id, 'customer:', customerId);
+        
+        // First, select the customer
+        const customer = customers.find(c => c.id === customerId);
+        if (customer) {
+          console.log('Auto-selecting customer:', customer.name);
+          selectCustomer(customer.id);
+        }
         
         await onEndSession(station.id);
         
