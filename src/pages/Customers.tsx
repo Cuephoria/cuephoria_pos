@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -324,7 +323,7 @@ const Customers = () => {
               
               {/* Conditional Membership Fields */}
               {formState.isMember && (
-                <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                <div className="space-y-4 border rounded-md p-4 bg-background">
                   <div className="grid gap-2">
                     <Label htmlFor="membershipPlan">Membership Plan</Label>
                     <Select 
