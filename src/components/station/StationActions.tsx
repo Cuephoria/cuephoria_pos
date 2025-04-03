@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, Search, User } from "lucide-react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StationActionsProps {
@@ -104,11 +104,6 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
-  // Function to get display text for a customer in the dropdown
-  const getCustomerDisplayText = (customer: Customer) => {
-    return `${customer.name} - ${customer.phone}${customer.email ? ` - ${customer.email}` : ''}`;
-  };
-
   // Filter customers based on search query
   const filteredCustomers = customers.filter(customer => {
     if (!searchQuery) return true;
@@ -155,15 +150,11 @@ const StationActions: React.FC<StationActionsProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0">
           <Command>
-            <div className="flex items-center border-b px-3">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <CommandInput 
-                placeholder="Search customer..." 
-                className="h-9"
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-              />
-            </div>
+            <CommandInput 
+              placeholder="Search customer..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
             <CommandList>
               <CommandEmpty>
                 <div className="p-2 text-center text-sm">
