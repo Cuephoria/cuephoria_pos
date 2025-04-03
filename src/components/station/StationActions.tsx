@@ -108,11 +108,12 @@ const StationActions: React.FC<StationActionsProps> = ({
   const filteredCustomers = customers.filter(customer => {
     if (!searchQuery) return true;
     
-    const term = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    
     return (
-      customer.name.toLowerCase().includes(term) ||
-      customer.phone.toLowerCase().includes(term) ||
-      (customer.email && customer.email.toLowerCase().includes(term))
+      (customer.name && customer.name.toLowerCase().includes(query)) ||
+      (customer.phone && customer.phone.toLowerCase().includes(query)) ||
+      (customer.email && customer.email.toLowerCase().includes(query))
     );
   });
 
