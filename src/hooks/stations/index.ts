@@ -5,6 +5,7 @@ import { useStationsData } from './useStationsData';
 import { useSessionActions } from './session-actions';
 import { Station, Session, Customer, SessionResult } from '@/types/pos.types';
 import { useState, useEffect } from 'react';
+import { toast as sonnerToast } from 'sonner';
 
 export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => void) => {
   const { 
@@ -83,10 +84,38 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     updateCustomer
   });
 
+  // Handle and log any errors from station or session operations
+  useEffect(() => {
+    if (stationsError) {
+      console.error('Stations error:', stationsError);
+      sonnerToast.error('Database Error', {
+        description: `Failed to load stations: ${stationsError.message}`,
+        duration: 5000,
+      });
+    }
+    
+    if (sessionsError) {
+      console.error('Sessions error:', sessionsError);
+      sonnerToast.error('Database Error', {
+        description: `Failed to load sessions: ${sessionsError.message}`,
+        duration: 5000,
+      });
+    }
+  }, [stationsError, sessionsError]);
+
   // Wrap the refreshSessions function to ensure it's properly defined
   const refreshSessions = async (): Promise<void> => {
     console.log("refreshSessions called from useStations");
-    return await refreshSessionsFromData();
+    try {
+      return await refreshSessionsFromData();
+    } catch (error) {
+      console.error("Error in refreshSessions:", error);
+      sonnerToast.error('Database Error', {
+        description: 'Failed to refresh sessions data',
+        duration: 5000,
+      });
+      throw error;
+    }
   };
 
   // Return all hooks combined
