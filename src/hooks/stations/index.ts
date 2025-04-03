@@ -9,8 +9,8 @@ import { useSessionActions } from './useSessionActions';
  * Main stations hook that combines data and actions
  */
 export const useStations = (
-  initialStations: Station[] = [], 
-  updateCustomer?: (customer: Customer) => void
+  initialStations: Station[], 
+  updateCustomer: (customer: Customer) => void
 ) => {
   // Initialize stations data
   const { stations, setStations } = useStationsData(initialStations);
@@ -18,15 +18,13 @@ export const useStations = (
   // Initialize sessions data
   const { sessions, setSessions } = useSessionsData(initialStations, setStations);
   
-  // Initialize session actions with safe handling of the updateCustomer function
+  // Initialize session actions
   const { startSession, endSession } = useSessionActions(
     stations,
     setStations,
     sessions,
     setSessions,
-    updateCustomer || ((customer: Customer) => {
-      console.log("Default updateCustomer called with:", customer.id);
-    })
+    updateCustomer
   );
   
   return {

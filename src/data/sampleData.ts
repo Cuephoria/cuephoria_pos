@@ -1,4 +1,5 @@
-import { Product, Station, Customer, Bill } from '@/types/pos.types';
+
+import { Product, Station, Customer } from '@/types/pos.types';
 
 // Sample data
 export const initialProducts: Product[] = [
@@ -213,12 +214,3 @@ export const indianCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
   }
 ];
 
-// Generate sample data function
-export const generateSampleData = () => {
-  return {
-    products: initialProducts,
-    stations: initialStations,
-    customers: initialCustomers,
-    bills: [] as Bill[]
-  };
-};

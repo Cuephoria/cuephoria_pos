@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 
@@ -13,82 +13,61 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
-  
-  // Use refs to maintain values between renders
-  const intervalRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Clear any existing intervals
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
     if (!station.isOccupied || !station.currentSession) {
       setElapsedTime(0);
       setCost(0);
       setHours(0);
       setMinutes(0);
       setSeconds(0);
-      startTimeRef.current = null;
       return;
     }
 
-    // Convert session startTime to a timestamp
+    // Convert session startTime to a date object if it isn't already
     const startTime = station.currentSession.startTime instanceof Date
       ? station.currentSession.startTime.getTime()
       : new Date(station.currentSession.startTime).getTime();
     
-    startTimeRef.current = startTime;
-    
     console.log("Timer start time:", new Date(startTime).toISOString());
     
-    // Immediately update once
+    const updateElapsedTime = () => {
+      const now = new Date().getTime();
+      const elapsedMs = now - startTime;
+      
+      const secondsTotal = Math.floor(elapsedMs / 1000);
+      const minutesTotal = Math.floor(secondsTotal / 60);
+      const hoursTotal = Math.floor(minutesTotal / 60);
+      
+      setSeconds(secondsTotal % 60);
+      setMinutes(minutesTotal % 60);
+      setHours(hoursTotal);
+      
+      setElapsedTime(minutesTotal);
+      
+      // Calculate cost based on hourly rate
+      const hoursElapsed = elapsedMs / (1000 * 60 * 60);
+      const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
+      setCost(calculatedCost);
+      
+      console.log("Timer update:", {
+        elapsedMs,
+        secondsTotal,
+        minutesTotal,
+        hoursTotal,
+        hourlyRate: station.hourlyRate,
+        hoursElapsed,
+        calculatedCost
+      });
+    };
+
+    // Run immediately then set interval
     updateElapsedTime();
     
-    // Then set interval for regular updates
-    intervalRef.current = window.setInterval(updateElapsedTime, 1000);
+    const interval = setInterval(updateElapsedTime, 1000);
     
-    return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [station.isOccupied, station.currentSession, station.hourlyRate]);
-
-  const updateElapsedTime = () => {
-    if (!startTimeRef.current) return;
-    
-    const now = new Date().getTime();
-    const elapsedMs = now - startTimeRef.current;
-    
-    const secondsTotal = Math.floor(elapsedMs / 1000);
-    const minutesTotal = Math.floor(secondsTotal / 60);
-    const hoursTotal = Math.floor(minutesTotal / 60);
-    
-    setSeconds(secondsTotal % 60);
-    setMinutes(minutesTotal % 60);
-    setHours(hoursTotal);
-    
-    setElapsedTime(minutesTotal);
-    
-    // Calculate cost based on hourly rate - local calculation
-    const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-    const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
-    setCost(calculatedCost);
-    
-    console.log("Timer update:", {
-      elapsedMs,
-      secondsTotal,
-      minutesTotal,
-      hoursTotal,
-      hourlyRate: station.hourlyRate,
-      hoursElapsed,
-      calculatedCost
-    });
-  };
+    return () => clearInterval(interval);
+  }, [station]);
 
   const formatTimeDisplay = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;

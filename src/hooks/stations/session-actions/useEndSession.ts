@@ -1,110 +1,171 @@
 
-import { useState } from 'react';
-import { calculateSessionDuration } from '@/utils/timeUtils';
-import { Station, Session, Customer, CartItem } from '@/types/pos.types';
+import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from '@/hooks/use-toast';
+import { SessionActionsProps } from './types';
+import { generateId } from '@/utils/pos.utils';
+import React from 'react';
 
-export const useEndSession = (
-  stations: Station[],
-  setStations: React.Dispatch<React.SetStateAction<Station[]>>,
-  sessions: Session[],
-  setSessions: React.Dispatch<React.SetStateAction<Session[]>>,
-  updateCustomer: (customer: Customer) => void
-) => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  // We'll modify the endSession function to make it compatible with the expected signature
-  // in POSFunctions.ts, which expects (stationId: string) => Promise<{sessionCartItem?, customer?}>
-  const endSession = async (stationId: string): Promise<{ 
-    sessionCartItem?: CartItem; 
-    customer?: Customer;
-  } | undefined> => {
-    setIsLoading(true);
+/**
+ * Hook to provide session end functionality
+ */
+export const useEndSession = ({
+  stations,
+  setStations,
+  sessions,
+  setSessions,
+  updateCustomer
+}: SessionActionsProps & { updateCustomer: (customer: Customer) => void }) => {
+  const { toast } = useToast();
+  
+  /**
+   * End an active session for a station
+   */
+  const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
-      // Store customers in a closure variable that we can access from the function body
-      const customers: Customer[] = [];
-
+      console.log("Ending session for station:", stationId);
+      
       // Find the station
-      const stationIndex = stations.findIndex((s) => s.id === stationId);
-      if (stationIndex === -1) {
-        console.log("Station not found");
-        throw new Error("Station not found");
-      }
-
-      const station = stations[stationIndex];
-
-      // Check if there's an active session
-      if (!station.isOccupied || !station.currentSession) {
-        console.log("No active session found for this station");
+      const station = stations.find(s => s.id === stationId);
+      if (!station || !station.isOccupied || !station.currentSession) {
+        console.error("No active session found for this station");
+        toast({
+          title: "Session Error",
+          description: "No active session found for this station",
+          variant: "destructive"
+        });
         throw new Error("No active session found");
       }
-
+      
       const session = station.currentSession;
       const endTime = new Date();
-      const duration = calculateSessionDuration(new Date(session.startTime), endTime);
-
-      // Find the customer (this will be handled by the POSProvider that has access to customers)
-      const customer = customers.find((c) => c.id === session.customerId);
-      if (!customer) {
-        console.log("Customer not found in session action");
-        // This is fine, the customer will be looked up in the POSProvider
-      }
-
-      // Update the session with end time and duration
-      const updatedSession = {
+      
+      // Calculate duration in minutes
+      const startTime = new Date(session.startTime);
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+      
+      // Create updated session object
+      const updatedSession: Session = {
         ...session,
         endTime,
-        duration
+        duration: durationMinutes
       };
-
-      // Calculate the cost based on hourly rate and duration
-      const hours = duration / 60; // Convert minutes to hours
-      const sessionCost = station.hourlyRate * hours;
-
-      // Create a cart item for the session
-      const sessionCartItem: CartItem = {
-        id: `session-${session.id}`,
-        type: 'session',
-        name: `${station.name} (${Math.floor(hours * 100) / 100} hrs)`,
-        price: sessionCost,
-        quantity: 1,
-        total: sessionCost
-      };
-
-      // We won't update the customer here since we don't have access to it
-      // Instead, we'll return it to be handled by the caller
-
-      // Update the station to mark it as unoccupied
-      const updatedStation = {
-        ...station,
-        isOccupied: false,
-        currentSession: null
-      };
-
-      // Update the stations array
-      const updatedStations = [...stations];
-      updatedStations[stationIndex] = updatedStation;
-      setStations(updatedStations);
-
-      // Update the sessions array to include the ended session
-      const updatedSessions = [...sessions, updatedSession];
-      setSessions(updatedSessions);
-
-      console.log(`Session ended for station ${station.name}`);
       
-      // Return the cart item to be added to the cart
-      return {
-        sessionCartItem
+      console.log("Updated session with end time and duration:", updatedSession);
+      
+      // Update session in Supabase
+      const { error: sessionError } = await supabase
+        .from('sessions')
+        .update({
+          end_time: endTime.toISOString(),
+          duration: durationMinutes
+        })
+        .eq('id', session.id);
+        
+      if (sessionError) {
+        console.error('Error updating session in Supabase:', sessionError);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to end session: ' + sessionError.message,
+          variant: 'destructive'
+        });
+        throw sessionError;
+      }
+      
+      // Update station in Supabase
+      const { error: stationError } = await supabase
+        .from('stations')
+        .update({ is_occupied: false })
+        .eq('id', stationId);
+      
+      if (stationError) {
+        console.error('Error updating station in Supabase:', stationError);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to update station: ' + stationError.message,
+          variant: 'destructive'
+        });
+        throw stationError;
+      }
+      
+      // Update local state
+      setSessions(prev => prev.map(s => 
+        s.id === session.id ? updatedSession : s
+      ));
+      
+      setStations(prev => prev.map(s => 
+        s.id === stationId 
+          ? { ...s, isOccupied: false, currentSession: null } 
+          : s
+      ));
+      
+      // Find customer
+      const customer = customersList?.find(c => c.id === session.customerId);
+      
+      if (!customer) {
+        console.warn("Customer not found for session", session.customerId);
+      } else {
+        console.log("Found customer for session:", customer.name);
+      }
+      
+      // Generate cart item for the session
+      const cartItemId = generateId();
+      console.log("Generated cart item ID:", cartItemId);
+      
+      // Calculate session cost
+      const stationRate = station.hourlyRate;
+      const hoursPlayed = durationMinutes / 60;
+      const sessionCost = Math.ceil(hoursPlayed * stationRate);
+      
+      console.log("Session cost calculation:", { 
+        stationRate, 
+        durationMinutes, 
+        hoursPlayed, 
+        sessionCost 
+      });
+      
+      // Create cart item for the session
+      const sessionCartItem: CartItem = {
+        id: cartItemId,
+        name: `${station.name} (${customer?.name || 'Unknown Customer'})`,
+        price: stationRate,
+        quantity: hoursPlayed,
+        total: sessionCost,
+        type: 'session',  // Using type instead of itemType to match CartItem interface
+      };
+      
+      console.log("Created cart item for ended session:", sessionCartItem);
+      
+      // Update customer's total play time
+      if (customer) {
+        const updatedCustomer = {
+          ...customer,
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+        };
+        updateCustomer(updatedCustomer);
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Session ended successfully',
+      });
+      
+      return { 
+        updatedSession, 
+        sessionCartItem, 
+        customer 
       };
     } catch (error) {
-      console.error("Error ending session:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      console.error('Error in endSession:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to end session: ' + (error instanceof Error ? error.message : 'Unknown error'),
+        variant: 'destructive'
+      });
+      return undefined;
     }
   };
-
-  return {
-    endSession,
-    isLoading
-  };
+  
+  return { endSession };
 };

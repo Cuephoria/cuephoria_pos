@@ -38,51 +38,29 @@ export const useStartSession = ({
       const sessionId = generateId();
       console.log("Generated session ID:", sessionId);
       
-      // Create session in Supabase - wrapped in try/catch to handle connectivity issues
-      try {
-        const { data, error } = await supabase
-          .from('sessions')
-          .insert({
-            id: sessionId,
-            station_id: stationId,
-            customer_id: customerId,
-            start_time: startTime.toISOString()
-          })
-          .select()
-          .single();
-          
-        if (error) {
-          console.error('Error creating session in Supabase:', error);
-          // Log the error but don't throw - we'll continue with local state
-          toast({
-            title: 'Syncing Warning',
-            description: 'Session started locally but will sync to database when connection is restored',
-            variant: 'default'
-          });
-        } else {
-          console.log("Session created in Supabase:", data);
-        }
+      // Create session in Supabase - ensure all IDs are proper UUIDs
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert({
+          id: sessionId,
+          station_id: stationId,
+          customer_id: customerId,
+          start_time: startTime.toISOString()
+        })
+        .select()
+        .single();
         
-        // Update station in Supabase
-        console.log("Updating station in Supabase to mark as occupied");
-        const { error: stationError } = await supabase
-          .from('stations')
-          .update({ is_occupied: true })
-          .eq('id', stationId);
-        
-        if (stationError) {
-          console.error('Error updating station in Supabase:', stationError);
-          // Log the error but don't throw
-        }
-      } catch (error) {
-        console.error('Supabase connection error:', error);
-        // Continue with local state updates even if Supabase fails
+      if (error) {
+        console.error('Error creating session in Supabase:', error);
         toast({
-          title: 'Connection Warning',
-          description: 'Working offline. Changes will sync when connection is restored.',
-          variant: 'default'
+          title: 'Database Error',
+          description: 'Failed to start session: ' + error.message,
+          variant: 'destructive'
         });
+        throw error;
       }
+      
+      console.log("Session created in Supabase:", data);
       
       // Create session object for local state
       const newSession: Session = {
@@ -92,7 +70,7 @@ export const useStartSession = ({
         startTime
       };
       
-      // Update local state regardless of Supabase success
+      // Update local state
       console.log("Updating sessions state with new session");
       setSessions(prev => [...prev, newSession]);
       
@@ -103,6 +81,18 @@ export const useStartSession = ({
           ? { ...s, isOccupied: true, currentSession: newSession } 
           : s
       ));
+      
+      // Update station in Supabase
+      console.log("Updating station in Supabase to mark as occupied");
+      const { error: stationError } = await supabase
+        .from('stations')
+        .update({ is_occupied: true })
+        .eq('id', stationId);
+      
+      if (stationError) {
+        console.error('Error updating station in Supabase:', stationError);
+        // Don't throw, as the session was already created
+      }
       
       toast({
         title: 'Success',
