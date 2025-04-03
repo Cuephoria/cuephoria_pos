@@ -10,6 +10,9 @@ import ActiveSessions from '@/components/dashboard/ActiveSessions';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart';
 import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
+import CustomerSpendingCorrelation from '@/components/dashboard/CustomerSpendingCorrelation';
+import HourlyRevenueDistribution from '@/components/dashboard/HourlyRevenueDistribution';
+import CategoryPerformance from '@/components/dashboard/CategoryPerformance';
 import ExpenseList from '@/components/expenses/ExpenseList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -308,6 +311,7 @@ const Dashboard = () => {
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-4 w-full max-w-md">
           <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-1">Analytics</TabsTrigger>
           <TabsTrigger value="finances" className="flex-1">Finances</TabsTrigger>
         </TabsList>
         
@@ -332,13 +336,22 @@ const Dashboard = () => {
           />
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            <CustomerActivityChart />
-            <ProductInventoryChart />
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             <ActiveSessions />
             <RecentTransactions />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <CustomerSpendingCorrelation />
+            <HourlyRevenueDistribution />
+          </div>
+          
+          <CategoryPerformance />
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <CustomerActivityChart />
+            <ProductInventoryChart />
           </div>
         </TabsContent>
         
