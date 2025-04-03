@@ -15,9 +15,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill }) => {
         <div key={index} className="receipt-item text-sm">
           <div>
             <span>{item.name}</span>
-            {item.type !== 'session' && item.quantity > 1 && (
-              <span className="text-gray-600"> x{item.quantity}</span>
-            )}
+            {item.quantity > 1 && <span className="text-gray-600"> x{item.quantity}</span>}
           </div>
           <CurrencyDisplay amount={item.total} />
         </div>
