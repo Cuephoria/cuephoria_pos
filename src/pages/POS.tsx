@@ -207,6 +207,10 @@ const POS = () => {
   }
   const total = calculateTotal();
 
+  const formatSessionQuantity = (quantity: number) => {
+    return Number(quantity.toFixed(2));
+  };
+
   return (
     <div className="flex-1 p-8 pt-6">
       <div className="flex items-center justify-between mb-6 animate-slide-down">
@@ -254,7 +258,9 @@ const POS = () => {
                       >
                         -
                       </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
+                      <span className="w-8 text-center">
+                        {item.type === 'session' ? formatSessionQuantity(item.quantity) : item.quantity}
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"

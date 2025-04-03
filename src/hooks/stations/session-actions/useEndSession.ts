@@ -116,12 +116,17 @@ export const useEndSession = ({
       // Calculate session cost
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMinutes / 60;
+      
+      // Format hours to 2 decimal places for display
+      const formattedHours = parseFloat(hoursPlayed.toFixed(2));
+      
+      // Calculate cost based on hourly rate and time played
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       console.log("Session cost calculation:", { 
         stationRate, 
         durationMinutes, 
-        hoursPlayed, 
+        hoursPlayed: formattedHours, 
         sessionCost 
       });
       
@@ -130,7 +135,7 @@ export const useEndSession = ({
         id: cartItemId,
         name: `${station.name} (${customer?.name || 'Unknown Customer'})`,
         price: stationRate,
-        quantity: hoursPlayed,
+        quantity: formattedHours,
         total: sessionCost,
         type: 'session',  // Using type instead of itemType to match CartItem interface
       };
