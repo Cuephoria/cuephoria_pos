@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ShoppingBag } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 
@@ -46,63 +46,88 @@ const CategoryPerformance: React.FC = () => {
     return [
       {
         name: 'Food',
-        revenue: categoryRevenue.food,
+        value: categoryRevenue.food,
         count: categoryCount.food,
         category: 'food'
       },
       {
         name: 'Drinks',
-        revenue: categoryRevenue.drinks,
+        value: categoryRevenue.drinks,
         count: categoryCount.drinks,
         category: 'drinks'
       },
       {
         name: 'Tobacco',
-        revenue: categoryRevenue.tobacco,
+        value: categoryRevenue.tobacco,
         count: categoryCount.tobacco,
         category: 'tobacco'
       },
       {
         name: 'Challenges',
-        revenue: categoryRevenue.challenges,
+        value: categoryRevenue.challenges,
         count: categoryCount.challenges,
         category: 'challenges'
       },
       {
         name: 'Membership',
-        revenue: categoryRevenue.membership,
+        value: categoryRevenue.membership,
         count: categoryCount.membership,
         category: 'membership'
       },
       {
         name: 'Gaming',
-        revenue: categoryRevenue.session,
+        value: categoryRevenue.session,
         count: categoryCount.session,
         category: 'session'
       }
-    ].filter(cat => cat.revenue > 0 || cat.count > 0);
+    ].filter(cat => cat.value > 0 || cat.count > 0);
   };
   
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'food':
-        return 'hsl(var(--secondary))'; // Orange
+        return '#F97316'; // Bright Orange
       case 'drinks':
-        return 'hsl(var(--accent))'; // Blue
+        return '#0EA5E9'; // Ocean Blue
       case 'tobacco':
-        return 'hsl(var(--destructive))'; // Red
+        return '#EF4444'; // Red
       case 'challenges':
-        return 'hsl(var(--primary))'; // Green/Purple
+        return '#10B981'; // Green
       case 'membership':
-        return 'hsl(var(--ring))'; // Purple
+        return '#8B5CF6'; // Vivid Purple
       case 'session':
-        return 'hsl(var(--muted))'; // Muted color
+        return '#D946EF'; // Magenta Pink
       default:
-        return 'hsl(var(--muted-foreground))';
+        return '#888888'; // Gray
     }
   };
   
+  const RADIAN = Math.PI / 180;
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    
+    // Only show label if the segment is significant enough (more than 5%)
+    if (percent < 0.05) return null;
+    
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="#fff" 
+        textAnchor="middle" 
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="bold"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+  
   const categoryData = generateCategoryData();
+  const totalRevenue = categoryData.reduce((sum, item) => sum + item.value, 0);
   
   return (
     <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
@@ -110,7 +135,7 @@ const CategoryPerformance: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl font-bold text-white font-heading">Category Performance</CardTitle>
-            <CardDescription className="text-gray-400">Revenue by product category</CardDescription>
+            <CardDescription className="text-gray-400">Revenue distribution by product category</CardDescription>
           </div>
           <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
             <ShoppingBag className="h-5 w-5 text-green-500" />
@@ -123,49 +148,42 @@ const CategoryPerformance: React.FC = () => {
           className="h-full w-full"
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={categoryData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
-              barGap={0}
-              barCategoryGap="15%"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-              <XAxis 
-                dataKey="name" 
-                stroke="#777" 
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis 
-                yAxisId="left"
-                stroke="#777"
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(value) => `₹${Number(value).toFixed(0)}`}
-              />
-              <YAxis 
-                yAxisId="right"
-                orientation="right"
-                stroke="#777"
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
+            <PieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={renderCustomizedLabel}
+                outerRadius={90}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={getCategoryColor(entry.category)} />
+                ))}
+              </Pie>
               <Tooltip 
-                content={({ active, payload, label }) => {
+                content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const category = payload[0]?.payload?.category;
+                    const item = payload[0].payload;
+                    const percentage = ((item.value / totalRevenue) * 100).toFixed(1);
+                    
                     return (
                       <div className="rounded-lg border bg-gray-800 border-gray-700 p-2 shadow-md">
-                        <p className="font-bold text-white">{label}</p>
+                        <p className="font-bold text-white">{item.name}</p>
                         <div className="grid grid-cols-1 gap-2 mt-1">
                           <div className="flex justify-between items-center gap-4">
                             <span className="text-gray-400">Revenue:</span>
-                            <span className="font-bold text-white">₹{Number(payload[0].value).toFixed(2)}</span>
+                            <span className="font-bold text-white">₹{Number(item.value).toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between items-center gap-4">
                             <span className="text-gray-400">Items Sold:</span>
-                            <span className="font-bold text-white">{payload[1].value}</span>
+                            <span className="font-bold text-white">{item.count}</span>
+                          </div>
+                          <div className="flex justify-between items-center gap-4">
+                            <span className="text-gray-400">Percentage:</span>
+                            <span className="font-bold text-white">{percentage}%</span>
                           </div>
                         </div>
                       </div>
@@ -175,29 +193,12 @@ const CategoryPerformance: React.FC = () => {
                 }}
               />
               <Legend 
+                layout="horizontal"
                 verticalAlign="bottom" 
-                height={36}
-                formatter={(value) => <span style={{ color: '#999' }}>{value}</span>}
+                align="center"
+                formatter={(value) => <span style={{ color: '#999', fontSize: '12px', marginLeft: '4px' }}>{value}</span>}
               />
-              <Bar 
-                yAxisId="left" 
-                dataKey="revenue" 
-                name="Revenue" 
-                radius={[4, 4, 0, 0]}
-                fill="#0EA5E9"
-                stroke="none"
-                fillOpacity={0.9}
-              />
-              <Bar 
-                yAxisId="right" 
-                dataKey="count" 
-                name="Items Sold" 
-                radius={[4, 4, 0, 0]}
-                fill="#D946EF"
-                stroke="none"
-                fillOpacity={0.7}
-              />
-            </BarChart>
+            </PieChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
