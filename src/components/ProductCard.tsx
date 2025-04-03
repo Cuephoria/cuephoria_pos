@@ -57,7 +57,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       price: product.price,
       quantity: 1,
       category: product.category
-    }, product.stock);
+    });
     
     if (product.category === 'membership' && product.studentPrice) {
       setIsStudentDiscount(true);
