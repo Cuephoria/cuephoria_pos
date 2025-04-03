@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -137,7 +136,6 @@ export const useProducts = () => {
   
   const lowStockProducts = products.filter(p => p.stock < 5 && p.category !== 'membership');
   
-  // Load products from Supabase on component mount
   useEffect(() => {
     console.log('useProducts initialized with', products.length, 'products');
     console.log('Initial sample data products:', initialProducts.length);
@@ -150,7 +148,6 @@ export const useProducts = () => {
     
     console.log('Products by category:', countByCategory);
 
-    // Fetch products from Supabase on initialization
     refreshFromDB().catch(err => {
       console.error('Error loading products from DB:', err);
     });
@@ -367,22 +364,27 @@ export const useProducts = () => {
       if (data && data.length > 0) {
         const dbProducts = data.map(convertFromSupabaseProduct);
         
-        const membershipIds = new Set(membershipProducts.map(p => p.id));
-        const nonMembershipDbProducts = dbProducts.filter(p => !membershipIds.has(p.id));
-        
-        const uniqueProducts = new Map<string, Product>();
+        const uniqueProductsById = new Map<string, Product>();
         const duplicates: string[] = [];
         
         membershipProducts.forEach(product => {
-          uniqueProducts.set(product.name.toLowerCase(), product);
+          uniqueProductsById.set(product.id, product);
         });
         
-        nonMembershipDbProducts.forEach(product => {
-          const lowerName = product.name.toLowerCase();
-          if (uniqueProducts.has(lowerName)) {
-            duplicates.push(product.name);
-          } else {
-            uniqueProducts.set(lowerName, product);
+        dbProducts.forEach(product => {
+          if (!uniqueProductsById.has(product.id)) {
+            const productNameLower = product.name.toLowerCase();
+            const duplicateByName = Array.from(uniqueProductsById.values()).find(
+              p => p.name.toLowerCase() === productNameLower && p.id !== product.id
+            );
+            
+            if (duplicateByName) {
+              duplicates.push(`${product.name} (ID: ${product.id})`);
+            } else {
+              uniqueProductsById.set(product.id, product);
+            }
+          } else if (!product.id.startsWith('mem')) {
+            duplicates.push(`${product.name} (ID: ${product.id})`);
           }
         });
         
@@ -391,25 +393,26 @@ export const useProducts = () => {
             (duplicates.length > 3 ? ` and ${duplicates.length - 3} more` : '');
           
           toast({
-            title: 'Warning',
-            description: `Duplicate product names found and resolved: ${duplicateNames}`,
-            variant: "destructive"
+            title: 'Duplicate Products Removed',
+            description: `${duplicates.length} duplicate products were found and removed: ${duplicateNames}`,
+            variant: "default"
           });
           
           console.warn('Duplicate products removed:', duplicates);
         }
         
-        const allProducts = Array.from(uniqueProducts.values());
+        const allProducts = Array.from(uniqueProductsById.values());
         setProducts(allProducts);
         console.log('Refreshed from DB:', allProducts.length);
+        
+        localStorage.setItem('cuephoriaProducts', JSON.stringify(allProducts));
+        
         return allProducts;
       } else {
         console.log('No products in DB, using initial data and syncing to DB');
         
-        // If no products in DB, initialize with sample data and save to DB
         const initialNonMembershipProducts = initialProducts.filter(p => p.category !== 'membership');
         
-        // Batch insert all non-membership products
         if (initialNonMembershipProducts.length > 0) {
           const { error: insertError } = await supabase
             .from('products')
