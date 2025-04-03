@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -38,6 +39,8 @@ const POSContext = createContext<POSContextType>({
   deleteProduct: () => {},
   startSession: async () => {},
   endSession: async () => {},
+  deleteSession: async () => false,
+  deleteAllSessions: async () => false,
   deleteStation: async () => false,
   addCustomer: () => ({}),
   updateCustomer: () => ({}),
@@ -100,6 +103,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSessions, 
     startSession: startSessionBase, 
     endSession: endSessionBase,
+    deleteSession: deleteSessionBase,
+    deleteAllSessions: deleteAllSessionsBase,
     deleteStation
   } = useStations([], updateCustomer);
   
@@ -173,6 +178,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Error in endSession:', error);
       throw error;
     }
+  };
+  
+  // Add deleteSession function
+  const deleteSession = async (sessionId: string): Promise<boolean> => {
+    return await deleteSessionBase(sessionId);
+  };
+  
+  // Add deleteAllSessions function
+  const deleteAllSessions = async (): Promise<boolean> => {
+    return await deleteAllSessionsBase();
   };
   
   // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
@@ -398,6 +413,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProduct,
         startSession,
         endSession,
+        deleteSession,
+        deleteAllSessions,
         deleteStation,
         addCustomer,
         updateCustomer,

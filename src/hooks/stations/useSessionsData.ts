@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +69,139 @@ export const useSessionsData = () => {
     }
   };
   
+  const deleteSession = async (sessionId: string): Promise<boolean> => {
+    setSessionsLoading(true);
+    try {
+      // First, get the session to check if it's active
+      const session = sessions.find(s => s.id === sessionId);
+      
+      if (!session) {
+        toast({
+          title: 'Error',
+          description: 'Session not found',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // If the session is active (no endTime), update the station status first
+      if (!session.endTime) {
+        try {
+          const { error: stationError } = await supabase
+            .from('stations')
+            .update({ is_occupied: false })
+            .eq('id', session.stationId);
+            
+          if (stationError) {
+            console.error('Error updating station status:', stationError);
+          }
+        } catch (error) {
+          console.error('Error updating station status:', error);
+        }
+      }
+      
+      // Delete the session from Supabase
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+        
+      if (error) {
+        console.error('Error deleting session:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to delete session from database',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
+      setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionId));
+      
+      toast({
+        title: 'Success',
+        description: 'Session deleted successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in deleteSession:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete session',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+  
+  const deleteAllSessions = async (): Promise<boolean> => {
+    setSessionsLoading(true);
+    try {
+      // First, end all active sessions in Supabase
+      const { error: updateError } = await supabase
+        .from('sessions')
+        .update({ 
+          end_time: new Date().toISOString(),
+          duration: 0 // Set duration to 0 since we're forcibly ending
+        })
+        .is('end_time', null); // Only update sessions without an end time
+        
+      if (updateError) {
+        console.error('Error ending active sessions in Supabase:', updateError);
+      }
+      
+      // Update all stations to show as unoccupied
+      const { error: stationError } = await supabase
+        .from('stations')
+        .update({ is_occupied: false })
+        .eq('is_occupied', true);
+        
+      if (stationError) {
+        console.error('Error updating station status in Supabase:', stationError);
+      }
+      
+      // Delete all sessions from Supabase
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .neq('id', '0'); // Dummy condition to match all
+        
+      if (error) {
+        console.error('Error deleting all sessions:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to delete all sessions from database',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Clear local state
+      setSessions([]);
+      
+      toast({
+        title: 'Success',
+        description: 'All sessions deleted successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in deleteAllSessions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete all sessions',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+  
   useEffect(() => {
     refreshSessions();
     
@@ -98,6 +232,8 @@ export const useSessionsData = () => {
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions
+    refreshSessions,
+    deleteSession,
+    deleteAllSessions
   };
 };
