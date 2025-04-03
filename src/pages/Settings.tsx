@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, User, DollarSign, Receipt, AlertTriangle, Database, Plus, RefreshCw } from 'lucide-react';
+import { Shield, User, DollarSign, Receipt, AlertTriangle, Database, Plus, RefreshCw, Loader2 } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import {
   AlertDialog,
@@ -56,6 +56,8 @@ const Settings = () => {
     sessions: true,
   });
   
+  const [isResetting, setIsResetting] = useState(false);
+  
   const handleGeneralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setGeneralSettings(prev => ({ ...prev, [name]: value }));
@@ -84,37 +86,63 @@ const Settings = () => {
     });
   };
   
-  const handleResetData = () => {
-    // Use the resetToSampleData function from context with specific options
-    resetToSampleData(resetOptions);
+  const handleResetData = async () => {
+    setIsResetting(true);
     
-    // Build message based on what was reset
-    const resetItems = [];
-    if (resetOptions.products) resetItems.push('products');
-    if (resetOptions.customers) resetItems.push('customers');
-    if (resetOptions.sales) resetItems.push('bills');
-    if (resetOptions.sessions) resetItems.push('sessions');
-    
-    toast({
-      title: 'Data Reset',
-      description: `Reset completed for: ${resetItems.join(', ')}`,
-      variant: 'destructive',
-    });
+    try {
+      // Use the resetToSampleData function from context with specific options
+      await resetToSampleData(resetOptions);
+      
+      // Build message based on what was reset
+      const resetItems = [];
+      if (resetOptions.products) resetItems.push('products');
+      if (resetOptions.customers) resetItems.push('customers');
+      if (resetOptions.sales) resetItems.push('bills');
+      if (resetOptions.sessions) resetItems.push('sessions');
+      
+      toast({
+        title: 'Data Reset',
+        description: `Reset completed for: ${resetItems.join(', ')}`,
+        variant: 'destructive',
+      });
+    } catch (error) {
+      console.error('Error during reset:', error);
+      toast({
+        title: 'Reset Failed',
+        description: 'There was an error resetting the data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResetting(false);
+    }
   };
   
-  const handleQuickReset = () => {
-    // Reset only transactions and sessions
-    resetToSampleData({
-      products: false,
-      customers: false,
-      sales: true,
-      sessions: true
-    });
+  const handleQuickReset = async () => {
+    setIsResetting(true);
     
-    toast({
-      title: 'Fresh Start',
-      description: 'All transactions and sessions have been cleared',
-    });
+    try {
+      // Reset only transactions and sessions
+      await resetToSampleData({
+        products: false,
+        customers: false,
+        sales: true,
+        sessions: true
+      });
+      
+      toast({
+        title: 'Fresh Start',
+        description: 'All transactions and sessions have been cleared',
+      });
+    } catch (error) {
+      console.error('Error during quick reset:', error);
+      toast({
+        title: 'Reset Failed',
+        description: 'Failed to clear transactions and sessions. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResetting(false);
+    }
   };
   
   const handleAddSampleData = () => {
@@ -135,9 +163,19 @@ const Settings = () => {
           onClick={handleQuickReset}
           variant="outline"
           className="gap-2"
+          disabled={isResetting}
         >
-          <RefreshCw className="h-4 w-4" />
-          Clear All Sessions & Transactions
+          {isResetting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Clearing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" />
+              Clear All Sessions & Transactions
+            </>
+          )}
         </Button>
       </div>
       
@@ -337,9 +375,19 @@ const Settings = () => {
                     variant="outline" 
                     className="flex items-center gap-2"
                     onClick={handleQuickReset}
+                    disabled={isResetting}
                   >
-                    <RefreshCw className="h-4 w-4" />
-                    Clear All Sessions & Transactions
+                    {isResetting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Clearing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" />
+                        Clear All Sessions & Transactions
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -481,9 +529,16 @@ const Settings = () => {
                       <AlertDialogAction 
                         onClick={handleResetData}
                         className="bg-red-600 hover:bg-red-700"
-                        disabled={!Object.values(resetOptions).some(Boolean)}
+                        disabled={!Object.values(resetOptions).some(Boolean) || isResetting}
                       >
-                        Reset Selected Data
+                        {isResetting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Resetting...
+                          </>
+                        ) : (
+                          'Reset Selected Data'
+                        )}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

@@ -52,8 +52,20 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
               currentSession: activeSession
             };
           }
-          return station;
+          return {
+            ...station,
+            isOccupied: false,
+            currentSession: null
+          };
         }));
+      } else {
+        // If there are no active sessions, make sure all stations are marked as unoccupied
+        console.log("No active sessions found, ensuring all stations are marked as unoccupied");
+        setStations(prev => prev.map(station => ({
+          ...station,
+          isOccupied: false,
+          currentSession: null
+        })));
       }
     }
   }, [sessions, stations.length]);

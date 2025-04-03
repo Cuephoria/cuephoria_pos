@@ -332,38 +332,30 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   // Simplified reset function - only resets local state
-  const handleResetToSampleData = (options?: ResetOptions) => {
-    // Clear all data except for products (maintained by Supabase sync)
-    if (options?.customers || !options) {
-      setCustomers([]);
-      localStorage.removeItem('cuephoriaCustomers');
-    }
-    
-    if (options?.sales || !options) {
-      setBills([]);
-      localStorage.removeItem('cuephoriaBills');
-    }
-    
-    if (options?.sessions || !options) {
-      setSessions([]);
-      setStations(stations.map(station => ({
-        ...station,
-        isOccupied: false,
-        currentSession: null
-      })));
-      localStorage.removeItem('cuephoriaSessions');
-      localStorage.removeItem('cuephoriaStations');
-    }
-    
-    // Clear cart regardless
-    setCart([]);
-    setDiscountAmount(0);
-    setLoyaltyPointsUsedAmount(0);
-    setSelectedCustomer(null);
-    
-    // Refresh products from DB if possible
-    if (refreshFromDB) {
-      refreshFromDB();
+  const handleResetToSampleData = async (options?: ResetOptions) => {
+    try {
+      // Import the reset function from services
+      const { resetToSampleData } = await import('@/services/dataOperations');
+      
+      // Call the async reset function
+      await resetToSampleData(
+        options,
+        setProducts,
+        setCustomers,
+        setBills,
+        setSessions,
+        setStations,
+        setCart,
+        setDiscountAmount,
+        setLoyaltyPointsUsedAmount,
+        setSelectedCustomer,
+        refreshFromDB
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error in handleResetToSampleData:', error);
+      throw error;
     }
   };
   
