@@ -1,11 +1,16 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 
 const ActiveSessions = () => {
-  const { stations, customers } = usePOS();
+  const { stations, customers, refreshSessions } = usePOS();
+  
+  // Refresh sessions data when component mounts
+  useEffect(() => {
+    refreshSessions();
+  }, []);
   
   // Get occupied stations with sessions
   const activeStations = stations.filter(station => station.isOccupied && station.currentSession);

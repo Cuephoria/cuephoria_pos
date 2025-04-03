@@ -141,7 +141,23 @@ export const useSessionsData = () => {
   const deleteAllSessions = async (): Promise<boolean> => {
     setSessionsLoading(true);
     try {
-      // First, end all active sessions in Supabase
+      // First, update all stations to show as unoccupied
+      const { error: stationError } = await supabase
+        .from('stations')
+        .update({ is_occupied: false })
+        .eq('is_occupied', true);
+        
+      if (stationError) {
+        console.error('Error updating station status in Supabase:', stationError);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to update stations',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Then end all active sessions in Supabase
       const { error: updateError } = await supabase
         .from('sessions')
         .update({ 
@@ -152,23 +168,19 @@ export const useSessionsData = () => {
         
       if (updateError) {
         console.error('Error ending active sessions in Supabase:', updateError);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to end active sessions',
+          variant: 'destructive'
+        });
+        return false;
       }
       
-      // Update all stations to show as unoccupied
-      const { error: stationError } = await supabase
-        .from('stations')
-        .update({ is_occupied: false })
-        .eq('is_occupied', true);
-        
-      if (stationError) {
-        console.error('Error updating station status in Supabase:', stationError);
-      }
-      
-      // Delete all sessions from Supabase
+      // Finally, delete all sessions from Supabase
       const { error } = await supabase
         .from('sessions')
         .delete()
-        .neq('id', '0'); // Dummy condition to match all
+        .gt('id', '0'); // Match all sessions
         
       if (error) {
         console.error('Error deleting all sessions:', error);
