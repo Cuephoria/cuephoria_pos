@@ -4,11 +4,12 @@ import { Expense, BusinessSummary } from '@/types/expense.types';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
+import { ExpenseFormData } from '@/components/expenses/ExpenseDialog';
 
 interface ExpenseContextType {
   expenses: Expense[];
   businessSummary: BusinessSummary;
-  addExpense: (expense: Omit<Expense, 'id'>) => Promise<boolean>;
+  addExpense: (expense: ExpenseFormData) => Promise<boolean>;
   updateExpense: (expense: Expense) => Promise<boolean>;
   deleteExpense: (id: string) => Promise<boolean>;
   refreshExpenses: () => Promise<void>;
@@ -111,7 +112,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Add a new expense
-  const addExpense = async (expenseData: Omit<Expense, 'id'>): Promise<boolean> => {
+  const addExpense = async (expenseData: ExpenseFormData): Promise<boolean> => {
     try {
       const id = generateId();
       
@@ -122,7 +123,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         amount: expenseData.amount,
         category: expenseData.category,
         frequency: expenseData.frequency,
-        date: new Date(expenseData.date).toISOString(), // Convert to ISO string for storage
+        date: expenseData.date.toISOString(), // Convert to ISO string for storage
         isRecurring: expenseData.isRecurring,
         notes: expenseData.notes || ''
       };
@@ -157,7 +158,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Ensure date is stored as ISO string
       const updatedExpense = {
         ...expense,
-        date: new Date(expense.date).toISOString()
+        date: typeof expense.date === 'string' ? expense.date : expense.date.toISOString()
       };
       
       // Update expenses array

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -28,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
+import { ExpenseFormData } from './ExpenseDialog';
 
 const expenseSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
@@ -41,8 +41,6 @@ const expenseSchema = z.object({
   isRecurring: z.boolean(),
   notes: z.string().optional(),
 });
-
-type ExpenseFormData = z.infer<typeof expenseSchema>;
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => void;

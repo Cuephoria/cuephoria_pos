@@ -26,7 +26,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // State for student discount
   const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
   
-  // Initialize all hooks
+  // Initialize all hooks without passing initialProducts as an argument
   const { 
     products, 
     loading: productsLoading,
@@ -35,7 +35,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addProduct, 
     updateProduct, 
     deleteProduct 
-  } = useProducts(initialProducts);
+  } = useProducts();
   
   const { 
     customers, 

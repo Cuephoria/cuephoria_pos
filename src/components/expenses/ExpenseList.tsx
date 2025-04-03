@@ -64,6 +64,19 @@ const ExpenseList = () => {
     return labels[frequency as keyof typeof labels] || frequency;
   };
 
+  // Helper function to format the date
+  const formatExpenseDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return format(date, 'MMM dd, yyyy');
+      }
+      return 'Invalid date';
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -102,11 +115,7 @@ const ExpenseList = () => {
                   <TableCell className="font-medium">{expense.name}</TableCell>
                   <TableCell><CurrencyDisplay amount={expense.amount} /></TableCell>
                   <TableCell>{getCategoryLabel(expense.category)}</TableCell>
-                  <TableCell>
-                    {expense.date instanceof Date 
-                      ? format(expense.date, 'MMM dd, yyyy')
-                      : 'Invalid date'}
-                  </TableCell>
+                  <TableCell>{formatExpenseDate(expense.date)}</TableCell>
                   <TableCell>
                     {expense.isRecurring 
                       ? getFrequencyLabel(expense.frequency) 
