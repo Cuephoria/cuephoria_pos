@@ -5,8 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Monitor, Users } from 'lucide-react';
-import { usePOS, Station, Customer } from '@/context/POSContext';
+import { Clock, Monitor } from 'lucide-react';
+import { usePOS, Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { useToast } from '@/hooks/use-toast';
 
@@ -73,6 +73,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const handleStartSession = async () => {
     if (selectedCustomerId) {
       try {
+        // Call startSession without checking its return value directly
         await startSession(station.id, selectedCustomerId);
         setSelectedCustomerId('');
         toast({
