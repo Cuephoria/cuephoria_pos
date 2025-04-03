@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -14,9 +14,6 @@ import {
 import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
 import { usePOS } from '@/context/POSContext';
-import { Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import DeleteSaleDialog from './DeleteSaleDialog';
 
 interface BusinessSummaryReportProps {
   startDate?: Date;
@@ -30,12 +27,8 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   onDownload 
 }) => {
   const { expenses, businessSummary } = useExpenses();
-  const { bills, products, deleteBill } = usePOS();
+  const { bills, products } = usePOS();
   
-  // State for delete dialog
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedBill, setSelectedBill] = useState<typeof bills[0] | null>(null);
-
   // Current date for display
   const currentDate = new Date();
   
@@ -180,21 +173,6 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   console.log('Canteen sales calculation:', { foodSales, beverageSales, tobaccoSales, totalCanteenSales });
   console.log('Products available:', products.length);
   console.log('Bills available:', bills.length);
-
-  // Get recent sales for display
-  const recentSales = [...bills]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
-
-  // Handle delete bill
-  const handleDeleteClick = (bill: typeof bills[0]) => {
-    setSelectedBill(bill);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async (billId: string) => {
-    await deleteBill(billId);
-  };
   
   return (
     <Card className="w-full">
@@ -361,61 +339,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
             </TableBody>
           </Table>
         </div>
-        
-        <div className="mb-6">
-          <h3 className="font-semibold text-base mb-2">Recent Sales</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Payment Method</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentSales.length > 0 ? (
-                recentSales.map(bill => (
-                  <TableRow key={bill.id}>
-                    <TableCell>
-                      {format(new Date(bill.createdAt), 'PP p')}
-                    </TableCell>
-                    <TableCell>
-                      <CurrencyDisplay amount={bill.total} />
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      {bill.paymentMethod}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                        onClick={() => handleDeleteClick(bill)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4">
-                    No recent sales
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
       </CardContent>
-      
-      <DeleteSaleDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        bill={selectedBill}
-        onConfirm={handleConfirmDelete}
-      />
     </Card>
   );
 };
