@@ -44,7 +44,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   return (
     <Card 
       className={`
-        relative overflow-hidden card-hover animate-scale-in
+        relative overflow-hidden card-hover animate-scale-in h-full
         ${station.isOccupied 
           ? customer?.isMember 
             ? 'border-green-500 bg-black/80' 
@@ -125,14 +125,14 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
           </AlertDialog>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-2">
         <div className="flex flex-col space-y-2">
           {station.isOccupied && station.currentSession && (
             <StationTimer station={station} />
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex-col space-y-2">
+      <CardFooter className="flex-col space-y-2 pt-2">
         <StationActions 
           station={station}
           customers={customers}

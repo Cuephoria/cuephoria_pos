@@ -74,12 +74,20 @@ const Stations = () => {
               {activePs5} active
             </span>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ps5Stations.map((station, index) => (
-              <div key={station.id} className={`animate-scale-in`} style={{animationDelay: `${index * 100}ms`}}>
-                <StationCard station={station} />
-              </div>
-            ))}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {ps5Stations
+              .sort((a, b) => {
+                // Extract numbers from station names (e.g., "Console 1" -> 1)
+                const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                return numA - numB;
+              })
+              .map((station, index) => (
+                <div key={station.id} className="animate-scale-in" style={{animationDelay: `${index * 100}ms`}}>
+                  <StationCard station={station} />
+                </div>
+              ))
+            }
           </div>
         </div>
 
@@ -92,7 +100,6 @@ const Stations = () => {
             </span>
           </div>
           
-          {/* Arrange 8-ball tables in a sequential grid layout */}
           <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
             {ballStations
               .sort((a, b) => {
@@ -102,7 +109,7 @@ const Stations = () => {
                 return numA - numB;
               })
               .map((station, index) => (
-                <div key={station.id} className={`animate-scale-in`} style={{animationDelay: `${index * 100 + 300}ms`}}>
+                <div key={station.id} className="animate-scale-in" style={{animationDelay: `${index * 100 + 300}ms`}}>
                   <StationCard station={station} />
                 </div>
               ))
