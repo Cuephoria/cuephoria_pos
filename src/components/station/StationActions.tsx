@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StationActionsProps {
@@ -99,6 +99,32 @@ const StationActions: React.FC<StationActionsProps> = ({
       }
     }
   };
+  
+  // Filter customers function - preserved from the current implementation
+  const filterCustomers = (searchValue: string) => {
+    return customers.filter(customer => {
+      if (!searchValue.trim()) return true;
+      
+      const query = searchValue.toLowerCase().trim();
+      
+      // Search by phone number
+      if (customer.phone && customer.phone.includes(query)) {
+        return true;
+      }
+      
+      // Search by name
+      if (customer.name && customer.name.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      // Search by email
+      if (customer.email && customer.email.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
 
   if (station.isOccupied) {
     return (
@@ -123,37 +149,42 @@ const StationActions: React.FC<StationActionsProps> = ({
             aria-expanded={open}
             className="w-full justify-between mb-3"
           >
-            {selectedCustomerId
-              ? customers.find((customer) => customer.id === selectedCustomerId)?.name
-              : "Select customer..."}
+            {selectedCustomerId ? (
+              customers.find((customer) => customer.id === selectedCustomerId)?.name
+            ) : (
+              "Select customer..."
+            )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0">
           <Command>
-            <CommandInput placeholder="Search customer..." className="h-9" />
+            <CommandInput placeholder="Search customers..." />
             <CommandEmpty>No customer found.</CommandEmpty>
             <CommandGroup>
               <CommandList>
                 {customers.map((customer) => (
                   <CommandItem
                     key={customer.id}
-                    value={customer.id}
+                    value={customer.name}
                     onSelect={() => {
                       setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
                       setOpen(false);
                     }}
                   >
-                    <div className="flex flex-col">
-                      <span>{customer.name}</span>
-                      <span className="text-xs text-muted-foreground">{customer.phone}</span>
-                    </div>
                     <Check
                       className={cn(
-                        "ml-auto h-4 w-4",
+                        "mr-2 h-4 w-4",
                         selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
                       )}
                     />
+                    <div className="flex items-center">
+                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{customer.name}</p>
+                        <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                      </div>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandList>

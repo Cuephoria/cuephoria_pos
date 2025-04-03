@@ -127,12 +127,19 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleResetProducts = () => {
+  const handleResetProducts = async () => {
     try {
       setIsResetting(true);
+      await resetToInitialProducts();
       toast({
-        title: 'Reset Not Available',
-        description: 'Product reset functionality is not available.',
+        title: 'Products Reset',
+        description: 'Products have been reset to default values.',
+      });
+    } catch (error) {
+      console.error('Error resetting products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset products. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -143,9 +150,16 @@ const ProductsPage: React.FC = () => {
   const handleRefreshProducts = async () => {
     try {
       setIsRefreshing(true);
+      await refreshFromDB();
       toast({
-        title: 'Refresh Not Available',
-        description: 'Product refresh functionality is not available.',
+        title: 'Products Refreshed',
+        description: 'Products have been refreshed from the database.',
+      });
+    } catch (error) {
+      console.error('Error refreshing products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh products from database. Please try again.',
         variant: 'destructive',
       });
     } finally {
