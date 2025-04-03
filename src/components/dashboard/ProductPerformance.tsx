@@ -32,7 +32,7 @@ const ProductPerformance: React.FC = () => {
     .slice(0, 10);
   };
   
-  const getProductColor = (productName: string) => {
+  const getProductColor = () => {
     return '#10B981';
   };
   
@@ -57,7 +57,12 @@ const ProductPerformance: React.FC = () => {
       </CardHeader>
       <CardContent className="h-[300px] pt-4">
         <ChartContainer
-          config={{}}
+          config={{
+            revenue: {
+              label: "Product Revenue",
+              color: "#10B981"
+            }
+          }}
           className="h-full w-full"
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -110,16 +115,22 @@ const ProductPerformance: React.FC = () => {
                   return null;
                 }}
               />
-              <Legend />
+              <Legend 
+                payload={[{ 
+                  value: 'Revenue', 
+                  color: '#10B981', 
+                  type: 'rect' 
+                }]} 
+              />
               <Bar 
                 dataKey="sales" 
                 name="Revenue"
-                fill="#F97316"
+                fill="#10B981"
                 fillOpacity={0.9}
                 radius={[0, 4, 4, 0]}
               >
                 {productData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getProductColor(entry.name)} />
+                  <Cell key={`cell-${index}`} fill="#10B981" />
                 ))}
               </Bar>
             </BarChart>
