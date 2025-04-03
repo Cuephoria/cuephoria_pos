@@ -42,14 +42,16 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   return (
     <Card className={`card-hover ${station.isOccupied ? 'border-cuephoria-orange bg-black/80' : 'border-gray-200'} animate-scale-in`}>
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <StationInfo station={station} customerName={customerName} />
+        <div className="flex justify-between items-center space-x-2">
+          <div className="flex-grow">
+            <StationInfo station={station} customerName={customerName} />
+          </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
                 disabled={station.isOccupied}
               >
                 <Trash2 className="h-4 w-4" />
