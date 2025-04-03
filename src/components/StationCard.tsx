@@ -73,7 +73,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const handleStartSession = async () => {
     if (selectedCustomerId) {
       try {
-        // Call startSession without checking its return value directly
+        // Simply call startSession without checking its return value
         await startSession(station.id, selectedCustomerId);
         setSelectedCustomerId('');
         toast({
