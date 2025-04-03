@@ -58,7 +58,7 @@ export const useStationsData = (initialStations: Station[]) => {
         // Try to create the initial stations in Supabase
         for (const station of initialStations) {
           // Generate a proper UUID for each station if it doesn't have one
-          const dbStationId = station.id.includes('-') ? station.id : generateId();
+          const dbStationId = crypto.randomUUID();
           
           try {
             const { error } = await supabase
@@ -75,6 +75,11 @@ export const useStationsData = (initialStations: Station[]) => {
               console.error(`Error creating station ${station.name} in Supabase:`, error);
             } else {
               console.log(`Created station ${station.name} in Supabase with ID ${dbStationId}`);
+              
+              // Update the local state with the new UUID
+              setStations(prev => prev.map(s => 
+                s.id === station.id ? { ...s, id: dbStationId } : s
+              ));
             }
           } catch (error) {
             console.error(`Error in station creation for ${station.name}:`, error);
@@ -100,7 +105,17 @@ export const useStationsData = (initialStations: Station[]) => {
     try {
       // Check if the station is occupied first
       const station = stations.find(s => s.id === stationId);
-      if (station?.isOccupied) {
+      if (!station) {
+        console.error('Station not found:', stationId);
+        toast({
+          title: 'Error',
+          description: 'Station not found',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      if (station.isOccupied) {
         toast({
           title: 'Cannot Delete',
           description: 'Cannot delete an occupied station. End the current session first.',
@@ -109,23 +124,31 @@ export const useStationsData = (initialStations: Station[]) => {
         return false;
       }
       
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('stations')
-        .delete()
-        .eq('id', stationId);
-        
-      if (error) {
-        console.error('Error deleting station:', error);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to delete station from database',
-          variant: 'destructive'
-        });
-        return false;
+      // Handle newly added stations that might not be in Supabase yet
+      // or stations that don't have a UUID format
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stationId);
+      
+      if (isValidUUID) {
+        // Delete from Supabase only if it's a valid UUID
+        const { error } = await supabase
+          .from('stations')
+          .delete()
+          .eq('id', stationId);
+          
+        if (error) {
+          console.error('Error deleting station from Supabase:', error);
+          toast({
+            title: 'Database Error',
+            description: 'Failed to delete station from database',
+            variant: 'destructive'
+          });
+          return false;
+        }
+      } else {
+        console.log('Skipping Supabase delete for non-UUID station ID:', stationId);
       }
       
-      // Update local state
+      // Update local state (do this regardless of Supabase result)
       setStations(prev => prev.filter(station => station.id !== stationId));
       
       toast({

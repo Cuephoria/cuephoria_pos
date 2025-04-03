@@ -11,6 +11,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { usePOS } from '@/context/POSContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from "@/integrations/supabase/client";
+import { generateId } from '@/utils/pos.utils';
 
 // Create a schema for station validation
 const stationSchema = z.object({
@@ -33,6 +35,7 @@ interface AddStationDialogProps {
 const AddStationDialog: React.FC<AddStationDialogProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
   const { stations, setStations } = usePOS();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Initialize the form
   const form = useForm<StationFormValues>({
@@ -44,29 +47,67 @@ const AddStationDialog: React.FC<AddStationDialogProps> = ({ open, onOpenChange 
     },
   });
 
-  const onSubmit = (values: StationFormValues) => {
-    // Create a new station object
-    const newStation = {
-      id: `station-${Date.now().toString(36)}`, // Simple ID generation
-      name: values.name,
-      type: values.type,
-      hourlyRate: values.hourlyRate,
-      isOccupied: false,
-      currentSession: null
-    };
+  const onSubmit = async (values: StationFormValues) => {
+    setIsSubmitting(true);
     
-    // Add to stations state
-    setStations([...stations, newStation]);
-    
-    // Show success toast
-    toast({
-      title: "Station Added",
-      description: `${values.name} has been added successfully.`,
-    });
-    
-    // Reset form and close dialog
-    form.reset();
-    onOpenChange(false);
+    try {
+      // Generate a proper UUID for the new station
+      const stationId = crypto.randomUUID();
+      
+      // Create a new station object
+      const newStation = {
+        id: stationId,
+        name: values.name,
+        type: values.type,
+        hourlyRate: values.hourlyRate,
+        isOccupied: false,
+        currentSession: null
+      };
+      
+      // First add to Supabase
+      const { error } = await supabase
+        .from('stations')
+        .insert({
+          id: stationId,
+          name: values.name,
+          type: values.type,
+          hourly_rate: values.hourlyRate,
+          is_occupied: false
+        });
+      
+      if (error) {
+        console.error('Error adding station to Supabase:', error);
+        toast({
+          title: "Error",
+          description: "Could not add the station to the database",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Then update local state
+      setStations([...stations, newStation]);
+      
+      // Show success toast
+      toast({
+        title: "Station Added",
+        description: `${values.name} has been added successfully.`,
+      });
+      
+      // Reset form and close dialog
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error in adding station:', error);
+      toast({
+        title: "Error",
+        description: "Something went wrong while adding the station",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -133,14 +174,16 @@ const AddStationDialog: React.FC<AddStationDialogProps> = ({ open, onOpenChange 
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
                 className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90"
+                disabled={isSubmitting}
               >
-                Add Station
+                {isSubmitting ? 'Adding...' : 'Add Station'}
               </Button>
             </DialogFooter>
           </form>
