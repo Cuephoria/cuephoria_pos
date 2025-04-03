@@ -45,7 +45,7 @@ const ReportsPage: React.FC = () => {
     to: new Date(),
   });
   
-  const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('summary');
+  const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   
   // Function to handle downloading reports
   const handleDownloadReport = () => {
@@ -202,17 +202,29 @@ const ReportsPage: React.FC = () => {
   
   const summaryMetrics = calculateSummaryMetrics();
   
-  // Format duration in hours and minutes
-  const formatDuration = (durationInMinutes: number) => {
+  // Format duration in hours and minutes (fixed format to match screenshot)
+  const formatDuration = (durationInMinutes: number | undefined) => {
+    if (!durationInMinutes) return "0h 0m";
+    
     const hours = Math.floor(durationInMinutes / 60);
     const minutes = durationInMinutes % 60;
     return `${hours}h ${minutes}m`;
   };
   
+  // Format time to show only the hour and minute in 12-hour format with am/pm
+  const formatTimeHM = (date: Date) => {
+    return format(date, 'hh:mm a');
+  };
+  
+  // Format to match the time format in screenshot (09:56 pm)
+  const formatTimeDigital = (date: Date) => {
+    return format(date, 'HH:mm');
+  };
+  
   // Calculate total time spent by customer
   const calculateCustomerPlayTime = (customerId: string) => {
     const customerSessions = filteredSessions.filter(
-      session => session.customerId === customerId && session.endTime
+      session => session.customerId === customerId
     );
     
     const totalMinutes = customerSessions.reduce((total, session) => {
@@ -223,8 +235,6 @@ const ReportsPage: React.FC = () => {
       }
       return total;
     }, 0);
-    
-    if (totalMinutes === 0) return "0h 0m";
     
     const hours = Math.floor(totalMinutes / 60);
     const minutes = Math.floor(totalMinutes % 60);
@@ -239,17 +249,43 @@ const ReportsPage: React.FC = () => {
       .reduce((total, bill) => total + bill.total, 0);
   };
   
+  // Extract first item name for bills display
+  const getFirstItemName = (bill: any) => {
+    if (!bill.items || bill.items.length === 0) return 'Unknown item';
+    
+    const firstItem = bill.items[0];
+    return firstItem.name;
+  };
+  
+  // Calculate total item count
+  const getTotalItemCount = (bill: any) => {
+    if (!bill.items) return 0;
+    return bill.items.length;
+  };
+  
+  // Get a customer name by ID
+  const getCustomerName = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    return customer?.name || 'Unknown';
+  };
+  
+  // Get formatted date for display
+  const getFormattedDate = (dateString: Date | string) => {
+    const date = new Date(dateString);
+    return `${format(date, 'd MMM yyyy')}\n${format(date, 'HH:mm')} pm`;
+  };
+  
   return (
-    <div className="p-6 space-y-6 bg-background min-h-screen">
+    <div className="p-6 space-y-6 bg-[#1A1F2C] min-h-screen text-white">
       {/* Header with title, date range, and export button */}
       <div className="flex justify-between items-center pb-2">
         <h1 className="text-4xl font-bold">Reports</h1>
         <div className="flex items-center gap-4">
           <Select defaultValue="30days">
-            <SelectTrigger className="w-[180px] bg-background">
-              <SelectValue placeholder="Select time period" />
+            <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+              <SelectValue placeholder="Last 30 days" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-800 border-gray-700 text-white">
               <SelectItem value="7days">Last 7 days</SelectItem>
               <SelectItem value="30days">Last 30 days</SelectItem>
               <SelectItem value="90days">Last 90 days</SelectItem>
@@ -260,12 +296,12 @@ const ReportsPage: React.FC = () => {
           
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 bg-background">
+              <Button variant="outline" className="gap-2 bg-gray-800 border-gray-700 text-white">
                 <CalendarIcon className="h-4 w-4" />
                 {getDateRangeString()}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
+            <PopoverContent className="w-auto p-0 bg-gray-800 border-gray-700" align="end">
               <Calendar
                 initialFocus
                 mode="range"
@@ -273,12 +309,12 @@ const ReportsPage: React.FC = () => {
                 selected={date}
                 onSelect={setDate}
                 numberOfMonths={2}
-                className="p-3 pointer-events-auto"
+                className="p-3 pointer-events-auto bg-gray-800 text-white"
               />
             </PopoverContent>
           </Popover>
           
-          <Button onClick={handleDownloadReport} className="gap-2 bg-primary/80 hover:bg-primary">
+          <Button onClick={handleDownloadReport} className="gap-2 bg-purple-500 hover:bg-purple-600 text-white">
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -286,11 +322,11 @@ const ReportsPage: React.FC = () => {
       </div>
       
       {/* Navigation tabs */}
-      <div className="bg-muted/60 rounded-lg p-1 flex gap-2 w-fit">
+      <div className="bg-gray-800/60 rounded-lg p-1 flex gap-2 w-fit">
         <Button 
           onClick={() => setActiveTab('bills')}
           variant={activeTab === 'bills' ? 'default' : 'ghost'} 
-          className="gap-2"
+          className={`gap-2 ${activeTab === 'bills' ? 'bg-gray-700' : 'text-gray-400'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
           Bills
@@ -298,7 +334,7 @@ const ReportsPage: React.FC = () => {
         <Button 
           onClick={() => setActiveTab('customers')}
           variant={activeTab === 'customers' ? 'default' : 'ghost'} 
-          className="gap-2"
+          className={`gap-2 ${activeTab === 'customers' ? 'bg-gray-700' : 'text-gray-400'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Customers
@@ -306,7 +342,7 @@ const ReportsPage: React.FC = () => {
         <Button 
           onClick={() => setActiveTab('sessions')}
           variant={activeTab === 'sessions' ? 'default' : 'ghost'} 
-          className="gap-2"
+          className={`gap-2 ${activeTab === 'sessions' ? 'bg-gray-700' : 'text-gray-400'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Sessions
@@ -314,7 +350,7 @@ const ReportsPage: React.FC = () => {
         <Button 
           onClick={() => setActiveTab('summary')}
           variant={activeTab === 'summary' ? 'default' : 'ghost'} 
-          className="gap-2"
+          className={`gap-2 ${activeTab === 'summary' ? 'bg-gray-700' : 'text-gray-400'}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
           Summary
@@ -323,172 +359,198 @@ const ReportsPage: React.FC = () => {
       
       {/* Content based on selected tab */}
       <div className="space-y-6">
-        {activeTab === 'customers' && (
-          <Card className="border-none bg-card shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle>Customer Activity</CardTitle>
-              <CardDescription>View all customers and their activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-muted/50">
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Member Status</TableHead>
-                      <TableHead>Total Spent</TableHead>
-                      <TableHead>Play Time</TableHead>
-                      <TableHead>Loyalty Points</TableHead>
-                      <TableHead>Joined On</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCustomers.map(customer => (
-                      <TableRow key={customer.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">{customer.name}</TableCell>
-                        <TableCell>
-                          {customer.phone}
-                          {customer.email && <div className="text-xs text-muted-foreground">{customer.email}</div>}
+        {activeTab === 'bills' && (
+          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-1">Transaction History</h2>
+              <p className="text-gray-400">
+                View all transactions 
+                {date?.from && date?.to ? 
+                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
+                  ''
+                }
+              </p>
+            </div>
+            <div className="rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Bill ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Subtotal</TableHead>
+                    <TableHead>Discount</TableHead>
+                    <TableHead>Points Used</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Payment</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredBills.map(bill => {
+                    const customer = customers.find(c => c.id === bill.customerId);
+                    const billDate = new Date(bill.createdAt);
+                    const firstItemName = bill.items.length > 0 ? bill.items[0].name : '';
+                    const itemCount = bill.items.length;
+                    
+                    return (
+                      <TableRow key={bill.id}>
+                        <TableCell className="text-white">
+                          <div>{format(billDate, 'd MMM yyyy')}</div>
+                          <div className="text-gray-400">{format(billDate, 'HH:mm')} pm</div>
                         </TableCell>
+                        <TableCell className="text-white font-mono text-xs">{bill.id.substring(0, 30)}</TableCell>
+                        <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
+                        <TableCell className="text-white">
+                          <div>{itemCount} item{itemCount !== 1 ? 's' : ''}</div>
+                          {bill.items.length > 0 && (
+                            <div className="text-gray-400 text-xs">{firstItemName}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-white">₹{bill.subtotal}</TableCell>
+                        <TableCell className="text-white">₹{bill.discountValue || 0}</TableCell>
+                        <TableCell className="text-white">{bill.loyaltyPointsUsed || 0}</TableCell>
+                        <TableCell className="text-white font-semibold">₹{bill.total}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={customer.isMember ? 
-                            "bg-purple-900/10 text-purple-500 border-purple-200" : 
-                            "bg-slate-100 text-slate-500 border-slate-200"
+                          <Badge variant="outline" className={
+                            bill.paymentMethod === 'upi'
+                              ? "bg-blue-900/30 text-blue-400 border-blue-800"
+                              : "bg-green-900/30 text-green-400 border-green-800"
                           }>
-                            {customer.isMember ? "Member" : "Non-Member"}
+                            {bill.paymentMethod === 'upi' ? 'UPI' : 'Cash'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <CurrencyDisplay amount={calculateCustomerTotalSpent(customer.id)} />
-                        </TableCell>
-                        <TableCell>{calculateCustomerPlayTime(customer.id)}</TableCell>
-                        <TableCell>{customer.loyaltyPoints || 0}</TableCell>
-                        <TableCell>{customer.createdAt ? format(new Date(customer.createdAt), 'dd MMM yyyy') : 'N/A'}</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
         
-        {activeTab === 'bills' && (
-          <Card className="border-none bg-card shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle>Bills</CardTitle>
-              <CardDescription>
-                {date?.from && date?.to 
-                  ? `From ${format(date.from, 'PP')} to ${format(date.to, 'PP')}` 
-                  : 'All bills'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-muted/50">
-                      <TableHead>Bill #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Date</TableHead>
+        {activeTab === 'customers' && (
+          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-1">Customer Activity</h2>
+              <p className="text-gray-400">View all customers and their activity</p>
+            </div>
+            <div className="rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Member Status</TableHead>
+                    <TableHead>Total Spent</TableHead>
+                    <TableHead>Play Time</TableHead>
+                    <TableHead>Loyalty Points</TableHead>
+                    <TableHead>Joined On</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map(customer => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="text-white font-medium">{customer.name}</TableCell>
+                      <TableCell className="text-white">
+                        <div>{customer.phone}</div>
+                        {customer.email && <div className="text-gray-400 text-xs">{customer.email}</div>}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={customer.isMember ? 
+                          "bg-purple-900/30 text-purple-400 border-purple-800" : 
+                          "bg-gray-800/50 text-gray-400 border-gray-700"
+                        }>
+                          {customer.isMember ? "Member" : "Non-Member"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-white">
+                        ₹{calculateCustomerTotalSpent(customer.id).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-white">{calculateCustomerPlayTime(customer.id)}</TableCell>
+                      <TableCell className="text-white">{customer.loyaltyPoints || 0}</TableCell>
+                      <TableCell className="text-white">{customer.createdAt ? format(new Date(customer.createdAt), 'd MMM yyyy') : 'N/A'}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBills.map(bill => {
-                      const customer = customers.find(c => c.id === bill.customerId);
-                      return (
-                        <TableRow key={bill.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{bill.id.substring(0, 8)}</TableCell>
-                          <TableCell>{customer?.name || 'Unknown'}</TableCell>
-                          <TableCell>{bill.items.reduce((sum, item) => sum + item.quantity, 0)}</TableCell>
-                          <TableCell><CurrencyDisplay amount={bill.total} /></TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={
-                              bill.paymentMethod === 'upi'
-                                ? "bg-blue-100 text-blue-800 border-blue-200"
-                                : "bg-green-100 text-green-800 border-green-200"
-                            }>
-                              {bill.paymentMethod === 'upi' ? 'UPI' : 'Cash'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{format(new Date(bill.createdAt), 'dd MMM yyyy')}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
         
         {activeTab === 'sessions' && (
-          <Card className="border-none bg-card shadow-md">
-            <CardHeader className="pb-2">
-              <CardTitle>Sessions</CardTitle>
-              <CardDescription>
-                {date?.from && date?.to 
-                  ? `From ${format(date.from, 'PP')} to ${format(date.to, 'PP')}` 
-                  : 'All sessions'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-muted/50">
-                      <TableHead>Station</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Start Time</TableHead>
-                      <TableHead>End Time</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSessions.map(session => {
-                      const customer = customers.find(c => c.id === session.customerId);
-                      const duration = session.endTime 
-                        ? Math.floor((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60))
-                        : 0;
+          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-1">Session History</h2>
+              <p className="text-gray-400">View all game sessions and their details</p>
+            </div>
+            <div className="rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Station</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Start Time</TableHead>
+                    <TableHead>End Time</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSessions.map(session => {
+                    const customer = customers.find(c => c.id === session.customerId);
+                    
+                    // Calculate session duration properly
+                    let durationDisplay = "0h 1m"; // Default duration
+                    if (session.endTime) {
+                      const startMs = new Date(session.startTime).getTime();
+                      const endMs = new Date(session.endTime).getTime();
+                      const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+                      const hours = Math.floor(durationMinutes / 60);
+                      const minutes = durationMinutes % 60;
+                      durationDisplay = `${hours}h ${minutes}m`;
+                    }
                         
-                      return (
-                        <TableRow key={session.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{session.stationId}</TableCell>
-                          <TableCell>{customer?.name || 'Unknown'}</TableCell>
-                          <TableCell>{format(new Date(session.startTime), 'dd MMM yyyy HH:mm')}</TableCell>
-                          <TableCell>{session.endTime ? format(new Date(session.endTime), 'dd MMM yyyy HH:mm') : '-'}</TableCell>
-                          <TableCell>{session.endTime ? formatDuration(duration) : 'In progress'}</TableCell>
-                          <TableCell>
-                            <Badge variant={session.endTime ? 'outline' : 'default'} className={
-                              !session.endTime
-                                ? "bg-green-100 text-green-800 border-green-200"
-                                : ""
-                            }>
-                              {session.endTime ? 'Completed' : 'Active'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                    return (
+                      <TableRow key={session.id}>
+                        <TableCell className="text-white font-medium">{session.stationId}</TableCell>
+                        <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
+                        <TableCell className="text-white">
+                          <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
+                          <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
+                        </TableCell>
+                        <TableCell className="text-white">
+                          {session.endTime ? (
+                            <>
+                              <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
+                              <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
+                            </>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-white">{durationDisplay}</TableCell>
+                        <TableCell>
+                          <Badge className={
+                            !session.endTime
+                              ? "bg-green-900/30 text-green-400 border-green-800"
+                              : "bg-gray-700 text-gray-300"
+                          }>
+                            {session.endTime ? 'Completed' : 'Active'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
         
         {activeTab === 'summary' && (
-          <Card className="border-none bg-card shadow-md">
+          <Card className="border-gray-800 bg-[#1A1F2C] shadow-xl">
             <CardHeader className="pb-2">
-              <CardTitle>Business Summary</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl text-white">Business Summary</CardTitle>
+              <CardDescription className="text-gray-400">
                 Overview of key metrics 
                 {date?.from && date?.to 
                   ? ` from ${format(date.from, 'MMM do, yyyy')} to ${format(date.to, 'MMM do, yyyy')}` 
@@ -500,91 +562,91 @@ const ReportsPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Financial Metrics */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Financial Metrics</h3>
+                  <h3 className="text-lg font-semibold text-white">Financial Metrics</h3>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Revenue</span>
-                      <span className="font-semibold"><CurrencyDisplay amount={summaryMetrics.financial.totalRevenue} /></span>
+                      <span className="text-gray-400">Total Revenue</span>
+                      <span className="font-semibold text-white">₹{summaryMetrics.financial.totalRevenue}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Average Bill Value</span>
-                      <span className="font-semibold"><CurrencyDisplay amount={summaryMetrics.financial.averageBillValue} /></span>
+                      <span className="text-gray-400">Average Bill Value</span>
+                      <span className="font-semibold text-white">₹{summaryMetrics.financial.averageBillValue.toFixed(2)}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Discounts Given</span>
-                      <span className="font-semibold"><CurrencyDisplay amount={summaryMetrics.financial.totalDiscounts} /></span>
+                      <span className="text-gray-400">Total Discounts Given</span>
+                      <span className="font-semibold text-white">₹{summaryMetrics.financial.totalDiscounts}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Cash Sales</span>
-                      <span className="font-semibold"><CurrencyDisplay amount={summaryMetrics.financial.cashSales} /></span>
+                      <span className="text-gray-400">Cash Sales</span>
+                      <span className="font-semibold text-white">₹{summaryMetrics.financial.cashSales}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">UPI Sales</span>
-                      <span className="font-semibold"><CurrencyDisplay amount={summaryMetrics.financial.upiSales} /></span>
+                      <span className="text-gray-400">UPI Sales</span>
+                      <span className="font-semibold text-white">₹{summaryMetrics.financial.upiSales}</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Operational Metrics */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Operational Metrics</h3>
+                  <h3 className="text-lg font-semibold text-white">Operational Metrics</h3>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Transactions</span>
-                      <span className="font-semibold">{summaryMetrics.operational.totalTransactions}</span>
+                      <span className="text-gray-400">Total Transactions</span>
+                      <span className="font-semibold text-white">{summaryMetrics.operational.totalTransactions}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Active Sessions</span>
-                      <span className="font-semibold">{summaryMetrics.operational.activeSessions}</span>
+                      <span className="text-gray-400">Active Sessions</span>
+                      <span className="font-semibold text-white">{summaryMetrics.operational.activeSessions}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Completed Sessions</span>
-                      <span className="font-semibold">{summaryMetrics.operational.completedSessions}</span>
+                      <span className="text-gray-400">Completed Sessions</span>
+                      <span className="font-semibold text-white">{summaryMetrics.operational.completedSessions}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Most Popular Product</span>
-                      <span className="font-semibold">{summaryMetrics.operational.mostPopularProduct}</span>
+                      <span className="text-gray-400">Most Popular Product</span>
+                      <span className="font-semibold text-white">{summaryMetrics.operational.mostPopularProduct}</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Customer Metrics */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Customer Metrics</h3>
+                  <h3 className="text-lg font-semibold text-white">Customer Metrics</h3>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Customers</span>
-                      <span className="font-semibold">{summaryMetrics.customer.totalCustomers}</span>
+                      <span className="text-gray-400">Total Customers</span>
+                      <span className="font-semibold text-white">{summaryMetrics.customer.totalCustomers}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Members</span>
-                      <span className="font-semibold">{summaryMetrics.customer.memberCount}</span>
+                      <span className="text-gray-400">Members</span>
+                      <span className="font-semibold text-white">{summaryMetrics.customer.memberCount}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Non-Members</span>
-                      <span className="font-semibold">{summaryMetrics.customer.nonMemberCount}</span>
+                      <span className="text-gray-400">Non-Members</span>
+                      <span className="font-semibold text-white">{summaryMetrics.customer.nonMemberCount}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Loyalty Points Used</span>
-                      <span className="font-semibold">{summaryMetrics.customer.loyaltyPointsUsed}</span>
+                      <span className="text-gray-400">Loyalty Points Used</span>
+                      <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsUsed}</span>
                     </div>
                     
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Loyalty Points Earned</span>
-                      <span className="font-semibold">{summaryMetrics.customer.loyaltyPointsEarned}</span>
+                      <span className="text-gray-400">Loyalty Points Earned</span>
+                      <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsEarned}</span>
                     </div>
                   </div>
                 </div>
