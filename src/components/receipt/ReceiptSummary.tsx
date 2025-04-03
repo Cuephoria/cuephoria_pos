@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Bill } from '@/context/POSContext';
-import { CurrencyDisplay } from '@/components/ui/currency';
 
 interface ReceiptSummaryProps {
   bill: Bill;
@@ -12,7 +11,7 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ bill }) => {
     <div className="space-y-1 text-sm">
       <div className="receipt-item">
         <span>Subtotal:</span>
-        <CurrencyDisplay amount={bill.subtotal} />
+        <span>₹{bill.subtotal.toLocaleString('en-IN')}</span>
       </div>
       
       {bill.discount > 0 && (
@@ -20,20 +19,20 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ bill }) => {
           <span>
             Discount {bill.discountType === 'percentage' ? `(${bill.discount}%)` : ''}:
           </span>
-          <CurrencyDisplay amount={bill.discountValue} className="text-cuephoria-purple" />
+          <span>-₹{bill.discountValue.toLocaleString('en-IN')}</span>
         </div>
       )}
       
       {bill.loyaltyPointsUsed > 0 && (
         <div className="receipt-item text-cuephoria-orange">
           <span>Loyalty Points:</span>
-          <CurrencyDisplay amount={bill.loyaltyPointsUsed} className="text-cuephoria-orange" />
+          <span>-₹{bill.loyaltyPointsUsed.toLocaleString('en-IN')}</span>
         </div>
       )}
       
       <div className="receipt-total flex justify-between font-bold">
         <span>Total:</span>
-        <CurrencyDisplay amount={bill.total} />
+        <span>₹{bill.total.toLocaleString('en-IN')}</span>
       </div>
       
       <div className="text-xs text-gray-600 mt-4">

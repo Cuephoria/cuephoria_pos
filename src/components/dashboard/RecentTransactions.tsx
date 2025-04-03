@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
-import { CurrencyDisplay } from '@/components/ui/currency';
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers } = usePOS();
@@ -42,7 +41,7 @@ const RecentTransactions: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-white font-semibold">
-                  <CurrencyDisplay amount={bill.total} />
+                  ₹{bill.total.toFixed(2)}
                 </div>
               </div>
             );

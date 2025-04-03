@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -80,12 +79,6 @@ export interface ResetOptions {
   sessions: boolean;
 }
 
-export interface SessionResult {
-  updatedSession?: Session;
-  sessionCartItem?: CartItem;
-  customer?: Customer;
-}
-
 export interface POSContextType {
   products: Product[];
   stations: Station[];
@@ -109,8 +102,8 @@ export interface POSContextType {
   deleteProduct: (id: string) => void;
   
   // Station functions
-  startSession: (stationId: string, customerId: string) => Promise<void>;
-  endSession: (stationId: string) => Promise<void>;
+  startSession: (stationId: string, customerId: string) => void;
+  endSession: (stationId: string) => void;
   
   // Customer functions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;

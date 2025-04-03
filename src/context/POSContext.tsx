@@ -5,9 +5,7 @@ import {
   Customer, 
   CartItem, 
   Bill,
-  Product,
-  Session,
-  SessionResult
+  Product
 } from '@/types/pos.types';
 import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
@@ -84,94 +82,38 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useBills(updateCustomer, updateProduct);
   
   // Wrapper functions that combine functionality from multiple hooks
-  const startSession = async (stationId: string, customerId: string): Promise<void> => {
+  const startSession = (stationId: string, customerId: string) => {
     // Check membership validity before allowing session
     if (!checkMembershipValidity(customerId)) {
-      throw new Error("Membership not valid or expired");
+      return;
     }
     
-    await startSessionBase(stationId, customerId);
+    return startSessionBase(stationId, customerId);
   };
   
-  // Make endSession return a Promise<void> to match type definition
-  const endSession = async (stationId: string): Promise<void> => {
-    try {
-      // Get the current station
-      const station = stations.find(s => s.id === stationId);
-      if (!station || !station.isOccupied || !station.currentSession) {
-        console.log("No active session found for this station in wrapper");
-        throw new Error("No active session found");
+  const endSession = (stationId: string) => {
+    const result = endSessionBase(stationId, customers);
+    if (result) {
+      const { sessionCartItem, customer } = result;
+      
+      // Clear cart before adding the new session
+      clearCart();
+      
+      // Auto-select customer
+      if (customer) {
+        console.log("Auto-selecting customer:", customer.name);
+        selectCustomer(customer.id);
       }
       
-      // Get the customer ID before ending the session
-      const customerId = station.currentSession.customerId;
+      // Add the session to cart
+      console.log("Adding session to cart:", sessionCartItem);
+      addToCart(sessionCartItem);
       
-      // Call the base endSession function
-      const result = await endSessionBase(stationId, customers);
-      
-      if (result) {
-        const { sessionCartItem, customer } = result;
-        
-        // Clear cart before adding the new session
-        clearCart();
-        
-        // Auto-select customer
-        if (customer) {
-          console.log("Auto-selecting customer:", customer.name);
-          selectCustomer(customer.id);
-        }
-        
-        // Add the session to cart
-        if (sessionCartItem) {
-          console.log("Adding session to cart:", sessionCartItem);
-          addToCart(sessionCartItem);
-        }
-      }
-    } catch (error) {
-      console.error('Error in endSession:', error);
-      throw error;
+      return result.updatedSession;
     }
   };
   
-  // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
-  const updateCustomerMembershipWrapper = (
-    customerId: string, 
-    membershipData: {
-      membershipPlan?: string;
-      membershipDuration?: 'weekly' | 'monthly';
-      membershipHoursLeft?: number;
-    }
-  ): Customer | null => {
-    // Create a placeholder customer with the minimum required fields
-    const customer = customers.find(c => c.id === customerId);
-    
-    if (!customer) return null;
-    
-    // Start the async update process but don't wait for it
-    updateCustomerMembership(customerId, membershipData)
-      .then((updatedCustomer) => {
-        if (updatedCustomer) {
-          console.log("Customer membership updated:", updatedCustomer.id);
-        }
-      })
-      .catch(error => {
-        console.error("Error updating customer membership:", error);
-      });
-    
-    // Return a modified version of the existing customer to satisfy the synchronous interface
-    return {
-      ...customer,
-      membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
-      membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
-      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
-        ? membershipData.membershipHoursLeft 
-        : customer.membershipHoursLeft,
-      isMember: true
-    };
-  };
-  
-  // Modified to handle async operations but return synchronously
-  const completeSale = (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
+  const completeSale = (paymentMethod: 'cash' | 'upi') => {
     try {
       // Apply student price for membership items if student discount is enabled
       if (isStudentDiscount) {
@@ -197,8 +139,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return product && product.category === 'membership';
       });
       
-      // This is async but we're handling it internally and returning a synchronous Bill
-      completeSaleBase(
+      const bill = completeSaleBase(
         cart, 
         selectedCustomer, 
         discount, 
@@ -207,77 +148,52 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         calculateTotal, 
         paymentMethod,
         products
-      ).then(bill => {
-        // If we have a successful sale with membership items, update the customer
-        if (bill && selectedCustomer && membershipItems.length > 0) {
-          for (const item of membershipItems) {
-            const product = products.find(p => p.id === item.id);
+      );
+      
+      // If we have a successful sale with membership items, update the customer
+      if (bill && selectedCustomer && membershipItems.length > 0) {
+        for (const item of membershipItems) {
+          const product = products.find(p => p.id === item.id);
+          
+          if (product) {
+            // Default values
+            let membershipHours = product.membershipHours || 4; // Default hours from product or fallback to 4
+            let membershipDuration: 'weekly' | 'monthly' = 'weekly';
             
-            if (product) {
-              // Default values
-              let membershipHours = product.membershipHours || 4; // Default hours from product or fallback to 4
-              let membershipDuration: 'weekly' | 'monthly' = 'weekly';
-              
-              // Set duration based on product
-              if (product.duration) {
-                membershipDuration = product.duration;
-              } else if (product.name.toLowerCase().includes('weekly')) {
-                membershipDuration = 'weekly';
-              } else if (product.name.toLowerCase().includes('monthly')) {
-                membershipDuration = 'monthly';
-              }
-              
-              // Update customer's membership
-              updateCustomerMembership(selectedCustomer.id, {
-                membershipPlan: product.name,
-                membershipDuration: membershipDuration,
-                membershipHoursLeft: membershipHours
-              });
-              
-              break; // Only apply the first membership found
+            // Set duration based on product
+            if (product.duration) {
+              membershipDuration = product.duration;
+            } else if (product.name.toLowerCase().includes('weekly')) {
+              membershipDuration = 'weekly';
+            } else if (product.name.toLowerCase().includes('monthly')) {
+              membershipDuration = 'monthly';
             }
+            
+            // Update customer's membership
+            updateCustomerMembership(selectedCustomer.id, {
+              membershipPlan: product.name,
+              membershipDuration: membershipDuration,
+              membershipHoursLeft: membershipHours
+            });
+            
+            break; // Only apply the first membership found
           }
         }
-        
-        if (bill) {
-          // Clear the cart after successful sale
-          clearCart();
-          // Reset selected customer
-          setSelectedCustomer(null);
-          // Reset student discount
-          setIsStudentDiscount(false);
-        }
-      }).catch(error => {
-        console.error("Error in completeSale async:", error);
-      });
-      
-      // Return a synchronous bill for the UI
-      if (selectedCustomer) {
-        const placeholderBill: Bill = {
-          id: `temp-${new Date().getTime()}`,
-          customerId: selectedCustomer.id,
-          items: [...cart],
-          subtotal: cart.reduce((sum, item) => sum + item.total, 0),
-          discount,
-          discountValue: discount > 0 ? 
-            (discountType === 'percentage' ? 
-              (cart.reduce((sum, item) => sum + item.total, 0) * discount / 100) : 
-              discount) : 0,
-          discountType,
-          loyaltyPointsUsed,
-          loyaltyPointsEarned: Math.floor(calculateTotal() / 10),
-          total: calculateTotal(),
-          paymentMethod,
-          createdAt: new Date()
-        };
-        return placeholderBill;
       }
       
-      return undefined;
+      if (bill) {
+        // Clear the cart after successful sale
+        clearCart();
+        // Reset selected customer
+        setSelectedCustomer(null);
+        // Reset student discount
+        setIsStudentDiscount(false);
+      }
       
+      return bill;
     } catch (error) {
-      console.error("Error in completeSale:", error);
-      return undefined;
+      // Re-throw the error to be handled by the component
+      throw error;
     }
   };
   
@@ -344,7 +260,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         endSession,
         addCustomer,
         updateCustomer,
-        updateCustomerMembership: updateCustomerMembershipWrapper,
+        updateCustomerMembership,
         deleteCustomer,
         selectCustomer,
         checkMembershipValidity,

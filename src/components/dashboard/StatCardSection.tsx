@@ -3,7 +3,6 @@ import React from 'react';
 import StatsCard from './StatsCard';
 import { CreditCard, Users, Clock, AlertTriangle, PlayCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { Product } from '@/context/POSContext';
-import { CurrencyDisplay } from '@/components/ui/currency';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -65,7 +64,7 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
       <StatsCard
         title="Total Sales"
-        value={<CurrencyDisplay amount={totalSales} />}
+        value={`₹${totalSales.toFixed(2)}`}
         icon={CreditCard}
         subValue={
           <div className="flex items-center space-x-1">

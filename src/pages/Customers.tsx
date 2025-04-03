@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,8 +22,6 @@ const Customers = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [phoneError, setPhoneError] = useState('');
-  const [emailError, setEmailError] = useState('');
 
   // Form state
   const [formState, setFormState] = useState({
@@ -81,8 +78,6 @@ const Customers = () => {
       membershipExpiryDate: '',
       membershipHoursLeft: ''
     });
-    setPhoneError('');
-    setEmailError('');
     setIsEditMode(false);
     setSelectedCustomer(null);
   };
@@ -118,40 +113,6 @@ const Customers = () => {
     });
   };
 
-  // Check for duplicate phone and email
-  const checkForDuplicates = (): boolean => {
-    setPhoneError('');
-    setEmailError('');
-    let hasDuplicates = false;
-    
-    // Skip checking current customer in edit mode
-    const currentId = isEditMode && selectedCustomer ? selectedCustomer.id : null;
-    
-    // Check for duplicate phone (required field)
-    const duplicatePhone = customersData.find(
-      c => c.phone === formState.phone && c.id !== currentId
-    );
-    
-    if (duplicatePhone) {
-      setPhoneError('This phone number is already registered');
-      hasDuplicates = true;
-    }
-    
-    // Check for duplicate email (if provided)
-    if (formState.email) {
-      const duplicateEmail = customersData.find(
-        c => c.email === formState.email && c.id !== currentId
-      );
-      
-      if (duplicateEmail) {
-        setEmailError('This email is already registered');
-        hasDuplicates = true;
-      }
-    }
-    
-    return hasDuplicates;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const {
@@ -175,13 +136,12 @@ const Customers = () => {
     // Validate Indian phone number
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(phone)) {
-      setPhoneError('Please enter a valid 10-digit Indian phone number');
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid 10-digit Indian phone number',
+        variant: 'destructive'
+      });
       return;
-    }
-    
-    // Check for duplicates
-    if (checkForDuplicates()) {
-      return; // Don't proceed if duplicates found
     }
 
     // Create the customer data object
@@ -234,15 +194,14 @@ const Customers = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value
+    } = e.target;
     setFormState(prev => ({
       ...prev,
       [name]: value
     }));
-    
-    // Clear validation errors when input changes
-    if (name === 'phone') setPhoneError('');
-    if (name === 'email') setEmailError('');
   };
 
   const handleSwitchChange = (checked: boolean) => {
@@ -300,28 +259,11 @@ const Customers = () => {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone" 
-                  name="phone" 
-                  value={formState.phone} 
-                  onChange={handleChange} 
-                  placeholder="10-digit mobile number" 
-                  className={phoneError ? "border-red-500" : ""}
-                />
-                {phoneError && <p className="text-sm text-red-500">{phoneError}</p>}
+                <Input id="phone" name="phone" value={formState.phone} onChange={handleChange} placeholder="10-digit mobile number" />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email (Optional)</Label>
-                <Input 
-                  id="email" 
-                  name="email" 
-                  type="email" 
-                  value={formState.email} 
-                  onChange={handleChange} 
-                  placeholder="Enter email address" 
-                  className={emailError ? "border-red-500" : ""}
-                />
-                {emailError && <p className="text-sm text-red-500">{emailError}</p>}
+                <Input id="email" name="email" type="email" value={formState.email} onChange={handleChange} placeholder="Enter email address" />
               </div>
               
               {/* Membership Section */}
