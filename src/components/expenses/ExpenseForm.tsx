@@ -57,26 +57,20 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 }) => {
   // Initialize with current date if no date is provided
   const today = new Date();
-  let initialDate = today;
   
+  // Parse the initial date if it exists
+  let initialDate = today;
   if (initialData?.date) {
-    // Handle different date formats that might come from the API or context
-    if (initialData.date instanceof Date) {
-      initialDate = initialData.date;
-    } else {
-      try {
-        initialDate = new Date(initialData.date as any);
-        if (isNaN(initialDate.getTime())) {
-          initialDate = today; // Fallback to current date if invalid
-        }
-      } catch (e) {
-        console.error('Failed to parse initial date:', e);
-        initialDate = today; // Fallback to current date
+    try {
+      initialDate = new Date(initialData.date);
+      if (isNaN(initialDate.getTime())) {
+        initialDate = today;
       }
+    } catch (e) {
+      console.error('Failed to parse initial date:', e);
+      initialDate = today;
     }
   }
-  
-  console.log('Form initializing with date:', initialDate);
   
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
@@ -214,7 +208,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                       className="pl-3 text-left font-normal"
                     >
                       {field.value ? (
-                        format(new Date(field.value), "PPP")
+                        format(field.value, "PPP")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -226,14 +220,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={(date) => {
-                      console.log('Calendar date selected:', date);
-                      if (date) {
-                        field.onChange(date);
-                      }
-                    }}
+                    onSelect={field.onChange}
                     initialFocus
-                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
