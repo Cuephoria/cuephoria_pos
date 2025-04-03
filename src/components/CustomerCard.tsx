@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePOS, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { User, Edit, Trash, Clock, CreditCard, Star, Award, CalendarCheck } from 'lucide-react';
+import { User, Edit, Trash, Clock, CreditCard, Star, Award, CalendarCheck, Calendar } from 'lucide-react';
 
 interface CustomerCardProps {
   customer: Customer;
@@ -22,7 +22,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onSelect,
   isSelectable = false
 }) => {
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | undefined) => {
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-IN');
   };
 
@@ -38,8 +39,16 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return expiryDate > new Date();
   };
 
-  // Debug log to check customer data
-  console.log('Customer data in card:', customer);
+  const getMembershipBadgeText = () => {
+    if (!customer.isMember) return 'Non-Member';
+    if (!isMembershipActive()) return 'Expired';
+    
+    const duration = customer.membershipDuration || 
+                     (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'weekly' : 
+                      customer.membershipPlan?.toLowerCase().includes('monthly') ? 'monthly' : '');
+    
+    return duration.charAt(0).toUpperCase() + duration.slice(1) + ' Member';
+  };
 
   return (
     <Card>
@@ -50,7 +59,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             {customer.name}
           </CardTitle>
           <Badge className={isMembershipActive() ? 'bg-cuephoria-purple' : 'bg-gray-500'}>
-            {isMembershipActive() ? 'Member' : 'Non-Member'}
+            {getMembershipBadgeText()}
           </Badge>
         </div>
       </CardHeader>
@@ -78,10 +87,19 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
                 </div>
               )}
               
+              {customer.membershipStartDate && (
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1" /> Start Date:
+                  </span>
+                  <span>{formatDate(customer.membershipStartDate)}</span>
+                </div>
+              )}
+              
               {customer.membershipExpiryDate && (
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center">
-                    <CalendarCheck className="h-4 w-4 mr-1" /> Valid Until:
+                    <CalendarCheck className="h-4 w-4 mr-1" /> End Date:
                   </span>
                   <span>{formatDate(customer.membershipExpiryDate)}</span>
                 </div>

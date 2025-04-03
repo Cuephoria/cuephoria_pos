@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -10,6 +9,7 @@ export interface Product {
   originalPrice?: number;
   offerPrice?: number;
   studentPrice?: number;
+  duration?: 'weekly' | 'monthly';
 }
 
 export interface Customer {
@@ -19,8 +19,10 @@ export interface Customer {
   email?: string;
   isMember: boolean;
   membershipExpiryDate?: Date;
+  membershipStartDate?: Date;
   membershipPlan?: string;
   membershipHoursLeft?: number;
+  membershipDuration?: 'weekly' | 'monthly';
   loyaltyPoints: number;
   totalSpent: number;
   totalPlayTime: number;
@@ -103,6 +105,11 @@ export interface POSContextType {
   // Customer functions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
   updateCustomer: (customer: Customer) => void;
+  updateCustomerMembership: (customerId: string, membershipData: {
+    membershipPlan?: string;
+    membershipDuration?: 'weekly' | 'monthly';
+    membershipHoursLeft?: number;
+  }) => Customer | null;
   deleteCustomer: (id: string) => void;
   selectCustomer: (id: string | null) => void;
   

@@ -19,6 +19,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       const customersWithDates = parsedCustomers.map((customer: any) => ({
         ...customer,
         createdAt: new Date(customer.createdAt),
+        membershipStartDate: customer.membershipStartDate ? new Date(customer.membershipStartDate) : undefined,
         membershipExpiryDate: customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate) : undefined
       }));
       
@@ -65,6 +66,39 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     };
     setCustomers([...customers, newCustomer]);
     return newCustomer;
+  };
+
+  const updateCustomerMembership = (customerId: string, membershipData: {
+    membershipPlan?: string;
+    membershipDuration?: 'weekly' | 'monthly';
+    membershipHoursLeft?: number;
+  }) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return null;
+    
+    const now = new Date();
+    const membershipStartDate = now;
+    let membershipExpiryDate = new Date(now);
+    
+    // Calculate expiry date based on duration
+    if (membershipData.membershipDuration === 'weekly') {
+      membershipExpiryDate.setDate(membershipExpiryDate.getDate() + 7);
+    } else if (membershipData.membershipDuration === 'monthly') {
+      membershipExpiryDate.setMonth(membershipExpiryDate.getMonth() + 1);
+    }
+    
+    const updatedCustomer = {
+      ...customer,
+      isMember: true,
+      membershipPlan: membershipData.membershipPlan,
+      membershipDuration: membershipData.membershipDuration,
+      membershipHoursLeft: membershipData.membershipHoursLeft,
+      membershipStartDate,
+      membershipExpiryDate
+    };
+    
+    updateCustomer(updatedCustomer);
+    return updatedCustomer;
   };
   
   const updateCustomer = (customer: Customer) => {
@@ -203,6 +237,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     setSelectedCustomer,
     addCustomer,
     updateCustomer,
+    updateCustomerMembership,
     deleteCustomer,
     selectCustomer,
     checkMembershipValidity,

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePOS, Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { ShoppingCart, Edit, Trash, Tag } from 'lucide-react';
+import { ShoppingCart, Edit, Trash, Tag, Clock } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -49,6 +49,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
     });
   };
 
+  const getDurationText = () => {
+    if (product.category !== 'membership') return '';
+    
+    if (product.duration === 'weekly') {
+      return 'Valid for 7 days';
+    } else if (product.duration === 'monthly') {
+      return 'Valid for 30 days';
+    } else if (product.name.includes('Weekly')) {
+      return 'Valid for 7 days';
+    } else if (product.name.includes('Monthly')) {
+      return 'Valid for 30 days';
+    }
+    
+    return '';
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -88,9 +104,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   <CurrencyDisplay amount={product.studentPrice} />
                 </div>
               )}
-              <div className="text-xs text-gray-500 pt-1">
-                <Tag className="h-3 w-3 inline mr-1" />
-                {product.name.includes('Weekly') ? 'Valid for 7 days' : 'Valid for 30 days'}
+              <div className="text-xs text-gray-500 pt-1 flex items-center">
+                <Clock className="h-3 w-3 inline mr-1" />
+                {getDurationText()}
               </div>
             </>
           )}

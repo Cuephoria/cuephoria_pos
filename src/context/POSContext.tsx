@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { 
   POSContextType, 
@@ -35,7 +34,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     selectedCustomer, 
     setSelectedCustomer, 
     addCustomer, 
-    updateCustomer, 
+    updateCustomer,
+    updateCustomerMembership,
     deleteCustomer, 
     selectCustomer,
     checkMembershipValidity,
@@ -111,6 +111,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const completeSale = (paymentMethod: 'cash' | 'upi') => {
     try {
+      // Look for membership products in cart
+      const membershipItems = cart.filter(item => {
+        const product = products.find(p => p.id === item.id);
+        return product && product.category === 'membership';
+      });
+      
       const bill = completeSaleBase(
         cart, 
         selectedCustomer, 
@@ -121,6 +127,46 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         paymentMethod,
         products
       );
+      
+      // If we have a successful sale with membership items, update the customer
+      if (bill && selectedCustomer && membershipItems.length > 0) {
+        for (const item of membershipItems) {
+          const product = products.find(p => p.id === item.id);
+          
+          if (product) {
+            // Default values
+            let membershipHours = 20; // Default hours
+            let membershipDuration: 'weekly' | 'monthly' = 'weekly';
+            
+            // Set duration based on product
+            if (product.duration) {
+              membershipDuration = product.duration;
+            } else if (product.name.toLowerCase().includes('weekly')) {
+              membershipDuration = 'weekly';
+            } else if (product.name.toLowerCase().includes('monthly')) {
+              membershipDuration = 'monthly';
+            }
+            
+            // Adjust hours based on plan type
+            if (product.name.includes('8-Ball')) {
+              membershipHours = membershipDuration === 'weekly' ? 20 : 80;
+            } else if (product.name.includes('PS5')) {
+              membershipHours = membershipDuration === 'weekly' ? 15 : 60;
+            } else if (product.name.includes('Combo')) {
+              membershipHours = membershipDuration === 'weekly' ? 30 : 120;
+            }
+            
+            // Update customer's membership
+            updateCustomerMembership(selectedCustomer.id, {
+              membershipPlan: product.name,
+              membershipDuration: membershipDuration,
+              membershipHoursLeft: membershipHours
+            });
+            
+            break; // Only apply the first membership found
+          }
+        }
+      }
       
       if (bill) {
         // Clear the cart after successful sale
@@ -197,6 +243,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         endSession,
         addCustomer,
         updateCustomer,
+        updateCustomerMembership,
         deleteCustomer,
         selectCustomer,
         checkMembershipValidity,

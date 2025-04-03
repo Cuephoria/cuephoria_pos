@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Customer } from '@/context/POSContext';
-import { CalendarCheck, Award, Clock } from 'lucide-react';
+import { CalendarCheck, Award, Clock, Calendar } from 'lucide-react';
 
 interface CustomerInfoProps {
   customer: Customer;
@@ -22,6 +22,16 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
     return expiryDate > new Date();
   };
 
+  const getMembershipType = () => {
+    if (!customer.isMember) return 'Non-Member';
+    
+    const duration = customer.membershipDuration || 
+                    (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'weekly' : 
+                     customer.membershipPlan?.toLowerCase().includes('monthly') ? 'monthly' : '');
+    
+    return duration.charAt(0).toUpperCase() + duration.slice(1) + ' Member';
+  };
+
   return (
     <div className="mb-4">
       <p className="font-medium text-sm">Customer: {customer.name}</p>
@@ -32,7 +42,7 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
           <Award className="h-3 w-3 mr-1" />
           <span className="font-medium">Membership Status:</span> 
           <span className={`ml-1 ${isMembershipActive() ? 'text-green-600' : 'text-red-600'}`}>
-            {isMembershipActive() ? 'Active' : 'Inactive'}
+            {isMembershipActive() ? getMembershipType() : 'Inactive'}
           </span>
         </p>
         
@@ -43,10 +53,18 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
           </p>
         )}
         
+        {customer.membershipStartDate && (
+          <p className="text-xs flex items-center mt-1">
+            <Calendar className="h-3 w-3 mr-1" />
+            <span className="font-medium">Start Date:</span>
+            <span className="ml-1">{formatDate(customer.membershipStartDate)}</span>
+          </p>
+        )}
+        
         {customer.membershipExpiryDate && (
           <p className="text-xs flex items-center mt-1">
             <CalendarCheck className="h-3 w-3 mr-1" />
-            <span className="font-medium">Valid Until:</span>
+            <span className="font-medium">End Date:</span>
             <span className="ml-1">{formatDate(customer.membershipExpiryDate)}</span>
           </p>
         )}

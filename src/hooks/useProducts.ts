@@ -3,77 +3,84 @@ import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 
-// Define the membership products
+// Define the membership products with shorter names
 const membershipProducts: Product[] = [
   { 
     id: 'mem1', 
-    name: "Nova Weekly Pass - 8 Ball (2 Players)",
+    name: "Weekly 8-Ball (2P)",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
     price: 399, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'weekly'
   },
   { 
     id: 'mem2', 
-    name: "Stellar Weekly Pass - 8 Ball (4 Players)",
+    name: "Weekly 8-Ball (4P)",
     originalPrice: 1199,
     offerPrice: 599,
     studentPrice: 499,
     price: 599, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'weekly'
   },
   { 
     id: 'mem3', 
-    name: "Cosmic Weekly Pass - PS5 Gaming",
+    name: "Weekly PS5 Gaming",
     originalPrice: 599,
     offerPrice: 399,
     studentPrice: 299,
     price: 399, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'weekly'
   },
   { 
     id: 'mem4', 
-    name: "Ultimate Galaxy Weekly Pass - Combo",
+    name: "Weekly Combo Pass",
     originalPrice: 1799,
     offerPrice: 899,
     studentPrice: 799,
     price: 899, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'weekly'
   },
   { 
     id: 'mem5', 
-    name: "Infinity Monthly Pass - 8 Ball (2 Players)",
+    name: "Monthly 8-Ball (2P)",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
     price: 1499, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'monthly'
   },
   { 
     id: 'mem6', 
-    name: "Nebula Monthly Pass - PS5 Gaming",
+    name: "Monthly PS5 Gaming",
     originalPrice: 1999,
     offerPrice: 1499,
     studentPrice: 1199,
     price: 1499, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'monthly'
   },
   { 
     id: 'mem7', 
-    name: "Supernova Monthly Pass - Ultimate Combo",
+    name: "Monthly Ultimate Combo",
     originalPrice: 5999,
     offerPrice: 3499,
     studentPrice: 2999,
     price: 3499, // Default to offer price
     category: 'membership', 
-    stock: 9999 
+    stock: 9999,
+    duration: 'monthly'
   }
 ];
 
