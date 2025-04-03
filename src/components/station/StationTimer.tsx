@@ -2,38 +2,64 @@
 import React, { useState, useEffect } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface StationTimerProps {
   station: Station;
 }
 
 const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
-  const [cost, setCost] = useState<number>(0);
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
+  const [cost, setCost] = useState<number>(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
-      setElapsedTime(0);
-      setCost(0);
       setHours(0);
       setMinutes(0);
       setSeconds(0);
+      setCost(0);
       return;
     }
 
-    // Convert session startTime to a date object if it isn't already
-    const startTime = station.currentSession.startTime instanceof Date
-      ? station.currentSession.startTime.getTime()
-      : new Date(station.currentSession.startTime).getTime();
+    // Get session ID from current session
+    const sessionId = station.currentSession.id;
+    console.log("Timer tracking session ID:", sessionId);
     
-    console.log("Timer start time:", new Date(startTime).toISOString());
+    // Initial fetch of session data
+    const fetchSessionData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sessions')
+          .select('start_time')
+          .eq('id', sessionId)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching session data:", error);
+          toast({
+            title: "Error",
+            description: "Could not fetch session data",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (data) {
+          updateTimerDisplay(new Date(data.start_time));
+        }
+      } catch (error) {
+        console.error("Error in fetchSessionData:", error);
+      }
+    };
     
-    const updateElapsedTime = () => {
-      const now = new Date().getTime();
-      const elapsedMs = now - startTime;
+    // Calculate and update the timer display
+    const updateTimerDisplay = (startTime: Date) => {
+      const now = new Date();
+      const elapsedMs = now.getTime() - startTime.getTime();
       
       const secondsTotal = Math.floor(elapsedMs / 1000);
       const minutesTotal = Math.floor(secondsTotal / 60);
@@ -43,14 +69,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(minutesTotal % 60);
       setHours(hoursTotal);
       
-      setElapsedTime(minutesTotal);
-      
       // Calculate cost based on hourly rate
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       setCost(calculatedCost);
       
-      console.log("Timer update:", {
+      console.log("Timer update from Supabase:", {
+        startTime: startTime.toISOString(),
         elapsedMs,
         secondsTotal,
         minutesTotal,
@@ -61,13 +86,43 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       });
     };
 
-    // Run immediately then set interval
-    updateElapsedTime();
+    // Fetch the data immediately
+    fetchSessionData();
     
-    const interval = setInterval(updateElapsedTime, 1000);
+    // Set up real-time subscription to session updates
+    const subscription = supabase
+      .channel(`session_timer_${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'sessions',
+          filter: `id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('Session updated:', payload);
+          if (payload.new && payload.new.start_time) {
+            updateTimerDisplay(new Date(payload.new.start_time));
+          }
+        }
+      )
+      .subscribe();
     
-    return () => clearInterval(interval);
-  }, [station]);
+    // Set up interval to update timer every second
+    const intervalId = setInterval(() => {
+      if (station.currentSession && station.currentSession.startTime) {
+        const startTime = new Date(station.currentSession.startTime);
+        updateTimerDisplay(startTime);
+      }
+    }, 1000);
+    
+    // Clean up on unmount
+    return () => {
+      clearInterval(intervalId);
+      subscription.unsubscribe();
+    };
+  }, [station, toast]);
 
   const formatTimeDisplay = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
