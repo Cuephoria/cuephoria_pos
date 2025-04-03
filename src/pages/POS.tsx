@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -347,7 +348,7 @@ const POS = () => {
           </CardFooter>
         </Card>
 
-        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200 overflow-hidden">
+        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200">
           <CardHeader className="pb-3 bg-gradient-to-r from-transparent to-cuephoria-blue/10">
             <CardTitle className="text-xl font-heading">Products</CardTitle>
             <div className="flex space-x-2">
@@ -375,9 +376,9 @@ const POS = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value={activeTab} className="flex-grow overflow-auto px-4 mt-4">
+            <TabsContent value={activeTab} className="flex-grow overflow-auto px-6 mt-4">
               {searchedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
                   {searchedProducts.map((product, index) => (
                     <div 
                       key={product.id} 
