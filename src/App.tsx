@@ -46,79 +46,79 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <div className="hidden md:block">
-            <SidebarTrigger />
+    <POSProvider>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <AppSidebar />
+          <div className="flex-1 flex flex-col">
+            <div className="hidden md:block">
+              <SidebarTrigger />
+            </div>
+            {children}
           </div>
-          {children}
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </POSProvider>
   );
 };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <POSProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/pos" element={
-                <ProtectedRoute>
-                  <POS />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/stations" element={
-                <ProtectedRoute>
-                  <Stations />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/products" element={
-                <ProtectedRoute>
-                  <Products />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/customers" element={
-                <ProtectedRoute>
-                  <Customers />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/reports" element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </POSProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/pos" element={
+              <ProtectedRoute>
+                <POS />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/stations" element={
+              <ProtectedRoute>
+                <Stations />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/products" element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/customers" element={
+              <ProtectedRoute>
+                <Customers />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/reports" element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
