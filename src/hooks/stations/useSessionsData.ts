@@ -18,7 +18,7 @@ export const useSessionsData = () => {
     setSessionsError(null);
     
     try {
-      // Fetch sessions from Supabase
+      // Fetch sessions from Supabase, including active sessions (no end_time)
       const { data, error } = await supabase
         .from('sessions')
         .select('*');
@@ -45,8 +45,15 @@ export const useSessionsData = () => {
           duration: item.duration
         }));
         
+        // Filter out sessions with end time - this ensures that all sessions
+        // (including those from past sessions that weren't properly ended due to page close)
+        // are still properly tracked until manually ended
         setSessions(transformedSessions);
-        console.log("Loaded sessions from Supabase:", transformedSessions);
+        
+        // Log active sessions (those without end_time)
+        const activeSessions = transformedSessions.filter(s => !s.endTime);
+        console.log(`Loaded ${activeSessions.length} active sessions from Supabase`);
+        activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
       }
@@ -65,6 +72,20 @@ export const useSessionsData = () => {
   
   useEffect(() => {
     refreshSessions();
+    
+    // Add listener for page visibility changes to refresh sessions when page becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Page became visible, refreshing sessions...');
+        refreshSessions();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
   
   return {

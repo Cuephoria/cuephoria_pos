@@ -44,6 +44,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
         stationId: stationId,
         customerId: customerId,
         startTime: now,
+        // No endTime or duration, will be set when explicitly ended
       };
       
       // Check if stationId is in UUID format for Supabase
@@ -65,6 +66,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
             station_id: dbStationId, // Use a valid UUID for database
             customer_id: newSession.customerId,
             start_time: newSession.startTime.toISOString(),
+            // No end_time or duration, making it persist until explicitly ended
           })
           .select();
           
