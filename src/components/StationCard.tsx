@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +24,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
 
-  // Update elapsed time every second for active sessions
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
       setElapsedTime(0);
@@ -42,29 +40,23 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
       const now = new Date().getTime();
       const elapsedMs = now - startTime;
       
-      // Calculate time components
       const secondsTotal = Math.floor(elapsedMs / 1000);
       const minutesTotal = Math.floor(secondsTotal / 60);
       const hoursTotal = Math.floor(minutesTotal / 60);
       
-      // Set displayed time values
       setSeconds(secondsTotal % 60);
       setMinutes(minutesTotal % 60);
       setHours(hoursTotal);
       
-      // Update elapsed minutes for cost calculation
       setElapsedTime(minutesTotal);
       
-      // Calculate cost based on hourly rate
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       setCost(calculatedCost);
     };
 
-    // Initial update
     updateElapsedTime();
     
-    // Set interval to update every second
     const interval = setInterval(updateElapsedTime, 1000);
     
     return () => clearInterval(interval);
@@ -73,7 +65,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const handleStartSession = async () => {
     if (selectedCustomerId) {
       try {
-        // Simply call startSession without checking its return value
         await startSession(station.id, selectedCustomerId);
         setSelectedCustomerId('');
         toast({
@@ -96,30 +87,19 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
       try {
         const customerId = station.currentSession.customerId;
         
-        // End the session and get session details
-        const result = await endSession(station.id);
+        await endSession(station.id);
         
-        if (result) {
-          // Set the customer in context and navigate to POS
-          console.log('Navigating to POS with customer ID:', customerId);
-          selectCustomer(customerId);
-          
-          toast({
-            title: "Session Ended",
-            description: "Session has been ended and added to cart. Redirecting to checkout...",
-          });
-          
-          // Navigate to POS page with a small delay to allow state updates
-          setTimeout(() => {
-            navigate('/pos');
-          }, 300);
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to end session. Please try again.",
-            variant: "destructive"
-          });
-        }
+        console.log('Navigating to POS with customer ID:', customerId);
+        selectCustomer(customerId);
+        
+        toast({
+          title: "Session Ended",
+          description: "Session has been ended and added to cart. Redirecting to checkout...",
+        });
+        
+        setTimeout(() => {
+          navigate('/pos');
+        }, 300);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({
