@@ -1,9 +1,9 @@
+
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import { generateId } from '@/utils/pos.utils';
-import { truncate } from '@/utils/number.utils';
 import React from 'react';
 
 /**
@@ -115,7 +115,7 @@ export const useEndSession = ({
       
       // Calculate session cost
       const stationRate = station.hourlyRate;
-      const hoursPlayed = truncate(durationMinutes / 60);
+      const hoursPlayed = durationMinutes / 60;
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       console.log("Session cost calculation:", { 
@@ -132,7 +132,7 @@ export const useEndSession = ({
         price: stationRate,
         quantity: hoursPlayed,
         total: sessionCost,
-        type: 'session',
+        type: 'session',  // Using type instead of itemType to match CartItem interface
       };
       
       console.log("Created cart item for ended session:", sessionCartItem);
