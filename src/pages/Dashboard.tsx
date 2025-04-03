@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -196,31 +197,93 @@ const Dashboard = () => {
   };
   
   const calculateTotalSales = () => {
+    // Define the start date based on the active tab
     let startDate = new Date();
+    const now = new Date();
     
     if (activeTab === 'hourly') {
+      // Start from the beginning of the current day
       startDate.setHours(0, 0, 0, 0);
     } else if (activeTab === 'daily') {
+      // Start from the beginning of the current week
+      const dayOfWeek = startDate.getDay(); // 0 for Sunday, 1 for Monday, etc.
+      startDate.setDate(startDate.getDate() - dayOfWeek); // Go back to the start of the week (Sunday)
       startDate.setHours(0, 0, 0, 0);
     } else if (activeTab === 'weekly') {
-      startDate.setDate(startDate.getDate() - startDate.getDay());
+      // Start from 4 weeks ago
+      startDate.setDate(startDate.getDate() - 28); // Go back 28 days (4 weeks)
       startDate.setHours(0, 0, 0, 0);
     } else if (activeTab === 'monthly') {
-      startDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      // Start from the beginning of the year
+      startDate = new Date(startDate.getFullYear(), 0, 1); // January 1st of current year
     }
     
-    const filteredBills = bills.filter(bill => new Date(bill.createdAt) >= startDate);
-    return filteredBills.reduce((sum, bill) => sum + bill.total, 0);
+    // Filter bills that are after the start date
+    const filteredBills = bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return billDate >= startDate && billDate <= now;
+    });
+    
+    // Calculate the total of all filtered bills
+    const total = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
+    
+    return total;
   };
   
   const calculatePercentChange = () => {
     const currentPeriodSales = calculateTotalSales();
     
-    if (currentPeriodSales === 0) {
-      return "No previous data";
+    // Get the previous period
+    let previousPeriodStart = new Date();
+    let previousPeriodEnd = new Date();
+    let currentPeriodStart = new Date();
+    
+    if (activeTab === 'hourly') {
+      // Compare to previous day
+      currentPeriodStart.setHours(0, 0, 0, 0);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 1);
+    } else if (activeTab === 'daily') {
+      // Compare to previous week
+      const dayOfWeek = currentPeriodStart.getDay();
+      currentPeriodStart.setDate(currentPeriodStart.getDate() - dayOfWeek); // Start of current week
+      currentPeriodStart.setHours(0, 0, 0, 0);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 7); // Start of previous week
+    } else if (activeTab === 'weekly') {
+      // Compare to previous 4 weeks
+      currentPeriodStart.setDate(currentPeriodStart.getDate() - 28);
+      currentPeriodStart.setHours(0, 0, 0, 0);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 28);
+    } else if (activeTab === 'monthly') {
+      // Compare to previous year
+      currentPeriodStart = new Date(currentPeriodStart.getFullYear(), 0, 1);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 1);
     }
     
-    return "+12.5% from last period";
+    // Calculate previous period sales
+    const previousPeriodBills = bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return billDate >= previousPeriodStart && billDate < previousPeriodEnd;
+    });
+    
+    const previousPeriodSales = previousPeriodBills.reduce((sum, bill) => sum + bill.total, 0);
+    
+    if (previousPeriodSales === 0) {
+      return currentPeriodSales > 0 ? "+100% from last period" : "No previous data";
+    }
+    
+    const percentChange = ((currentPeriodSales - previousPeriodSales) / previousPeriodSales) * 100;
+    
+    // Format to 1 decimal place and add + sign for positive values
+    const formattedChange = percentChange.toFixed(1);
+    return (percentChange >= 0 ? "+" : "") + formattedChange + "% from last period";
   };
   
   const getLowStockCount = () => {
