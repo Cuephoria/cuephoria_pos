@@ -1,4 +1,5 @@
 import { Bill, CartItem, Customer } from '@/types/pos.types';
+import { truncate } from './number.utils';
 
 // Helper functions
 export const generateId = (): string => {
@@ -95,10 +96,10 @@ export const calculateCartTotal = (
   
   let discountValue = 0;
   if (discountType === 'percentage') {
-    discountValue = subtotal * (discount / 100);
+    discountValue = truncate(subtotal * (discount / 100));
   } else {
-    discountValue = discount;
+    discountValue = truncate(discount);
   }
   
-  return Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+  return Math.max(0, truncate(subtotal - discountValue - loyaltyPointsUsed));
 };

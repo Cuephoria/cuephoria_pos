@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { CartItem } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
+import { truncate } from '@/utils/number.utils';
 
 export const useCart = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -17,7 +17,11 @@ export const useCart = () => {
       if (existingItem) {
         const updatedCart = cart.map(i => 
           i.id === item.id && i.type === item.type
-            ? { ...i, quantity: i.quantity + item.quantity, total: (i.quantity + item.quantity) * i.price }
+            ? { 
+                ...i, 
+                quantity: truncate(i.quantity + item.quantity), 
+                total: truncate((i.quantity + item.quantity) * i.price)
+              }
             : i
         );
         setCart(updatedCart);
@@ -26,7 +30,11 @@ export const useCart = () => {
           description: `Increased quantity of ${item.name}`,
         });
       } else {
-        const newItem = { ...item, total: item.quantity * item.price };
+        const newItem = { 
+          ...item, 
+          quantity: truncate(item.quantity), 
+          total: truncate(item.quantity * item.price)
+        };
         setCart([...cart, newItem]);
         toast({
           title: "Item Added",
@@ -73,7 +81,11 @@ export const useCart = () => {
       
       const updatedCart = cart.map(i => 
         i.id === id
-          ? { ...i, quantity, total: quantity * i.price }
+          ? { 
+              ...i, 
+              quantity: truncate(quantity), 
+              total: truncate(quantity * i.price)
+            }
           : i
       );
       
