@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePOS, Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { ShoppingCart, Edit, Trash, Tag, Clock, GraduationCap } from 'lucide-react';
@@ -50,7 +51,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
       quantity: 1
     });
     
-    // If this is a membership product and it has student price, show student discount option
     if (product.category === 'membership' && product.studentPrice) {
       setIsStudentDiscount(true);
     }
@@ -86,7 +86,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <Card className={`flex flex-col h-full ${className}`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap">{product.name}</CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap max-w-[200px] cursor-default">
+                  {product.name}
+                </CardTitle>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="px-2 py-1">{product.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Badge className={getCategoryColor(product.category)}>
             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
           </Badge>
@@ -144,24 +155,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </CardContent>
       <CardFooter className="mt-auto">
         {isAdmin ? (
-          <div className="flex w-full space-x-2">
+          <>
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex-1 justify-start"
               onClick={() => onEdit && onEdit(product)}
             >
-              <Edit className="h-4 w-4 mr-2" /> Edit
+              <Edit className="h-4 w-4 mr-1" /> Edit
             </Button>
             <Button 
               variant="destructive" 
               size="sm" 
-              className="flex-1 justify-start"
               onClick={() => onDelete && onDelete(product.id)}
             >
-              <Trash className="h-4 w-4 mr-2" /> Delete
+              <Trash className="h-4 w-4 mr-1" /> Delete
             </Button>
-          </div>
+          </>
         ) : (
           <Button 
             variant="default" 
