@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { User, Trash2 } from 'lucide-react';
+import { User, Trash2, KeyRound } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { 
@@ -16,12 +16,21 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Bill } from '@/types/pos.types';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill } = usePOS();
+  const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Sort bills by date (newest first)
   const sortedBills = [...bills].sort((a, b) => 
@@ -36,6 +45,68 @@ const RecentTransactions: React.FC = () => {
     setIsConfirmOpen(true);
   };
   
+  const handlePasswordVerification = async () => {
+    if (!billToDelete) return;
+    if (!adminPassword.trim()) {
+      toast({
+        title: 'Password Required',
+        description: 'Please enter the admin password to proceed',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsVerifying(true);
+    
+    try {
+      // Verify admin password against Supabase
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id, password')
+        .eq('is_admin', true)
+        .single();
+      
+      if (error) {
+        console.error('Error verifying admin:', error);
+        toast({
+          title: 'Authentication Error',
+          description: 'Could not verify admin credentials',
+          variant: 'destructive',
+        });
+        setIsVerifying(false);
+        return;
+      }
+      
+      if (data && data.password === adminPassword) {
+        // Password is correct, proceed with deletion
+        setIsPasswordDialogOpen(false);
+        setAdminPassword('');
+        handleConfirmDelete();
+      } else {
+        // Password is incorrect
+        toast({
+          title: 'Authentication Failed',
+          description: 'Incorrect admin password',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error in password verification:', error);
+      toast({
+        title: 'Authentication Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+  
+  const handleConfirmPasswordCheck = () => {
+    setIsConfirmOpen(false);
+    setIsPasswordDialogOpen(true);
+  };
+  
   const handleConfirmDelete = async () => {
     if (!billToDelete) return;
     
@@ -46,6 +117,11 @@ const RecentTransactions: React.FC = () => {
     if (success) {
       setIsConfirmOpen(false);
       setBillToDelete(null);
+      toast({
+        title: 'Success',
+        description: 'Transaction deleted successfully',
+        variant: 'default',
+      });
     }
   };
   
@@ -111,15 +187,62 @@ const RecentTransactions: React.FC = () => {
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleConfirmDelete}
+              onClick={handleConfirmPasswordCheck}
               className="bg-red-600 hover:bg-red-700"
-              disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              Continue
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-yellow-500" />
+              Admin Authentication
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Please enter the admin password to delete this transaction
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="admin-password">Admin Password</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                placeholder="Enter password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="bg-gray-700 border-gray-600"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsPasswordDialogOpen(false);
+                setAdminPassword('');
+              }}
+              className="bg-gray-700 text-white hover:bg-gray-600"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              onClick={handlePasswordVerification}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isVerifying || !adminPassword.trim()}
+            >
+              {isVerifying ? "Verifying..." : "Verify & Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
