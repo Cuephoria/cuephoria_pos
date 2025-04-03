@@ -1,224 +1,153 @@
 
-import React, { createContext, useContext, useState } from 'react';
-import { 
-  Customer, 
-  Product, 
-  Bill, 
-  Session, 
-  Station, 
-  CartItem
-} from '@/types/pos.types';
-import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
-import { useProducts } from '@/hooks/useProducts';
-import { useCustomers } from '@/hooks/useCustomers';
-import { useStations } from '@/hooks/useStations';
-import { useCart } from '@/hooks/useCart';
-import { useBills } from '@/hooks/useBills';
-import { POSContextType, ResetOptions } from './POSTypes';
-import { 
-  createResetToSampleData, 
-  createAddSampleIndianData 
-} from './POSUtils';
-import { 
-  createUpdateCustomerMembershipWrapper, 
-  createStartSessionWrapper, 
-  createEndSessionWrapper, 
-  createCompleteSaleWrapper 
-} from './POSFunctions';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { POSContextType, Product, Station, Customer, Session, Bill, CartItem, ResetOptions } from "@/types/pos.types";
+import { createPOSFunctions } from "./POSFunctions";
+import { generateSampleData } from "@/data/sampleData";
+import { useStations, useSessionActions } from "@/hooks/stations";
 
-// Create context
+// Create the context with a default value
 const POSContext = createContext<POSContextType | undefined>(undefined);
 
-export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log('POSProvider initialized'); // Debug log
+// Provider component
+export const POSProvider = ({ children }: { children: React.ReactNode }) => {
+  // Products state
+  const [products, setProducts] = useLocalStorage<Product[]>("cuephoriaProducts", []);
+
+  // Stations state
+  const [stationsLocal, setStationsLocal] = useState<Station[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   
-  // State for student discount
-  const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
+  // Customer state
+  const [customers, setCustomers] = useLocalStorage<Customer[]>("cuephoriaCustomers", []);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
-  // Initialize all hooks
-  const { 
-    products, 
-    setProducts, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct 
-  } = useProducts(initialProducts);
+  // Sales state
+  const [bills, setBills] = useLocalStorage<Bill[]>("cuephoriaBills", []);
+  const [cart, setCart] = useState<CartItem[]>([]);
   
-  const { 
-    customers, 
-    setCustomers, 
-    selectedCustomer, 
-    setSelectedCustomer, 
-    addCustomer, 
-    updateCustomer,
-    updateCustomerMembership,
-    deleteCustomer, 
-    selectCustomer,
-    checkMembershipValidity,
-    deductMembershipHours
-  } = useCustomers(initialCustomers);
+  // Discount state
+  const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [loyaltyPointsUsed, setLoyaltyPointsUsed] = useState(0);
+  const [isStudentDiscount, setIsStudentDiscount] = useState(false);
   
+  // Add any services or custom hooks here
+  const updateCustomer = (customer: Customer) => {
+    setCustomers(prev => 
+      prev.map(c => c.id === customer.id ? customer : c)
+    );
+  };
+  
+  // Initialize stations with the useStations hook
   const { 
     stations, 
-    setStations, 
-    sessions, 
-    setSessions, 
-    startSession: startSessionBase, 
-    endSession: endSessionBase 
-  } = useStations(initialStations, updateCustomer);
+    setStations,
+    startSession: startSessionHook,
+    endSession: endSessionHook
+  } = useStations(stationsLocal, updateCustomer);
   
-  const { 
-    cart, 
-    setCart, 
-    discount, 
-    setDiscountAmount, 
-    discountType, 
-    setDiscountType, 
-    loyaltyPointsUsed, 
-    setLoyaltyPointsUsedAmount, 
-    addToCart, 
-    removeFromCart, 
-    updateCartItem, 
-    clearCart, 
-    setDiscount, 
-    setLoyaltyPointsUsed, 
-    calculateTotal 
-  } = useCart();
-  
-  const { 
-    bills, 
-    setBills, 
-    completeSale: completeSaleBase, 
-    exportBills: exportBillsBase, 
-    exportCustomers: exportCustomersBase 
-  } = useBills(updateCustomer, updateProduct);
-  
-  // Create wrapper functions that combine functionality from multiple hooks
-  const updateCustomerMembershipWrapper = createUpdateCustomerMembershipWrapper(
+  // Create POS functions with all the necessary dependencies
+  const posFunctions = createPOSFunctions(
+    // State setters
+    setProducts,
+    setStations,
+    setCustomers,
+    setSessions,
+    setBills,
+    setCart,
+    setSelectedCustomer,
+    setDiscount,
+    setDiscountType,
+    setLoyaltyPointsUsed,
+    setIsStudentDiscount,
+    
+    // State values
+    products,
+    stations,
     customers,
-    updateCustomerMembership
-  );
-  
-  const startSession = createStartSessionWrapper(
-    checkMembershipValidity,
-    startSessionBase
-  );
-  
-  const endSession = createEndSessionWrapper(
-    stations, // Fixed: Passing stations instead of customers
-    endSessionBase,
-    clearCart,
-    selectCustomer,
-    addToCart
-  );
-  
-  const completeSale = createCompleteSaleWrapper(
+    sessions,
+    bills,
     cart,
     selectedCustomer,
     discount,
     discountType,
     loyaltyPointsUsed,
-    calculateTotal,
-    products,
     isStudentDiscount,
-    setCart,
-    completeSaleBase,
-    updateCustomerMembership,
-    clearCart,
-    setSelectedCustomer,
-    setIsStudentDiscount
+    
+    // Hook functions
+    startSessionHook,
+    endSessionHook
   );
   
-  const exportBills = () => {
-    exportBillsBase(customers);
-  };
+  // Initialize with sample data if empty
+  useEffect(() => {
+    const initSampleData = () => {
+      // Only initialize if all data arrays are empty
+      if (
+        products.length === 0 &&
+        stations.length === 0 &&
+        customers.length === 0 &&
+        bills.length === 0
+      ) {
+        const sampleData = generateSampleData();
+        
+        // Set initial data
+        setProducts(sampleData.products);
+        setStationsLocal(sampleData.stations);
+        setCustomers(sampleData.customers);
+        setBills(sampleData.bills);
+      } else if (stations.length === 0) {
+        // If only stations are empty (common when using localStorage)
+        const sampleData = generateSampleData();
+        setStationsLocal(sampleData.stations);
+      }
+    };
+    
+    initSampleData();
+  }, []);
   
-  const exportCustomers = () => {
-    exportCustomersBase(customers);
-  };
+  // Update local stations when stations from the hook change
+  useEffect(() => {
+    if (stations.length > 0) {
+      setStationsLocal(stations);
+    }
+  }, [stations]);
   
-  // Create sample data functions
-  const handleResetToSampleData = createResetToSampleData(
-    initialProducts,
-    initialCustomers,
-    initialStations,
-    setProducts,
-    setCustomers,
-    setBills,
-    setSessions,
-    setStations,
-    setCart,
-    setDiscountAmount,
-    setLoyaltyPointsUsedAmount,
-    setSelectedCustomer
-  );
-  
-  const handleAddSampleIndianData = createAddSampleIndianData(
+  // Combine all the state and functions
+  const contextValue: POSContextType = {
+    // States
     products,
+    stations,
     customers,
+    sessions,
     bills,
-    setProducts,
-    setCustomers,
-    setBills
-  );
-  
-  console.log('POSProvider rendering with context value'); // Debug log
+    cart,
+    selectedCustomer,
+    discount,
+    discountType,
+    loyaltyPointsUsed,
+    isStudentDiscount,
+    
+    // Station state setter
+    setStations,
+    
+    // Include all the functions
+    ...posFunctions
+  };
   
   return (
-    <POSContext.Provider
-      value={{
-        products,
-        stations,
-        customers,
-        sessions,
-        bills,
-        cart,
-        selectedCustomer,
-        discount,
-        discountType,
-        loyaltyPointsUsed,
-        isStudentDiscount,
-        setIsStudentDiscount,
-        setStations,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        startSession,
-        endSession,
-        addCustomer,
-        updateCustomer,
-        updateCustomerMembership: updateCustomerMembershipWrapper,
-        deleteCustomer,
-        selectCustomer,
-        checkMembershipValidity,
-        deductMembershipHours,
-        addToCart,
-        removeFromCart,
-        updateCartItem,
-        clearCart,
-        setDiscount,
-        setLoyaltyPointsUsed,
-        calculateTotal,
-        completeSale,
-        exportBills,
-        exportCustomers,
-        resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData
-      }}
-    >
+    <POSContext.Provider value={contextValue}>
       {children}
     </POSContext.Provider>
   );
 };
 
-// Hook to use the POS context
+// Custom hook to use the POS context
 export const usePOS = () => {
-  console.log('usePOS hook called'); // Debug log
   const context = useContext(POSContext);
   if (context === undefined) {
-    console.error('usePOS must be used within a POSProvider'); // Debug log
-    throw new Error('usePOS must be used within a POSProvider');
+    throw new Error("usePOS must be used within a POSProvider");
   }
-  console.log('usePOS hook returning context'); // Debug log
   return context;
 };

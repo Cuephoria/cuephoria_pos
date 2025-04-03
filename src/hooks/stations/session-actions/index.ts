@@ -15,16 +15,21 @@ export const useSessionActions = (
   setSessions: React.Dispatch<React.SetStateAction<Session[]>>,
   updateCustomer: (customer: Customer) => void
 ) => {
-  const sessionActionsProps: SessionActionsProps = {
+  const { startSession } = useStartSession({
     stations,
     setStations,
     sessions,
     setSessions,
     updateCustomer
-  };
+  });
   
-  const { startSession } = useStartSession(sessionActionsProps);
-  const { endSession } = useEndSession(sessionActionsProps);
+  const { endSession } = useEndSession(
+    stations,
+    setStations,
+    sessions,
+    setSessions,
+    updateCustomer
+  );
   
   return {
     startSession,

@@ -1,265 +1,388 @@
-
-import React from 'react';
 import { 
-  Customer, 
-  Product, 
-  Bill, 
-  Session, 
-  CartItem,
-  Station
-} from '@/types/pos.types';
+  Product, Station, Customer, Session, CartItem, Bill, 
+  ResetOptions, SessionResult 
+} from "@/types/pos.types";
+import { generateId } from "@/utils/pos.utils";
+import { 
+  checkMembershipValidityInternal, 
+  deductMembershipHoursInternal,
+  updateCustomerMembershipInternal
+} from "@/utils/membership.utils";
+import { exportToCSV } from "@/services/dataOperations";
 
-// Customer membership wrapper function
-export const createUpdateCustomerMembershipWrapper = (
+// Create a type for the functions object
+export type POSFunctionsType = ReturnType<typeof createPOSFunctions>;
+
+export const createPOSFunctions = (
+  // State setters
+  setProducts: React.Dispatch<React.SetStateAction<Product[]>>,
+  setStations: React.Dispatch<React.SetStateAction<Station[]>>,
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>,
+  setSessions: React.Dispatch<React.SetStateAction<Session[]>>,
+  setBills: React.Dispatch<React.SetStateAction<Bill[]>>,
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>,
+  setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | null>>,
+  setDiscount: React.Dispatch<React.SetStateAction<number>>,
+  setDiscountType: React.Dispatch<React.SetStateAction<'percentage' | 'fixed'>>,
+  setLoyaltyPointsUsed: React.Dispatch<React.SetStateAction<number>>,
+  setIsStudentDiscount: React.Dispatch<React.SetStateAction<boolean>>,
+  
+  // State values
+  products: Product[],
+  stations: Station[],
   customers: Customer[],
-  updateCustomerMembership: (
-    customerId: string, 
-    membershipData: {
-      membershipPlan?: string;
-      membershipDuration?: 'weekly' | 'monthly';
-      membershipHoursLeft?: number;
-    }
-  ) => Promise<Customer | undefined>
+  sessions: Session[],
+  bills: Bill[],
+  cart: CartItem[],
+  selectedCustomer: Customer | null,
+  discount: number,
+  discountType: 'percentage' | 'fixed',
+  loyaltyPointsUsed: number,
+  isStudentDiscount: boolean,
+  
+  // Dependencies
+  startSessionFn?: (stationId: string, customerId: string) => Promise<Session | undefined>,
+  endSessionFn?: (stationId: string, customers: Customer[]) => Promise<{
+    sessionCartItem?: CartItem;
+    customer?: Customer;
+  } | undefined>
 ) => {
-  return (
-    customerId: string, 
+  // Create a wrapper for startSession
+  const createStartSessionWrapper = () => {
+    // If a startSessionFn was provided, use it
+    if (startSessionFn) {
+      return async (stationId: string, customerId: string): Promise<void> => {
+        try {
+          await startSessionFn(stationId, customerId);
+        } catch (error) {
+          console.error("Error in startSession wrapper:", error);
+          throw error;
+        }
+      };
+    }
+    
+    // Otherwise, create a default implementation
+    return async (stationId: string, customerId: string): Promise<void> => {
+      try {
+        // Implementation details...
+        console.log("Default startSession called");
+      } catch (error) {
+        console.error("Error in default startSession:", error);
+        throw error;
+      }
+    };
+  };
+  
+  // Create a wrapper for endSession
+  const createEndSessionWrapper = () => {
+    // If an endSessionFn was provided, use it
+    if (endSessionFn) {
+      return async (stationId: string): Promise<void> => {
+        try {
+          const result = await endSessionFn(stationId, customers);
+          if (result?.sessionCartItem) {
+            addToCart({
+              id: result.sessionCartItem.id,
+              type: result.sessionCartItem.type,
+              name: result.sessionCartItem.name,
+              price: result.sessionCartItem.price,
+              quantity: result.sessionCartItem.quantity
+            });
+          }
+        } catch (error) {
+          console.error("Error in endSession wrapper:", error);
+          throw error;
+        }
+      };
+    }
+    
+    // Otherwise, create a default implementation
+    return async (stationId: string): Promise<void> => {
+      try {
+        // Implementation details...
+        console.log("Default endSession called");
+      } catch (error) {
+        console.error("Error in default endSession:", error);
+        throw error;
+      }
+    };
+  };
+  
+  // Product functions
+  const addProduct = (product: Omit<Product, "id">) => {
+    const newProduct: Product = {
+      id: generateId(),
+      ...product,
+    };
+    setProducts((prevProducts) => [...prevProducts, newProduct]);
+  };
+  
+  const updateProduct = (product: Product) => {
+    setProducts((prevProducts) =>
+      prevProducts.map((p) => (p.id === product.id ? product : p))
+    );
+  };
+  
+  const deleteProduct = (id: string) => {
+    setProducts((prevProducts) => prevProducts.filter((p) => p.id !== id));
+  };
+  
+  // Customer functions
+  const addCustomer = (customer: Omit<Customer, "id" | "createdAt">) => {
+    const newCustomer: Customer = {
+      id: generateId(),
+      ...customer,
+      createdAt: new Date(),
+      totalSpent: 0,
+      totalPlayTime: 0,
+      loyaltyPoints: 0
+    };
+    setCustomers((prevCustomers) => [...prevCustomers, newCustomer]);
+  };
+  
+  const updateCustomer = (customer: Customer) => {
+    setCustomers((prevCustomers) =>
+      prevCustomers.map((c) => (c.id === customer.id ? customer : c))
+    );
+  };
+  
+  const deleteCustomer = (id: string) => {
+    setCustomers((prevCustomers) => prevCustomers.filter((c) => c.id !== id));
+    setSelectedCustomer(null);
+  };
+  
+  const selectCustomer = (id: string | null) => {
+    if (id === null) {
+      setSelectedCustomer(null);
+    } else {
+      const customer = customers.find((c) => c.id === id);
+      setSelectedCustomer(customer || null);
+    }
+  };
+  
+  // Membership functions
+  const checkMembershipValidity = (customerId: string): boolean => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return false;
+    return checkMembershipValidityInternal(customer);
+  };
+  
+  const deductMembershipHours = (customerId: string, hours: number): boolean => {
+    const updatedCustomers = customers.map(customer => {
+      if (customer.id === customerId) {
+        return deductMembershipHoursInternal(customer, hours);
+      }
+      return customer;
+    });
+    setCustomers(updatedCustomers);
+    return true;
+  };
+  
+  const updateCustomerMembership = (
+    customerId: string,
     membershipData: {
       membershipPlan?: string;
       membershipDuration?: 'weekly' | 'monthly';
       membershipHoursLeft?: number;
     }
   ): Customer | null => {
-    // Create a placeholder customer with the minimum required fields
-    const customer = customers.find(c => c.id === customerId);
+    const updatedCustomer = updateCustomerMembershipInternal(customers, customerId, membershipData);
+    if (updatedCustomer) {
+      setCustomers(prevCustomers =>
+        prevCustomers.map(c => (c.id === customerId ? updatedCustomer : c))
+      );
+      return updatedCustomer;
+    }
+    return null;
+  };
+  
+  // Cart functions
+  const addToCart = (item: Omit<CartItem, "total">) => {
+    const existingCartItem = cart.find((i) => i.id === item.id);
     
-    if (!customer) return null;
+    if (existingCartItem) {
+      updateCartItem(item.id, existingCartItem.quantity + item.quantity);
+    } else {
+      const newItem: CartItem = {
+        ...item,
+        total: item.price * item.quantity,
+      };
+      setCart((prevCart) => [...prevCart, newItem]);
+    }
+  };
+  
+  const removeFromCart = (id: string) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+  };
+  
+  const updateCartItem = (id: string, quantity: number) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === id ? { ...item, quantity, total: item.price * quantity } : item
+      )
+    );
+  };
+  
+  const clearCart = () => {
+    setCart([]);
+    setDiscount(0);
+    setDiscountType('percentage');
+    setLoyaltyPointsUsed(0);
+  };
+  
+  // Billing functions
+  const setDiscountValue = (amount: number, type: 'percentage' | 'fixed') => {
+    setDiscount(amount);
+    setDiscountType(type);
+  };
+  
+  const setLoyaltyPointsUsedValue = (points: number) => {
+    setLoyaltyPointsUsed(points);
+  };
+  
+  const calculateTotal = () => {
+    let subtotal = cart.reduce((acc, item) => acc + item.total, 0);
     
-    // Start the async update process but don't wait for it
-    updateCustomerMembership(customerId, membershipData)
-      .then((updatedCustomer) => {
-        if (updatedCustomer) {
-          console.log("Customer membership updated:", updatedCustomer.id);
-        }
-      })
-      .catch(error => {
-        console.error("Error updating customer membership:", error);
-      });
+    let discountValue = 0;
+    if (discountType === 'percentage') {
+      discountValue = (subtotal * discount) / 100;
+    } else {
+      discountValue = discount;
+    }
     
-    // Return a modified version of the existing customer to satisfy the synchronous interface
-    return {
-      ...customer,
-      membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
-      membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
-      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
-        ? membershipData.membershipHoursLeft 
-        : customer.membershipHoursLeft,
-      isMember: true
+    const total = subtotal - discountValue;
+    return total;
+  };
+  
+  const completeSale = (paymentMethod: 'cash' | 'upi') => {
+    if (cart.length === 0) return undefined;
+    
+    const subtotal = cart.reduce((acc, item) => acc + item.total, 0);
+    let discountValue = 0;
+    
+    if (discountType === 'percentage') {
+      discountValue = (subtotal * discount) / 100;
+    } else {
+      discountValue = discount;
+    }
+    
+    const total = subtotal - discountValue;
+    
+    const newBill: Bill = {
+      id: generateId(),
+      customerId: selectedCustomer ? selectedCustomer.id : 'guest',
+      items: cart,
+      subtotal,
+      discount,
+      discountValue,
+      discountType,
+      loyaltyPointsUsed,
+      loyaltyPointsEarned: Math.floor(total * 0.05),
+      total,
+      paymentMethod,
+      createdAt: new Date(),
     };
-  };
-};
-
-// Session functions
-export const createStartSessionWrapper = (
-  checkMembershipValidity: (customerId: string) => boolean,
-  startSessionBase: (stationId: string, customerId: string) => Promise<Session | undefined>
-) => {
-  return async (stationId: string, customerId: string): Promise<void> => {
-    // Check membership validity before allowing session
-    if (!checkMembershipValidity(customerId)) {
-      throw new Error("Membership not valid or expired");
+    
+    setBills((prevBills) => [...prevBills, newBill]);
+    
+    if (selectedCustomer) {
+      const updatedCustomer: Customer = {
+        ...selectedCustomer,
+        loyaltyPoints: selectedCustomer.loyaltyPoints + newBill.loyaltyPointsEarned - loyaltyPointsUsed,
+        totalSpent: selectedCustomer.totalSpent + total,
+      };
+      updateCustomer(updatedCustomer);
     }
     
-    await startSessionBase(stationId, customerId);
+    clearCart();
+    setSelectedCustomer(null);
+    setLoyaltyPointsUsed(0);
+    
+    return newBill;
   };
-};
-
-export const createEndSessionWrapper = (
-  stations: Station[], // Changed from Customer[] to Station[]
-  endSessionBase: (stationId: string, customers: Customer[]) => Promise<{
-    sessionCartItem?: CartItem;
-    customer?: Customer;
-  } | undefined>,
-  clearCart: () => void,
-  selectCustomer: (id: string | null) => void,
-  addToCart: (item: Omit<CartItem, 'total'>) => void
-) => {
-  return async (stationId: string): Promise<void> => {
-    try {
-      // Get the current station
-      const station = stations.find(s => s.id === stationId);
-      if (!station || !station.isOccupied) {
-        console.log("No active session found for this station in wrapper");
-        throw new Error("No active session found");
-      }
-      
-      // Call the base endSession function
-      const result = await endSessionBase(stationId, stations);
-      
-      if (result) {
-        const { sessionCartItem, customer } = result;
-        
-        // Clear cart before adding the new session
-        clearCart();
-        
-        // Auto-select customer
-        if (customer) {
-          console.log("Auto-selecting customer:", customer.name);
-          selectCustomer(customer.id);
-        }
-        
-        // Add the session to cart
-        if (sessionCartItem) {
-          console.log("Adding session to cart:", sessionCartItem);
-          addToCart(sessionCartItem);
-        }
-      }
-    } catch (error) {
-      console.error('Error in endSession:', error);
-      throw error;
-    }
+  
+  // Data export functions
+  const exportBills = () => {
+    exportToCSV(bills, 'bills');
   };
-};
-
-// Sale functions
-export const createCompleteSaleWrapper = (
-  cart: CartItem[],
-  selectedCustomer: Customer | null,
-  discount: number,
-  discountType: 'percentage' | 'fixed',
-  loyaltyPointsUsed: number,
-  calculateTotal: () => number,
-  products: Product[],
-  isStudentDiscount: boolean,
-  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>,
-  completeSaleBase: (
-    cart: CartItem[],
-    customer: Customer | null,
-    discount: number,
-    discountType: 'percentage' | 'fixed',
-    loyaltyPointsUsed: number,
-    calculateTotal: () => number,
-    paymentMethod: 'cash' | 'upi',
-    products: Product[]
-  ) => Promise<Bill | undefined>,
-  updateCustomerMembership: (
-    customerId: string, 
-    membershipData: {
-      membershipPlan?: string;
-      membershipDuration?: 'weekly' | 'monthly';
-      membershipHoursLeft?: number;
+  
+  const exportCustomers = () => {
+    exportToCSV(customers, 'customers');
+  };
+  
+  // Sample data / reset functions
+  const resetToSampleData = (options?: ResetOptions) => {
+    const sampleData = generateSampleData();
+    
+    if (!options || options.products) {
+      setProducts(sampleData.products);
     }
-  ) => Promise<Customer | undefined>,
-  clearCart: () => void,
-  setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | null>>,
-  setIsStudentDiscount: React.Dispatch<React.SetStateAction<boolean>>
-) => {
-  return (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
-    try {
-      // Apply student price for membership items if student discount is enabled
-      if (isStudentDiscount) {
-        const updatedCart = cart.map(item => {
-          const product = products.find(p => p.id === item.id) as Product;
-          if (product && product.category === 'membership' && product.studentPrice) {
-            return {
-              ...item,
-              price: product.studentPrice,
-              total: product.studentPrice * item.quantity
-            };
-          }
-          return item;
-        });
-        
-        // Temporarily update cart with student prices
-        setCart(updatedCart);
-      }
-      
-      // Look for membership products in cart
-      const membershipItems = cart.filter(item => {
-        const product = products.find(p => p.id === item.id);
-        return product && product.category === 'membership';
-      });
-      
-      // This is async but we're handling it internally and returning a synchronous Bill
-      completeSaleBase(
-        cart, 
-        selectedCustomer, 
-        discount, 
-        discountType, 
-        loyaltyPointsUsed, 
-        calculateTotal, 
-        paymentMethod,
-        products
-      ).then(bill => {
-        // If we have a successful sale with membership items, update the customer
-        if (bill && selectedCustomer && membershipItems.length > 0) {
-          for (const item of membershipItems) {
-            const product = products.find(p => p.id === item.id);
-            
-            if (product) {
-              // Default values
-              let membershipHours = product.membershipHours || 4; // Default hours from product or fallback to 4
-              let membershipDuration: 'weekly' | 'monthly' = 'weekly';
-              
-              // Set duration based on product
-              if (product.duration) {
-                membershipDuration = product.duration;
-              } else if (product.name.toLowerCase().includes('weekly')) {
-                membershipDuration = 'weekly';
-              } else if (product.name.toLowerCase().includes('monthly')) {
-                membershipDuration = 'monthly';
-              }
-              
-              // Update customer's membership
-              updateCustomerMembership(selectedCustomer.id, {
-                membershipPlan: product.name,
-                membershipDuration: membershipDuration,
-                membershipHoursLeft: membershipHours
-              });
-              
-              break; // Only apply the first membership found
-            }
-          }
-        }
-        
-        if (bill) {
-          // Clear the cart after successful sale
-          clearCart();
-          // Reset selected customer
-          setSelectedCustomer(null);
-          // Reset student discount
-          setIsStudentDiscount(false);
-        }
-      }).catch(error => {
-        console.error("Error in completeSale async:", error);
-      });
-      
-      // Return a synchronous bill for the UI
-      if (selectedCustomer) {
-        const placeholderBill: Bill = {
-          id: `temp-${new Date().getTime()}`,
-          customerId: selectedCustomer.id,
-          items: [...cart],
-          subtotal: cart.reduce((sum, item) => sum + item.total, 0),
-          discount,
-          discountValue: discount > 0 ? 
-            (discountType === 'percentage' ? 
-              (cart.reduce((sum, item) => sum + item.total, 0) * discount / 100) : 
-              discount) : 0,
-          discountType,
-          loyaltyPointsUsed,
-          loyaltyPointsEarned: Math.floor(calculateTotal() / 10),
-          total: calculateTotal(),
-          paymentMethod,
-          createdAt: new Date()
-        };
-        return placeholderBill;
-      }
-      
-      return undefined;
-      
-    } catch (error) {
-      console.error("Error in completeSale:", error);
-      return undefined;
+    if (!options || options.stations) {
+      setStations(sampleData.stations);
     }
+    if (!options || options.customers) {
+      setCustomers(sampleData.customers);
+    }
+    if (!options || options.sales) {
+      setBills(sampleData.bills);
+    }
+    if (!options || options.sessions) {
+      setSessions([]);
+    }
+    clearCart();
+    setSelectedCustomer(null);
+  };
+  
+  const addSampleIndianData = () => {
+    // Implementation for adding sample Indian data
+  };
+  
+  // Create the session action wrappers
+  const startSession = createStartSessionWrapper();
+  const endSession = createEndSessionWrapper();
+  
+  return {
+    // Product functions
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    
+    // Station functions
+    startSession,
+    endSession,
+    
+    // Customer functions
+    addCustomer,
+    updateCustomer,
+    updateCustomerMembership,
+    deleteCustomer,
+    selectCustomer,
+    
+    // Membership functions
+    checkMembershipValidity,
+    deductMembershipHours,
+    
+    // Cart functions
+    addToCart,
+    removeFromCart,
+    updateCartItem,
+    clearCart,
+    
+    // Billing functions
+    setDiscount: setDiscountValue,
+    setLoyaltyPointsUsed: setLoyaltyPointsUsedValue,
+    calculateTotal,
+    completeSale,
+    
+    // Data export
+    exportBills,
+    exportCustomers,
+    
+    // Sample data / reset
+    resetToSampleData,
+    addSampleIndianData,
+    
+    // UI state setters
+    setIsStudentDiscount
   };
 };

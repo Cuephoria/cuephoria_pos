@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
+import { Station, Customer, CartItem } from '@/types/pos.types';
 import { calculateSessionDuration } from '@/utils/timeUtils';
 
 export const useEndSession = (
