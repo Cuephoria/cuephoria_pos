@@ -18,14 +18,14 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
       <div className="flex justify-between items-center">
         <div className="flex items-center text-lg font-heading">
           {stationIcon}
-          <span className="ml-2">{station.name}</span>
+          <span className="ml-2 font-bold">{station.name}</span>
         </div>
         <Badge className={`${station.isOccupied ? 'bg-cuephoria-orange' : 'bg-green-500'} ${station.isOccupied ? 'animate-pulse' : ''}`}>
           {station.isOccupied ? 'Occupied' : 'Available'}
         </Badge>
       </div>
       
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-2 mt-2">
         <div className="flex justify-between text-sm">
           <span>Hourly Rate:</span>
           <CurrencyDisplay amount={station.hourlyRate} />
@@ -34,7 +34,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
         {station.isOccupied && station.currentSession && (
           <div className="flex justify-between text-sm">
             <span>Customer:</span>
-            <span>{customerName}</span>
+            <span className="font-semibold">{customerName}</span>
           </div>
         )}
       </div>

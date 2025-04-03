@@ -38,31 +38,7 @@ export const useStartSession = ({
       const sessionId = generateId();
       console.log("Generated session ID:", sessionId);
       
-      // Create session in Supabase - ensure all IDs are proper UUIDs
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          id: sessionId,
-          station_id: stationId,
-          customer_id: customerId,
-          start_time: startTime.toISOString()
-        })
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Error creating session in Supabase:', error);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to start session: ' + error.message,
-          variant: 'destructive'
-        });
-        throw error;
-      }
-      
-      console.log("Session created in Supabase:", data);
-      
-      // Create session object for local state
+      // Create new session locally first
       const newSession: Session = {
         id: sessionId,
         stationId,
@@ -70,28 +46,52 @@ export const useStartSession = ({
         startTime
       };
       
-      // Update local state
-      console.log("Updating sessions state with new session");
+      // Update local state first for immediate UI update
       setSessions(prev => [...prev, newSession]);
-      
-      // Update station state
-      console.log("Updating stations state to mark station as occupied");
       setStations(prev => prev.map(s => 
         s.id === stationId 
           ? { ...s, isOccupied: true, currentSession: newSession } 
           : s
       ));
       
-      // Update station in Supabase
-      console.log("Updating station in Supabase to mark as occupied");
-      const { error: stationError } = await supabase
-        .from('stations')
-        .update({ is_occupied: true })
-        .eq('id', stationId);
+      // Then try to create session in Supabase
+      try {
+        const { data, error } = await supabase
+          .from('sessions')
+          .insert({
+            id: sessionId,
+            station_id: stationId,
+            customer_id: customerId,
+            start_time: startTime.toISOString()
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('Error creating session in Supabase:', error);
+          // We'll continue since local state is already updated
+        } else {
+          console.log("Session created in Supabase:", data);
+        }
+      } catch (supabaseError) {
+        console.error('Error in Supabase operation:', supabaseError);
+        // We'll continue since local state is already updated
+      }
       
-      if (stationError) {
-        console.error('Error updating station in Supabase:', stationError);
-        // Don't throw, as the session was already created
+      // Try to update station in Supabase
+      try {
+        const { error: stationError } = await supabase
+          .from('stations')
+          .update({ is_occupied: true })
+          .eq('id', stationId);
+        
+        if (stationError) {
+          console.error('Error updating station in Supabase:', stationError);
+          // Continue since local state is already updated
+        }
+      } catch (supabaseError) {
+        console.error('Error updating station in Supabase:', supabaseError);
+        // Continue since local state is already updated
       }
       
       toast({
@@ -107,7 +107,7 @@ export const useStartSession = ({
         description: 'Failed to start session: ' + (error instanceof Error ? error.message : 'Unknown error'),
         variant: 'destructive'
       });
-      return undefined; // Return undefined instead of throwing to prevent further errors
+      return undefined;
     }
   };
   

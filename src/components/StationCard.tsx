@@ -23,7 +23,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     : '';
 
   return (
-    <Card className={`card-hover ${station.isOccupied ? 'border-cuephoria-orange' : 'border-gray-200'} animate-scale-in`}>
+    <Card className={`card-hover ${station.isOccupied ? 'border-cuephoria-orange bg-black/80' : 'border-gray-200'} animate-scale-in`}>
       <CardHeader className="pb-2">
         <StationInfo station={station} customerName={customerName} />
       </CardHeader>

@@ -73,7 +73,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         // Longer delay before redirecting to ensure state updates complete
         setTimeout(() => {
           navigate('/pos');
-        }, 2000);
+        }, 1500);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({
@@ -91,7 +91,7 @@ const StationActions: React.FC<StationActionsProps> = ({
     return (
       <Button 
         variant="destructive" 
-        className="w-full btn-hover-effect"
+        className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
         onClick={handleEndSession}
         disabled={isLoading}
       >
@@ -120,7 +120,7 @@ const StationActions: React.FC<StationActionsProps> = ({
       </Select>
       <Button 
         variant="default" 
-        className="w-full bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
+        className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
         disabled={!selectedCustomerId || isLoading} 
         onClick={handleStartSession}
       >
