@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary } from '@/types/expense.types';
 import { supabase } from '@/integrations/supabase/client';
@@ -116,38 +115,21 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log('Adding expense with data:', expenseData);
       const id = generateId();
       
-      // Properly handle the date
-      let dateValue: Date;
-      let dateString: string;
+      // Handle date conversion to ISO string for Supabase
+      let dateToStore: string;
       
       if (expenseData.date instanceof Date) {
-        dateValue = expenseData.date;
-        dateString = dateValue.toISOString();
+        dateToStore = expenseData.date.toISOString();
       } else if (typeof expenseData.date === 'string') {
-        dateValue = new Date(expenseData.date);
-        dateString = dateValue.toISOString();
-      } else if (expenseData.date && typeof expenseData.date === 'object') {
-        // Handle complex date object from form
-        if (expenseData.date._type === 'Date' && expenseData.date.value && expenseData.date.value.iso) {
-          dateString = expenseData.date.value.iso;
-          dateValue = new Date(dateString);
-        } else {
-          // Try to extract date in other ways
-          const dateObj = expenseData.date as any;
-          if (dateObj.toISOString) {
-            dateString = dateObj.toISOString();
-            dateValue = new Date(dateString);
-          } else {
-            // Fallback to current date
-            dateValue = new Date();
-            dateString = dateValue.toISOString();
-          }
-        }
+        dateToStore = new Date(expenseData.date).toISOString();
       } else {
-        // Fallback to current date
-        dateValue = new Date();
-        dateString = dateValue.toISOString();
+        // Handle complex date object if needed
+        console.log('Complex date object detected:', expenseData.date);
+        // Default to current date if we can't parse it
+        dateToStore = new Date().toISOString();
       }
+      
+      console.log('Date to store:', dateToStore);
       
       const { error } = await supabase
         .from('expenses')
@@ -157,7 +139,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: expenseData.amount,
           category: expenseData.category,
           frequency: expenseData.frequency,
-          date: dateString,
+          date: dateToStore,
           is_recurring: expenseData.isRecurring,
           notes: expenseData.notes || ''
         });
@@ -179,7 +161,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         amount: expenseData.amount,
         category: expenseData.category,
         frequency: expenseData.frequency,
-        date: dateValue,
+        date: new Date(dateToStore),
         isRecurring: expenseData.isRecurring,
         notes: expenseData.notes || ''
       };
@@ -205,38 +187,21 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      // Properly handle the date
-      let dateValue: Date;
-      let dateString: string;
+      // Handle date conversion to ISO string for Supabase
+      let dateToStore: string;
       
       if (expense.date instanceof Date) {
-        dateValue = expense.date;
-        dateString = dateValue.toISOString();
+        dateToStore = expense.date.toISOString();
       } else if (typeof expense.date === 'string') {
-        dateValue = new Date(expense.date);
-        dateString = dateValue.toISOString();
-      } else if (expense.date && typeof expense.date === 'object') {
-        // Handle complex date object from form
-        if (expense.date._type === 'Date' && expense.date.value && expense.date.value.iso) {
-          dateString = expense.date.value.iso;
-          dateValue = new Date(dateString);
-        } else {
-          // Try to extract date in other ways
-          const dateObj = expense.date as any;
-          if (dateObj.toISOString) {
-            dateString = dateObj.toISOString();
-            dateValue = new Date(dateString);
-          } else {
-            // Fallback to current date
-            dateValue = new Date();
-            dateString = dateValue.toISOString();
-          }
-        }
+        dateToStore = new Date(expense.date).toISOString();
       } else {
-        // Fallback to current date
-        dateValue = new Date();
-        dateString = dateValue.toISOString();
+        // Handle complex date object if needed
+        console.log('Complex date object detected in update:', expense.date);
+        // Default to current date if we can't parse it
+        dateToStore = new Date().toISOString();
       }
+      
+      console.log('Date to update:', dateToStore);
       
       const { error } = await supabase
         .from('expenses')
@@ -245,7 +210,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           amount: expense.amount,
           category: expense.category,
           frequency: expense.frequency,
-          date: dateString,
+          date: dateToStore,
           is_recurring: expense.isRecurring,
           notes: expense.notes || ''
         })
@@ -264,7 +229,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Update the expense with the correct date object
       const updatedExpense = {
         ...expense,
-        date: dateValue
+        date: new Date(dateToStore)
       };
       
       setExpenses(prev => 
