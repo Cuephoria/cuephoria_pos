@@ -2,17 +2,24 @@
 import React from 'react';
 import { Station } from '@/context/POSContext';
 import { Badge } from '@/components/ui/badge';
-import { Gamepad2, CircleOff } from 'lucide-react';
+import { Gamepad2, CircleOff, UserCheck, User } from 'lucide-react';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { Customer } from '@/types/pos.types';
+import { isMembershipActive, getMembershipBadgeText } from '@/utils/membership.utils';
 
 interface StationInfoProps {
   station: Station;
   customerName: string;
+  customerData?: Customer | null;
 }
 
-const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
+const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, customerData }) => {
   // Different styling based on station type
   const isPoolTable = station.type === '8ball';
+  
+  // Check if customer is a member and membership is active
+  const isMember = customerData ? isMembershipActive(customerData) : false;
+  const membershipText = customerData && customerData.isMember ? getMembershipBadgeText(customerData) : 'Non-Member';
   
   return (
     <>
@@ -57,10 +64,34 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
         </div>
         
         {station.isOccupied && station.currentSession && (
-          <div className="flex justify-between text-sm">
-            <span>Customer:</span>
-            <span className="font-semibold">{customerName}</span>
-          </div>
+          <>
+            <div className="flex justify-between text-sm">
+              <span>Customer:</span>
+              <span className="font-semibold">{customerName}</span>
+            </div>
+            
+            {/* Membership indicator */}
+            <div className="flex justify-between items-center text-sm">
+              <span>Status:</span>
+              <Badge 
+                className={`
+                  ${isMember
+                    ? 'bg-green-600 text-white border-green-700'
+                    : 'bg-gray-600 text-white border-gray-700'
+                  }
+                  flex items-center gap-1
+                `}
+              >
+                {isMember ? <UserCheck className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                {membershipText}
+              </Badge>
+            </div>
+            {isMember && (
+              <div className="text-xs text-right mt-0 text-green-500">
+                50% discount applied
+              </div>
+            )}
+          </>
         )}
       </div>
     </>

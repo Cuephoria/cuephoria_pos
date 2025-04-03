@@ -27,14 +27,15 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const { customers, startSession, endSession, deleteStation } = usePOS();
   const isPoolTable = station.type === '8ball';
 
-  const getCustomerName = (id: string) => {
-    const customer = customers.find(c => c.id === id);
-    return customer ? customer.name : 'Unknown Customer';
+  const getCustomer = (id: string) => {
+    return customers.find(c => c.id === id);
   };
 
-  const customerName = station.currentSession 
-    ? getCustomerName(station.currentSession.customerId)
-    : '';
+  const customer = station.currentSession 
+    ? getCustomer(station.currentSession.customerId)
+    : null;
+    
+  const customerName = customer ? customer.name : 'Unknown Customer';
     
   const handleDeleteStation = async () => {
     await deleteStation(station.id);
@@ -45,7 +46,9 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
       className={`
         relative overflow-hidden card-hover animate-scale-in
         ${station.isOccupied 
-          ? 'border-cuephoria-orange bg-black/80' 
+          ? customer?.isMember 
+            ? 'border-green-500 bg-black/80' 
+            : 'border-cuephoria-orange bg-black/80' 
           : isPoolTable 
             ? 'border-green-500 bg-gradient-to-b from-green-900/30 to-green-950/40' 
             : 'border-cuephoria-purple bg-gradient-to-b from-cuephoria-purple/20 to-black/50'
@@ -73,10 +76,17 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         </>
       )}
 
+      {/* Membership indicator on top of card */}
+      {station.isOccupied && customer && (
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-transparent to-transparent">
+          <div className={`h-full ${customer.isMember ? 'bg-green-500' : 'bg-gray-500'} w-2/3 rounded-br-lg`}></div>
+        </div>
+      )}
+
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center space-x-2">
           <div className="flex-grow">
-            <StationInfo station={station} customerName={customerName} />
+            <StationInfo station={station} customerName={customerName} customerData={customer} />
           </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
