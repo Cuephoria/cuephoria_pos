@@ -9,7 +9,292 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+          password: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          password: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          password?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      bill_items: {
+        Row: {
+          bill_id: string
+          created_at: string
+          id: string
+          item_id: string
+          item_type: string
+          name: string
+          price: number
+          quantity: number
+          total: number
+        }
+        Insert: {
+          bill_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          item_type: string
+          name: string
+          price: number
+          quantity: number
+          total: number
+        }
+        Update: {
+          bill_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_type?: string
+          name?: string
+          price?: number
+          quantity?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_items_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bills: {
+        Row: {
+          created_at: string
+          customer_id: string
+          discount: number
+          discount_type: string
+          discount_value: number
+          id: string
+          loyalty_points_earned: number
+          loyalty_points_used: number
+          payment_method: string
+          subtotal: number
+          total: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          discount?: number
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          loyalty_points_earned?: number
+          loyalty_points_used?: number
+          payment_method: string
+          subtotal: number
+          total: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          discount?: number
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          loyalty_points_earned?: number
+          loyalty_points_used?: number
+          payment_method?: string
+          subtotal?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_member: boolean
+          loyalty_points: number
+          membership_duration: string | null
+          membership_expiry_date: string | null
+          membership_hours_left: number | null
+          membership_plan: string | null
+          membership_start_date: string | null
+          name: string
+          phone: string
+          total_play_time: number
+          total_spent: number
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_member?: boolean
+          loyalty_points?: number
+          membership_duration?: string | null
+          membership_expiry_date?: string | null
+          membership_hours_left?: number | null
+          membership_plan?: string | null
+          membership_start_date?: string | null
+          name: string
+          phone: string
+          total_play_time?: number
+          total_spent?: number
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_member?: boolean
+          loyalty_points?: number
+          membership_duration?: string | null
+          membership_expiry_date?: string | null
+          membership_hours_left?: number | null
+          membership_plan?: string | null
+          membership_start_date?: string | null
+          name?: string
+          phone?: string
+          total_play_time?: number
+          total_spent?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          duration: string | null
+          id: string
+          image: string | null
+          membership_hours: number | null
+          name: string
+          offer_price: number | null
+          original_price: number | null
+          price: number
+          stock: number
+          student_price: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          duration?: string | null
+          id?: string
+          image?: string | null
+          membership_hours?: number | null
+          name: string
+          offer_price?: number | null
+          original_price?: number | null
+          price: number
+          stock: number
+          student_price?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          duration?: string | null
+          id?: string
+          image?: string | null
+          membership_hours?: number | null
+          name?: string
+          offer_price?: number | null
+          original_price?: number | null
+          price?: number
+          stock?: number
+          student_price?: number | null
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          duration: number | null
+          end_time: string | null
+          id: string
+          start_time: string
+          station_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          start_time: string
+          station_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          start_time?: string
+          station_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stations: {
+        Row: {
+          created_at: string
+          hourly_rate: number
+          id: string
+          is_occupied: boolean
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate: number
+          id?: string
+          is_occupied?: boolean
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          is_occupied?: boolean
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

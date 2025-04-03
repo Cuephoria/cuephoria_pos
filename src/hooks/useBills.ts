@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
-import { generateId } from '@/utils/pos.utils';
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
+import { generateId } from '@/utils/pos.utils';
 
 export const useBills = (
   updateCustomer: (customer: Customer) => void,
@@ -11,20 +11,130 @@ export const useBills = (
   const [bills, setBills] = useState<Bill[]>([]);
   const { toast } = useToast();
 
-  // Load data from localStorage
+  // Load data from Supabase
   useEffect(() => {
-    const storedBills = localStorage.getItem('cuephoriaBills');
-    if (storedBills) {
-      setBills(JSON.parse(storedBills));
-    }
+    const fetchBills = async () => {
+      try {
+        // First check if we already have bills in localStorage (for backward compatibility)
+        const storedBills = localStorage.getItem('cuephoriaBills');
+        if (storedBills) {
+          const parsedBills = JSON.parse(storedBills);
+          
+          // Convert date strings to actual Date objects
+          const billsWithDates = parsedBills.map((bill: any) => ({
+            ...bill,
+            createdAt: new Date(bill.createdAt)
+          }));
+          
+          setBills(billsWithDates);
+          
+          // Migrate localStorage data to Supabase
+          for (const bill of billsWithDates) {
+            // Insert bill
+            const { data: billData, error: billError } = await supabase
+              .from('bills')
+              .upsert({
+                id: bill.id,
+                customer_id: bill.customerId,
+                subtotal: bill.subtotal,
+                discount: bill.discount,
+                discount_value: bill.discountValue,
+                discount_type: bill.discountType,
+                loyalty_points_used: bill.loyaltyPointsUsed,
+                loyalty_points_earned: bill.loyaltyPointsEarned,
+                total: bill.total,
+                payment_method: bill.paymentMethod,
+                created_at: bill.createdAt
+              }, { onConflict: 'id' })
+              .select()
+              .single();
+            
+            if (billError) {
+              console.error('Error migrating bill:', billError);
+              continue;
+            }
+            
+            // Insert bill items
+            for (const item of bill.items) {
+              await supabase
+                .from('bill_items')
+                .insert({
+                  bill_id: bill.id,
+                  item_id: item.id,
+                  item_type: item.type,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  total: item.total
+                });
+            }
+          }
+          
+          // Clear localStorage after migration
+          localStorage.removeItem('cuephoriaBills');
+          return;
+        }
+        
+        // Fetch bills from Supabase
+        const { data: billsData, error: billsError } = await supabase
+          .from('bills')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (billsError) {
+          console.error('Error fetching bills:', billsError);
+          return;
+        }
+        
+        const transformedBills: Bill[] = [];
+        
+        for (const billData of billsData) {
+          // Fetch bill items for each bill
+          const { data: itemsData, error: itemsError } = await supabase
+            .from('bill_items')
+            .select('*')
+            .eq('bill_id', billData.id);
+            
+          if (itemsError) {
+            console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
+            continue;
+          }
+          
+          const items: CartItem[] = itemsData.map(item => ({
+            id: item.item_id,
+            type: item.item_type as 'product' | 'session',
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          }));
+          
+          transformedBills.push({
+            id: billData.id,
+            customerId: billData.customer_id,
+            items,
+            subtotal: billData.subtotal,
+            discount: billData.discount,
+            discountValue: billData.discount_value,
+            discountType: billData.discount_type as 'percentage' | 'fixed',
+            loyaltyPointsUsed: billData.loyalty_points_used,
+            loyaltyPointsEarned: billData.loyalty_points_earned,
+            total: billData.total,
+            paymentMethod: billData.payment_method as 'cash' | 'upi',
+            createdAt: new Date(billData.created_at)
+          });
+        }
+        
+        setBills(transformedBills);
+      } catch (error) {
+        console.error('Error in fetchBills:', error);
+      }
+    };
+    
+    fetchBills();
   }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('cuephoriaBills', JSON.stringify(bills));
-  }, [bills]);
   
-  const completeSale = (
+  const completeSale = async (
     cart: CartItem[],
     selectedCustomer: Customer | null,
     discount: number,
@@ -62,100 +172,161 @@ export const useBills = (
       }
     }
     
-    // Create bill
-    const total = calculateTotal();
-    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-    
-    let discountValue = 0;
-    if (discountType === 'percentage') {
-      discountValue = subtotal * (discount / 100);
-    } else {
-      discountValue = discount;
-    }
-    
-    // Calculate loyalty points earned (1 point per 100 rupees spent)
-    const loyaltyPointsEarned = Math.floor(total / 100);
-    
-    const bill: Bill = {
-      id: generateId(),
-      customerId: selectedCustomer.id,
-      items: [...cart],
-      subtotal,
-      discount,
-      discountValue,
-      discountType,
-      loyaltyPointsUsed,
-      loyaltyPointsEarned,
-      total,
-      paymentMethod,
-      createdAt: new Date()
-    };
-    
-    // Update bills
-    setBills([...bills, bill]);
-    
-    // Update customer data
-    const updatedCustomer = {
-      ...selectedCustomer,
-      loyaltyPoints: selectedCustomer.loyaltyPoints - loyaltyPointsUsed + loyaltyPointsEarned,
-      totalSpent: selectedCustomer.totalSpent + total
-    };
-    
-    // Handle membership purchase
-    if (membershipItems.length > 0) {
-      const membershipProduct = products.find(p => 
-        p.id === membershipItems[0].id && p.category === 'membership'
-      );
+    try {
+      // Create bill
+      const total = calculateTotal();
+      const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
       
-      if (membershipProduct) {
-        // Set membership expiry date based on product name
-        const currentDate = new Date();
-        let expiryDate = new Date();
-        
-        if (membershipProduct.name.toLowerCase().includes("weekly")) {
-          // Add 7 days for weekly pass
-          expiryDate.setDate(currentDate.getDate() + 7);
-        } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
-          // Add 30 days for monthly pass
-          expiryDate.setDate(currentDate.getDate() + 30);
-        }
-        
-        updatedCustomer.isMember = true;
-        updatedCustomer.membershipExpiryDate = expiryDate;
-        updatedCustomer.membershipPlan = membershipProduct.name;
-        
-        // Set membership hours if available in the product
-        if (membershipProduct.membershipHours) {
-          updatedCustomer.membershipHoursLeft = membershipProduct.membershipHours;
-        }
-        
-        // Set membership type based on product name
-        if (membershipProduct.duration) {
-          updatedCustomer.membershipDuration = membershipProduct.duration;
-        } else if (membershipProduct.name.toLowerCase().includes("weekly")) {
-          updatedCustomer.membershipDuration = "weekly";
-        } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
-          updatedCustomer.membershipDuration = "monthly";
-        }
+      let discountValue = 0;
+      if (discountType === 'percentage') {
+        discountValue = subtotal * (discount / 100);
+      } else {
+        discountValue = discount;
       }
-    }
-    
-    updateCustomer(updatedCustomer);
-    
-    // Update product stock
-    cart.forEach(item => {
-      if (item.type === 'product') {
-        const product = products.find(p => p.id === item.id);
-        if (product && product.category !== 'membership') {
-          updateProduct({
-            ...product,
-            stock: product.stock - item.quantity
+      
+      // Calculate loyalty points earned (1 point per 100 rupees spent)
+      const loyaltyPointsEarned = Math.floor(total / 100);
+      
+      const billId = generateId();
+      
+      // Create bill in Supabase
+      const { data: billData, error: billError } = await supabase
+        .from('bills')
+        .insert({
+          id: billId,
+          customer_id: selectedCustomer.id,
+          subtotal,
+          discount,
+          discount_value: discountValue,
+          discount_type: discountType,
+          loyalty_points_used: loyaltyPointsUsed,
+          loyalty_points_earned: loyaltyPointsEarned,
+          total,
+          payment_method: paymentMethod
+        })
+        .select()
+        .single();
+        
+      if (billError) {
+        console.error('Error creating bill:', billError);
+        toast({
+          title: 'Error',
+          description: 'Failed to complete sale',
+          variant: 'destructive'
+        });
+        return undefined;
+      }
+      
+      // Create bill items
+      for (const item of cart) {
+        const { error: itemError } = await supabase
+          .from('bill_items')
+          .insert({
+            bill_id: billId,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
           });
+          
+        if (itemError) {
+          console.error('Error creating bill item:', itemError);
         }
       }
-    });
-    
-    return bill;
+      
+      // Construct the bill object
+      const bill: Bill = {
+        id: billId,
+        customerId: selectedCustomer.id,
+        items: [...cart],
+        subtotal,
+        discount,
+        discountValue,
+        discountType,
+        loyaltyPointsUsed,
+        loyaltyPointsEarned,
+        total,
+        paymentMethod,
+        createdAt: new Date(billData.created_at)
+      };
+      
+      // Update bills state
+      setBills([bill, ...bills]);
+      
+      // Update customer data
+      const updatedCustomer = {
+        ...selectedCustomer,
+        loyaltyPoints: selectedCustomer.loyaltyPoints - loyaltyPointsUsed + loyaltyPointsEarned,
+        totalSpent: selectedCustomer.totalSpent + total
+      };
+      
+      // Handle membership purchase
+      if (membershipItems.length > 0) {
+        const membershipProduct = products.find(p => 
+          p.id === membershipItems[0].id && p.category === 'membership'
+        );
+        
+        if (membershipProduct) {
+          // Set membership expiry date based on product name
+          const currentDate = new Date();
+          let expiryDate = new Date();
+          
+          if (membershipProduct.name.toLowerCase().includes("weekly")) {
+            // Add 7 days for weekly pass
+            expiryDate.setDate(currentDate.getDate() + 7);
+          } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
+            // Add 30 days for monthly pass
+            expiryDate.setDate(currentDate.getDate() + 30);
+          }
+          
+          updatedCustomer.isMember = true;
+          updatedCustomer.membershipExpiryDate = expiryDate;
+          updatedCustomer.membershipPlan = membershipProduct.name;
+          
+          // Set membership hours if available in the product
+          if (membershipProduct.membershipHours) {
+            updatedCustomer.membershipHoursLeft = membershipProduct.membershipHours;
+          }
+          
+          // Set membership type based on product name
+          if (membershipProduct.duration) {
+            updatedCustomer.membershipDuration = membershipProduct.duration;
+          } else if (membershipProduct.name.toLowerCase().includes("weekly")) {
+            updatedCustomer.membershipDuration = "weekly";
+          } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
+            updatedCustomer.membershipDuration = "monthly";
+          }
+        }
+      }
+      
+      // Update customer in database
+      updateCustomer(updatedCustomer);
+      
+      // Update product stock
+      for (const item of cart) {
+        if (item.type === 'product') {
+          const product = products.find(p => p.id === item.id);
+          if (product && product.category !== 'membership') {
+            updateProduct({
+              ...product,
+              stock: product.stock - item.quantity
+            });
+          }
+        }
+      }
+      
+      return bill;
+    } catch (error) {
+      console.error('Error in completeSale:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete sale',
+        variant: 'destructive'
+      });
+      return undefined;
+    }
   };
   
   const exportBills = (customers: Customer[]) => {

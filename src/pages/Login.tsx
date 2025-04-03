@@ -134,6 +134,9 @@ const Login = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50"
                 />
               </div>
+              <div className="text-xs text-accent/80">
+                <p>Default credentials: admin / admin123</p>
+              </div>
             </CardContent>
             <CardFooter className="relative z-10">
               <Button 

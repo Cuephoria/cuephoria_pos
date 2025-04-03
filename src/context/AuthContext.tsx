@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,22 +21,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const storedAdmin = localStorage.getItem('cuephoriaAdmin');
-    if (storedAdmin) {
-      setUser(JSON.parse(storedAdmin));
-    }
-    setIsLoading(false);
+    const checkExistingUser = async () => {
+      try {
+        const storedAdmin = localStorage.getItem('cuephoriaAdmin');
+        if (storedAdmin) {
+          setUser(JSON.parse(storedAdmin));
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin')
+          .single();
+        
+        if (error) {
+          console.error('Error fetching admin user:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        if (data) {
+          const adminUser = {
+            id: data.id,
+            username: data.username,
+            isAdmin: data.is_admin
+          };
+          setUser(adminUser);
+          localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
+        }
+      } catch (error) {
+        console.error('Error checking existing user:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkExistingUser();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Simple admin-only authentication
-    if (username === 'admin' && password === 'admin123') {
-      const adminUser = { id: '1', username: 'admin', isAdmin: true };
-      setUser(adminUser);
-      localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
-      return true;
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id, username, is_admin, password')
+        .eq('username', username)
+        .single();
+
+      if (error || !data) {
+        console.error('Login error:', error);
+        return false;
+      }
+
+      if (data.password === password) {
+        const adminUser = {
+          id: data.id,
+          username: data.username,
+          isAdmin: data.is_admin
+        };
+        setUser(adminUser);
+        localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
