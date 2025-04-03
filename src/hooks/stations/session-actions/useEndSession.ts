@@ -123,26 +123,19 @@ export const useEndSession = ({
       // Calculate session cost - USING THE SAME CALCULATION AS StationTimer.tsx
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMs / (1000 * 60 * 60);
-      let sessionCost = Math.ceil(hoursPlayed * stationRate);
-      
-      // Apply 50% member discount
-      if (customer && customer.isMember) {
-        sessionCost = Math.ceil(sessionCost * 0.5); // 50% discount
-        console.log("Applied 50% member discount. Original: ", Math.ceil(hoursPlayed * stationRate), ", Discounted: ", sessionCost);
-      }
+      const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       console.log("Session cost calculation:", { 
         stationRate, 
         durationMinutes, 
         hoursPlayed, 
-        sessionCost,
-        isMember: customer?.isMember
+        sessionCost 
       });
       
       // Create cart item for the session
       const sessionCartItem: CartItem = {
         id: cartItemId,
-        name: `${station.name} (${customer?.name || 'Unknown Customer'})${customer?.isMember ? ' (50% Member Discount)' : ''}`,
+        name: `${station.name} (${customer?.name || 'Unknown Customer'})`,
         price: sessionCost,
         quantity: 1,
         total: sessionCost,

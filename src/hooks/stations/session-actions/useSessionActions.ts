@@ -213,21 +213,37 @@ export const useSessionActions = (props: SessionActionsProps) => {
       setStations(stations.map(s => s.id === stationId ? updatedStation : s));
       setSessions(sessions.map(s => s.id === updatedSession.id ? updatedSession : s));
       
-      // Call the original hook implementation to get the result with customer info and proper discount
-      const originalResult = await endSessionHook.endSession(stationId);
+      // Calculate pricing based on hourly rate and duration - USING THE SAME CALCULATION AS StationTimer.tsx
+      const hoursPlayed = durationMs / (1000 * 60 * 60);
+      const sessionCost = Math.ceil(hoursPlayed * station.hourlyRate);
       
-      if (!originalResult) {
-        throw new Error('Failed to end session properly');
-      }
-      
-      console.log("Session ended successfully, cart item:", originalResult.sessionCartItem);
+      // Create cart item for the session
+      const sessionCartItem = {
+        id: updatedSession.id,
+        type: 'session',
+        name: `${station.name} (${hoursPlayed.toFixed(1)} hours)`,
+        price: sessionCost,
+        quantity: 1,
+        total: sessionCost
+      };
       
       toast({
         title: 'Session Ended',
         description: `Session ended for station ${station.name}`,
       });
       
-      return originalResult;
+      console.log('Session ended successfully, cart item:', sessionCartItem);
+      
+      // Call the original hook implementation to get the customer information
+      const originalResult = await endSessionHook.endSession(stationId);
+      
+      console.log("Original end session result:", originalResult);
+      
+      return {
+        updatedSession,
+        sessionCartItem,
+        customer: originalResult?.customer
+      };
       
     } catch (error) {
       console.error('Error in endSession:', error);

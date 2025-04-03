@@ -36,17 +36,6 @@ const StationActions: React.FC<StationActionsProps> = ({
       return;
     }
     
-    // Check if customer is a member
-    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-    if (!selectedCustomer?.isMember) {
-      toast({
-        title: "Membership Required",
-        description: "Only members can start gaming sessions",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     try {
       setIsLoading(true);
       console.log(`Starting session - Station ID: ${station.id} (${typeof station.id}), Customer ID: ${selectedCustomerId} (${typeof selectedCustomerId})`);
@@ -110,9 +99,6 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
-  // Filter for only members in the dropdown
-  const memberCustomers = customers.filter(c => c.isMember);
-
   if (station.isOccupied) {
     return (
       <Button 
@@ -130,13 +116,13 @@ const StationActions: React.FC<StationActionsProps> = ({
     <>
       <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoading}>
         <SelectTrigger className="font-quicksand">
-          <SelectValue placeholder="Select Member" />
+          <SelectValue placeholder="Select Customer" />
         </SelectTrigger>
         <SelectContent>
-          {memberCustomers.length === 0 ? (
-            <SelectItem value="no-customers" disabled>No members available</SelectItem>
+          {customers.length === 0 ? (
+            <SelectItem value="no-customers" disabled>No customers available</SelectItem>
           ) : (
-            memberCustomers.map((customer) => (
+            customers.map((customer) => (
               <SelectItem key={customer.id} value={customer.id} className="font-quicksand">
                 {customer.name}
               </SelectItem>
