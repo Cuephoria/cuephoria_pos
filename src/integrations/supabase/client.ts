@@ -46,7 +46,7 @@ export const handleSupabaseError = (error: any, operation: string): string => {
 
 // Helper functions for data conversion
 export const convertFromSupabaseProduct = (item: any): any => {
-  return {
+  const product = {
     id: item.id,
     name: item.name,
     price: item.price,
@@ -59,10 +59,13 @@ export const convertFromSupabaseProduct = (item: any): any => {
     duration: item.duration || undefined,
     membershipHours: item.membership_hours || undefined
   };
+  
+  console.log('Converted product from DB:', product);
+  return product;
 };
 
 export const convertToSupabaseProduct = (product: any): any => {
-  return {
+  const supabaseProduct = {
     id: product.id,
     name: product.name,
     price: product.price,
@@ -75,4 +78,7 @@ export const convertToSupabaseProduct = (product: any): any => {
     duration: product.duration,
     membership_hours: product.membershipHours
   };
+  
+  console.log('Converting product to Supabase format:', supabaseProduct);
+  return supabaseProduct;
 };

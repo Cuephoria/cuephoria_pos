@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, Filter, Tag } from 'lucide-react';
+import { Plus, Package, Filter, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import ProductCard from '@/components/ProductCard';
 import { useToast } from '@/hooks/use-toast';
 
 const Products = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = usePOS();
+  const { products, addProduct, updateProduct, deleteProduct, resetToInitialProducts, refreshFromDB } = usePOS();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -20,6 +19,9 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [debugMessage, setDebugMessage] = useState('');
 
   const [formState, setFormState] = useState({
     name: '',
@@ -161,19 +163,107 @@ const Products = () => {
     setFormState(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleResetProducts = () => {
+    try {
+      setIsResetting(true);
+      setDebugMessage('Resetting products...');
+      
+      const resetProducts = resetToInitialProducts ? resetToInitialProducts() : [];
+      
+      toast({
+        title: 'Products Reset',
+        description: `Reset to ${resetProducts.length} initial products`,
+      });
+      
+      setDebugMessage(`Reset complete. Products: ${resetProducts.length}`);
+    } catch (error) {
+      console.error('Reset error:', error);
+      setDebugMessage(`Reset error: ${error}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset products',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleRefreshProducts = async () => {
+    try {
+      setIsRefreshing(true);
+      setDebugMessage('Refreshing from database...');
+      
+      const refreshedProducts = refreshFromDB ? await refreshFromDB() : [];
+      
+      toast({
+        title: 'Products Refreshed',
+        description: `Loaded ${refreshedProducts.length} products from database`,
+      });
+      
+      setDebugMessage(`Refresh complete. Products: ${refreshedProducts.length}`);
+    } catch (error) {
+      console.error('Refresh error:', error);
+      setDebugMessage(`Refresh error: ${error}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh products',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const getCategoryCounts = () => {
+    const counts: Record<string, number> = { all: products.length };
+    products.forEach(product => {
+      counts[product.category] = (counts[product.category] || 0) + 1;
+    });
+    return counts;
+  };
+
+  const categoryCounts = getCategoryCounts();
+  
   const filteredProducts = activeTab === 'all' 
     ? products 
     : products.filter(product => product.category === activeTab);
   
-  const lowStockProducts = products.filter(product => product.stock <= 10 && product.category !== 'membership');
+  const lowStockProducts = products.filter(product => 
+    product.stock <= 10 && 
+    product.category !== 'membership' &&
+    product.category !== 'challenges'
+  );
+
+  useEffect(() => {
+    console.log('Products component rendered with', products.length, 'products');
+    setDebugMessage(`Current products: ${products.length}. Filtered: ${filteredProducts.length}`);
+  }, [products, filteredProducts.length]);
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-        <Button onClick={handleOpenDialog}>
-          <Plus className="h-4 w-4 mr-2" /> Add Product
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+            Refresh DB
+          </Button>
+          <Button onClick={handleResetProducts} variant="outline" disabled={isResetting}>
+            <RotateCcw className={`h-4 w-4 mr-2 ${isResetting ? 'animate-spin' : ''}`} /> 
+            Reset
+          </Button>
+          <Button onClick={handleOpenDialog}>
+            <Plus className="h-4 w-4 mr-2" /> Add Product
+          </Button>
+        </div>
+      </div>
+
+      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+        <p className="font-medium">Debug Info:</p>
+        <p>Total products: {products.length} | Current tab: {activeTab} | Products in view: {filteredProducts.length}</p>
+        <p>Categories: {Object.entries(categoryCounts).map(([cat, count]) => `${cat}: ${count}`).join(', ')}</p>
+        <p>{debugMessage}</p>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -343,12 +433,12 @@ const Products = () => {
       
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="all">All Products</TabsTrigger>
-          <TabsTrigger value="food">Food</TabsTrigger>
-          <TabsTrigger value="drinks">Drinks</TabsTrigger>
-          <TabsTrigger value="tobacco">Tobacco</TabsTrigger>
-          <TabsTrigger value="challenges">Challenges</TabsTrigger>
-          <TabsTrigger value="membership">Membership</TabsTrigger>
+          <TabsTrigger value="all">All ({categoryCounts.all || 0})</TabsTrigger>
+          <TabsTrigger value="food">Food ({categoryCounts.food || 0})</TabsTrigger>
+          <TabsTrigger value="drinks">Drinks ({categoryCounts.drinks || 0})</TabsTrigger>
+          <TabsTrigger value="tobacco">Tobacco ({categoryCounts.tobacco || 0})</TabsTrigger>
+          <TabsTrigger value="challenges">Challenges ({categoryCounts.challenges || 0})</TabsTrigger>
+          <TabsTrigger value="membership">Membership ({categoryCounts.membership || 0})</TabsTrigger>
         </TabsList>
         
         <TabsContent value={activeTab} className="mt-6">

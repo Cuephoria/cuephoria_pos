@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
+import { initialProducts } from '@/data/sampleData';
 
 const membershipProducts: Product[] = [
   { 
@@ -128,255 +128,116 @@ const membershipProducts: Product[] = [
   }
 ];
 
-export const useProducts = (initialProducts: Product[]) => {
+export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([...initialProducts, ...membershipProducts]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log('Fetching products from Supabase...');
-        
-        // Fetch products from Supabase
-        const { data, error } = await supabase
-          .from('products')
-          .select('*');
-          
-        if (error) {
-          const errorMessage = handleSupabaseError(error, 'fetching products');
-          setError(errorMessage);
-          console.error('Error fetching products:', error);
-          toast({
-            title: "Error loading products",
-            description: errorMessage,
-            variant: "destructive"
-          });
-          // Ensure we always have the default products
-          setProducts([...initialProducts, ...membershipProducts]);
-          setLoading(false);
-          return;
-        }
-        
-        // Transform data to match our Product type
-        if (data && data.length > 0) {
-          console.log('Retrieved', data.length, 'products from Supabase');
-          const transformedProducts = data.map(convertFromSupabaseProduct);
-          
-          // Make sure membership products are always included
-          // First create a set of IDs from membership products
-          const membershipIds = new Set(membershipProducts.map(p => p.id));
-          
-          // Filter out any existing memberships from DB to avoid duplicates
-          const nonMembershipDbProducts = transformedProducts.filter(p => !membershipIds.has(p.id));
-          
-          // Set the final products array with non-membership DB products + membership products
-          setProducts([...nonMembershipDbProducts, ...membershipProducts]);
-        } else {
-          console.log('No products found in Supabase, initializing with default products');
-          // Add default products to Supabase (ignore memberships, we'll handle those separately)
-          const regularProducts = initialProducts.filter(p => p.category !== 'membership');
-          
-          for (const product of regularProducts) {
-            const supabaseProduct = convertToSupabaseProduct({
-              ...product,
-              id: product.id || generateId()
-            });
-            
-            const { error: insertError } = await supabase
-              .from('products')
-              .insert(supabaseProduct);
-              
-            if (insertError) {
-              console.error('Error adding default product to Supabase:', insertError);
-            }
-          }
-          
-          // Set products to initial + membership regardless of DB insert success
-          setProducts([...initialProducts, ...membershipProducts]);
-        }
-        
-      } catch (error) {
-        console.error('Unexpected error in fetchProducts:', error);
-        setError('Failed to load products. Please try again later.');
-        // Fallback to initialProducts + membershipProducts
-        setProducts([...initialProducts, ...membershipProducts]);
-        toast({
-          title: "Error loading products",
-          description: "Failed to load products. Using default products instead.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    console.log('useProducts initialized with', products.length, 'products');
+    console.log('Initial sample data products:', initialProducts.length);
+    console.log('Membership products:', membershipProducts.length);
     
-    fetchProducts();
-  }, [initialProducts]);
+    const countByCategory = products.reduce((acc, product) => {
+      acc[product.category] = (acc[product.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    console.log('Products by category:', countByCategory);
+  }, []);
   
-  const addProduct = async (product: Omit<Product, 'id'>) => {
+  const addProduct = (product: Omit<Product, 'id'>) => {
     try {
-      setLoading(true);
-      setError(null);
-      console.log('Adding product:', product);
-      
-      // Skip adding membership products to the database
-      if (product.category === 'membership') {
-        toast({
-          title: "Info",
-          description: "Membership products are managed by the system and cannot be modified.",
-        });
-        setLoading(false);
-        return;
-      }
-      
       const newProductId = generateId();
-      const supabaseProduct = convertToSupabaseProduct({
+      const newProduct: Product = {
         ...product,
         id: newProductId
-      });
-      
-      const { data, error } = await supabase
-        .from('products')
-        .insert(supabaseProduct)
-        .select();
-        
-      if (error) {
-        const errorMessage = handleSupabaseError(error, 'adding product');
-        setError(errorMessage);
-        toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Product added to Supabase:', data);
-      
-      const newProduct: Product = {
-        id: newProductId,
-        ...product
       };
       
-      setProducts(prevProducts => [...prevProducts, newProduct]);
+      setProducts(prev => [...prev, newProduct]);
+      
+      if (product.category !== 'membership') {
+        supabase
+          .from('products')
+          .insert(convertToSupabaseProduct(newProduct))
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error adding product to DB:', error);
+            } else {
+              console.log('Product added to DB:', newProduct.name);
+            }
+          });
+      }
       
       toast({
         title: 'Success',
         description: 'Product added successfully',
       });
       
+      return newProduct;
     } catch (error) {
-      console.error('Unexpected error in addProduct:', error);
+      console.error('Error adding product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add product. Please try again later.',
+        description: 'Failed to add product',
         variant: 'destructive'
       });
-    } finally {
-      setLoading(false);
+      throw error;
     }
   };
   
-  const updateProduct = async (product: Product) => {
+  const updateProduct = (product: Product) => {
     try {
-      setLoading(true);
-      setError(null);
-      console.log('Updating product:', product);
-      
-      // Don't allow updating membership products in Supabase
       if (product.category === 'membership' || product.id.startsWith('mem')) {
         toast({
           title: "Info",
           description: "Membership products are managed by the system and cannot be modified.",
         });
-        setLoading(false);
-        return;
+        return product;
       }
       
-      // Convert to Supabase format
-      const supabaseProduct = convertToSupabaseProduct(product);
+      setProducts(prev => prev.map(p => p.id === product.id ? product : p));
       
-      // Check if the product exists in Supabase first
-      const { data: existingProduct, error: checkError } = await supabase
+      supabase
         .from('products')
-        .select('id')
+        .update(convertToSupabaseProduct(product))
         .eq('id', product.id)
-        .single();
-        
-      if (checkError) {
-        console.log('Product does not exist in database, creating it:', product.id);
-        // Product doesn't exist, insert it instead
-        const { error: insertError } = await supabase
-          .from('products')
-          .insert(supabaseProduct);
-          
-        if (insertError) {
-          const errorMessage = handleSupabaseError(insertError, 'creating product');
-          setError(errorMessage);
-          toast({
-            title: 'Error',
-            description: errorMessage,
-            variant: 'destructive'
-          });
-          setLoading(false);
-          return;
-        }
-        
-        // Product successfully created
-        console.log('Product successfully created in Supabase');
-      } else {
-        // Product exists, update it
-        const { error: updateError } = await supabase
-          .from('products')
-          .update(supabaseProduct)
-          .eq('id', product.id);
-          
-        if (updateError) {
-          const errorMessage = handleSupabaseError(updateError, 'updating product');
-          setError(errorMessage);
-          toast({
-            title: 'Error',
-            description: errorMessage,
-            variant: 'destructive'
-          });
-          setLoading(false);
-          return;
-        }
-        
-        // Product successfully updated
-        console.log('Product successfully updated in Supabase');
-      }
-      
-      // Update the product in the state
-      setProducts(prevProducts => 
-        prevProducts.map(p => p.id === product.id ? product : p)
-      );
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error updating product in DB:', error);
+            return supabase
+              .from('products')
+              .insert(convertToSupabaseProduct(product));
+          }
+        })
+        .then(result => {
+          if (result?.error) {
+            console.error('Error inserting product after update failure:', result.error);
+          } else {
+            console.log('Product updated in DB:', product.name);
+          }
+        });
       
       toast({
         title: 'Success',
         description: 'Product updated successfully',
       });
       
+      return product;
     } catch (error) {
-      console.error('Unexpected error in updateProduct:', error);
+      console.error('Error updating product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update product. Please try again later.',
+        description: 'Failed to update product',
         variant: 'destructive'
       });
-    } finally {
-      setLoading(false);
+      throw error;
     }
   };
   
-  const deleteProduct = async (id: string) => {
+  const deleteProduct = (id: string) => {
     try {
-      // Don't allow deleting membership products
       if (id.startsWith('mem')) {
         toast({
           title: "Info",
@@ -385,43 +246,79 @@ export const useProducts = (initialProducts: Product[]) => {
         return;
       }
       
-      setLoading(true);
-      setError(null);
-      console.log('Deleting product with ID:', id);
+      setProducts(prev => prev.filter(p => p.id !== id));
       
-      const { error } = await supabase
+      supabase
         .from('products')
         .delete()
-        .eq('id', id);
-        
-      if (error) {
-        const errorMessage = handleSupabaseError(error, 'deleting product');
-        setError(errorMessage);
-        toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive'
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error deleting product from DB:', error);
+          } else {
+            console.log('Product deleted from DB:', id);
+          }
         });
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Product deleted from Supabase');
-      
-      setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
       
       toast({
         title: 'Success',
         description: 'Product deleted successfully',
       });
-      
     } catch (error) {
-      console.error('Unexpected error in deleteProduct:', error);
+      console.error('Error deleting product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete product. Please try again later.',
+        description: 'Failed to delete product',
         variant: 'destructive'
       });
+      throw error;
+    }
+  };
+  
+  const resetToInitialProducts = () => {
+    const allProducts = [...initialProducts, ...membershipProducts];
+    setProducts(allProducts);
+    console.log('Reset to initial products:', allProducts.length);
+    return allProducts;
+  };
+  
+  const refreshFromDB = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.from('products').select('*');
+      
+      if (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch products from database',
+          variant: 'destructive'
+        });
+        return products;
+      }
+      
+      if (data && data.length > 0) {
+        const dbProducts = data.map(convertFromSupabaseProduct);
+        
+        const membershipIds = new Set(membershipProducts.map(p => p.id));
+        const nonMembershipDbProducts = dbProducts.filter(p => !membershipIds.has(p.id));
+        
+        const allProducts = [...nonMembershipDbProducts, ...membershipProducts];
+        setProducts(allProducts);
+        console.log('Refreshed from DB:', allProducts.length);
+        return allProducts;
+      } else {
+        console.log('No products in DB, using initial');
+        return resetToInitialProducts();
+      }
+    } catch (error) {
+      console.error('Error refreshing products:', error);
+      toast({
+        title: 'Error',
+        description: 'An error occurred while refreshing products',
+        variant: 'destructive'
+      });
+      return products;
     } finally {
       setLoading(false);
     }
@@ -434,6 +331,8 @@ export const useProducts = (initialProducts: Product[]) => {
     setProducts,
     addProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    resetToInitialProducts,
+    refreshFromDB
   };
 };
