@@ -134,6 +134,8 @@ export const useProducts = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
+  const lowStockProducts = products.filter(p => p.stock < 5 && p.category !== 'membership');
+  
   useEffect(() => {
     console.log('useProducts initialized with', products.length, 'products');
     console.log('Initial sample data products:', initialProducts.length);

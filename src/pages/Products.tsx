@@ -1,17 +1,11 @@
-
-import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCw, RotateCcw } from 'lucide-react';
+import React from 'react';
+import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
-import { usePOS, Product } from '@/context/POSContext';
-import { useToast } from '@/hooks/use-toast';
-import ProductDialog from '@/components/product/ProductDialog';
-import LowStockAlert from '@/components/product/LowStockAlert';
-import ProductTabs from '@/components/product/ProductTabs';
-import { ProductFormState } from '@/components/product/ProductForm';
+import { useProducts } from '@/hooks/useProducts';
 
-const Products = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = usePOS();
-  const { toast } = useToast();
+const ProductsPage: React.FC = () => {
+  const { addProduct, updateProduct, deleteProduct, products } = usePOS();
+  const { resetToInitialProducts, refreshFromDB } = useProducts();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -165,7 +159,7 @@ const Products = () => {
   }, [products]);
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div>
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
         <div className="flex space-x-2">
@@ -207,4 +201,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default ProductsPage;

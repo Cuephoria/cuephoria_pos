@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ExpenseContextType {
   expenses: Expense[];
   businessSummary: BusinessSummary;
-  addExpense: (expense: Omit<ExpenseFormData, 'id'>) => Promise<boolean>;
+  addExpense: (expense: ExpenseFormData) => Promise<boolean>;
   updateExpense: (expense: Expense & { date: Date }) => Promise<boolean>;
   deleteExpense: (id: string) => Promise<boolean>;
   refreshExpenses: () => Promise<void>;

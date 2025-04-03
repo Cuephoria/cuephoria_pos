@@ -32,8 +32,17 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
       let success = false;
       
       if (expense) {
-        // Update existing expense
-        success = await updateExpense({ ...expense, ...formData });
+        // Update existing expense by combining current expense with form data
+        success = await updateExpense({
+          ...expense,
+          name: formData.name,
+          amount: formData.amount,
+          category: formData.category,
+          frequency: formData.frequency,
+          isRecurring: formData.isRecurring,
+          notes: formData.notes,
+          date: formData.date // Pass the Date object from the form
+        });
       } else {
         // Add new expense
         success = await addExpense(formData);
