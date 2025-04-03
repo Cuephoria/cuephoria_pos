@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { usePOS, Customer } from '@/context/POSContext';
 import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
+
 const Customers = () => {
   console.log('Customers component rendering');
 
@@ -67,6 +68,7 @@ const Customers = () => {
       setIsContextLoaded(true);
     }
   }, [posContext, customers]);
+
   const resetForm = () => {
     setFormState({
       name: '',
@@ -79,10 +81,12 @@ const Customers = () => {
     setIsEditMode(false);
     setSelectedCustomer(null);
   };
+
   const handleOpenDialog = () => {
     resetForm();
     setIsDialogOpen(true);
   };
+
   const handleEditCustomer = (customer: Customer) => {
     console.log('Editing customer:', customer);
     setIsEditMode(true);
@@ -100,6 +104,7 @@ const Customers = () => {
     });
     setIsDialogOpen(true);
   };
+
   const handleDeleteCustomer = (id: string) => {
     deleteCustomer(id);
     toast({
@@ -107,6 +112,7 @@ const Customers = () => {
       description: 'The customer has been removed successfully.'
     });
   };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const {
@@ -117,6 +123,7 @@ const Customers = () => {
       membershipExpiryDate,
       membershipHoursLeft
     } = formState;
+    
     if (!name || !phone) {
       toast({
         title: 'Error',
@@ -153,10 +160,13 @@ const Customers = () => {
       // Keep existing membership plan if editing
       if (isEditMode && selectedCustomer && selectedCustomer.membershipPlan) {
         customerData.membershipPlan = selectedCustomer.membershipPlan;
+        customerData.membershipDuration = selectedCustomer.membershipDuration;
       }
+      
       if (membershipExpiryDate) {
         customerData.membershipExpiryDate = new Date(membershipExpiryDate);
       }
+      
       if (membershipHoursLeft) {
         customerData.membershipHoursLeft = parseInt(membershipHoursLeft, 10);
       }
@@ -182,6 +192,7 @@ const Customers = () => {
     setIsDialogOpen(false);
     resetForm();
   };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const {
       name,
@@ -192,6 +203,7 @@ const Customers = () => {
       [name]: value
     }));
   };
+
   const handleSwitchChange = (checked: boolean) => {
     setFormState(prev => ({
       ...prev,
@@ -215,6 +227,7 @@ const Customers = () => {
         </div>
       </div>;
   }
+
   return <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
@@ -262,8 +275,11 @@ const Customers = () => {
               {/* Conditional Membership Fields */}
               {formState.isMember && <div className="space-y-4 border rounded-md p-4 bg-background">
                   {isEditMode && selectedCustomer && selectedCustomer.membershipPlan && <div className="grid gap-2">
-                      <Label htmlFor="membershipPlan">Membership Plan</Label>
-                      <Input id="membershipPlan" value={selectedCustomer.membershipPlan} readOnly className="bg-transparent" />
+                      <Label htmlFor="membershipPlan">Current Membership</Label>
+                      <Input id="membershipPlan" value={selectedCustomer.membershipPlan} readOnly className="bg-muted" />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Membership can only be changed through purchase at checkout.
+                      </p>
                     </div>}
                   
                   <div className="grid gap-2">
@@ -312,4 +328,5 @@ const Customers = () => {
         </div>}
     </div>;
 };
+
 export default Customers;

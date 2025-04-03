@@ -1,12 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
+import { useToast } from '@/hooks/use-toast';
 
 export const useBills = (
   updateCustomer: (customer: Customer) => void,
   updateProduct: (product: Product) => void
 ) => {
   const [bills, setBills] = useState<Bill[]>([]);
+  const { toast } = useToast();
 
   // Load data from localStorage
   useEffect(() => {
@@ -40,10 +43,22 @@ export const useBills = (
     });
     
     if (membershipItems.length > 0 && selectedCustomer.isMember) {
-      if (new Date(selectedCustomer.membershipExpiryDate as Date) > new Date()) {
-        // Customer already has an active membership
-        console.error("Customer already has an active membership");
-        throw new Error("Customer already has an active membership");
+      // Get current date and membership expiry date
+      const currentDate = new Date();
+      const membershipExpiryDate = selectedCustomer.membershipExpiryDate 
+        ? new Date(selectedCustomer.membershipExpiryDate) 
+        : null;
+      
+      // Only allow membership purchase if current membership has expired
+      if (membershipExpiryDate && membershipExpiryDate > currentDate) {
+        console.error("Customer already has an active membership that hasn't expired yet");
+        toast({
+          title: "Active Membership",
+          description: "Customer already has an active membership that expires on " + 
+                      membershipExpiryDate.toLocaleDateString(),
+          variant: "destructive"
+        });
+        throw new Error("Customer already has an active membership that hasn't expired yet");
       }
     }
     
@@ -107,6 +122,21 @@ export const useBills = (
         
         updatedCustomer.isMember = true;
         updatedCustomer.membershipExpiryDate = expiryDate;
+        updatedCustomer.membershipPlan = membershipProduct.name;
+        
+        // Set membership hours if available in the product
+        if (membershipProduct.membershipHours) {
+          updatedCustomer.membershipHoursLeft = membershipProduct.membershipHours;
+        }
+        
+        // Set membership type based on product name
+        if (membershipProduct.duration) {
+          updatedCustomer.membershipDuration = membershipProduct.duration;
+        } else if (membershipProduct.name.toLowerCase().includes("weekly")) {
+          updatedCustomer.membershipDuration = "weekly";
+        } else if (membershipProduct.name.toLowerCase().includes("monthly")) {
+          updatedCustomer.membershipDuration = "monthly";
+        }
       }
     }
     
