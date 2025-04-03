@@ -4,7 +4,7 @@ import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/hooks/useProducts';
 import { Product } from '@/types/pos.types';
-import { Plus, RefreshCw, RotateCcw } from 'lucide-react';
+import { Plus, RefreshCw, RotateCcw, IndianRupee } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ProductDialog from '@/components/product/ProductDialog';
 import LowStockAlert from '@/components/product/LowStockAlert';
@@ -12,7 +12,7 @@ import ProductTabs from '@/components/product/ProductTabs';
 import { ProductFormState } from '@/components/product/ProductForm';
 
 const ProductsPage: React.FC = () => {
-  const { addProduct, updateProduct, deleteProduct, products } = usePOS();
+  const { addProduct, updateProduct, deleteProduct, products, addSampleIndianData } = usePOS();
   const { resetToInitialProducts, refreshFromDB } = useProducts();
   const { toast } = useToast();
 
@@ -23,6 +23,7 @@ const ProductsPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isSyncingIndian, setIsSyncingIndian] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleOpenDialog = () => {
@@ -133,7 +134,7 @@ const ProductsPage: React.FC = () => {
       await resetToInitialProducts();
       toast({
         title: 'Products Reset',
-        description: 'Products have been reset to default values.',
+        description: 'Products have been reset to default values including Indian products.',
       });
     } catch (error) {
       console.error('Error resetting products:', error);
@@ -167,6 +168,27 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleSyncIndianProducts = async () => {
+    try {
+      setIsSyncingIndian(true);
+      addSampleIndianData();
+      await refreshFromDB();
+      toast({
+        title: 'Indian Products Synced',
+        description: 'Indian products have been added and synced with the database.',
+      });
+    } catch (error) {
+      console.error('Error syncing Indian products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sync Indian products. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncingIndian(false);
+    }
+  };
+
   const getCategoryCounts = () => {
     const counts: Record<string, number> = { all: products.length };
     products.forEach(product => {
@@ -186,6 +208,10 @@ const ProductsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
         <div className="flex space-x-2">
+          <Button onClick={handleSyncIndianProducts} variant="outline" disabled={isSyncingIndian}>
+            <IndianRupee className={`h-4 w-4 mr-2 ${isSyncingIndian ? 'animate-spin' : ''}`} /> 
+            Sync Indian Products
+          </Button>
           <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
             Refresh DB
