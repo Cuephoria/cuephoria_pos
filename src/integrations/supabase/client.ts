@@ -62,17 +62,21 @@ export const convertFromSupabaseProduct = (item: any): any => {
 };
 
 export const convertToSupabaseProduct = (product: any): any => {
-  return {
+  // Ensure we have the correct data structure
+  const supabaseProduct = {
     id: product.id,
     name: product.name,
     price: product.price,
     category: product.category,
     stock: product.stock,
-    image: product.image,
-    original_price: product.originalPrice,
-    offer_price: product.offerPrice,
-    student_price: product.studentPrice,
-    duration: product.duration,
-    membership_hours: product.membershipHours
+    image: product.image || null,
+    original_price: product.originalPrice || null,
+    offer_price: product.offerPrice || null,
+    student_price: product.studentPrice || null,
+    duration: product.duration || null,
+    membership_hours: product.membershipHours || null
   };
+  
+  console.log('Converting product to Supabase format:', supabaseProduct);
+  return supabaseProduct;
 };

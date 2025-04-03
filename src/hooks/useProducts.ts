@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -274,25 +275,54 @@ export const useProducts = (initialProducts: Product[]) => {
       
       const supabaseProduct = convertToSupabaseProduct(product);
       
-      const { error } = await supabase
+      // First check if the product exists
+      const { data: existingProduct, error: checkError } = await supabase
         .from('products')
-        .update(supabaseProduct)
-        .eq('id', product.id);
+        .select('*')
+        .eq('id', product.id)
+        .single();
         
-      if (error) {
-        const errorMessage = handleSupabaseError(error, 'updating product');
-        setError(errorMessage);
-        toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-        setLoading(false);
-        return;
+      if (checkError) {
+        console.log('Error checking product existence:', checkError);
+        // Product might not exist in Supabase yet, try to insert it
+        const { error: insertError } = await supabase
+          .from('products')
+          .insert(supabaseProduct);
+          
+        if (insertError) {
+          const errorMessage = handleSupabaseError(insertError, 'inserting product');
+          setError(errorMessage);
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        }
+      } else {
+        // Product exists, update it
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(supabaseProduct)
+          .eq('id', product.id);
+          
+        if (updateError) {
+          const errorMessage = handleSupabaseError(updateError, 'updating product');
+          setError(errorMessage);
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        }
       }
       
       console.log('Product updated in Supabase');
       
+      // Update local state
       setProducts(prevProducts => 
         prevProducts.map(p => p.id === product.id ? product : p)
       );
