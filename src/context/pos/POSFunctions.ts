@@ -5,7 +5,8 @@ import {
   Product, 
   Bill, 
   Session, 
-  CartItem
+  CartItem,
+  Station
 } from '@/types/pos.types';
 
 // Customer membership wrapper function
@@ -73,7 +74,7 @@ export const createStartSessionWrapper = (
 };
 
 export const createEndSessionWrapper = (
-  stations: Customer[],
+  stations: Station[], // Changed from Customer[] to Station[]
   endSessionBase: (stationId: string, customers: Customer[]) => Promise<{
     sessionCartItem?: CartItem;
     customer?: Customer;

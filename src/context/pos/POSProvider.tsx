@@ -105,7 +105,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   
   const endSession = createEndSessionWrapper(
-    customers,
+    stations, // Fixed: Passing stations instead of customers
     endSessionBase,
     clearCart,
     selectCustomer,
