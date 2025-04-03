@@ -86,19 +86,19 @@ const CategoryPerformance: React.FC = () => {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'food':
-        return '#F97316'; // Orange
+        return 'hsl(var(--secondary))'; // Orange
       case 'drinks':
-        return '#0EA5E9'; // Blue
+        return 'hsl(var(--accent))'; // Blue
       case 'tobacco':
-        return '#EF4444'; // Red
+        return 'hsl(var(--destructive))'; // Red
       case 'challenges':
-        return '#10B981'; // Green
+        return 'hsl(var(--primary))'; // Green/Purple
       case 'membership':
-        return '#8B5CF6'; // Purple
+        return 'hsl(var(--ring))'; // Purple
       case 'session':
-        return '#FBBF24'; // Yellow
+        return 'hsl(var(--muted))'; // Muted color
       default:
-        return '#888888';
+        return 'hsl(var(--muted-foreground))';
     }
   };
   
@@ -141,7 +141,7 @@ const CategoryPerformance: React.FC = () => {
                 stroke="#777"
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(value) => `₹${value}`}
+                tickFormatter={(value) => `₹${Number(value).toFixed(0)}`}
               />
               <YAxis 
                 yAxisId="right"
@@ -161,7 +161,7 @@ const CategoryPerformance: React.FC = () => {
                         <div className="grid grid-cols-1 gap-2 mt-1">
                           <div className="flex justify-between items-center gap-4">
                             <span className="text-gray-400">Revenue:</span>
-                            <span className="font-bold text-white">₹{payload[0].value.toFixed(2)}</span>
+                            <span className="font-bold text-white">₹{Number(payload[0].value).toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between items-center gap-4">
                             <span className="text-gray-400">Items Sold:</span>
@@ -202,3 +202,4 @@ const CategoryPerformance: React.FC = () => {
 };
 
 export default CategoryPerformance;
+
