@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -40,7 +39,6 @@ const POSContext = createContext<POSContextType>({
   startSession: async () => {},
   endSession: async () => {},
   deleteSession: async () => false,
-  deleteAllSessions: async () => false,
   refreshSessions: async () => {},
   deleteStation: async () => false,
   addCustomer: () => ({}),
@@ -105,7 +103,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startSession: startSessionBase, 
     endSession: endSessionBase,
     deleteSession: deleteSessionBase,
-    deleteAllSessions: deleteAllSessionsBase,
     refreshSessions: refreshSessionsBase,
     deleteStation
   } = useStations([], updateCustomer);
@@ -186,11 +183,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteSession = async (sessionId: string): Promise<boolean> => {
     return await deleteSessionBase(sessionId);
   };
-  
-  // Add deleteAllSessions function
-  const deleteAllSessions = async (): Promise<boolean> => {
-    return await deleteAllSessionsBase();
-  };
 
   // Add refreshSessions function
   const refreshSessions = async (): Promise<void> => {
@@ -234,7 +226,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
   
-  // Modified to handle async operations but return synchronously
   const completeSale = (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
     try {
       // Apply student price for membership items if student discount is enabled
@@ -421,7 +412,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startSession,
         endSession,
         deleteSession,
-        deleteAllSessions,
         refreshSessions,
         deleteStation,
         addCustomer,

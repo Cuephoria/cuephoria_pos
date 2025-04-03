@@ -118,7 +118,6 @@ export interface POSContextType {
   
   // Session management functions
   deleteSession: (sessionId: string) => Promise<boolean>;
-  deleteAllSessions: () => Promise<boolean>;
   refreshSessions: () => Promise<void>;
   
   // Customer functions

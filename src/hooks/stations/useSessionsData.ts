@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -138,82 +137,6 @@ export const useSessionsData = () => {
     }
   };
   
-  const deleteAllSessions = async (): Promise<boolean> => {
-    setSessionsLoading(true);
-    try {
-      // First, update all stations to show as unoccupied
-      const { error: stationError } = await supabase
-        .from('stations')
-        .update({ is_occupied: false })
-        .eq('is_occupied', true);
-        
-      if (stationError) {
-        console.error('Error updating station status in Supabase:', stationError);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to update stations',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Then end all active sessions in Supabase
-      const { error: updateError } = await supabase
-        .from('sessions')
-        .update({ 
-          end_time: new Date().toISOString(),
-          duration: 0 // Set duration to 0 since we're forcibly ending
-        })
-        .is('end_time', null); // Only update sessions without an end time
-        
-      if (updateError) {
-        console.error('Error ending active sessions in Supabase:', updateError);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to end active sessions',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Finally, delete all sessions from Supabase
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .gt('id', '0'); // Match all sessions
-        
-      if (error) {
-        console.error('Error deleting all sessions:', error);
-        toast({
-          title: 'Database Error',
-          description: 'Failed to delete all sessions from database',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Clear local state
-      setSessions([]);
-      
-      toast({
-        title: 'Success',
-        description: 'All sessions deleted successfully',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error in deleteAllSessions:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete all sessions',
-        variant: 'destructive'
-      });
-      return false;
-    } finally {
-      setSessionsLoading(false);
-    }
-  };
-  
   useEffect(() => {
     refreshSessions();
     
@@ -245,7 +168,6 @@ export const useSessionsData = () => {
     sessionsLoading,
     sessionsError,
     refreshSessions,
-    deleteSession,
-    deleteAllSessions
+    deleteSession
   };
 };
