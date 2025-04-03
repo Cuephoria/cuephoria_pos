@@ -1,4 +1,3 @@
-
 import { Bill, Customer, Product, ResetOptions, CartItem } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 import { indianCustomers, indianProducts } from '@/data/sampleData';
@@ -26,12 +25,25 @@ export const addSampleIndianData = async (
       
       newProducts.push(newProduct);
       
-      // Sync to Supabase
-      await supabase
+      // Check if product exists in Supabase
+      const { data: existingProduct } = await supabase
         .from('products')
-        .insert(convertToSupabaseProduct(newProduct))
-        .onConflict('id')
-        .merge();
+        .select('*')
+        .eq('id', newProduct.id)
+        .maybeSingle();
+        
+      if (existingProduct) {
+        // Update if exists
+        await supabase
+          .from('products')
+          .update(convertToSupabaseProduct(newProduct))
+          .eq('id', newProduct.id);
+      } else {
+        // Insert if it doesn't exist
+        await supabase
+          .from('products')
+          .insert(convertToSupabaseProduct(newProduct));
+      }
     }
   }
   
@@ -51,27 +63,55 @@ export const addSampleIndianData = async (
       
       newCustomers.push(newCustomer);
       
-      // Sync to Supabase
-      await supabase
+      // Check if customer exists in Supabase
+      const { data: existingCustomer } = await supabase
         .from('customers')
-        .insert({
-          id: newCustomer.id,
-          name: newCustomer.name,
-          phone: newCustomer.phone,
-          email: newCustomer.email || null,
-          is_member: newCustomer.isMember,
-          membership_plan: newCustomer.membershipPlan || null,
-          membership_duration: newCustomer.membershipDuration || null,
-          membership_start_date: newCustomer.membershipStartDate ? newCustomer.membershipStartDate.toISOString() : null,
-          membership_expiry_date: newCustomer.membershipExpiryDate ? newCustomer.membershipExpiryDate.toISOString() : null,
-          membership_hours_left: newCustomer.membershipHoursLeft || null,
-          loyalty_points: newCustomer.loyaltyPoints,
-          total_spent: newCustomer.totalSpent,
-          total_play_time: newCustomer.totalPlayTime || 0,
-          created_at: newCustomer.createdAt.toISOString()
-        })
-        .onConflict('id')
-        .merge();
+        .select('*')
+        .eq('id', newCustomer.id)
+        .maybeSingle();
+        
+      if (existingCustomer) {
+        // Update if exists
+        await supabase
+          .from('customers')
+          .update({
+            id: newCustomer.id,
+            name: newCustomer.name,
+            phone: newCustomer.phone,
+            email: newCustomer.email || null,
+            is_member: newCustomer.isMember,
+            membership_plan: newCustomer.membershipPlan || null,
+            membership_duration: newCustomer.membershipDuration || null,
+            membership_start_date: newCustomer.membershipStartDate ? newCustomer.membershipStartDate.toISOString() : null,
+            membership_expiry_date: newCustomer.membershipExpiryDate ? newCustomer.membershipExpiryDate.toISOString() : null,
+            membership_hours_left: newCustomer.membershipHoursLeft || null,
+            loyalty_points: newCustomer.loyaltyPoints,
+            total_spent: newCustomer.totalSpent,
+            total_play_time: newCustomer.totalPlayTime || 0,
+            created_at: newCustomer.createdAt.toISOString()
+          })
+          .eq('id', newCustomer.id);
+      } else {
+        // Insert if it doesn't exist
+        await supabase
+          .from('customers')
+          .insert({
+            id: newCustomer.id,
+            name: newCustomer.name,
+            phone: newCustomer.phone,
+            email: newCustomer.email || null,
+            is_member: newCustomer.isMember,
+            membership_plan: newCustomer.membershipPlan || null,
+            membership_duration: newCustomer.membershipDuration || null,
+            membership_start_date: newCustomer.membershipStartDate ? newCustomer.membershipStartDate.toISOString() : null,
+            membership_expiry_date: newCustomer.membershipExpiryDate ? newCustomer.membershipExpiryDate.toISOString() : null,
+            membership_hours_left: newCustomer.membershipHoursLeft || null,
+            loyalty_points: newCustomer.loyaltyPoints,
+            total_spent: newCustomer.totalSpent,
+            total_play_time: newCustomer.totalPlayTime || 0,
+            created_at: newCustomer.createdAt.toISOString()
+          });
+      }
     }
   }
   
@@ -138,37 +178,86 @@ export const addSampleIndianData = async (
       sampleBills.push(bill);
       
       // Sync bill to Supabase
-      await supabase
+      // Check if bill exists in Supabase
+      const { data: existingBill } = await supabase
         .from('bills')
-        .insert({
-          id: billId,
-          customer_id: customerId,
-          subtotal,
-          discount,
-          discount_value: discountValue,
-          discount_type: 'percentage',
-          loyalty_points_used: 0,
-          loyalty_points_earned: loyaltyPointsEarned,
-          total,
-          payment_method: bill.paymentMethod,
-          created_at: bill.createdAt.toISOString()
-        })
-        .onConflict('id')
-        .merge();
+        .select('*')
+        .eq('id', billId)
+        .maybeSingle();
+        
+      if (existingBill) {
+        // Update if exists
+        await supabase
+          .from('bills')
+          .update({
+            customer_id: customerId,
+            subtotal,
+            discount,
+            discount_value: discountValue,
+            discount_type: 'percentage',
+            loyalty_points_used: 0,
+            loyalty_points_earned: loyaltyPointsEarned,
+            total,
+            payment_method: bill.paymentMethod,
+            created_at: bill.createdAt.toISOString()
+          })
+          .eq('id', billId);
+      } else {
+        // Insert if it doesn't exist
+        await supabase
+          .from('bills')
+          .insert({
+            id: billId,
+            customer_id: customerId,
+            subtotal,
+            discount,
+            discount_value: discountValue,
+            discount_type: 'percentage',
+            loyalty_points_used: 0,
+            loyalty_points_earned: loyaltyPointsEarned,
+            total,
+            payment_method: bill.paymentMethod,
+            created_at: bill.createdAt.toISOString()
+          });
+      }
       
       // Sync bill items to Supabase
       for (const item of billItems) {
-        await supabase
+        // Check if bill item exists in Supabase
+        const { data: existingBillItem } = await supabase
           .from('bill_items')
-          .insert({
-            bill_id: billId,
-            item_id: item.id,
-            item_type: item.type,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            total: item.total
-          });
+          .select('*')
+          .eq('bill_id', billId)
+          .eq('item_id', item.id)
+          .maybeSingle();
+          
+        if (existingBillItem) {
+          // Update if exists
+          await supabase
+            .from('bill_items')
+            .update({
+              item_type: item.type,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              total: item.total
+            })
+            .eq('bill_id', billId)
+            .eq('item_id', item.id);
+        } else {
+          // Insert if it doesn't exist
+          await supabase
+            .from('bill_items')
+            .insert({
+              bill_id: billId,
+              item_id: item.id,
+              item_type: item.type,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              total: item.total
+            });
+        }
       }
     }
   }
@@ -213,9 +302,7 @@ export const resetToSampleData = async (
     for (const product of initialProducts) {
       await supabase
         .from('products')
-        .insert(convertToSupabaseProduct(product))
-        .onConflict('id')
-        .merge();
+        .insert(convertToSupabaseProduct(product));
     }
     
     setProducts(initialProducts);
@@ -247,9 +334,7 @@ export const resetToSampleData = async (
           total_spent: customer.totalSpent,
           total_play_time: customer.totalPlayTime || 0,
           created_at: customer.createdAt.toISOString()
-        })
-        .onConflict('id')
-        .merge();
+        });
     }
     
     setCustomers(initialCustomers);
@@ -288,18 +373,39 @@ export const resetToSampleData = async (
     
     // Update stations in Supabase
     for (const station of initialStations) {
-      await supabase
+      // Check if station exists
+      const { data: existingStation } = await supabase
         .from('stations')
-        .upsert({
-          id: station.id,
-          name: station.name,
-          type: station.type,
-          hourly_rate: station.hourlyRate,
-          is_occupied: false,
-          current_session: null
-        })
-        .onConflict('id')
-        .merge();
+        .select('*')
+        .eq('id', station.id)
+        .maybeSingle();
+        
+      if (existingStation) {
+        // Update if exists
+        await supabase
+          .from('stations')
+          .update({
+            id: station.id,
+            name: station.name,
+            type: station.type,
+            hourly_rate: station.hourlyRate,
+            is_occupied: false,
+            current_session: null
+          })
+          .eq('id', station.id);
+      } else {
+        // Insert if it doesn't exist
+        await supabase
+          .from('stations')
+          .insert({
+            id: station.id,
+            name: station.name,
+            type: station.type,
+            hourly_rate: station.hourlyRate,
+            is_occupied: false,
+            current_session: null
+          });
+      }
     }
   }
   

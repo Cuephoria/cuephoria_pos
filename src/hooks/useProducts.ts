@@ -325,7 +325,8 @@ export const useProducts = () => {
       for (const product of allProducts) {
         const { error: insertError } = await supabase
           .from('products')
-          .insert(convertToSupabaseProduct(product));
+          .insert(convertToSupabaseProduct(product))
+          .match({ id: product.id });
         
         if (insertError) {
           console.error('Error inserting product:', insertError);
@@ -393,14 +394,29 @@ export const useProducts = () => {
       const allProducts = [...initialProducts, ...membershipProducts];
       
       for (const product of allProducts) {
-        const { error } = await supabase
+        const { data: existingProduct } = await supabase
           .from('products')
-          .insert(convertToSupabaseProduct(product))
-          .onConflict('id')
-          .merge();
-        
-        if (error) {
-          console.error('Error syncing product to Supabase:', error);
+          .select('*')
+          .eq('id', product.id)
+          .maybeSingle();
+          
+        if (existingProduct) {
+          const { error: updateError } = await supabase
+            .from('products')
+            .update(convertToSupabaseProduct(product))
+            .eq('id', product.id);
+            
+          if (updateError) {
+            console.error('Error updating existing product:', updateError);
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from('products')
+            .insert(convertToSupabaseProduct(product));
+            
+          if (insertError) {
+            console.error('Error inserting new product:', insertError);
+          }
         }
       }
       
