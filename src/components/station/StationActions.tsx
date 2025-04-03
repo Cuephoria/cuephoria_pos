@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Station, Customer } from '@/context/POSContext';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown, Search, User } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
@@ -108,15 +109,17 @@ const StationActions: React.FC<StationActionsProps> = ({
     return `${customer.name} - ${customer.phone}${customer.email ? ` - ${customer.email}` : ''}`;
   };
 
-  // Helper to check if a customer matches the search term
-  const customerMatchesSearch = (customer: Customer, searchTerm: string) => {
-    const term = searchTerm.toLowerCase();
+  // Filter customers based on search query
+  const filteredCustomers = customers.filter(customer => {
+    if (!searchQuery) return true;
+    
+    const term = searchQuery.toLowerCase();
     return (
       customer.name.toLowerCase().includes(term) ||
       customer.phone.toLowerCase().includes(term) ||
       (customer.email && customer.email.toLowerCase().includes(term))
     );
-  };
+  });
 
   if (station.isOccupied) {
     return (
@@ -150,48 +153,48 @@ const StationActions: React.FC<StationActionsProps> = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
+        <PopoverContent className="w-[300px] p-0">
           <Command>
             <div className="flex items-center border-b px-3">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
               <CommandInput 
-                placeholder="Search customer by name, phone or email..." 
-                className="h-9" 
+                placeholder="Search customer..." 
+                className="h-9"
+                value={searchQuery}
+                onValueChange={setSearchQuery}
               />
             </div>
-            <CommandEmpty>
-              <div className="p-2 text-center text-sm">
-                No customers found. Try a different search.
-              </div>
-            </CommandEmpty>
-            <CommandGroup className="max-h-60 overflow-y-auto">
-              {customers.map((customer) => (
-                <CommandItem
-                  key={customer.id}
-                  value={getCustomerDisplayText(customer)}
-                  onSelect={() => {
-                    setSelectedCustomerId(customer.id);
-                    setOpen(false);
-                  }}
-                >
-                  <div className="flex items-center">
-                    <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="flex-1 truncate">
-                      {customer.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {customer.phone}
-                    </span>
-                  </div>
-                  <Check
-                    className={cn(
-                      "ml-auto h-4 w-4",
-                      selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+            <CommandList>
+              <CommandEmpty>
+                <div className="p-2 text-center text-sm">
+                  No customers found. Try a different search.
+                </div>
+              </CommandEmpty>
+              <CommandGroup className="max-h-60 overflow-y-auto">
+                {filteredCustomers.map((customer) => (
+                  <CommandItem
+                    key={customer.id}
+                    value={customer.id}
+                    onSelect={() => {
+                      setSelectedCustomerId(customer.id);
+                      setOpen(false);
+                    }}
+                    className="flex items-center justify-between py-2"
+                  >
+                    <div className="flex items-center">
+                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{customer.name}</p>
+                        <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                      </div>
+                    </div>
+                    {selectedCustomerId === customer.id && (
+                      <Check className="h-4 w-4" />
                     )}
-                  />
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
