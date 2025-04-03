@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Expense } from '@/types/expense.types';
+import { Expense, ExpenseFormData } from '@/types/expense.types';
 import ExpenseForm from './ExpenseForm';
 import { PlusCircle } from 'lucide-react';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -25,24 +25,18 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
   const { addExpense, updateExpense } = useExpenses();
   const { toast } = useToast();
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: ExpenseFormData) => {
     try {
       console.log('Submitting expense data:', formData);
-      
-      // Convert Date object to ISO string for storage
-      const expenseData = {
-        ...formData,
-        date: formData.date instanceof Date ? formData.date.toISOString() : formData.date
-      };
       
       let success = false;
       
       if (expense) {
         // Update existing expense
-        success = await updateExpense({ ...expenseData, id: expense.id });
+        success = await updateExpense({ ...expense, ...formData });
       } else {
         // Add new expense
-        success = await addExpense(expenseData);
+        success = await addExpense(formData);
       }
       
       console.log('Expense operation result:', success);
@@ -93,7 +87,7 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
           onSubmit={handleSubmit} 
           initialData={expense ? {
             ...expense,
-            date: new Date(expense.date) // Convert ISO string back to Date for form
+            date: new Date(expense.date) // Convert ISO string to Date for form
           } : undefined} 
           onCancel={() => setOpen(false)}
         />

@@ -18,7 +18,48 @@ import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 
-const POSContext = createContext<POSContextType | undefined>(undefined);
+const POSContext = createContext<POSContextType>({
+  products: [],
+  productsLoading: false,
+  productsError: null,
+  stations: [],
+  customers: [],
+  sessions: [],
+  bills: [],
+  cart: [],
+  selectedCustomer: null,
+  discount: 0,
+  discountType: 'percentage',
+  loyaltyPointsUsed: 0,
+  isStudentDiscount: false,
+  setIsStudentDiscount: () => {},
+  setStations: () => {},
+  addProduct: () => {},
+  updateProduct: () => {},
+  deleteProduct: () => {},
+  startSession: () => {},
+  endSession: () => {},
+  deleteStation: () => {},
+  addCustomer: () => {},
+  updateCustomer: () => {},
+  updateCustomerMembership: () => {},
+  deleteCustomer: () => {},
+  selectCustomer: (id) => {},
+  checkMembershipValidity: () => {},
+  deductMembershipHours: () => {},
+  addToCart: () => {},
+  removeFromCart: () => {},
+  updateCartItem: () => {},
+  clearCart: () => {},
+  setDiscount: () => {},
+  setLoyaltyPointsUsed: () => {},
+  calculateTotal: () => {},
+  completeSale: () => {},
+  exportBills: () => {},
+  exportCustomers: () => {},
+  resetToSampleData: () => {},
+  addSampleIndianData: () => {}
+});
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('POSProvider initialized'); // Debug log

@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { CurrencyDisplay } from '@/components/ui/currency';
 
 const ExpenseList = () => {
@@ -73,6 +73,15 @@ const ExpenseList = () => {
     );
   }
 
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), 'MMM dd, yyyy');
+    } catch (error) {
+      console.error('Invalid date format:', dateString, error);
+      return 'Invalid date';
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -102,11 +111,7 @@ const ExpenseList = () => {
                   <TableCell className="font-medium">{expense.name}</TableCell>
                   <TableCell><CurrencyDisplay amount={expense.amount} /></TableCell>
                   <TableCell>{getCategoryLabel(expense.category)}</TableCell>
-                  <TableCell>
-                    {expense.date instanceof Date 
-                      ? format(expense.date, 'MMM dd, yyyy')
-                      : 'Invalid date'}
-                  </TableCell>
+                  <TableCell>{formatDate(expense.date)}</TableCell>
                   <TableCell>
                     {expense.isRecurring 
                       ? getFrequencyLabel(expense.frequency) 

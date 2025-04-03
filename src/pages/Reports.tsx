@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +30,10 @@ const Reports = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [reportType, setReportType] = useState('bills');
   const form = useForm();
+
+  const onExportBills = () => {
+    exportBills(); // Remove the extra argument
+  };
 
   // Filter bills by date range
   const filteredBills = bills.filter(bill => {
@@ -128,7 +131,7 @@ const Reports = () => {
         downloadSummaryReport(sortedBills, customers);
         break;
       default:
-        exportBills(customers);
+        onExportBills();
     }
   };
 

@@ -10,7 +10,7 @@ import ProductTabs from '@/components/product/ProductTabs';
 import { ProductFormState } from '@/components/product/ProductForm';
 
 const Products = () => {
-  const { products, addProduct, updateProduct, deleteProduct, resetToInitialProducts, refreshFromDB } = usePOS();
+  const { products, addProduct, updateProduct, deleteProduct } = usePOS();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -127,18 +127,9 @@ const Products = () => {
   const handleResetProducts = () => {
     try {
       setIsResetting(true);
-      
-      const resetProducts = resetToInitialProducts ? resetToInitialProducts() : [];
-      
       toast({
-        title: 'Products Reset',
-        description: `Reset to ${resetProducts.length} initial products`,
-      });
-    } catch (error) {
-      console.error('Reset error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reset products',
+        title: 'Reset Not Available',
+        description: 'Product reset functionality is not available.',
         variant: 'destructive',
       });
     } finally {
@@ -149,18 +140,9 @@ const Products = () => {
   const handleRefreshProducts = async () => {
     try {
       setIsRefreshing(true);
-      
-      const refreshedProducts = refreshFromDB ? await refreshFromDB() : [];
-      
       toast({
-        title: 'Products Refreshed',
-        description: `Loaded ${refreshedProducts.length} products from database`,
-      });
-    } catch (error) {
-      console.error('Refresh error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh products',
+        title: 'Refresh Not Available',
+        description: 'Product refresh functionality is not available.',
         variant: 'destructive',
       });
     } finally {

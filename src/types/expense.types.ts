@@ -19,3 +19,14 @@ export interface BusinessSummary {
   netProfit: number;
   profitMargin: number;
 }
+
+// Form-specific type to handle Date objects in forms
+export interface ExpenseFormData {
+  name: string;
+  amount: number;
+  category: ExpenseCategory;
+  frequency: ExpenseFrequency;
+  date: Date;
+  isRecurring: boolean;
+  notes?: string;
+}

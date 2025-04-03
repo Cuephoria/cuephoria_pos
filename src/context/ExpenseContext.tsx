@@ -1,6 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Expense, BusinessSummary } from '@/types/expense.types';
-import { supabase } from '@/integrations/supabase/client';
+import { Expense, BusinessSummary, ExpenseFormData } from '@/types/expense.types';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
@@ -8,8 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 interface ExpenseContextType {
   expenses: Expense[];
   businessSummary: BusinessSummary;
-  addExpense: (expense: Omit<Expense, 'id'>) => Promise<boolean>;
-  updateExpense: (expense: Expense) => Promise<boolean>;
+  addExpense: (expense: Omit<ExpenseFormData, 'id'>) => Promise<boolean>;
+  updateExpense: (expense: Expense & { date: Date }) => Promise<boolean>;
   deleteExpense: (id: string) => Promise<boolean>;
   refreshExpenses: () => Promise<void>;
   loading: boolean;
@@ -17,6 +17,8 @@ interface ExpenseContextType {
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined);
+
+const STORAGE_KEY = 'pos-expenses';
 
 export const useExpenses = () => {
   const context = useContext(ExpenseContext);
@@ -44,31 +46,17 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching expenses:', error);
-        setError(`Failed to fetch expenses: ${error.message}`);
-        return;
-      }
+      // Get expenses from localStorage
+      const storedExpenses = localStorage.getItem(STORAGE_KEY);
       
-      if (data) {
-        const transformedExpenses: Expense[] = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          amount: item.amount,
-          category: item.category,
-          frequency: item.frequency,
-          date: item.date,
-          isRecurring: item.is_recurring,
-          notes: item.notes
-        }));
-        
-        setExpenses(transformedExpenses);
-        console.log(`Loaded ${transformedExpenses.length} expenses`);
+      if (storedExpenses) {
+        const parsedExpenses = JSON.parse(storedExpenses) as Expense[];
+        setExpenses(parsedExpenses);
+        console.log(`Loaded ${parsedExpenses.length} expenses from localStorage`);
+      } else {
+        // Initialize with empty array if no data found
+        setExpenses([]);
+        console.log('No expenses found in localStorage');
       }
     } catch (err) {
       console.error('Error in fetchExpenses:', err);
@@ -110,66 +98,38 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const addExpense = async (expenseData: Omit<Expense, 'id'>): Promise<boolean> => {
+  const saveExpensesToStorage = (updatedExpenses: Expense[]) => {
     try {
-      console.log('Adding expense with data:', expenseData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedExpenses));
+    } catch (err) {
+      console.error('Error saving expenses to localStorage:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to save expenses data',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const addExpense = async (formData: ExpenseFormData): Promise<boolean> => {
+    try {
       const id = generateId();
       
-      // Ensure date is a valid string
-      let dateStr: string;
-      
-      if (typeof expenseData.date === 'string') {
-        dateStr = expenseData.date;
-      } else if (expenseData.date instanceof Date) {
-        dateStr = expenseData.date.toISOString();
-      } else {
-        console.error('Invalid date format:', expenseData.date);
-        toast({
-          title: 'Error',
-          description: 'Invalid date format',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      console.log('Formatted date to store:', dateStr);
-      
-      const { error: supabaseError } = await supabase
-        .from('expenses')
-        .insert({
-          id,
-          name: expenseData.name,
-          amount: expenseData.amount,
-          category: expenseData.category,
-          frequency: expenseData.frequency,
-          date: dateStr,
-          is_recurring: expenseData.isRecurring,
-          notes: expenseData.notes || ''
-        });
-        
-      if (supabaseError) {
-        console.error('Error adding expense:', supabaseError);
-        toast({
-          title: 'Error',
-          description: `Failed to add expense: ${supabaseError.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Create a proper expense object for the state
+      // Convert Date to ISO string for storage
       const newExpense: Expense = {
         id,
-        name: expenseData.name,
-        amount: expenseData.amount,
-        category: expenseData.category,
-        frequency: expenseData.frequency,
-        date: dateStr,
-        isRecurring: expenseData.isRecurring,
-        notes: expenseData.notes || ''
+        name: formData.name,
+        amount: formData.amount,
+        category: formData.category,
+        frequency: formData.frequency,
+        date: formData.date.toISOString(),
+        isRecurring: formData.isRecurring,
+        notes: formData.notes
       };
       
-      setExpenses(prev => [newExpense, ...prev]);
+      const updatedExpenses = [newExpense, ...expenses];
+      setExpenses(updatedExpenses);
+      saveExpensesToStorage(updatedExpenses);
       
       toast({
         title: 'Success',
@@ -188,59 +148,20 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const updateExpense = async (expense: Expense): Promise<boolean> => {
+  const updateExpense = async (expense: Expense & { date: Date }): Promise<boolean> => {
     try {
-      // Ensure date is a valid string
-      let dateStr: string;
-      
-      if (typeof expense.date === 'string') {
-        dateStr = expense.date;
-      } else if (expense.date instanceof Date) {
-        dateStr = expense.date.toISOString();
-      } else {
-        console.error('Invalid date format:', expense.date);
-        toast({
-          title: 'Error',
-          description: 'Invalid date format',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      console.log('Formatted date to update:', dateStr);
-      
-      const { error: supabaseError } = await supabase
-        .from('expenses')
-        .update({
-          name: expense.name,
-          amount: expense.amount,
-          category: expense.category,
-          frequency: expense.frequency,
-          date: dateStr,
-          is_recurring: expense.isRecurring,
-          notes: expense.notes || ''
-        })
-        .eq('id', expense.id);
-        
-      if (supabaseError) {
-        console.error('Error updating expense:', supabaseError);
-        toast({
-          title: 'Error',
-          description: `Failed to update expense: ${supabaseError.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Update the expense with the correct date 
-      const updatedExpense = {
+      // Convert Date to ISO string for storage
+      const updatedExpense: Expense = {
         ...expense,
-        date: dateStr
+        date: expense.date.toISOString()
       };
       
-      setExpenses(prev => 
-        prev.map(item => item.id === expense.id ? updatedExpense : item)
+      const updatedExpenses = expenses.map(item => 
+        item.id === expense.id ? updatedExpense : item
       );
+      
+      setExpenses(updatedExpenses);
+      saveExpensesToStorage(updatedExpenses);
       
       toast({
         title: 'Success',
@@ -261,22 +182,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', id);
-        
-      if (error) {
-        console.error('Error deleting expense:', error);
-        toast({
-          title: 'Error',
-          description: `Failed to delete expense: ${error.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      setExpenses(prev => prev.filter(item => item.id !== id));
+      const updatedExpenses = expenses.filter(item => item.id !== id);
+      setExpenses(updatedExpenses);
+      saveExpensesToStorage(updatedExpenses);
       
       toast({
         title: 'Success',

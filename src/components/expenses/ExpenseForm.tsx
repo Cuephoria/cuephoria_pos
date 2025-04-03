@@ -3,7 +3,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Expense, ExpenseCategory, ExpenseFrequency } from '@/types/expense.types';
+import { ExpenseCategory, ExpenseFrequency, ExpenseFormData } from '@/types/expense.types';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -42,11 +42,9 @@ const expenseSchema = z.object({
   notes: z.string().optional(),
 });
 
-type ExpenseFormData = z.infer<typeof expenseSchema>;
-
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => void;
-  initialData?: Partial<Expense>;
+  initialData?: Partial<ExpenseFormData>;
   onCancel?: () => void;
 }
 
@@ -60,20 +58,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   let initialDate = today;
   
   if (initialData?.date) {
-    // Handle different date formats that might come from the API or context
-    if (initialData.date instanceof Date) {
-      initialDate = initialData.date;
-    } else if (typeof initialData.date === 'string') {
-      try {
-        initialDate = new Date(initialData.date);
-        if (isNaN(initialDate.getTime())) {
-          initialDate = today; // Fallback to current date if invalid
-        }
-      } catch (e) {
-        console.error('Failed to parse initial date:', e);
-        initialDate = today; // Fallback to current date
-      }
-    }
+    initialDate = initialData.date;
   }
   
   console.log('Form initializing with date:', initialDate);
@@ -261,7 +246,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             </Button>
           )}
           <Button type="submit">
-            {initialData?.id ? 'Update Expense' : 'Add Expense'}
+            {initialData?.name ? 'Update Expense' : 'Add Expense'}
           </Button>
         </div>
       </form>
