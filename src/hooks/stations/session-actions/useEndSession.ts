@@ -3,6 +3,7 @@ import { Session, Station, Customer, SessionResult, CartItem } from '@/types/pos
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
+import React from 'react';
 
 /**
  * Hook to provide session end functionality

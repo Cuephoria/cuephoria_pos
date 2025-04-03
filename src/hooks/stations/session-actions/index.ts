@@ -3,6 +3,7 @@ import { Session, Station, Customer, SessionResult } from '@/types/pos.types';
 import { useStartSession } from './useStartSession';
 import { useEndSession } from './useEndSession';
 import { SessionActionsProps } from './types';
+import React from 'react';
 
 /**
  * Hook to provide session management actions

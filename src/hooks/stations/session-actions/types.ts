@@ -1,6 +1,6 @@
 
 import { Station, Session, Customer, SessionResult } from '@/types/pos.types';
-import { SupabaseClient } from '@supabase/supabase-js';
+import React from 'react';
 
 export interface SessionActionsProps {
   stations: Station[];

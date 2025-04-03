@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 
 /**
  * Hook to load and manage session data from Supabase
