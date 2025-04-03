@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
+import { CurrencyDisplay } from '@/components/ui/currency';
 
 interface SalesChartProps {
   data: {
@@ -87,7 +88,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ data, activeTab, setActiveTab }
                               Sales
                             </span>
                             <span className="font-bold">
-                              ₹{payload[0].value}
+                              <CurrencyDisplay amount={payload[0].value as number} />
                             </span>
                           </div>
                         </div>

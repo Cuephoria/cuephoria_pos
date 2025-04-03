@@ -292,25 +292,25 @@ const POS = () => {
             <div className="w-full">
               <div className="flex justify-between py-1">
                 <span>Subtotal</span>
-                <span className="indian-rupee font-mono">{subtotal.toLocaleString('en-IN')}</span>
+                <CurrencyDisplay amount={subtotal} />
               </div>
               {discount > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-purple">
                   <span>
                     Discount {discountType === 'percentage' ? `(${discount}%)` : ''}
                   </span>
-                  <span className="indian-rupee font-mono">-{discountValue.toLocaleString('en-IN')}</span>
+                  <CurrencyDisplay amount={discountValue} className="text-cuephoria-purple" />
                 </div>
               )}
               {loyaltyPointsUsed > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-orange">
                   <span>Loyalty Points Used</span>
-                  <span className="indian-rupee font-mono">-{loyaltyPointsUsed.toLocaleString('en-IN')}</span>
+                  <CurrencyDisplay amount={loyaltyPointsUsed} className="text-cuephoria-orange" />
                 </div>
               )}
               <div className="flex justify-between py-1 text-lg font-bold border-t mt-2 pt-2">
                 <span>Total</span>
-                <span className="indian-rupee font-mono text-cuephoria-lightpurple">{total.toLocaleString('en-IN')}</span>
+                <CurrencyDisplay amount={total} className="text-cuephoria-lightpurple" />
               </div>
             </div>
             
@@ -530,25 +530,25 @@ const POS = () => {
             <div className="border-t pt-4 mt-2 animate-slide-up delay-300">
               <div className="flex justify-between py-1">
                 <span>Subtotal</span>
-                <CurrencyDisplay amount={subtotal} className="font-mono" />
+                <CurrencyDisplay amount={subtotal} />
               </div>
               {discount > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-purple">
                   <span>
                     Discount {discountType === 'percentage' ? `(${discount}%)` : ''}
                   </span>
-                  <span>-<CurrencyDisplay amount={discountValue} className="font-mono" /></span>
+                  <CurrencyDisplay amount={discountValue} className="text-cuephoria-purple" />
                 </div>
               )}
               {loyaltyPointsUsed > 0 && (
                 <div className="flex justify-between py-1 text-cuephoria-orange">
                   <span>Loyalty Points Used</span>
-                  <span>-<CurrencyDisplay amount={loyaltyPointsUsed} className="font-mono" /></span>
+                  <CurrencyDisplay amount={loyaltyPointsUsed} className="text-cuephoria-orange" />
                 </div>
               )}
               <div className="flex justify-between py-1 text-lg font-bold border-t mt-2 pt-2">
                 <span>Total</span>
-                <CurrencyDisplay amount={total} className="font-mono text-cuephoria-lightpurple" />
+                <CurrencyDisplay amount={total} className="text-cuephoria-lightpurple" />
               </div>
             </div>
             
