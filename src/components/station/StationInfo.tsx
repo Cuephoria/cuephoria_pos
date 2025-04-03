@@ -20,9 +20,9 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
         <div className="flex items-center text-lg font-heading">
           {isPoolTable ? (
             <div className="relative w-10 h-10 flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-blue-950/50 backdrop-blur-md rounded-md"></div>
-              <CircleOff className="h-6 w-6 text-blue-300 z-10 opacity-80" />
-              <div className="absolute inset-0 border-2 border-blue-700/50 rounded-md"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-black rounded-md backdrop-blur-md"></div>
+              <CircleOff className="h-6 w-6 text-cuephoria-lightpurple z-10 opacity-80" />
+              <div className="absolute bottom-0 h-1 w-8 mx-auto bg-cuephoria-purple rounded-t-lg"></div>
             </div>
           ) : (
             <div className="relative w-10 h-10 flex items-center justify-center">
@@ -31,7 +31,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
               <div className="absolute bottom-0 h-1 w-8 mx-auto bg-cuephoria-purple rounded-t-lg"></div>
             </div>
           )}
-          <span className={`ml-2 font-bold ${isPoolTable ? 'text-blue-400' : 'text-cuephoria-lightpurple'}`}>
+          <span className={`ml-2 font-bold text-cuephoria-lightpurple`}>
             {station.name}
           </span>
         </div>
@@ -39,9 +39,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName }) => {
           className={`
             ${station.isOccupied 
               ? 'bg-cuephoria-orange text-white' 
-              : isPoolTable 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-cuephoria-lightpurple text-white'
+              : 'bg-cuephoria-lightpurple text-white'
             } 
             ${station.isOccupied ? 'animate-pulse' : ''}
           `}
