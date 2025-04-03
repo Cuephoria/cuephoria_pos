@@ -114,7 +114,8 @@ export interface POSContextType {
   // Station functions
   startSession: (stationId: string, customerId: string) => Promise<void>;
   endSession: (stationId: string) => Promise<void>;
-  deleteStation: (stationId: string) => Promise<boolean>; // Add this new function
+  deleteStation: (stationId: string) => Promise<boolean>;
+  deleteSession: (sessionId: string) => Promise<boolean>;
   
   // Customer functions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;

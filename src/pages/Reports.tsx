@@ -270,7 +270,7 @@ const ReportsPage: React.FC = () => {
     if (!durationInMinutes) return "0h 0m";
     
     const hours = Math.floor(durationInMinutes / 60);
-    const minutes = durationMinutes % 60;
+    const minutes = durationInMinutes % 60;
     return `${hours}h ${minutes}m`;
   };
   
@@ -555,9 +555,9 @@ const ReportsPage: React.FC = () => {
                     if (session.endTime) {
                       const startMs = new Date(session.startTime).getTime();
                       const endMs = new Date(session.endTime).getTime();
-                      const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
-                      const hours = Math.floor(durationMinutes / 60);
-                      const minutes = durationMinutes % 60;
+                      const durationMin = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+                      const hours = Math.floor(durationMin / 60);
+                      const minutes = durationMin % 60;
                       durationDisplay = `${hours}h ${minutes}m`;
                     } else if (session.duration) {
                       const hours = Math.floor(session.duration / 60);
