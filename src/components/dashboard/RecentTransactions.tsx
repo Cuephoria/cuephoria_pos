@@ -81,7 +81,7 @@ const RecentTransactions: React.FC = () => {
         // Password is correct, proceed with deletion
         setIsPasswordDialogOpen(false);
         setAdminPassword('');
-        handleConfirmDelete();
+        await handleConfirmDelete();
       } else {
         // Password is incorrect
         toast({
@@ -111,17 +111,27 @@ const RecentTransactions: React.FC = () => {
     if (!billToDelete) return;
     
     setIsDeleting(true);
-    const success = await deleteBill(billToDelete.id, billToDelete.customerId);
-    setIsDeleting(false);
-    
-    if (success) {
-      setIsConfirmOpen(false);
-      setBillToDelete(null);
+    try {
+      const success = await deleteBill(billToDelete.id, billToDelete.customerId);
+      
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'Transaction deleted successfully',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting bill:', error);
       toast({
-        title: 'Success',
-        description: 'Transaction deleted successfully',
-        variant: 'default',
+        title: 'Error',
+        description: 'Failed to delete transaction',
+        variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
+      setBillToDelete(null);
+      setIsConfirmOpen(false);
     }
   };
   
@@ -160,6 +170,7 @@ const RecentTransactions: React.FC = () => {
                       size="icon" 
                       className="text-gray-400 hover:text-red-500 transition-colors"
                       onClick={() => handleDeleteClick(bill)}
+                      disabled={isDeleting}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -175,7 +186,9 @@ const RecentTransactions: React.FC = () => {
         </CardContent>
       </Card>
       
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      <AlertDialog open={isConfirmOpen} onOpenChange={(open) => {
+        if (!isDeleting) setIsConfirmOpen(open);
+      }}>
         <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
@@ -185,10 +198,16 @@ const RecentTransactions: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">Cancel</AlertDialogCancel>
+            <AlertDialogCancel 
+              className="bg-gray-700 text-white hover:bg-gray-600"
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleConfirmPasswordCheck}
               className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
             >
               Continue
             </AlertDialogAction>
@@ -196,7 +215,9 @@ const RecentTransactions: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+      <Dialog open={isPasswordDialogOpen} onOpenChange={(open) => {
+        if (!isVerifying && !isDeleting) setIsPasswordDialogOpen(open);
+      }}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -218,6 +239,7 @@ const RecentTransactions: React.FC = () => {
                 onChange={(e) => setAdminPassword(e.target.value)}
                 className="bg-gray-700 border-gray-600"
                 autoComplete="off"
+                disabled={isVerifying || isDeleting}
               />
             </div>
           </div>
@@ -225,10 +247,13 @@ const RecentTransactions: React.FC = () => {
             <Button 
               variant="outline" 
               onClick={() => {
-                setIsPasswordDialogOpen(false);
-                setAdminPassword('');
+                if (!isVerifying && !isDeleting) {
+                  setIsPasswordDialogOpen(false);
+                  setAdminPassword('');
+                }
               }}
               className="bg-gray-700 text-white hover:bg-gray-600"
+              disabled={isVerifying || isDeleting}
             >
               Cancel
             </Button>
@@ -236,9 +261,9 @@ const RecentTransactions: React.FC = () => {
               type="submit" 
               onClick={handlePasswordVerification}
               className="bg-red-600 hover:bg-red-700"
-              disabled={isVerifying || !adminPassword.trim()}
+              disabled={isVerifying || isDeleting || !adminPassword.trim()}
             >
-              {isVerifying ? "Verifying..." : "Verify & Delete"}
+              {isVerifying ? "Verifying..." : isDeleting ? "Deleting..." : "Verify & Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
