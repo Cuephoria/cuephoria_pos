@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -69,11 +68,9 @@ const StationActions: React.FC<StationActionsProps> = ({
       try {
         setIsLoading(true);
         
-        // Get the customer ID before ending the session
         const customerId = station.currentSession.customerId;
         console.log('Ending session for station:', station.id, 'customer:', customerId);
         
-        // First, select the customer
         const customer = customers.find(c => c.id === customerId);
         if (customer) {
           console.log('Auto-selecting customer:', customer.name);
@@ -87,7 +84,6 @@ const StationActions: React.FC<StationActionsProps> = ({
           description: "Session has been ended and added to cart. Redirecting to checkout...",
         });
         
-        // Longer delay before redirecting to ensure state updates complete
         setTimeout(() => {
           navigate('/pos');
         }, 1500);
@@ -104,15 +100,18 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
-  // Filter customers based on search query
   const filteredCustomers = customers.filter(customer => {
     if (!searchQuery) return true;
     
     const query = searchQuery.toLowerCase().trim();
     
+    if (/^\d+$/.test(query)) {
+      return customer.phone && customer.phone.includes(query);
+    }
+    
     return (
+      (customer.phone && customer.phone.includes(query)) ||
       (customer.name && customer.name.toLowerCase().includes(query)) ||
-      (customer.phone && customer.phone.toLowerCase().includes(query)) ||
       (customer.email && customer.email.toLowerCase().includes(query))
     );
   });
@@ -151,11 +150,14 @@ const StationActions: React.FC<StationActionsProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0">
           <Command>
-            <CommandInput 
-              placeholder="Search customer..." 
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
+            <div className="flex items-center border-b px-3">
+              <CommandInput 
+                placeholder="Search by phone number..." 
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+                className="h-11 w-full border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
             <CommandList>
               <CommandEmpty>
                 <div className="p-2 text-center text-sm">
