@@ -1,11 +1,20 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/hooks/useProducts';
+import { Product } from '@/types/pos.types';
+import { Plus, RefreshCw, RotateCcw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import ProductDialog from '@/components/product/ProductDialog';
+import LowStockAlert from '@/components/product/LowStockAlert';
+import ProductTabs from '@/components/product/ProductTabs';
+import { ProductFormState } from '@/components/product/ProductForm';
 
 const ProductsPage: React.FC = () => {
   const { addProduct, updateProduct, deleteProduct, products } = usePOS();
   const { resetToInitialProducts, refreshFromDB } = useProducts();
+  const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
