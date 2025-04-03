@@ -21,6 +21,10 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
   const isMember = customerData ? isMembershipActive(customerData) : false;
   const membershipText = customerData && customerData.isMember ? getMembershipBadgeText(customerData) : 'Non-Member';
   
+  // Extract station number for consistent display
+  const stationNumber = parseInt(station.name.replace(/\D/g, '')) || 0;
+  const formattedName = isPoolTable ? `Table ${stationNumber}` : `Console ${stationNumber}`;
+  
   return (
     <>
       <div className="flex justify-between items-center">
@@ -39,7 +43,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
             </div>
           )}
           <span className={`ml-2 font-bold ${isPoolTable ? 'text-green-500' : 'text-cuephoria-lightpurple'}`}>
-            {station.name}
+            {formattedName}
           </span>
         </div>
         <Badge 
@@ -99,3 +103,4 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
 };
 
 export default StationInfo;
+
