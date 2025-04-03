@@ -24,7 +24,12 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       return;
     }
 
-    const startTime = new Date(station.currentSession.startTime).getTime();
+    // Convert session startTime to a date object if it isn't already
+    const startTime = station.currentSession.startTime instanceof Date
+      ? station.currentSession.startTime.getTime()
+      : new Date(station.currentSession.startTime).getTime();
+    
+    console.log("Timer start time:", new Date(startTime).toISOString());
     
     const updateElapsedTime = () => {
       const now = new Date().getTime();
@@ -43,8 +48,17 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       const calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       setCost(calculatedCost);
+      
+      console.log("Timer update:", {
+        elapsedMs,
+        secondsTotal,
+        minutesTotal,
+        hoursTotal,
+        calculatedCost
+      });
     };
 
+    // Run immediately then set interval
     updateElapsedTime();
     
     const interval = setInterval(updateElapsedTime, 1000);

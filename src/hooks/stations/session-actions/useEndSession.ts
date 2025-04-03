@@ -117,6 +117,7 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
+      // Calculate session cost
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMinutes / 60;
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
@@ -142,7 +143,11 @@ export const useEndSession = ({
         description: 'Session ended successfully',
       });
       
-      return { updatedSession, sessionCartItem, customer };
+      return { 
+        updatedSession, 
+        sessionCartItem, 
+        customer 
+      };
     } catch (error) {
       console.error('Error in endSession:', error);
       toast({
