@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import StatsCard from './StatsCard';
 import { CreditCard, Users, Clock, AlertTriangle, PlayCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { useSessionsData } from '@/hooks/stations/useSessionsData';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -26,8 +27,18 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
   lowStockCount,
   lowStockItems
 }) => {
+  const { sessions } = useSessionsData();
+  const [realActiveSessionsCount, setRealActiveSessionsCount] = useState(activeSessionsCount);
+
   // Determine whether the sales trend is positive or negative
   const isSalesTrendPositive = salesChange.includes('+');
+  
+  // Calculate real-time active sessions count
+  useEffect(() => {
+    // Count sessions that don't have an end time
+    const activeSessions = sessions.filter(session => !session.endTime).length;
+    setRealActiveSessionsCount(activeSessions);
+  }, [sessions]);
   
   // Determine color for sales trend
   const getTrendIconAndClass = () => {
@@ -80,7 +91,7 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
 
       <StatsCard
         title="Active Sessions"
-        value={activeSessionsCount}
+        value={realActiveSessionsCount}
         icon={PlayCircle}
         subValue={`${totalStations} stations available`}
         iconColor="text-[#0EA5E9]"
