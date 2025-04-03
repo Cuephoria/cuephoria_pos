@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -7,10 +8,12 @@ interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({ size = 'md', className }) => {
+  const isMobile = useIsMobile();
+  
   const sizeClasses = {
-    sm: 'text-xl',
-    md: 'text-2xl',
-    lg: 'text-4xl'
+    sm: isMobile ? 'text-lg' : 'text-xl',
+    md: isMobile ? 'text-xl' : 'text-2xl',
+    lg: isMobile ? 'text-2xl' : 'text-4xl'
   };
 
   return (
