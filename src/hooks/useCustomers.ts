@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -29,23 +30,22 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           
           // Migrate localStorage data to Supabase
           for (const customer of customersWithDates) {
-            await supabase.from('customers').upsert(
-              {
+            await supabase.from('customers').upsert({
                 id: customer.id,
                 name: customer.name,
                 phone: customer.phone,
                 email: customer.email,
                 is_member: customer.isMember,
-                membership_expiry_date: customer.membershipExpiryDate,
-                membership_start_date: customer.membershipStartDate,
+                membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
+                membership_start_date: customer.membershipStartDate?.toISOString(),
                 membership_plan: customer.membershipPlan,
                 membership_hours_left: customer.membershipHoursLeft,
                 membership_duration: customer.membershipDuration,
                 loyalty_points: customer.loyaltyPoints,
                 total_spent: customer.totalSpent,
                 total_play_time: customer.totalPlayTime,
-                created_at: customer.createdAt
-              },
+                created_at: customer.createdAt.toISOString()
+              }, 
               { onConflict: 'id' }
             );
           }
@@ -147,8 +147,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           phone: customer.phone,
           email: customer.email,
           is_member: customer.isMember,
-          membership_expiry_date: customer.membershipExpiryDate,
-          membership_start_date: customer.membershipStartDate,
+          membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
+          membership_start_date: customer.membershipStartDate?.toISOString(),
           membership_plan: customer.membershipPlan,
           membership_hours_left: customer.membershipHoursLeft,
           membership_duration: customer.membershipDuration,
@@ -254,8 +254,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           phone: customer.phone,
           email: customer.email,
           is_member: customer.isMember,
-          membership_expiry_date: customer.membershipExpiryDate,
-          membership_start_date: customer.membershipStartDate,
+          membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
+          membership_start_date: customer.membershipStartDate?.toISOString(),
           membership_plan: customer.membershipPlan,
           membership_hours_left: customer.membershipHoursLeft,
           membership_duration: customer.membershipDuration,

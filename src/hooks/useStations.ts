@@ -52,10 +52,10 @@ export const useStations = (
         
         // Transform data to match our Station type
         if (data) {
-          const transformedStations = data.map(item => ({
+          const transformedStations: Station[] = data.map(item => ({
             id: item.id,
             name: item.name,
-            type: item.type,
+            type: item.type as 'ps5' | '8ball',  // Cast to appropriate type
             hourlyRate: item.hourly_rate,
             isOccupied: item.is_occupied,
             currentSession: null

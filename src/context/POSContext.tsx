@@ -94,28 +94,34 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const endSession = async (stationId: string) => {
-    const result = await endSessionBase(stationId, customers);
-    if (result) {
-      const { sessionCartItem, customer, updatedSession } = result;
-      
-      // Clear cart before adding the new session
-      clearCart();
-      
-      // Auto-select customer
-      if (customer) {
-        console.log("Auto-selecting customer:", customer.name);
-        selectCustomer(customer.id);
+    try {
+      const result = await endSessionBase(stationId, customers);
+      if (result) {
+        const { sessionCartItem, customer, updatedSession } = result;
+        
+        // Clear cart before adding the new session
+        clearCart();
+        
+        // Auto-select customer
+        if (customer) {
+          console.log("Auto-selecting customer:", customer.name);
+          selectCustomer(customer.id);
+        }
+        
+        // Add the session to cart
+        console.log("Adding session to cart:", sessionCartItem);
+        addToCart(sessionCartItem);
+        
+        return updatedSession;
       }
-      
-      // Add the session to cart
-      console.log("Adding session to cart:", sessionCartItem);
-      addToCart(sessionCartItem);
-      
-      return updatedSession;
+      return undefined;
+    } catch (error) {
+      console.error('Error in endSession wrapper:', error);
+      return undefined;
     }
-    return undefined;
   };
   
+  // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
   const updateCustomerMembershipWrapper = (
     customerId: string, 
     membershipData: {
@@ -124,11 +130,35 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       membershipHoursLeft?: number;
     }
   ): Customer | null => {
-    const result = updateCustomerMembership(customerId, membershipData);
-    // Handle the Promise result synchronously for the POSContext interface
-    return result || null;
+    // Create a placeholder customer with the minimum required fields
+    const customer = customers.find(c => c.id === customerId);
+    
+    if (!customer) return null;
+    
+    // Start the async update process but don't wait for it
+    updateCustomerMembership(customerId, membershipData)
+      .then((updatedCustomer) => {
+        if (updatedCustomer) {
+          console.log("Customer membership updated:", updatedCustomer.id);
+        }
+      })
+      .catch(error => {
+        console.error("Error updating customer membership:", error);
+      });
+    
+    // Return a modified version of the existing customer to satisfy the synchronous interface
+    return {
+      ...customer,
+      membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
+      membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
+      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
+        ? membershipData.membershipHoursLeft 
+        : customer.membershipHoursLeft,
+      isMember: true
+    };
   };
   
+  // Modified to return a Bill object synchronously
   const completeSale = (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
     try {
       // Apply student price for membership items if student discount is enabled
@@ -207,19 +237,21 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
       
-      // Since we need to return a synchronous Bill, we'll return a placeholder Bill
-      // This is just to satisfy the TypeScript interface - in practice the async flow will work correctly
+      // Since we need to return a synchronous Bill, we'll create a new Bill
       if (selectedCustomer) {
         const placeholderBill: Bill = {
-          id: 'temp-id',
+          id: `temp-${new Date().getTime()}`,
           customerId: selectedCustomer.id,
           items: [...cart],
           subtotal: cart.reduce((sum, item) => sum + item.total, 0),
           discount,
-          discountValue: 0, // Calculated in completeSaleBase
+          discountValue: discount > 0 ? 
+            (discountType === 'percentage' ? 
+              (cart.reduce((sum, item) => sum + item.total, 0) * discount / 100) : 
+              discount) : 0,
           discountType,
           loyaltyPointsUsed,
-          loyaltyPointsEarned: 0, // Calculated in completeSaleBase
+          loyaltyPointsEarned: Math.floor(calculateTotal() / 10),
           total: calculateTotal(),
           paymentMethod,
           createdAt: new Date()
