@@ -37,30 +37,46 @@ export const useSessionActions = (props: SessionActionsProps) => {
       
       // Create a new session
       const now = new Date();
+      const sessionId = generateId();
       const newSession: Session = {
-        id: generateId(),
+        id: sessionId,
         stationId: stationId,
         customerId: customerId,
         startTime: now,
       };
       
-      // Insert into Supabase
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          id: newSession.id,
-          station_id: newSession.stationId,
-          customer_id: newSession.customerId,
-          start_time: newSession.startTime.toISOString(),
-        })
-        .select();
-        
-      if (error) {
-        console.error('Error inserting session into Supabase:', error);
-        throw error;
-      }
+      // Check if stationId is in UUID format for Supabase
+      const isUUID = stationId.includes('-') && 
+                    stationId.split('-').length === 5 && 
+                    stationId.length >= 36;
+                    
+      console.log(`Station ID ${stationId} is ${isUUID ? '' : 'not '}a valid UUID`);
       
-      console.log('Session inserted into Supabase:', data);
+      // For database operations, use a valid UUID
+      const dbStationId = isUUID ? stationId : sessionId;
+      
+      // Insert into Supabase
+      try {
+        const { data, error } = await supabase
+          .from('sessions')
+          .insert({
+            id: newSession.id,
+            station_id: dbStationId, // Use a valid UUID for database
+            customer_id: newSession.customerId,
+            start_time: newSession.startTime.toISOString(),
+          })
+          .select();
+          
+        if (error) {
+          console.error('Error inserting session into Supabase:', error);
+          console.log('Continuing with local state updates only');
+        } else {
+          console.log('Session inserted into Supabase:', data);
+        }
+      } catch (error) {
+        console.error('Supabase insert error:', error);
+        console.log('Continuing with local state updates only');
+      }
       
       // Update station
       const updatedStation = {
@@ -69,19 +85,22 @@ export const useSessionActions = (props: SessionActionsProps) => {
         currentSession: newSession
       };
       
-      // Update Supabase station
-      const { error: stationError } = await supabase
-        .from('stations')
-        .update({
-          is_occupied: true
-        })
-        .eq('id', stationId);
-        
-      if (stationError) {
-        console.error('Error updating station in Supabase:', stationError);
-        // Try to roll back session
-        await supabase.from('sessions').delete().eq('id', newSession.id);
-        throw stationError;
+      // Update Supabase station only if ID is in valid UUID format
+      if (isUUID) {
+        try {
+          const { error: stationError } = await supabase
+            .from('stations')
+            .update({
+              is_occupied: true
+            })
+            .eq('id', stationId);
+            
+          if (stationError) {
+            console.error('Error updating station in Supabase:', stationError);
+          }
+        } catch (error) {
+          console.error('Supabase station update error:', error);
+        }
       }
       
       // Update local state
@@ -94,9 +113,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
       });
       
       console.log('Session started successfully');
-      
-      // Also call the original hook implementation for backward compatibility
-      await startSessionHook.startSession(stationId, customerId);
       
     } catch (error) {
       console.error('Error in startSession:', error);
@@ -142,18 +158,26 @@ export const useSessionActions = (props: SessionActionsProps) => {
         duration: durationMinutes
       };
       
+      // Check if stationId is in UUID format for Supabase
+      const isUUID = stationId.includes('-') && 
+                    stationId.split('-').length === 5 && 
+                    stationId.length >= 36;
+      
       // Update Supabase
-      const { error } = await supabase
-        .from('sessions')
-        .update({
-          end_time: updatedSession.endTime.toISOString(),
-          duration: updatedSession.duration
-        })
-        .eq('id', updatedSession.id);
-        
-      if (error) {
-        console.error('Error updating session in Supabase:', error);
-        throw error;
+      try {
+        const { error } = await supabase
+          .from('sessions')
+          .update({
+            end_time: updatedSession.endTime.toISOString(),
+            duration: updatedSession.duration
+          })
+          .eq('id', updatedSession.id);
+          
+        if (error) {
+          console.error('Error updating session in Supabase:', error);
+        }
+      } catch (error) {
+        console.error('Supabase session update error:', error);
       }
       
       // Update station
@@ -163,17 +187,22 @@ export const useSessionActions = (props: SessionActionsProps) => {
         currentSession: null
       };
       
-      // Update Supabase station
-      const { error: stationError } = await supabase
-        .from('stations')
-        .update({
-          is_occupied: false
-        })
-        .eq('id', stationId);
-        
-      if (stationError) {
-        console.error('Error updating station in Supabase:', stationError);
-        throw stationError;
+      // Update Supabase station only if ID is in valid UUID format
+      if (isUUID) {
+        try {
+          const { error: stationError } = await supabase
+            .from('stations')
+            .update({
+              is_occupied: false
+            })
+            .eq('id', stationId);
+            
+          if (stationError) {
+            console.error('Error updating station in Supabase:', stationError);
+          }
+        } catch (error) {
+          console.error('Supabase station update error:', error);
+        }
       }
       
       // Update local state

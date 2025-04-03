@@ -23,9 +23,44 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     refreshSessions
   } = useSessionsData();
   
+  // Connect active sessions to stations
+  useEffect(() => {
+    if (sessions.length > 0 && stations.length > 0) {
+      console.log("Connecting active sessions to stations");
+      
+      // Find active sessions (without endTime)
+      const activeSessions = sessions.filter(s => !s.endTime);
+      
+      if (activeSessions.length > 0) {
+        console.log(`Found ${activeSessions.length} active sessions to connect`);
+        
+        // Create a mapping of station ID to session
+        const activeSessionMap = new Map<string, Session>();
+        activeSessions.forEach(session => {
+          activeSessionMap.set(session.stationId, session);
+        });
+        
+        // Update stations with their active sessions
+        setStations(prev => prev.map(station => {
+          const activeSession = activeSessionMap.get(station.id);
+          if (activeSession) {
+            console.log(`Connecting session to station ${station.name}`);
+            return {
+              ...station,
+              isOccupied: true,
+              currentSession: activeSession
+            };
+          }
+          return station;
+        }));
+      }
+    }
+  }, [sessions, stations.length]);
+  
   const {
     startSession,
-    endSession
+    endSession,
+    isLoading
   } = useSessionActions({
     stations,
     setStations,
@@ -47,7 +82,8 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     sessionsLoading,
     sessionsError,
     refreshStations,
-    refreshSessions
+    refreshSessions,
+    isLoading
   };
 };
 

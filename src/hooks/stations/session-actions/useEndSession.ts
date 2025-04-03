@@ -86,14 +86,21 @@ export const useEndSession = ({
       
       // Try to update station in Supabase
       try {
-        const { error: stationError } = await supabase
-          .from('stations')
-          .update({ is_occupied: false })
-          .eq('id', stationId);
+        // Check if stationId is a proper UUID format
+        const dbStationId = stationId.includes('-') ? stationId : null;
         
-        if (stationError) {
-          console.error('Error updating station in Supabase:', stationError);
-          // Continue since local state is already updated
+        if (dbStationId) {
+          const { error: stationError } = await supabase
+            .from('stations')
+            .update({ is_occupied: false })
+            .eq('id', dbStationId);
+          
+          if (stationError) {
+            console.error('Error updating station in Supabase:', stationError);
+            // Continue since local state is already updated
+          }
+        } else {
+          console.log("Skipping station update in Supabase due to non-UUID station ID");
         }
       } catch (supabaseError) {
         console.error('Error updating station in Supabase:', supabaseError);

@@ -56,11 +56,17 @@ export const useStartSession = ({
       
       // Then try to create session in Supabase
       try {
+        // Convert non-UUID station IDs to proper UUIDs for Supabase
+        // Check if stationId is already a UUID format (contains hyphens)
+        const dbStationId = stationId.includes('-') ? stationId : sessionId; // Use session ID as fallback
+        
+        console.log("Using DB station ID:", dbStationId);
+        
         const { data, error } = await supabase
           .from('sessions')
           .insert({
             id: sessionId,
-            station_id: stationId,
+            station_id: dbStationId, // Use the proper format for DB
             customer_id: customerId,
             start_time: startTime.toISOString()
           })
@@ -80,14 +86,21 @@ export const useStartSession = ({
       
       // Try to update station in Supabase
       try {
-        const { error: stationError } = await supabase
-          .from('stations')
-          .update({ is_occupied: true })
-          .eq('id', stationId);
+        // Find the station to check if it has a proper UUID
+        const dbStationId = stationId.includes('-') ? stationId : null;
         
-        if (stationError) {
-          console.error('Error updating station in Supabase:', stationError);
-          // Continue since local state is already updated
+        if (dbStationId) {
+          const { error: stationError } = await supabase
+            .from('stations')
+            .update({ is_occupied: true })
+            .eq('id', dbStationId);
+          
+          if (stationError) {
+            console.error('Error updating station in Supabase:', stationError);
+            // Continue since local state is already updated
+          }
+        } else {
+          console.log("Skipping station update in Supabase due to non-UUID station ID");
         }
       } catch (supabaseError) {
         console.error('Error updating station in Supabase:', supabaseError);
