@@ -1,92 +1,16 @@
 
-// Types for the POS system
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  category: 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
-  stock: number;
-  image?: string;
-  originalPrice?: number;
-  offerPrice?: number;
-  studentPrice?: number;
-  duration?: 'weekly' | 'monthly';
-  membershipHours?: number;
-}
+import { 
+  Product,
+  Station,
+  Customer,
+  Session,
+  CartItem,
+  Bill
+} from '@/types/pos.types';
 
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  isMember: boolean;
-  membershipExpiryDate?: Date;
-  membershipStartDate?: Date;
-  membershipPlan?: string;
-  membershipHoursLeft?: number;
-  membershipDuration?: 'weekly' | 'monthly';
-  loyaltyPoints: number;
-  totalSpent: number;
-  totalPlayTime: number;
-  createdAt: Date;
-}
-
-export interface Station {
-  id: string;
-  name: string;
-  type: 'ps5' | '8ball';
-  hourlyRate: number;
-  isOccupied: boolean;
-  currentSession: Session | null;
-}
-
-export interface Session {
-  id: string;
-  stationId: string;
-  customerId: string;
-  startTime: Date;
-  endTime?: Date;
-  duration?: number; // in minutes
-}
-
-export interface CartItem {
-  id: string;
-  type: 'product' | 'session';
-  name: string;
-  price: number;
-  quantity: number;
-  total: number;
-}
-
-export interface Bill {
-  id: string;
-  customerId: string;
-  items: CartItem[];
-  subtotal: number;
-  discount: number;
-  discountValue: number;
-  discountType: 'percentage' | 'fixed';
-  loyaltyPointsUsed: number;
-  loyaltyPointsEarned: number;
-  total: number;
-  paymentMethod: 'cash' | 'upi';
-  createdAt: Date;
-}
-
-export interface ResetOptions {
-  products: boolean;
-  customers: boolean;
-  sales: boolean;
-  sessions: boolean;
-}
-
-export interface SessionResult {
-  updatedSession?: Session;
-  sessionCartItem?: CartItem;
-  customer?: Customer;
-}
-
+// Context type definitions
 export interface POSContextType {
+  // State
   products: Product[];
   stations: Station[];
   customers: Customer[];
@@ -98,9 +22,9 @@ export interface POSContextType {
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
   isStudentDiscount: boolean;
-  setIsStudentDiscount: (value: boolean) => void;
   
-  // Station state setter
+  // Setters
+  setIsStudentDiscount: (value: boolean) => void;
   setStations: (stations: Station[]) => void;
   
   // Product functions
@@ -146,4 +70,11 @@ export interface POSContextType {
   // Reset and sample data functions
   resetToSampleData: (options?: ResetOptions) => void;
   addSampleIndianData: () => void;
+}
+
+export interface ResetOptions {
+  products: boolean;
+  customers: boolean;
+  sales: boolean;
+  sessions: boolean;
 }
