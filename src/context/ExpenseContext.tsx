@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Expense, BusinessSummary } from '@/types/expense.types';
+import { Expense, BusinessSummary, ExpenseCategory } from '@/types/expense.types';
 import { supabase } from '@/integrations/supabase/client';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
@@ -35,11 +35,15 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     grossIncome: 0,
     totalExpenses: 0,
     netProfit: 0,
-    profitMargin: 0
+    profitMargin: 0,
+    monthlyExpenses: {},
+    categoryTotals: []
   });
+  
   const { bills } = usePOS();
   const { toast } = useToast();
 
+  // Fetch expenses from the database
   const fetchExpenses = async () => {
     setLoading(true);
     setError(null);
@@ -79,38 +83,130 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Calculate the business summary with improved logic
   const calculateBusinessSummary = () => {
+    // Calculate total revenue from all bills
     const grossIncome = bills.reduce((sum, bill) => sum + bill.total, 0);
     
-    const totalExpenses = expenses.reduce((sum, expense) => {
-      if (expense.isRecurring) {
-        switch(expense.frequency) {
-          case 'monthly':
-            return sum + expense.amount;
-          case 'quarterly':
-            return sum + (expense.amount / 3);
-          case 'yearly':
-            return sum + (expense.amount / 12);
-          default:
-            return sum + expense.amount;
-        }
-      } else {
-        return sum + expense.amount;
+    // Calculate monthly expense equivalent for recurring expenses
+    const calculateMonthlyEquivalent = (expense: Expense): number => {
+      if (!expense.isRecurring) {
+        return 0; // One-time expenses handled separately
       }
-    }, 0);
+      
+      switch(expense.frequency) {
+        case 'monthly':
+          return expense.amount;
+        case 'quarterly':
+          return expense.amount / 3;
+        case 'yearly':
+          return expense.amount / 12;
+        default:
+          return 0;
+      }
+    };
     
-    const netProfit = grossIncome - totalExpenses;
+    // Calculate one-time expenses in the current month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
     
+    const oneTimeExpensesThisMonth = expenses
+      .filter(expense => !expense.isRecurring)
+      .filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate.getMonth() === currentMonth && 
+               expenseDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, expense) => sum + expense.amount, 0);
+    
+    // Calculate recurring monthly expenses
+    const recurringMonthlyExpenses = expenses
+      .filter(expense => expense.isRecurring)
+      .reduce((sum, expense) => sum + calculateMonthlyEquivalent(expense), 0);
+    
+    // Total monthly expenses
+    const totalMonthlyExpenses = oneTimeExpensesThisMonth + recurringMonthlyExpenses;
+    
+    // Calculate expenses by category
+    const categoryExpenses = expenses.reduce((acc, expense) => {
+      const category = expense.category;
+      const monthlyAmount = expense.isRecurring 
+        ? calculateMonthlyEquivalent(expense)
+        : (new Date(expense.date).getMonth() === currentMonth && 
+           new Date(expense.date).getFullYear() === currentYear) 
+          ? expense.amount 
+          : 0;
+          
+      acc[category] = (acc[category] || 0) + monthlyAmount;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Calculate category totals with percentages
+    const categoryTotals = Object.entries(categoryExpenses)
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: totalMonthlyExpenses > 0 
+          ? (amount / totalMonthlyExpenses) * 100 
+          : 0
+      }))
+      .sort((a, b) => b.amount - a.amount);
+    
+    // Calculate net profit and profit margin
+    const netProfit = grossIncome - totalMonthlyExpenses;
     const profitMargin = grossIncome > 0 ? (netProfit / grossIncome) * 100 : 0;
+    
+    // Organize expenses by month (for trending/charts)
+    const monthlyExpenseTrend: Record<string, number> = {};
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return date;
+    });
+    
+    last6Months.forEach(date => {
+      const month = date.getMonth();
+      const year = date.getFullYear();
+      const key = `${year}-${month + 1}`;
+      
+      // Calculate recurring expenses for this month
+      const recurringForMonth = expenses
+        .filter(expense => expense.isRecurring)
+        .reduce((sum, expense) => sum + calculateMonthlyEquivalent(expense), 0);
+      
+      // Calculate one-time expenses for this month
+      const oneTimeForMonth = expenses
+        .filter(expense => !expense.isRecurring)
+        .filter(expense => {
+          const expenseDate = new Date(expense.date);
+          return expenseDate.getMonth() === month && 
+                 expenseDate.getFullYear() === year;
+        })
+        .reduce((sum, expense) => sum + expense.amount, 0);
+      
+      monthlyExpenseTrend[key] = recurringForMonth + oneTimeForMonth;
+    });
     
     setBusinessSummary({
       grossIncome,
-      totalExpenses,
+      totalExpenses: totalMonthlyExpenses,
       netProfit,
-      profitMargin
+      profitMargin,
+      monthlyExpenses: monthlyExpenseTrend,
+      categoryTotals
+    });
+    
+    console.log('Business summary calculated:', {
+      grossIncome,
+      totalExpenses: totalMonthlyExpenses,
+      netProfit,
+      profitMargin,
+      categories: categoryTotals
     });
   };
 
+  // Add a new expense
   const addExpense = async (expenseData: Omit<Expense, 'id'>): Promise<boolean> => {
     try {
       console.log('Adding expense with data:', expenseData);
@@ -121,22 +217,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (expenseData.date instanceof Date) {
         dateObj = expenseData.date;
-      } else if (expenseData.date && typeof expenseData.date === 'object' && expenseData.date._type === 'Date') {
-        // Handle serialized date object
-        try {
-          dateObj = new Date(expenseData.date.value.iso);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date format');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', expenseData.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format',
-            variant: 'destructive'
-          });
-          return false;
-        }
       } else {
         try {
           dateObj = new Date(expenseData.date as any);
@@ -200,6 +280,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: 'Expense added successfully'
       });
       
+      // Recalculate business summary
+      calculateBusinessSummary();
+      
       return true;
     } catch (err) {
       console.error('Error in addExpense:', err);
@@ -212,6 +295,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Update an existing expense
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
       // Ensure date is a valid Date object
@@ -219,22 +303,6 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       if (expense.date instanceof Date) {
         dateObj = expense.date;
-      } else if (expense.date && typeof expense.date === 'object' && expense.date._type === 'Date') {
-        // Handle serialized date object
-        try {
-          dateObj = new Date(expense.date.value.iso);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date format');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', expense.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format',
-            variant: 'destructive'
-          });
-          return false;
-        }
       } else {
         try {
           dateObj = new Date(expense.date as any);
@@ -294,6 +362,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: 'Expense updated successfully'
       });
       
+      // Recalculate business summary
+      calculateBusinessSummary();
+      
       return true;
     } catch (err) {
       console.error('Error in updateExpense:', err);
@@ -306,6 +377,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Delete an expense
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
       const { error } = await supabase
@@ -330,6 +402,9 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         description: 'Expense deleted successfully'
       });
       
+      // Recalculate business summary
+      calculateBusinessSummary();
+      
       return true;
     } catch (err) {
       console.error('Error in deleteExpense:', err);
@@ -342,10 +417,12 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Initial load of expenses
   useEffect(() => {
     fetchExpenses();
   }, []);
 
+  // Recalculate business summary when bills or expenses change
   useEffect(() => {
     calculateBusinessSummary();
   }, [bills, expenses]);
