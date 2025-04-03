@@ -50,6 +50,14 @@ const POS = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const categoryCounts = products.reduce((acc, product) => {
+    const category = product.category;
+    acc[category] = (acc[category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  categoryCounts.all = products.length;
+
   useEffect(() => {
     setCustomDiscountAmount(discount.toString());
     setCustomDiscountType(discountType);
@@ -365,13 +373,24 @@ const POS = () => {
           
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow animate-scale-in">
             <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
-              <TabsTrigger value="all" className="font-heading flex-grow basis-0">All</TabsTrigger>
-              <TabsTrigger value="food" className="font-heading flex-grow basis-0">Food</TabsTrigger>
-              <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">Drinks</TabsTrigger>
-              <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">Tobacco</TabsTrigger>
-              <TabsTrigger value="challenges" className="font-heading flex-grow basis-0">Challenges</TabsTrigger>
+              <TabsTrigger value="all" className="font-heading flex-grow basis-0">
+                All ({categoryCounts.all || 0})
+              </TabsTrigger>
+              <TabsTrigger value="food" className="font-heading flex-grow basis-0">
+                Food ({categoryCounts.food || 0})
+              </TabsTrigger>
+              <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">
+                Drinks ({categoryCounts.drinks || 0})
+              </TabsTrigger>
+              <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">
+                Tobacco ({categoryCounts.tobacco || 0})
+              </TabsTrigger>
+              <TabsTrigger value="challenges" className="font-heading flex-grow basis-0">
+                Challenges ({categoryCounts.challenges || 0})
+              </TabsTrigger>
               <TabsTrigger value="membership" className="font-heading flex-grow basis-0">
-                <Award className="h-4 w-4 mr-1" /> Membership
+                <Award className="h-4 w-4 mr-1" /> 
+                Membership ({categoryCounts.membership || 0})
               </TabsTrigger>
             </TabsList>
             
