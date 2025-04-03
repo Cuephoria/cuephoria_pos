@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
@@ -9,12 +8,9 @@ import { usePOS } from '@/context/POSContext';
 const ProductPerformance: React.FC = () => {
   const { bills, products } = usePOS();
   
-  // Generate product performance data
   const generateProductData = () => {
-    // Create a map to store product sales
     const productSales = new Map();
     
-    // Analyze bills and count product sales
     bills.forEach(bill => {
       bill.items.forEach(item => {
         if (item.type === 'product') {
@@ -27,36 +23,17 @@ const ProductPerformance: React.FC = () => {
       });
     });
     
-    // Convert map to array and sort by sales (highest first)
     return Array.from(productSales, ([name, data]) => ({
       name,
       sales: data.sales,
       count: data.count
     }))
     .sort((a, b) => b.sales - a.sales)
-    .slice(0, 10); // Only show top 10 products
+    .slice(0, 10);
   };
   
   const getProductColor = (productName: string) => {
-    // Find the product by name to get its category
-    const product = products.find(p => p.name === productName);
-    const category = product?.category || 'food';
-    
-    // Use the category color
-    switch (category) {
-      case 'food':
-        return '#F97316'; // Bright Orange
-      case 'drinks':
-        return '#0EA5E9'; // Ocean Blue
-      case 'tobacco':
-        return '#EF4444'; // Red
-      case 'challenges':
-        return '#10B981'; // Green
-      case 'membership':
-        return '#8B5CF6'; // Vivid Purple
-      default:
-        return '#888888'; // Gray
-    }
+    return '#10B981';
   };
   
   const formatCurrency = (value: number) => {
@@ -106,7 +83,6 @@ const ProductPerformance: React.FC = () => {
                 tick={{ fill: '#999' }} 
                 width={100}
                 tickFormatter={(value) => {
-                  // Truncate long product names
                   return value.length > 13 ? value.substring(0, 13) + '...' : value;
                 }}
               />
