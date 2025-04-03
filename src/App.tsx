@@ -54,7 +54,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           <div className="hidden md:block">
             <SidebarTrigger />
           </div>
-          {children}
+          <ExpenseProvider>
+            {children}
+          </ExpenseProvider>
         </div>
       </div>
     </SidebarProvider>
@@ -65,62 +67,60 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <POSProvider>
-        <ExpenseProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/pos" element={
-                  <ProtectedRoute>
-                    <POS />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/stations" element={
-                  <ProtectedRoute>
-                    <Stations />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/products" element={
-                  <ProtectedRoute>
-                    <Products />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/customers" element={
-                  <ProtectedRoute>
-                    <Customers />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ExpenseProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/pos" element={
+                <ProtectedRoute>
+                  <POS />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/stations" element={
+                <ProtectedRoute>
+                  <Stations />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/customers" element={
+                <ProtectedRoute>
+                  <Customers />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
       </POSProvider>
     </AuthProvider>
   </QueryClientProvider>
