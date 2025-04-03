@@ -86,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <Card className={`flex flex-col h-full ${className}`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg text-ellipsis overflow-hidden">{product.name}</CardTitle>
+          <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap">{product.name}</CardTitle>
           <Badge className={getCategoryColor(product.category)}>
             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
           </Badge>
