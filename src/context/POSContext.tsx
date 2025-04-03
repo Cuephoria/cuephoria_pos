@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -18,6 +17,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
+import { toast } from 'react-toastify';
 
 const POSContext = createContext<POSContextType | undefined>(undefined);
 
@@ -90,6 +90,17 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Wrapper functions that combine functionality from multiple hooks
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
+    // Check if customer is a member
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer || !customer.isMember) {
+      toast({
+        title: "Membership Required",
+        description: "Only members can start gaming sessions",
+        variant: "destructive"
+      });
+      throw new Error("Membership required to start session");
+    }
+    
     // Check membership validity before allowing session
     if (!checkMembershipValidity(customerId)) {
       throw new Error("Membership not valid or expired");
@@ -349,7 +360,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteProduct,
         startSession,
         endSession,
-        deleteStation, // Add the new deleteStation function
+        deleteStation,
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,
