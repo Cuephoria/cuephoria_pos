@@ -118,7 +118,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     return { ps5Sales, poolSales };
   };
   
-  // Calculate canteen sales (food and beverages)
+  // Calculate canteen sales (food, beverages, and tobacco)
   const calculateCanteenSales = () => {
     // Filter bills based on date range
     const filteredBills = bills.filter(bill => {
@@ -139,6 +139,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     
     let foodSales = 0;
     let beverageSales = 0;
+    let tobaccoSales = 0;
     
     filteredBills.forEach(bill => {
       bill.items.forEach(item => {
@@ -152,20 +153,24 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               foodSales += item.total;
             } else if (category === 'beverage' || category === 'drinks') {
               beverageSales += item.total;
+            } else if (category === 'tobacco') {
+              tobaccoSales += item.total;
             }
           }
         }
       });
     });
     
-    return { foodSales, beverageSales, totalCanteenSales: foodSales + beverageSales };
+    const totalCanteenSales = foodSales + beverageSales + tobaccoSales;
+    
+    return { foodSales, beverageSales, tobaccoSales, totalCanteenSales };
   };
   
   const { ps5Sales, poolSales } = calculateGameSales();
-  const { foodSales, beverageSales, totalCanteenSales } = calculateCanteenSales();
+  const { foodSales, beverageSales, tobaccoSales, totalCanteenSales } = calculateCanteenSales();
   
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-xl">Business Summary Report</CardTitle>
         <CardDescription>
@@ -201,7 +206,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           </div>
         </div>
         
-        <div className="grid gap-6 md:grid-cols-2 mb-6">
+        <div className="grid gap-8 md:grid-cols-2 mb-8">
           <div>
             <h3 className="font-semibold text-base mb-2">Expenses by Category</h3>
             <Table>
@@ -305,6 +310,17 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 <TableCell>
                   {totalCanteenSales > 0 
                     ? ((beverageSales / totalCanteenSales) * 100).toFixed(1) 
+                    : '0.0'}%
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Tobacco Products</TableCell>
+                <TableCell>
+                  <CurrencyDisplay amount={tobaccoSales} />
+                </TableCell>
+                <TableCell>
+                  {totalCanteenSales > 0 
+                    ? ((tobaccoSales / totalCanteenSales) * 100).toFixed(1) 
                     : '0.0'}%
                 </TableCell>
               </TableRow>
