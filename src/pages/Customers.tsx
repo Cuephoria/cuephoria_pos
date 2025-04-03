@@ -8,7 +8,6 @@ import { Switch } from '@/components/ui/switch';
 import { usePOS, Customer } from '@/context/POSContext';
 import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Customers = () => {
   console.log('Customers component rendering');
@@ -30,7 +29,6 @@ const Customers = () => {
     phone: '',
     email: '',
     isMember: false,
-    membershipPlan: '',
     membershipExpiryDate: '',
     membershipHoursLeft: '',
   });
@@ -77,7 +75,6 @@ const Customers = () => {
       phone: '',
       email: '',
       isMember: false,
-      membershipPlan: '',
       membershipExpiryDate: '',
       membershipHoursLeft: '',
     });
@@ -105,7 +102,6 @@ const Customers = () => {
       phone: customer.phone,
       email: customer.email || '',
       isMember: customer.isMember,
-      membershipPlan: customer.membershipPlan || '',
       membershipExpiryDate: expiryDate,
       membershipHoursLeft: customer.membershipHoursLeft !== undefined 
         ? customer.membershipHoursLeft.toString() 
@@ -130,7 +126,6 @@ const Customers = () => {
       phone, 
       email, 
       isMember, 
-      membershipPlan, 
       membershipExpiryDate, 
       membershipHoursLeft 
     } = formState;
@@ -168,8 +163,9 @@ const Customers = () => {
     
     // Add membership details if customer is a member
     if (isMember) {
-      if (membershipPlan) {
-        customerData.membershipPlan = membershipPlan;
+      // Keep existing membership plan if editing
+      if (isEditMode && selectedCustomer && selectedCustomer.membershipPlan) {
+        customerData.membershipPlan = selectedCustomer.membershipPlan;
       }
       
       if (membershipExpiryDate) {
@@ -214,10 +210,6 @@ const Customers = () => {
     setFormState(prev => ({ ...prev, isMember: checked }));
   };
 
-  const handleSelectChange = (value: string) => {
-    setFormState(prev => ({ ...prev, membershipPlan: value }));
-  };
-
   // Filter customers based on search query
   const filteredCustomers = searchQuery.trim() === ''
     ? customersData
@@ -226,16 +218,6 @@ const Customers = () => {
         customer.phone.includes(searchQuery) ||
         (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()))
       );
-
-  // Membership plan options
-  const membershipPlans = [
-    'Basic Monthly',
-    'Premium Monthly',
-    'Student Monthly',
-    'Basic Weekly',
-    'Premium Weekly',
-    'Day Pass'
-  ];
 
   // If we have an error, display it
   if (error) {
@@ -324,22 +306,17 @@ const Customers = () => {
               {/* Conditional Membership Fields */}
               {formState.isMember && (
                 <div className="space-y-4 border rounded-md p-4 bg-background">
-                  <div className="grid gap-2">
-                    <Label htmlFor="membershipPlan">Membership Plan</Label>
-                    <Select 
-                      value={formState.membershipPlan} 
-                      onValueChange={handleSelectChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a membership plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {membershipPlans.map(plan => (
-                          <SelectItem key={plan} value={plan}>{plan}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {isEditMode && selectedCustomer && selectedCustomer.membershipPlan && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="membershipPlan">Membership Plan</Label>
+                      <Input
+                        id="membershipPlan"
+                        value={selectedCustomer.membershipPlan}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                  )}
                   
                   <div className="grid gap-2">
                     <Label htmlFor="membershipExpiryDate">Expiry Date</Label>
