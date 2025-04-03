@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       quantity: 1
     });
     
+    // If this is a membership product and it has student price, show student discount option
     if (product.category === 'membership' && product.studentPrice) {
       setIsStudentDiscount(true);
     }
@@ -85,10 +87,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap">{product.name}</CardTitle>
-          <Badge 
-            className={`${getCategoryColor(product.category)} text-white`}
-            variant="default"
-          >
+          <Badge className={getCategoryColor(product.category)}>
             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
           </Badge>
         </div>
