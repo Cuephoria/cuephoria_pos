@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StationCard from '@/components/StationCard';
 import { Card, CardContent } from '@/components/ui/card';
-import { Gamepad2, Plus, CircleOff } from 'lucide-react';
+import { Gamepad2, Plus, Table2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AddStationDialog from '@/components/AddStationDialog';
 
@@ -59,7 +59,7 @@ const Stations = () => {
               <p className="text-2xl font-bold">{activeBall} / {ballStations.length} Active</p>
             </div>
             <div className="rounded-full bg-green-900/30 p-3">
-              <CircleOff className="h-6 w-6 text-green-500" />
+              <Table2 className="h-6 w-6 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -85,18 +85,28 @@ const Stations = () => {
 
         <div className="animate-slide-up delay-300">
           <div className="flex items-center mb-4">
-            <CircleOff className="h-5 w-5 text-green-500 mr-2" />
+            <Table2 className="h-5 w-5 text-green-500 mr-2" />
             <h3 className="text-xl font-semibold font-heading">8-Ball Tables</h3>
             <span className="ml-2 bg-green-800/30 text-green-400 text-xs px-2 py-1 rounded-full">
               {activeBall} active
             </span>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {ballStations.map((station, index) => (
-              <div key={station.id} className={`animate-scale-in`} style={{animationDelay: `${index * 100 + 300}ms`}}>
-                <StationCard station={station} />
-              </div>
-            ))}
+          
+          {/* Arrange 8-ball tables in a sequential grid layout */}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+            {ballStations
+              .sort((a, b) => {
+                // Extract numbers from station names (e.g., "Table 1" -> 1)
+                const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                return numA - numB;
+              })
+              .map((station, index) => (
+                <div key={station.id} className={`animate-scale-in`} style={{animationDelay: `${index * 100 + 300}ms`}}>
+                  <StationCard station={station} />
+                </div>
+              ))
+            }
           </div>
         </div>
       </div>
