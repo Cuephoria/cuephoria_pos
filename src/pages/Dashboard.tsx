@@ -11,14 +11,12 @@ import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart'
 import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
 import ExpenseList from '@/components/expenses/ExpenseList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 
 const Dashboard = () => {
   const { customers, bills, stations, sessions, products } = usePOS();
   const { expenses, businessSummary } = useExpenses();
   
   const [activeTab, setActiveTab] = useState('daily');
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [chartData, setChartData] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
     totalSales: 0,
@@ -240,14 +238,6 @@ const Dashboard = () => {
     return customers.filter(c => new Date(c.createdAt) >= today).length;
   };
 
-  const handleDownloadReport = () => {
-    console.log('Downloading report...');
-  };
-
-  const handleMonthChange = (month: string) => {
-    setSelectedMonth(month);
-  };
-
   return (
     <div className="flex-1 space-y-6 p-6 bg-[#1A1F2C] text-white">
       <h2 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h2>
@@ -290,13 +280,9 @@ const Dashboard = () => {
         </TabsContent>
         
         <TabsContent value="finances" className="space-y-6">
-          <BusinessSummaryReport 
-            onDownload={handleDownloadReport}
-            selectedMonth={selectedMonth}
-            onMonthChange={handleMonthChange}
-          />
+          <BusinessSummarySection />
           
-          <ExpenseList selectedMonth={selectedMonth} />
+          <ExpenseList />
         </TabsContent>
       </Tabs>
     </div>
