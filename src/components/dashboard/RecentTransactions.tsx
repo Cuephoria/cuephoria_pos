@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { User, Trash2, KeyRound } from 'lucide-react';
+import { User, Trash2 } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { 
@@ -16,21 +16,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Bill } from '@/types/pos.types';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill } = usePOS();
-  const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   
   // Sort bills by date (newest first)
   const sortedBills = [...bills].sort((a, b) => 
@@ -45,125 +36,16 @@ const RecentTransactions: React.FC = () => {
     setIsConfirmOpen(true);
   };
   
-  const handlePasswordVerification = async () => {
-    if (!billToDelete) return;
-    if (!adminPassword.trim()) {
-      toast({
-        title: 'Password Required',
-        description: 'Please enter the admin password to proceed',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setIsVerifying(true);
-    
-    try {
-      // Verify admin password against Supabase
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('id, password')
-        .eq('is_admin', true)
-        .single();
-      
-      if (error) {
-        console.error('Error verifying admin:', error);
-        toast({
-          title: 'Authentication Error',
-          description: 'Could not verify admin credentials',
-          variant: 'destructive',
-        });
-        setIsVerifying(false);
-        return;
-      }
-      
-      if (data && data.password === adminPassword) {
-        // Password is correct, proceed with deletion
-        setIsPasswordDialogOpen(false);
-        setAdminPassword('');
-        await handleConfirmDelete();
-      } else {
-        // Password is incorrect
-        toast({
-          title: 'Authentication Failed',
-          description: 'Incorrect admin password',
-          variant: 'destructive',
-        });
-        setIsVerifying(false);
-      }
-    } catch (error) {
-      console.error('Error in password verification:', error);
-      toast({
-        title: 'Authentication Error',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-      setIsVerifying(false);
-    }
-  };
-  
-  const handleConfirmPasswordCheck = () => {
-    setIsConfirmOpen(false);
-    setIsPasswordDialogOpen(true);
-  };
-  
   const handleConfirmDelete = async () => {
-    if (!billToDelete) {
-      setIsVerifying(false);
-      return;
-    }
+    if (!billToDelete) return;
     
-    try {
-      setIsDeleting(true);
-      setIsVerifying(false);
-      
-      const billId = billToDelete.id;
-      const customerId = billToDelete.customerId;
-      
-      // Clear state before async operation to prevent UI issues
-      setBillToDelete(null);
-      
-      const success = await deleteBill(billId, customerId);
-      
-      if (success) {
-        toast({
-          title: 'Success',
-          description: 'Transaction deleted successfully',
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete transaction',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting bill:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete transaction: ' + (error instanceof Error ? error.message : 'Unknown error'),
-        variant: 'destructive',
-      });
-    } finally {
-      // Clean up state
-      setIsDeleting(false);
-      setIsConfirmOpen(false);
-      setIsPasswordDialogOpen(false);
-    }
-  };
-  
-  const handleDialogClose = () => {
-    if (!isVerifying && !isDeleting) {
+    setIsDeleting(true);
+    const success = await deleteBill(billToDelete.id, billToDelete.customerId);
+    setIsDeleting(false);
+    
+    if (success) {
       setIsConfirmOpen(false);
       setBillToDelete(null);
-    }
-  };
-  
-  const handlePasswordDialogClose = () => {
-    if (!isVerifying && !isDeleting) {
-      setIsPasswordDialogOpen(false);
-      setAdminPassword('');
     }
   };
   
@@ -202,7 +84,6 @@ const RecentTransactions: React.FC = () => {
                       size="icon" 
                       className="text-gray-400 hover:text-red-500 transition-colors"
                       onClick={() => handleDeleteClick(bill)}
-                      disabled={isDeleting || isVerifying}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -218,10 +99,7 @@ const RecentTransactions: React.FC = () => {
         </CardContent>
       </Card>
       
-      <AlertDialog 
-        open={isConfirmOpen} 
-        onOpenChange={handleDialogClose}
-      >
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
@@ -231,72 +109,17 @@ const RecentTransactions: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
-              className="bg-gray-700 text-white hover:bg-gray-600"
-              disabled={isDeleting || isVerifying}
-            >
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleConfirmPasswordCheck}
+              onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700"
-              disabled={isDeleting || isVerifying}
+              disabled={isDeleting}
             >
-              Continue
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      <Dialog 
-        open={isPasswordDialogOpen} 
-        onOpenChange={handlePasswordDialogClose}
-      >
-        <DialogContent className="bg-gray-800 border-gray-700 text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5 text-yellow-500" />
-              Admin Authentication
-            </DialogTitle>
-            <DialogDescription className="text-gray-300">
-              Please enter the admin password to delete this transaction
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="admin-password">Admin Password</Label>
-              <Input
-                id="admin-password"
-                type="password"
-                placeholder="Enter password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="bg-gray-700 border-gray-600"
-                autoComplete="off"
-                disabled={isVerifying || isDeleting}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={handlePasswordDialogClose}
-              className="bg-gray-700 text-white hover:bg-gray-600"
-              disabled={isVerifying || isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              onClick={handlePasswordVerification}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={isVerifying || isDeleting || !adminPassword.trim()}
-            >
-              {isVerifying ? "Verifying..." : isDeleting ? "Deleting..." : "Verify & Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
