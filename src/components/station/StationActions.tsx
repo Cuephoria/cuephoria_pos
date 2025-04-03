@@ -7,8 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, User } from "lucide-react";
+import { Check, ChevronsUpDown, User, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 interface StationActionsProps {
   station: Station;
@@ -101,22 +102,23 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
+  // Filter customers based on search query - similar to Customers page
   const filteredCustomers = customers.filter(customer => {
     if (!searchQuery.trim()) return true;
     
     const query = searchQuery.toLowerCase().trim();
     
-    // First try to match phone number
+    // Search by phone number
     if (customer.phone && customer.phone.includes(query)) {
       return true;
     }
     
-    // Then try to match by name
+    // Search by name
     if (customer.name && customer.name.toLowerCase().includes(query)) {
       return true;
     }
     
-    // Finally try to match by email
+    // Search by email
     if (customer.email && customer.email.toLowerCase().includes(query)) {
       return true;
     }
@@ -139,65 +141,47 @@ const StationActions: React.FC<StationActionsProps> = ({
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between font-quicksand"
-            disabled={isLoading}
-          >
-            {selectedCustomerId ? (
-              customers.find((customer) => customer.id === selectedCustomerId)?.name || "Select Customer"
-            ) : (
-              <span className="text-muted-foreground">Select Customer</span>
-            )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0">
-          <Command>
-            <CommandInput 
-              placeholder="Search by phone, name or email..." 
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              className="w-full border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-            <CommandList>
-              <CommandEmpty>
-                <div className="p-2 text-center text-sm">
-                  No customers found. Try a different search.
+      {/* Customer search input styled like in Customers page */}
+      <div className="relative flex-1 mb-3">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input 
+          placeholder="Search by phone, name or email..." 
+          className="pl-8" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {/* Customer selection list */}
+      <div className="bg-white rounded-md border border-gray-200 shadow-sm mb-3 max-h-60 overflow-y-auto">
+        {filteredCustomers.length > 0 ? (
+          filteredCustomers.map((customer) => (
+            <div
+              key={customer.id}
+              className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer ${
+                selectedCustomerId === customer.id ? 'bg-gray-50' : ''
+              }`}
+              onClick={() => setSelectedCustomerId(customer.id)}
+            >
+              <div className="flex items-center">
+                <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">{customer.name}</p>
+                  <p className="text-xs text-muted-foreground">{customer.phone}</p>
                 </div>
-              </CommandEmpty>
-              <CommandGroup className="max-h-60 overflow-y-auto">
-                {filteredCustomers.map((customer) => (
-                  <CommandItem
-                    key={customer.id}
-                    value={customer.id}
-                    onSelect={() => {
-                      setSelectedCustomerId(customer.id);
-                      setOpen(false);
-                    }}
-                    className="flex items-center justify-between py-2"
-                  >
-                    <div className="flex items-center">
-                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">{customer.name}</p>
-                        <p className="text-xs text-muted-foreground">{customer.phone}</p>
-                      </div>
-                    </div>
-                    {selectedCustomerId === customer.id && (
-                      <Check className="h-4 w-4" />
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+              </div>
+              {selectedCustomerId === customer.id && (
+                <Check className="h-4 w-4" />
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="p-3 text-center text-sm text-muted-foreground">
+            No customers found. Try a different search.
+          </div>
+        )}
+      </div>
+
       <Button 
         variant="default" 
         className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
