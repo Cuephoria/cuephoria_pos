@@ -14,7 +14,7 @@ export const formatCurrency = (amount: number): string => {
 export function CurrencyDisplay({ amount, className }: CurrencyDisplayProps) {
   return (
     <span className={cn("indian-rupee", className)}>
-      ₹{amount.toLocaleString('en-IN')}
+      {amount.toLocaleString('en-IN')}
     </span>
   );
 }
