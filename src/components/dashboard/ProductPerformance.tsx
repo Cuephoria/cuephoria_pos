@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { BarChartHorizontal } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 
@@ -140,11 +140,12 @@ const ProductPerformance: React.FC = () => {
                 name="Revenue"
                 fill="#F97316"
                 fillOpacity={0.9}
-                stroke="#F97316"
                 radius={[0, 4, 4, 0]}
-                getStroke={(data) => getProductColor(data.name)}
-                style={{ fill: (data) => getProductColor(data.name) }}
-              />
+              >
+                {productData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={getProductColor(entry.name)} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
