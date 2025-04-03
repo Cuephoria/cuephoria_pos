@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
@@ -182,19 +181,19 @@ const ProductsPage: React.FC = () => {
   }, [products]);
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-        <div className="flex space-x-2">
-          <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing} className="h-10">
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
             Refresh DB
           </Button>
-          <Button onClick={handleResetProducts} variant="outline" disabled={isResetting}>
+          <Button onClick={handleResetProducts} variant="outline" disabled={isResetting} className="h-10">
             <RotateCcw className={`h-4 w-4 mr-2 ${isResetting ? 'animate-spin' : ''}`} /> 
             Reset
           </Button>
-          <Button onClick={handleOpenDialog}>
+          <Button onClick={handleOpenDialog} className="h-10">
             <Plus className="h-4 w-4 mr-2" /> Add Product
           </Button>
         </div>
@@ -209,17 +208,21 @@ const ProductsPage: React.FC = () => {
         isSubmitting={isSubmitting}
       />
 
-      <LowStockAlert products={products} />
+      <div className="mb-6">
+        <LowStockAlert products={products} />
+      </div>
       
-      <ProductTabs
-        products={products}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        categoryCounts={categoryCounts}
-        onEdit={handleEditProduct}
-        onDelete={handleDeleteProduct}
-        onAddProduct={handleOpenDialog}
-      />
+      <div className="bg-card rounded-lg shadow-sm p-4">
+        <ProductTabs
+          products={products}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          categoryCounts={categoryCounts}
+          onEdit={handleEditProduct}
+          onDelete={handleDeleteProduct}
+          onAddProduct={handleOpenDialog}
+        />
+      </div>
     </div>
   );
 };

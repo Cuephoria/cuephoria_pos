@@ -103,7 +103,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card className={`flex flex-col h-full ${className}`}>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 space-y-1">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap">{product.name}</CardTitle>
           <Badge className={getCategoryColor(product.category)}>
@@ -111,7 +111,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow">
+      <CardContent className="flex-grow py-3">
         <div className="flex flex-col space-y-2">
           <div className="flex justify-between text-sm font-medium">
             <span>Price:</span>
@@ -163,13 +163,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
       </CardContent>
-      <CardFooter className="mt-auto">
+      <CardFooter className="mt-auto pt-2">
         {isAdmin ? (
           <div className="flex w-full space-x-2">
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex-1 justify-start"
+              className="flex-1 justify-center"
               onClick={() => onEdit && onEdit(product)}
             >
               <Edit className="h-4 w-4 mr-2" /> Edit
@@ -177,7 +177,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button 
               variant="destructive" 
               size="sm" 
-              className="flex-1 justify-start"
+              className="flex-1 justify-center"
               onClick={() => onDelete && onDelete(product.id)}
             >
               <Trash className="h-4 w-4 mr-2" /> Delete

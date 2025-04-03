@@ -29,8 +29,8 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
     : products.filter(product => product.category === activeTab);
 
   return (
-    <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange}>
-      <TabsList>
+    <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange} className="w-full">
+      <TabsList className="mb-4 flex flex-wrap gap-1 justify-start sm:justify-center">
         <TabsTrigger value="all">All ({categoryCounts.all || 0})</TabsTrigger>
         <TabsTrigger value="food">Food ({categoryCounts.food || 0})</TabsTrigger>
         <TabsTrigger value="drinks">Drinks ({categoryCounts.drinks || 0})</TabsTrigger>
@@ -41,15 +41,15 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
       
       <TabsContent value={activeTab} className="mt-6">
         {filteredProducts.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
-              <div key={product.id} className="h-full">
+              <div key={product.id} className="flex h-full">
                 <ProductCard
                   product={product}
                   isAdmin={true}
                   onEdit={onEdit}
                   onDelete={onDelete}
-                  className="h-full"
+                  className="w-full"
                 />
               </div>
             ))}
