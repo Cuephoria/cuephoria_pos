@@ -150,6 +150,19 @@
   }
 }
 
+@keyframes pulse-soft {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+/* Animation classes */
 .animate-slide-up {
   animation: slideUp 0.5s ease forwards;
 }
@@ -168,6 +181,10 @@
 
 .animate-pulse-glow {
   animation: pulseGlow 2s infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s infinite ease-in-out;
 }
 
 /* Animation delays */
