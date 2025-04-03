@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -147,6 +148,7 @@ export const useProducts = () => {
     console.log('Products by category:', countByCategory);
   }, []);
   
+  // Check if product with the same name already exists
   const isProductDuplicate = (productName: string, excludeId?: string): boolean => {
     return products.some(p => 
       p.name.toLowerCase() === productName.toLowerCase() && 
@@ -156,6 +158,7 @@ export const useProducts = () => {
   
   const addProduct = (product: Omit<Product, 'id'>) => {
     try {
+      // Check for duplicate product name
       if (isProductDuplicate(product.name)) {
         toast({
           title: 'Error',
@@ -196,6 +199,7 @@ export const useProducts = () => {
     } catch (error) {
       console.error('Error adding product:', error);
       
+      // Only show toast if it's not a duplicate product error (already handled)
       if (!(error instanceof Error && error.message.includes('already exists'))) {
         toast({
           title: 'Error',
@@ -219,6 +223,7 @@ export const useProducts = () => {
         return product;
       }
       
+      // Check for duplicate product name (excluding the current product being updated)
       if (isProductDuplicate(product.name, product.id)) {
         toast({
           title: 'Error',
@@ -261,6 +266,7 @@ export const useProducts = () => {
     } catch (error) {
       console.error('Error updating product:', error);
       
+      // Only show toast if it's not a duplicate product error (already handled)
       if (!(error instanceof Error && error.message.includes('already exists'))) {
         toast({
           title: 'Error',
@@ -346,13 +352,16 @@ export const useProducts = () => {
         const membershipIds = new Set(membershipProducts.map(p => p.id));
         const nonMembershipDbProducts = dbProducts.filter(p => !membershipIds.has(p.id));
         
+        // Check for duplicate product names and deduplicate
         const uniqueProducts = new Map<string, Product>();
         const duplicates: string[] = [];
         
+        // First add membership products (these have precedence)
         membershipProducts.forEach(product => {
           uniqueProducts.set(product.name.toLowerCase(), product);
         });
         
+        // Then add database products, tracking duplicates
         nonMembershipDbProducts.forEach(product => {
           const lowerName = product.name.toLowerCase();
           if (uniqueProducts.has(lowerName)) {
@@ -362,6 +371,7 @@ export const useProducts = () => {
           }
         });
         
+        // Show warning if duplicates were found
         if (duplicates.length > 0) {
           const duplicateNames = duplicates.slice(0, 3).join(', ') + 
             (duplicates.length > 3 ? ` and ${duplicates.length - 3} more` : '');
@@ -369,7 +379,7 @@ export const useProducts = () => {
           toast({
             title: 'Warning',
             description: `Duplicate product names found and resolved: ${duplicateNames}`,
-            variant: 'destructive'
+            variant: 'warning'
           });
           
           console.warn('Duplicate products removed:', duplicates);

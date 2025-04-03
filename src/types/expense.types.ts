@@ -8,7 +8,7 @@ export interface Expense {
   amount: number;
   category: ExpenseCategory;
   frequency: ExpenseFrequency;
-  date: string; // Store as ISO string for easier serialization
+  date: Date;
   isRecurring: boolean;
   notes?: string;
 }

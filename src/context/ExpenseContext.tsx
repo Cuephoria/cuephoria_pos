@@ -1,15 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary } from '@/types/expense.types';
+import { supabase } from '@/integrations/supabase/client';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
-import { ExpenseFormData } from '@/components/expenses/ExpenseDialog';
 
 interface ExpenseContextType {
   expenses: Expense[];
   businessSummary: BusinessSummary;
-  addExpense: (expense: ExpenseFormData) => Promise<boolean>;
+  addExpense: (expense: Omit<Expense, 'id'>) => Promise<boolean>;
   updateExpense: (expense: Expense) => Promise<boolean>;
   deleteExpense: (id: string) => Promise<boolean>;
   refreshExpenses: () => Promise<void>;
@@ -18,9 +18,6 @@ interface ExpenseContextType {
 }
 
 const ExpenseContext = createContext<ExpenseContextType | undefined>(undefined);
-
-// Local storage key for expenses
-const EXPENSES_STORAGE_KEY = 'pos-app-expenses';
 
 export const useExpenses = () => {
   const context = useContext(ExpenseContext);
@@ -40,46 +37,48 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     netProfit: 0,
     profitMargin: 0
   });
-  
   const { bills } = usePOS();
   const { toast } = useToast();
 
-  // Load expenses from localStorage
-  const loadExpenses = async () => {
+  const fetchExpenses = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const storedExpenses = localStorage.getItem(EXPENSES_STORAGE_KEY);
-      if (storedExpenses) {
-        const parsedExpenses: Expense[] = JSON.parse(storedExpenses);
-        setExpenses(parsedExpenses);
-        console.log(`Loaded ${parsedExpenses.length} expenses from localStorage`);
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+        
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        setError(`Failed to fetch expenses: ${error.message}`);
+        return;
+      }
+      
+      if (data) {
+        const transformedExpenses: Expense[] = data.map(item => ({
+          id: item.id,
+          name: item.name,
+          amount: item.amount,
+          category: item.category,
+          frequency: item.frequency,
+          date: new Date(item.date),
+          isRecurring: item.is_recurring,
+          notes: item.notes
+        }));
+        
+        setExpenses(transformedExpenses);
+        console.log(`Loaded ${transformedExpenses.length} expenses`);
       }
     } catch (err) {
-      console.error('Error loading expenses:', err);
-      setError('Failed to load expenses from storage');
+      console.error('Error in fetchExpenses:', err);
+      setError('An unexpected error occurred while fetching expenses');
     } finally {
       setLoading(false);
     }
   };
 
-  // Save expenses to localStorage
-  const saveExpenses = (updatedExpenses: Expense[]) => {
-    try {
-      localStorage.setItem(EXPENSES_STORAGE_KEY, JSON.stringify(updatedExpenses));
-      console.log(`Saved ${updatedExpenses.length} expenses to localStorage`);
-    } catch (err) {
-      console.error('Error saving expenses:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to save expenses',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Calculate business summary based on expenses and bills
   const calculateBusinessSummary = () => {
     const grossIncome = bills.reduce((sum, bill) => sum + bill.total, 0);
     
@@ -101,6 +100,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, 0);
     
     const netProfit = grossIncome - totalExpenses;
+    
     const profitMargin = grossIncome > 0 ? (netProfit / grossIncome) * 100 : 0;
     
     setBusinessSummary({
@@ -111,29 +111,89 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Add a new expense
-  const addExpense = async (expenseData: ExpenseFormData): Promise<boolean> => {
+  const addExpense = async (expenseData: Omit<Expense, 'id'>): Promise<boolean> => {
     try {
+      console.log('Adding expense with data:', expenseData);
       const id = generateId();
       
-      // Create the new expense object
+      // Ensure date is a valid Date object
+      let dateObj: Date;
+      
+      if (expenseData.date instanceof Date) {
+        dateObj = expenseData.date;
+      } else if (expenseData.date && typeof expenseData.date === 'object' && expenseData.date._type === 'Date') {
+        // Handle serialized date object
+        try {
+          dateObj = new Date(expenseData.date.value.iso);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date format');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expenseData.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
+      } else {
+        try {
+          dateObj = new Date(expenseData.date as any);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expenseData.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
+      }
+      
+      // Format date for storage as ISO string
+      const dateToStore = dateObj.toISOString();
+      console.log('Formatted date to store:', dateToStore);
+      
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .insert({
+          id,
+          name: expenseData.name,
+          amount: expenseData.amount,
+          category: expenseData.category,
+          frequency: expenseData.frequency,
+          date: dateToStore,
+          is_recurring: expenseData.isRecurring,
+          notes: expenseData.notes || ''
+        });
+        
+      if (supabaseError) {
+        console.error('Error adding expense:', supabaseError);
+        toast({
+          title: 'Error',
+          description: `Failed to add expense: ${supabaseError.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Create a proper expense object for the state
       const newExpense: Expense = {
         id,
         name: expenseData.name,
         amount: expenseData.amount,
         category: expenseData.category,
         frequency: expenseData.frequency,
-        date: expenseData.date.toISOString(), // Convert to ISO string for storage
+        date: dateObj,
         isRecurring: expenseData.isRecurring,
         notes: expenseData.notes || ''
       };
       
-      // Update state with new expense
-      const updatedExpenses = [newExpense, ...expenses];
-      setExpenses(updatedExpenses);
-      
-      // Save to localStorage
-      saveExpenses(updatedExpenses);
+      setExpenses(prev => [newExpense, ...prev]);
       
       toast({
         title: 'Success',
@@ -152,24 +212,82 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Update an existing expense
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      // Ensure date is stored as ISO string
+      // Ensure date is a valid Date object
+      let dateObj: Date;
+      
+      if (expense.date instanceof Date) {
+        dateObj = expense.date;
+      } else if (expense.date && typeof expense.date === 'object' && expense.date._type === 'Date') {
+        // Handle serialized date object
+        try {
+          dateObj = new Date(expense.date.value.iso);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date format');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expense.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
+      } else {
+        try {
+          dateObj = new Date(expense.date as any);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid date');
+          }
+        } catch (err) {
+          console.error('Failed to parse date:', expense.date);
+          toast({
+            title: 'Error',
+            description: 'Invalid date format',
+            variant: 'destructive'
+          });
+          return false;
+        }
+      }
+      
+      // Format date for storage as ISO string
+      const dateToStore = dateObj.toISOString();
+      console.log('Formatted date to update:', dateToStore);
+      
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .update({
+          name: expense.name,
+          amount: expense.amount,
+          category: expense.category,
+          frequency: expense.frequency,
+          date: dateToStore,
+          is_recurring: expense.isRecurring,
+          notes: expense.notes || ''
+        })
+        .eq('id', expense.id);
+        
+      if (supabaseError) {
+        console.error('Error updating expense:', supabaseError);
+        toast({
+          title: 'Error',
+          description: `Failed to update expense: ${supabaseError.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update the expense with the correct date object
       const updatedExpense = {
         ...expense,
-        date: typeof expense.date === 'string' ? expense.date : expense.date.toISOString()
+        date: dateObj
       };
       
-      // Update expenses array
-      const updatedExpenses = expenses.map(item => 
-        item.id === expense.id ? updatedExpense : item
+      setExpenses(prev => 
+        prev.map(item => item.id === expense.id ? updatedExpense : item)
       );
-      
-      setExpenses(updatedExpenses);
-      
-      // Save to localStorage
-      saveExpenses(updatedExpenses);
       
       toast({
         title: 'Success',
@@ -188,16 +306,24 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Delete an expense
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
-      // Remove expense from array
-      const updatedExpenses = expenses.filter(item => item.id !== id);
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('Error deleting expense:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to delete expense: ${error.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
       
-      setExpenses(updatedExpenses);
-      
-      // Save to localStorage
-      saveExpenses(updatedExpenses);
+      setExpenses(prev => prev.filter(item => item.id !== id));
       
       toast({
         title: 'Success',
@@ -216,12 +342,10 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Initialize by loading expenses from localStorage
   useEffect(() => {
-    loadExpenses();
+    fetchExpenses();
   }, []);
 
-  // Recalculate business summary when expenses or bills change
   useEffect(() => {
     calculateBusinessSummary();
   }, [bills, expenses]);
@@ -232,7 +356,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addExpense,
     updateExpense,
     deleteExpense,
-    refreshExpenses: loadExpenses,
+    refreshExpenses: fetchExpenses,
     loading,
     error
   };

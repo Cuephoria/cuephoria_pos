@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,7 +28,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import { ExpenseFormData } from './ExpenseDialog';
 
 const expenseSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
@@ -42,6 +42,8 @@ const expenseSchema = z.object({
   notes: z.string().optional(),
 });
 
+type ExpenseFormData = z.infer<typeof expenseSchema>;
+
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => void;
   initialData?: Partial<Expense>;
@@ -55,20 +57,26 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 }) => {
   // Initialize with current date if no date is provided
   const today = new Date();
-  
-  // Parse the initial date if it exists
   let initialDate = today;
+  
   if (initialData?.date) {
-    try {
-      initialDate = new Date(initialData.date);
-      if (isNaN(initialDate.getTime())) {
-        initialDate = today;
+    // Handle different date formats that might come from the API or context
+    if (initialData.date instanceof Date) {
+      initialDate = initialData.date;
+    } else {
+      try {
+        initialDate = new Date(initialData.date as any);
+        if (isNaN(initialDate.getTime())) {
+          initialDate = today; // Fallback to current date if invalid
+        }
+      } catch (e) {
+        console.error('Failed to parse initial date:', e);
+        initialDate = today; // Fallback to current date
       }
-    } catch (e) {
-      console.error('Failed to parse initial date:', e);
-      initialDate = today;
     }
   }
+  
+  console.log('Form initializing with date:', initialDate);
   
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
@@ -206,7 +214,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                       className="pl-3 text-left font-normal"
                     >
                       {field.value ? (
-                        format(field.value, "PPP")
+                        format(new Date(field.value), "PPP")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -218,8 +226,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={field.onChange}
+                    onSelect={(date) => {
+                      console.log('Calendar date selected:', date);
+                      if (date) {
+                        field.onChange(date);
+                      }
+                    }}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>

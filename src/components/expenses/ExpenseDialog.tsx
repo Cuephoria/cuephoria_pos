@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Expense, ExpenseCategory, ExpenseFrequency } from '@/types/expense.types';
+import { Expense } from '@/types/expense.types';
 import ExpenseForm from './ExpenseForm';
 import { PlusCircle } from 'lucide-react';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -20,23 +20,12 @@ interface ExpenseDialogProps {
   children?: React.ReactNode;
 }
 
-// Define a consistent type for form data that matches what the form produces
-export interface ExpenseFormData {
-  name: string;
-  amount: number;
-  category: ExpenseCategory;
-  frequency: ExpenseFrequency;
-  date: Date;
-  isRecurring: boolean;
-  notes?: string;
-}
-
 const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
   const [open, setOpen] = React.useState(false);
   const { addExpense, updateExpense } = useExpenses();
   const { toast } = useToast();
 
-  const handleSubmit = async (data: ExpenseFormData) => {
+  const handleSubmit = async (data: Omit<Expense, 'id'>) => {
     try {
       console.log('Submitting expense data:', data);
       
