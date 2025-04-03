@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -17,6 +18,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
+import { useToast } from '@/hooks/use-toast';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -67,6 +69,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // State for student discount
   const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
+  const { toast } = useToast();
   
   // Initialize all hooks
   const { 
@@ -76,7 +79,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts, 
     addProduct, 
     updateProduct, 
-    deleteProduct 
+    deleteProduct,
+    syncInitialDataToSupabase,
+    refreshFromDB,
+    resetToInitialProducts
   } = useProducts();
   
   const { 
@@ -332,33 +338,42 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   // Wrapper for sample data functions
-  const handleResetToSampleData = (options?: ResetOptions) => {
-    resetToSampleData(
-      options,
-      initialProducts,
-      initialCustomers,
-      initialStations,
-      setProducts,
-      setCustomers,
-      setBills,
-      setSessions,
-      setStations,
-      setCart,
-      setDiscountAmount,
-      setLoyaltyPointsUsedAmount,
-      setSelectedCustomer
-    );
+  const handleResetToSampleData = async (options?: ResetOptions) => {
+    try {
+      // Use the refreshFromDB function to sync with Supabase
+      await refreshFromDB();
+      
+      toast({
+        title: 'Data Refreshed',
+        description: 'Data has been refreshed from Supabase.',
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh data from Supabase.',
+        variant: 'destructive'
+      });
+    }
   };
   
-  const handleAddSampleIndianData = () => {
-    addSampleIndianData(
-      products,
-      customers,
-      bills,
-      setProducts,
-      setCustomers,
-      setBills
-    );
+  const handleAddSampleIndianData = async () => {
+    try {
+      // Sync the initial data to Supabase
+      await syncInitialDataToSupabase();
+      
+      toast({
+        title: 'Data Synced',
+        description: 'Sample data has been synced to Supabase.',
+      });
+    } catch (error) {
+      console.error('Error syncing data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sync data to Supabase.',
+        variant: 'destructive'
+      });
+    }
   };
   
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {

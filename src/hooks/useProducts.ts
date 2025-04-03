@@ -129,25 +129,16 @@ const membershipProducts: Product[] = [
 ];
 
 export const useProducts = () => {
-  const [products, setProducts] = useState<Product[]>([...initialProducts, ...membershipProducts]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  const lowStockProducts = products.filter(p => p.stock < 5 && p.category !== 'membership');
-  
   useEffect(() => {
-    console.log('useProducts initialized with', products.length, 'products');
-    console.log('Initial sample data products:', initialProducts.length);
-    console.log('Membership products:', membershipProducts.length);
-    
-    const countByCategory = products.reduce((acc, product) => {
-      acc[product.category] = (acc[product.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    console.log('Products by category:', countByCategory);
+    refreshFromDB();
   }, []);
+  
+  const lowStockProducts = products.filter(p => p.stock < 5 && p.category !== 'membership');
   
   const isProductDuplicate = (productName: string, excludeId?: string): boolean => {
     return products.some(p => 
@@ -175,19 +166,17 @@ export const useProducts = () => {
       
       setProducts(prev => [...prev, newProduct]);
       
-      if (product.category !== 'membership') {
-        supabase
-          .from('products')
-          .insert(convertToSupabaseProduct(newProduct))
-          .then(({ error }) => {
-            if (error) {
-              console.error('Error adding product to DB:', error);
-              setError(`Failed to add product to database: ${error.message}`);
-            } else {
-              console.log('Product added to DB:', newProduct.name);
-            }
-          });
-      }
+      supabase
+        .from('products')
+        .insert(convertToSupabaseProduct(newProduct))
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error adding product to DB:', error);
+            setError(`Failed to add product to database: ${error.message}`);
+          } else {
+            console.log('Product added to DB:', newProduct.name);
+          }
+        });
       
       toast({
         title: 'Success',
@@ -317,12 +306,45 @@ export const useProducts = () => {
     }
   };
   
-  const resetToInitialProducts = () => {
-    const allProducts = [...initialProducts, ...membershipProducts];
-    setProducts(allProducts);
-    setError(null);
-    console.log('Reset to initial products:', allProducts.length);
-    return allProducts;
+  const resetToInitialProducts = async () => {
+    try {
+      setLoading(true);
+      
+      const { error: deleteError } = await supabase
+        .from('products')
+        .delete()
+        .not('id', 'is', null);
+      
+      if (deleteError) {
+        console.error('Error deleting existing products:', deleteError);
+        throw new Error(`Failed to reset products: ${deleteError.message}`);
+      }
+      
+      const allProducts = [...initialProducts, ...membershipProducts];
+      
+      for (const product of allProducts) {
+        const { error: insertError } = await supabase
+          .from('products')
+          .insert(convertToSupabaseProduct(product));
+        
+        if (insertError) {
+          console.error('Error inserting product:', insertError);
+        }
+      }
+      
+      return await refreshFromDB();
+    } catch (error) {
+      console.error('Error in resetToInitialProducts:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reset products',
+        variant: 'destructive'
+      });
+      setError(error instanceof Error ? error.message : 'Unknown error resetting products');
+      return products;
+    } finally {
+      setLoading(false);
+    }
   };
   
   const refreshFromDB = async () => {
@@ -339,51 +361,18 @@ export const useProducts = () => {
           description: 'Failed to fetch products from database',
           variant: 'destructive'
         });
+        
         return products;
       }
       
       if (data && data.length > 0) {
         const dbProducts = data.map(convertFromSupabaseProduct);
-        
-        const membershipIds = new Set(membershipProducts.map(p => p.id));
-        const nonMembershipDbProducts = dbProducts.filter(p => !membershipIds.has(p.id));
-        
-        const uniqueProducts = new Map<string, Product>();
-        const duplicates: string[] = [];
-        
-        membershipProducts.forEach(product => {
-          uniqueProducts.set(product.name.toLowerCase(), product);
-        });
-        
-        nonMembershipDbProducts.forEach(product => {
-          const lowerName = product.name.toLowerCase();
-          if (uniqueProducts.has(lowerName)) {
-            duplicates.push(product.name);
-          } else {
-            uniqueProducts.set(lowerName, product);
-          }
-        });
-        
-        if (duplicates.length > 0) {
-          const duplicateNames = duplicates.slice(0, 3).join(', ') + 
-            (duplicates.length > 3 ? ` and ${duplicates.length - 3} more` : '');
-          
-          toast({
-            title: 'Warning',
-            description: `Duplicate product names found and resolved: ${duplicateNames}`,
-            variant: "destructive"
-          });
-          
-          console.warn('Duplicate products removed:', duplicates);
-        }
-        
-        const allProducts = Array.from(uniqueProducts.values());
-        setProducts(allProducts);
-        console.log('Refreshed from DB:', allProducts.length);
-        return allProducts;
+        setProducts(dbProducts);
+        console.log('Refreshed from DB:', dbProducts.length);
+        return dbProducts;
       } else {
-        console.log('No products in DB, using initial');
-        return resetToInitialProducts();
+        console.log('No products in DB, syncing initial data');
+        return await syncInitialDataToSupabase();
       }
     } catch (error) {
       console.error('Error refreshing products:', error);
@@ -396,6 +385,48 @@ export const useProducts = () => {
       return products;
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const syncInitialDataToSupabase = async () => {
+    try {
+      const allProducts = [...initialProducts, ...membershipProducts];
+      
+      for (const product of allProducts) {
+        const { error } = await supabase
+          .from('products')
+          .insert(convertToSupabaseProduct(product))
+          .onConflict('id')
+          .merge();
+        
+        if (error) {
+          console.error('Error syncing product to Supabase:', error);
+        }
+      }
+      
+      const { data, error } = await supabase.from('products').select('*');
+      
+      if (error) {
+        console.error('Error fetching products after sync:', error);
+        setError(`Failed to fetch products after sync: ${error.message}`);
+        setProducts(allProducts);
+        return allProducts;
+      }
+      
+      if (data && data.length > 0) {
+        const dbProducts = data.map(convertFromSupabaseProduct);
+        setProducts(dbProducts);
+        console.log('Synced and refreshed from DB:', dbProducts.length);
+        return dbProducts;
+      } else {
+        setProducts(allProducts);
+        return allProducts;
+      }
+    } catch (error) {
+      console.error('Error syncing initial data:', error);
+      const allProducts = [...initialProducts, ...membershipProducts];
+      setProducts(allProducts);
+      return allProducts;
     }
   };
   
@@ -417,6 +448,7 @@ export const useProducts = () => {
     deleteProduct,
     resetToInitialProducts,
     refreshFromDB,
+    syncInitialDataToSupabase,
     displayLowStockWarning
   };
 };

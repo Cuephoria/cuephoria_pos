@@ -2,9 +2,10 @@
 import { Bill, Customer, Product, ResetOptions, CartItem } from '@/types/pos.types';
 import { generateId } from '@/utils/pos.utils';
 import { indianCustomers, indianProducts } from '@/data/sampleData';
+import { supabase, convertToSupabaseProduct } from "@/integrations/supabase/client";
 
 // Function to add sample Indian data
-export const addSampleIndianData = (
+export const addSampleIndianData = async (
   products: Product[], 
   customers: Customer[], 
   bills: Bill[],
@@ -15,22 +16,31 @@ export const addSampleIndianData = (
   // Add Indian products (don't replace existing ones)
   const newProducts = [...products];
   
-  indianProducts.forEach(product => {
+  for (const product of indianProducts) {
     // Check if product with same name already exists
     if (!newProducts.some(p => p.name === product.name)) {
-      newProducts.push({
+      const newProduct = {
         ...product,
         id: generateId() // Generate new ID
-      });
+      };
+      
+      newProducts.push(newProduct);
+      
+      // Sync to Supabase
+      await supabase
+        .from('products')
+        .insert(convertToSupabaseProduct(newProduct))
+        .onConflict('id')
+        .merge();
     }
-  });
+  }
   
   setProducts(newProducts);
   
   // Add Indian customers (don't replace existing ones)
   const newCustomers = [...customers];
   
-  indianCustomers.forEach(customer => {
+  for (const customer of indianCustomers) {
     // Check if customer with same phone number already exists
     if (!newCustomers.some(c => c.phone === customer.phone)) {
       const newCustomer = {
@@ -40,8 +50,30 @@ export const addSampleIndianData = (
       };
       
       newCustomers.push(newCustomer);
+      
+      // Sync to Supabase
+      await supabase
+        .from('customers')
+        .insert({
+          id: newCustomer.id,
+          name: newCustomer.name,
+          phone: newCustomer.phone,
+          email: newCustomer.email || null,
+          is_member: newCustomer.isMember,
+          membership_plan: newCustomer.membershipPlan || null,
+          membership_duration: newCustomer.membershipDuration || null,
+          membership_start_date: newCustomer.membershipStartDate ? newCustomer.membershipStartDate.toISOString() : null,
+          membership_expiry_date: newCustomer.membershipExpiryDate ? newCustomer.membershipExpiryDate.toISOString() : null,
+          membership_hours_left: newCustomer.membershipHoursLeft || null,
+          loyalty_points: newCustomer.loyaltyPoints,
+          total_spent: newCustomer.totalSpent,
+          total_play_time: newCustomer.totalPlayTime || 0,
+          created_at: newCustomer.createdAt.toISOString()
+        })
+        .onConflict('id')
+        .merge();
     }
-  });
+  }
   
   setCustomers(newCustomers);
   
@@ -52,7 +84,7 @@ export const addSampleIndianData = (
   const customerIds = newCustomers.map(c => c.id);
   
   // Create sample bills (1-3 per customer)
-  customerIds.forEach(customerId => {
+  for (const customerId of customerIds) {
     const numBills = Math.floor(Math.random() * 3) + 1;
     
     for (let i = 0; i < numBills; i++) {
@@ -87,8 +119,9 @@ export const addSampleIndianData = (
       // Random loyalty points
       const loyaltyPointsEarned = Math.floor(total / 10);
       
+      const billId = generateId();
       const bill: Bill = {
-        id: generateId(),
+        id: billId,
         customerId,
         items: billItems,
         subtotal,
@@ -103,19 +136,48 @@ export const addSampleIndianData = (
       };
       
       sampleBills.push(bill);
+      
+      // Sync bill to Supabase
+      await supabase
+        .from('bills')
+        .insert({
+          id: billId,
+          customer_id: customerId,
+          subtotal,
+          discount,
+          discount_value: discountValue,
+          discount_type: 'percentage',
+          loyalty_points_used: 0,
+          loyalty_points_earned: loyaltyPointsEarned,
+          total,
+          payment_method: bill.paymentMethod,
+          created_at: bill.createdAt.toISOString()
+        })
+        .onConflict('id')
+        .merge();
+      
+      // Sync bill items to Supabase
+      for (const item of billItems) {
+        await supabase
+          .from('bill_items')
+          .insert({
+            bill_id: billId,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          });
+      }
     }
-  });
+  }
   
   setBills([...bills, ...sampleBills]);
-  
-  // Save to localStorage
-  localStorage.setItem('cuephoriaProducts', JSON.stringify(newProducts));
-  localStorage.setItem('cuephoriaCustomers', JSON.stringify(newCustomers));
-  localStorage.setItem('cuephoriaBills', JSON.stringify([...bills, ...sampleBills]));
 };
 
-// Reset function with options
-export const resetToSampleData = (
+// Reset function with options - Now uses Supabase to reset data
+export const resetToSampleData = async (
   options: ResetOptions | undefined,
   initialProducts: Product[],
   initialCustomers: Customer[],
@@ -141,21 +203,80 @@ export const resetToSampleData = (
   
   // Reset selected data types to initial values
   if (resetOpts.products) {
+    // Clear products table in Supabase
+    await supabase
+      .from('products')
+      .delete()
+      .not('id', 'is', null);
+    
+    // Insert initial products
+    for (const product of initialProducts) {
+      await supabase
+        .from('products')
+        .insert(convertToSupabaseProduct(product))
+        .onConflict('id')
+        .merge();
+    }
+    
     setProducts(initialProducts);
-    localStorage.removeItem('cuephoriaProducts');
   }
   
   if (resetOpts.customers) {
+    // Clear customers table in Supabase
+    await supabase
+      .from('customers')
+      .delete()
+      .not('id', 'is', null);
+    
+    // Insert initial customers
+    for (const customer of initialCustomers) {
+      await supabase
+        .from('customers')
+        .insert({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email || null,
+          is_member: customer.isMember,
+          membership_plan: customer.membershipPlan || null,
+          membership_duration: customer.membershipDuration || null,
+          membership_start_date: customer.membershipStartDate ? customer.membershipStartDate.toISOString() : null,
+          membership_expiry_date: customer.membershipExpiryDate ? customer.membershipExpiryDate.toISOString() : null,
+          membership_hours_left: customer.membershipHoursLeft || null,
+          loyalty_points: customer.loyaltyPoints,
+          total_spent: customer.totalSpent,
+          total_play_time: customer.totalPlayTime || 0,
+          created_at: customer.createdAt.toISOString()
+        })
+        .onConflict('id')
+        .merge();
+    }
+    
     setCustomers(initialCustomers);
-    localStorage.removeItem('cuephoriaCustomers');
   }
   
   if (resetOpts.sales) {
+    // Clear bills and bill_items tables in Supabase
+    await supabase
+      .from('bill_items')
+      .delete()
+      .not('bill_id', 'is', null);
+      
+    await supabase
+      .from('bills')
+      .delete()
+      .not('id', 'is', null);
+    
     setBills([]);
-    localStorage.removeItem('cuephoriaBills');
   }
   
   if (resetOpts.sessions) {
+    // Clear sessions table in Supabase
+    await supabase
+      .from('sessions')
+      .delete()
+      .not('id', 'is', null);
+    
     setSessions([]);
     
     // Reset station occupation status
@@ -165,8 +286,21 @@ export const resetToSampleData = (
       currentSession: null
     })));
     
-    localStorage.removeItem('cuephoriaSessions');
-    localStorage.removeItem('cuephoriaStations');
+    // Update stations in Supabase
+    for (const station of initialStations) {
+      await supabase
+        .from('stations')
+        .upsert({
+          id: station.id,
+          name: station.name,
+          type: station.type,
+          hourly_rate: station.hourlyRate,
+          is_occupied: false,
+          current_session: null
+        })
+        .onConflict('id')
+        .merge();
+    }
   }
   
   // Clear cart regardless of options

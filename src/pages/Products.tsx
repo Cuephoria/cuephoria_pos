@@ -13,7 +13,7 @@ import { ProductFormState } from '@/components/product/ProductForm';
 
 const ProductsPage: React.FC = () => {
   const { addProduct, updateProduct, deleteProduct, products } = usePOS();
-  const { resetToInitialProducts, refreshFromDB } = useProducts();
+  const { resetToInitialProducts, refreshFromDB, syncInitialDataToSupabase } = useProducts();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -24,6 +24,7 @@ const ProductsPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleOpenDialog = () => {
     setIsEditMode(false);
@@ -127,12 +128,19 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleResetProducts = () => {
+  const handleResetProducts = async () => {
     try {
       setIsResetting(true);
+      await resetToInitialProducts();
       toast({
-        title: 'Reset Not Available',
-        description: 'Product reset functionality is not available.',
+        title: 'Products Reset',
+        description: 'Products have been reset to initial sample data.',
+      });
+    } catch (error) {
+      console.error('Reset error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset products. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -143,13 +151,40 @@ const ProductsPage: React.FC = () => {
   const handleRefreshProducts = async () => {
     try {
       setIsRefreshing(true);
+      await refreshFromDB();
       toast({
-        title: 'Refresh Not Available',
-        description: 'Product refresh functionality is not available.',
+        title: 'Products Refreshed',
+        description: 'Products have been refreshed from the database.',
+      });
+    } catch (error) {
+      console.error('Refresh error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh products. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleSyncToSupabase = async () => {
+    try {
+      setIsSyncing(true);
+      await syncInitialDataToSupabase();
+      toast({
+        title: 'Data Synced',
+        description: 'Sample data has been synced to Supabase.',
+      });
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sync data to Supabase. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -172,6 +207,10 @@ const ProductsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
         <div className="flex space-x-2">
+          <Button onClick={handleSyncToSupabase} variant="outline" disabled={isSyncing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} /> 
+            Sync to Supabase
+          </Button>
           <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
             Refresh DB
