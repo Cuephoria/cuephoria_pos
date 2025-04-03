@@ -1,16 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
+import { useExpenses } from '@/context/ExpenseContext';
 import StatCardSection from '@/components/dashboard/StatCardSection';
 import ActionButtonSection from '@/components/dashboard/ActionButtonSection';
 import SalesChart from '@/components/dashboard/SalesChart';
+import BusinessSummarySection from '@/components/dashboard/BusinessSummarySection';
 import ActiveSessions from '@/components/dashboard/ActiveSessions';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart';
 import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
+import ExpenseList from '@/components/expenses/ExpenseList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
   const { customers, bills, stations, sessions, products } = usePOS();
+  const { expenses, businessSummary } = useExpenses();
+  
   const [activeTab, setActiveTab] = useState('daily');
   const [chartData, setChartData] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
@@ -54,7 +59,6 @@ const Dashboard = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Create array for all 24 hours of the day
     const hours = Array.from({ length: 24 }, (_, i) => i);
     
     if (bills.length > 0) {
@@ -63,7 +67,6 @@ const Dashboard = () => {
       bills.forEach(bill => {
         const billDate = new Date(bill.createdAt);
         
-        // Only include bills from today
         if (billDate >= today) {
           const hour = billDate.getHours();
           const current = hourlyTotals.get(hour) || 0;
@@ -71,10 +74,9 @@ const Dashboard = () => {
         }
       });
       
-      // Format hours with AM/PM
       return hours.map(hour => {
         const ampm = hour >= 12 ? 'PM' : 'AM';
-        const hour12 = hour % 12 || 12; // Convert 0 to 12 for 12 AM
+        const hour12 = hour % 12 || 12;
         const formattedHour = `${hour12}${ampm}`;
         
         return {
@@ -84,7 +86,6 @@ const Dashboard = () => {
       });
     }
     
-    // Default empty data with AM/PM format
     return hours.map(hour => {
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const hour12 = hour % 12 || 12;
@@ -198,7 +199,7 @@ const Dashboard = () => {
     let startDate = new Date();
     
     if (activeTab === 'hourly') {
-      startDate.setHours(0, 0, 0, 0); // Start of today
+      startDate.setHours(0, 0, 0, 0);
     } else if (activeTab === 'daily') {
       startDate.setHours(0, 0, 0, 0);
     } else if (activeTab === 'weekly') {
@@ -241,34 +242,49 @@ const Dashboard = () => {
     <div className="flex-1 space-y-6 p-6 bg-[#1A1F2C] text-white">
       <h2 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h2>
       
-      <StatCardSection 
-        totalSales={dashboardStats.totalSales}
-        salesChange={dashboardStats.salesChange}
-        activeSessionsCount={dashboardStats.activeSessionsCount}
-        totalStations={stations.length}
-        customersCount={customers.length}
-        newMembersCount={dashboardStats.newMembersCount}
-        lowStockCount={dashboardStats.lowStockCount}
-        lowStockItems={dashboardStats.lowStockItems}
-      />
-      
-      <ActionButtonSection />
-      
-      <SalesChart 
-        data={chartData}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
-      
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        <CustomerActivityChart />
-        <ProductInventoryChart />
-      </div>
-      
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        <ActiveSessions />
-        <RecentTransactions />
-      </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-4 w-full max-w-md">
+          <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+          <TabsTrigger value="finances" className="flex-1">Finances</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6">
+          <StatCardSection 
+            totalSales={dashboardStats.totalSales}
+            salesChange={dashboardStats.salesChange}
+            activeSessionsCount={dashboardStats.activeSessionsCount}
+            totalStations={stations.length}
+            customersCount={customers.length}
+            newMembersCount={dashboardStats.newMembersCount}
+            lowStockCount={dashboardStats.lowStockCount}
+            lowStockItems={dashboardStats.lowStockItems}
+          />
+          
+          <ActionButtonSection />
+          
+          <SalesChart 
+            data={chartData}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <CustomerActivityChart />
+            <ProductInventoryChart />
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <ActiveSessions />
+            <RecentTransactions />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="finances" className="space-y-6">
+          <BusinessSummarySection />
+          
+          <ExpenseList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
