@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -128,7 +129,7 @@ const membershipProducts: Product[] = [
 ];
 
 export const useProducts = (initialProducts: Product[]) => {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([...initialProducts, ...membershipProducts]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -138,7 +139,7 @@ export const useProducts = (initialProducts: Product[]) => {
       try {
         setLoading(true);
         setError(null);
-        console.log('Fetching products...');
+        console.log('Fetching products from Supabase...');
         
         // Fetch products from Supabase
         const { data, error } = await supabase
@@ -149,7 +150,12 @@ export const useProducts = (initialProducts: Product[]) => {
           const errorMessage = handleSupabaseError(error, 'fetching products');
           setError(errorMessage);
           console.error('Error fetching products:', error);
-          // Fallback to initialProducts + membershipProducts
+          toast({
+            title: "Error loading products",
+            description: errorMessage,
+            variant: "destructive"
+          });
+          // Ensure we always have the default products
           setProducts([...initialProducts, ...membershipProducts]);
           setLoading(false);
           return;
@@ -160,13 +166,21 @@ export const useProducts = (initialProducts: Product[]) => {
           console.log('Retrieved', data.length, 'products from Supabase');
           const transformedProducts = data.map(convertFromSupabaseProduct);
           
-          setProducts(transformedProducts);
+          // Make sure membership products are always included
+          // First create a set of IDs from membership products
+          const membershipIds = new Set(membershipProducts.map(p => p.id));
+          
+          // Filter out any existing memberships from DB to avoid duplicates
+          const nonMembershipDbProducts = transformedProducts.filter(p => !membershipIds.has(p.id));
+          
+          // Set the final products array with non-membership DB products + membership products
+          setProducts([...nonMembershipDbProducts, ...membershipProducts]);
         } else {
           console.log('No products found in Supabase, initializing with default products');
-          // Add default products to Supabase
-          const allDefaultProducts = [...initialProducts, ...membershipProducts];
+          // Add default products to Supabase (ignore memberships, we'll handle those separately)
+          const regularProducts = initialProducts.filter(p => p.category !== 'membership');
           
-          for (const product of allDefaultProducts) {
+          for (const product of regularProducts) {
             const supabaseProduct = convertToSupabaseProduct({
               ...product,
               id: product.id || generateId()
@@ -181,29 +195,21 @@ export const useProducts = (initialProducts: Product[]) => {
             }
           }
           
-          // Fetch the products again after adding
-          const { data: updatedData, error: fetchError } = await supabase
-            .from('products')
-            .select('*');
-            
-          if (fetchError) {
-            console.error('Error fetching updated products:', fetchError);
-            setProducts(allDefaultProducts);
-          } else if (updatedData) {
-            const updatedProducts = updatedData.map(convertFromSupabaseProduct);
-            setProducts(updatedProducts);
-          } else {
-            setProducts(allDefaultProducts);
-          }
+          // Set products to initial + membership regardless of DB insert success
+          setProducts([...initialProducts, ...membershipProducts]);
         }
-        
-        setLoading(false);
         
       } catch (error) {
         console.error('Unexpected error in fetchProducts:', error);
         setError('Failed to load products. Please try again later.');
         // Fallback to initialProducts + membershipProducts
         setProducts([...initialProducts, ...membershipProducts]);
+        toast({
+          title: "Error loading products",
+          description: "Failed to load products. Using default products instead.",
+          variant: "destructive"
+        });
+      } finally {
         setLoading(false);
       }
     };
@@ -216,6 +222,16 @@ export const useProducts = (initialProducts: Product[]) => {
       setLoading(true);
       setError(null);
       console.log('Adding product:', product);
+      
+      // Skip adding membership products to the database
+      if (product.category === 'membership') {
+        toast({
+          title: "Info",
+          description: "Membership products are managed by the system and cannot be modified.",
+        });
+        setLoading(false);
+        return;
+      }
       
       const newProductId = generateId();
       const supabaseProduct = convertToSupabaseProduct({
@@ -272,26 +288,64 @@ export const useProducts = (initialProducts: Product[]) => {
       setError(null);
       console.log('Updating product:', product);
       
-      const supabaseProduct = convertToSupabaseProduct(product);
-      
-      const { error } = await supabase
-        .from('products')
-        .update(supabaseProduct)
-        .eq('id', product.id);
-        
-      if (error) {
-        const errorMessage = handleSupabaseError(error, 'updating product');
-        setError(errorMessage);
+      // Don't allow updating membership products in Supabase
+      if (product.category === 'membership' || product.id.startsWith('mem')) {
         toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive'
+          title: "Info",
+          description: "Membership products are managed by the system and cannot be modified.",
         });
         setLoading(false);
         return;
       }
       
-      console.log('Product updated in Supabase');
+      const supabaseProduct = convertToSupabaseProduct(product);
+      
+      // Check if the product exists in Supabase first
+      const { data: existingProduct, error: checkError } = await supabase
+        .from('products')
+        .select('id')
+        .eq('id', product.id)
+        .single();
+        
+      if (checkError) {
+        console.log('Product does not exist in database, creating it:', product.id);
+        // Product doesn't exist, insert it instead
+        const { error: insertError } = await supabase
+          .from('products')
+          .insert(supabaseProduct);
+          
+        if (insertError) {
+          const errorMessage = handleSupabaseError(insertError, 'creating product');
+          setError(errorMessage);
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        }
+      } else {
+        // Product exists, update it
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(supabaseProduct)
+          .eq('id', product.id);
+          
+        if (updateError) {
+          const errorMessage = handleSupabaseError(updateError, 'updating product');
+          setError(errorMessage);
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      
+      console.log('Product updated in state');
       
       setProducts(prevProducts => 
         prevProducts.map(p => p.id === product.id ? product : p)
@@ -316,6 +370,15 @@ export const useProducts = (initialProducts: Product[]) => {
   
   const deleteProduct = async (id: string) => {
     try {
+      // Don't allow deleting membership products
+      if (id.startsWith('mem')) {
+        toast({
+          title: "Info",
+          description: "Membership products are managed by the system and cannot be deleted.",
+        });
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       console.log('Deleting product with ID:', id);
