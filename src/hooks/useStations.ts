@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Station, Session, Customer } from '@/types/pos.types';
+import { Station, Session, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
@@ -173,7 +173,7 @@ export const useStations = (
     fetchSessions();
   }, [initialStations, toast]);
   
-  const startSession = async (stationId: string, customerId: string) => {
+  const startSession = async (stationId: string, customerId: string): Promise<Session | undefined> => {
     try {
       const station = stations.find(s => s.id === stationId);
       if (!station || station.isOccupied) {
@@ -234,6 +234,7 @@ export const useStations = (
         
         return newSession;
       }
+      return undefined;
     } catch (error) {
       console.error('Error in startSession:', error);
       toast({
@@ -245,7 +246,7 @@ export const useStations = (
     }
   };
   
-  const endSession = async (stationId: string, customers: Customer[] = []) => {
+  const endSession = async (stationId: string, customers: Customer[] = []): Promise<SessionResult | undefined> => {
     try {
       console.log("Ending session for station:", stationId);
       const station = stations.find(s => s.id === stationId);
@@ -318,9 +319,9 @@ export const useStations = (
       const hoursPlayed = durationMinutes / 60;
       const sessionCost = Math.ceil(hoursPlayed * stationRate);
       
-      const sessionCartItem = {
+      const sessionCartItem: CartItem = {
         id: updatedSession.id,
-        type: 'session' as const,
+        type: 'session',
         name: `${station.name} (${durationMinutes} mins)`,
         price: sessionCost,
         quantity: 1,
@@ -340,7 +341,7 @@ export const useStations = (
         description: 'Failed to end session',
         variant: 'destructive'
       });
-      return undefined;
+      throw error;
     }
   };
   

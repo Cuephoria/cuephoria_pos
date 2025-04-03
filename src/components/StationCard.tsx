@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,8 +88,11 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
       try {
         const customerId = station.currentSession.customerId;
         
+        // Call endSession and don't check its return value directly
+        // The function will handle adding to cart internally
         await endSession(station.id);
         
+        // Select customer and navigate to POS
         console.log('Navigating to POS with customer ID:', customerId);
         selectCustomer(customerId);
         

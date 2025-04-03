@@ -6,7 +6,8 @@ import {
   CartItem, 
   Bill,
   Product,
-  Session
+  Session,
+  SessionResult
 } from '@/types/pos.types';
 import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
 import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
@@ -83,65 +84,52 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useBills(updateCustomer, updateProduct);
   
   // Wrapper functions that combine functionality from multiple hooks
-  const startSession = (stationId: string, customerId: string) => {
+  const startSession = async (stationId: string, customerId: string): Promise<void> => {
     // Check membership validity before allowing session
     if (!checkMembershipValidity(customerId)) {
-      return;
+      throw new Error("Membership not valid or expired");
     }
     
-    return startSessionBase(stationId, customerId);
+    await startSessionBase(stationId, customerId);
   };
   
-  // This is a key fix - we're making endSession return synchronously but handle the async operation
-  const endSession = (stationId: string) => {
+  // Make endSession return a Promise<void> to match type definition
+  const endSession = async (stationId: string): Promise<void> => {
     try {
-      // Get the current station to prepare synchronous response
+      // Get the current station
       const station = stations.find(s => s.id === stationId);
       if (!station || !station.isOccupied || !station.currentSession) {
         console.log("No active session found for this station in wrapper");
-        return undefined;
+        throw new Error("No active session found");
       }
       
-      // Start the async operation
-      endSessionBase(stationId, customers)
-        .then(result => {
-          if (result) {
-            const { sessionCartItem, customer, updatedSession } = result;
-            
-            // Clear cart before adding the new session
-            clearCart();
-            
-            // Auto-select customer
-            if (customer) {
-              console.log("Auto-selecting customer:", customer.name);
-              selectCustomer(customer.id);
-            }
-            
-            // Add the session to cart
-            console.log("Adding session to cart:", sessionCartItem);
-            addToCart(sessionCartItem);
-          }
-        })
-        .catch(error => {
-          console.error('Error in endSession wrapper:', error);
-        });
+      // Get the customer ID before ending the session
+      const customerId = station.currentSession.customerId;
       
-      // Return a placeholder session result for synchronous code
-      return {
-        updatedSession: station.currentSession,
-        sessionCartItem: {
-          id: station.currentSession.id,
-          type: 'session' as const,
-          name: `${station.name}`,
-          price: 0, // Will be calculated properly in the async handler
-          quantity: 1,
-          total: 0
-        },
-        customer: customers.find(c => c.id === station.currentSession.customerId)
-      };
+      // Call the base endSession function
+      const result = await endSessionBase(stationId, customers);
+      
+      if (result) {
+        const { sessionCartItem, customer } = result;
+        
+        // Clear cart before adding the new session
+        clearCart();
+        
+        // Auto-select customer
+        if (customer) {
+          console.log("Auto-selecting customer:", customer.name);
+          selectCustomer(customer.id);
+        }
+        
+        // Add the session to cart
+        if (sessionCartItem) {
+          console.log("Adding session to cart:", sessionCartItem);
+          addToCart(sessionCartItem);
+        }
+      }
     } catch (error) {
-      console.error('Error in endSession synchronous wrapper:', error);
-      return undefined;
+      console.error('Error in endSession:', error);
+      throw error;
     }
   };
   
