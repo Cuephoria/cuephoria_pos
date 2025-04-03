@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { usePOS, Customer } from '@/context/POSContext';
 import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Customers = () => {
   console.log('Customers component rendering');
@@ -214,10 +214,6 @@ const Customers = () => {
     setFormState(prev => ({ ...prev, isMember: checked }));
   };
 
-  const handleSelectChange = (value: string) => {
-    setFormState(prev => ({ ...prev, membershipPlan: value }));
-  };
-
   // Filter customers based on search query
   const filteredCustomers = searchQuery.trim() === ''
     ? customersData
@@ -226,16 +222,6 @@ const Customers = () => {
         customer.phone.includes(searchQuery) ||
         (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()))
       );
-
-  // Membership plan options
-  const membershipPlans = [
-    'Basic Monthly',
-    'Premium Monthly',
-    'Student Monthly',
-    'Basic Weekly',
-    'Premium Weekly',
-    'Day Pass'
-  ];
 
   // If we have an error, display it
   if (error) {
@@ -326,19 +312,17 @@ const Customers = () => {
                 <div className="space-y-4 border rounded-md p-4 bg-background">
                   <div className="grid gap-2">
                     <Label htmlFor="membershipPlan">Membership Plan</Label>
-                    <Select 
-                      value={formState.membershipPlan} 
-                      onValueChange={handleSelectChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a membership plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {membershipPlans.map(plan => (
-                          <SelectItem key={plan} value={plan}>{plan}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="membershipPlan"
+                      name="membershipPlan"
+                      value={formState.membershipPlan}
+                      readOnly
+                      className="bg-muted cursor-not-allowed"
+                      placeholder="Plan will be set during checkout"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Membership plan is set automatically when purchasing a membership
+                    </p>
                   </div>
                   
                   <div className="grid gap-2">
