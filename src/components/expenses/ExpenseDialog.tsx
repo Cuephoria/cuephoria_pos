@@ -29,10 +29,10 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
     try {
       console.log('Submitting expense data:', data);
       
-      // Ensure we have a valid date object
+      // Make sure we have a proper Date object
       const formattedData = {
         ...data,
-        date: data.date instanceof Date ? data.date : new Date()
+        date: data.date instanceof Date ? data.date : new Date(data.date)
       };
       
       let success = false;
@@ -52,6 +52,12 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
         toast({
           title: expense ? 'Expense Updated' : 'Expense Added',
           description: expense ? 'The expense has been updated successfully.' : 'New expense has been added successfully.',
+        });
+      } else {
+        toast({
+          title: 'Operation Failed',
+          description: `Failed to ${expense ? 'update' : 'add'} expense. Please check your input and try again.`,
+          variant: 'destructive',
         });
       }
     } catch (error) {
