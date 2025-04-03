@@ -87,7 +87,7 @@ const HourlyRevenueDistribution: React.FC = () => {
                 axisLine={false}
                 tickLine={false}
                 width={50}
-                tickFormatter={(value) => `₹${value}`}
+                tickFormatter={(value) => `₹${typeof value === 'number' ? value.toFixed(0) : value}`}
               />
               <Tooltip 
                 content={({ active, payload, label }) => {
@@ -105,7 +105,9 @@ const HourlyRevenueDistribution: React.FC = () => {
                                 />
                                 <span className="text-gray-400">{entry.name}:</span>
                               </div>
-                              <span className="font-bold text-white">₹{entry.value.toFixed(2)}</span>
+                              <span className="font-bold text-white">
+                                ₹{typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
+                              </span>
                             </div>
                           ))}
                         </div>

@@ -184,14 +184,18 @@ const CategoryPerformance: React.FC = () => {
                 dataKey="revenue" 
                 name="Revenue" 
                 radius={[4, 4, 0, 0]}
-                fill={(data) => getCategoryColor(data.category)}
+                fill="#0EA5E9"
+                stroke="none"
+                fillOpacity={0.9}
               />
               <Bar 
                 yAxisId="right" 
                 dataKey="count" 
                 name="Items Sold" 
                 radius={[4, 4, 0, 0]}
-                fill={(data) => `${getCategoryColor(data.category)}80`}
+                fill="#D946EF"
+                stroke="none"
+                fillOpacity={0.7}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -202,4 +206,3 @@ const CategoryPerformance: React.FC = () => {
 };
 
 export default CategoryPerformance;
-
