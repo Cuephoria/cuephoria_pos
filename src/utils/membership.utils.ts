@@ -140,3 +140,19 @@ export const updateCustomerMembershipInternal = (
         : customer.membershipHoursLeft
   };
 };
+
+// Public API functions that match the imports in POSFunctions.ts
+/**
+ * Check membership validity (public API)
+ */
+export const checkMembershipValidity = checkMembershipValidityInternal;
+
+/**
+ * Deduct hours from membership (public API)
+ */
+export const deductMembershipHours = deductMembershipHoursInternal;
+
+/**
+ * Update customer membership data (public API)
+ */
+export const updateCustomerMembership = updateCustomerMembershipInternal;

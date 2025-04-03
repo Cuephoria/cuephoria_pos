@@ -5,9 +5,9 @@ import {
 } from "@/types/pos.types";
 import { generateId } from "@/utils/pos.utils";
 import { 
-  checkMembershipValidityInternal,
-  deductMembershipHoursInternal,
-  updateCustomerMembershipInternal
+  checkMembershipValidity,
+  deductMembershipHours,
+  updateCustomerMembership
 } from "@/utils/membership.utils";
 import { exportToCSV } from "@/services/dataOperations";
 import { generateSampleData } from "@/data/sampleData";
