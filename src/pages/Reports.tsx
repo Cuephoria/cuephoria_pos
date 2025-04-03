@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
@@ -44,8 +44,46 @@ const ReportsPage: React.FC = () => {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
   });
+  const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
+  
+  // Handle date range selection from dropdown
+  const handleDateRangeChange = (value: string) => {
+    setDateRangeKey(value);
+    
+    const today = new Date();
+    let from: Date | undefined;
+    let to: Date | undefined = today;
+    
+    switch (value) {
+      case '7days':
+        from = new Date(today);
+        from.setDate(today.getDate() - 7);
+        break;
+      case '30days':
+        from = new Date(today);
+        from.setDate(today.getDate() - 30);
+        break;
+      case '90days':
+        from = new Date(today);
+        from.setDate(today.getDate() - 90);
+        break;
+      case 'year':
+        from = new Date(today.getFullYear(), 0, 1); // Start of current year
+        break;
+      case 'custom':
+        // Keep the current date range for custom
+        from = date?.from;
+        to = date?.to;
+        break;
+      default:
+        from = new Date(today);
+        from.setDate(today.getDate() - 30);
+    }
+    
+    setDate({ from, to });
+  };
   
   // Function to handle downloading reports
   const handleDownloadReport = () => {
@@ -71,41 +109,32 @@ const ReportsPage: React.FC = () => {
     return 'Select date range';
   };
   
-  // Filter customers based on date joined
-  const filteredCustomers = customers.filter(customer => {
-    if (!date?.from && !date?.to) return true;
-    
-    const joinedDate = customer.createdAt ? new Date(customer.createdAt) : new Date();
-    
-    if (date?.from && date?.to) {
-      return joinedDate >= date.from && joinedDate <= date.to;
-    } else if (date?.from) {
-      return joinedDate >= date.from;
-    } else if (date?.to) {
-      return joinedDate <= date.to;
-    }
-    
-    return true;
-  });
+  // Filter data based on date range
+  const filterByDateRange = <T extends { createdAt: Date | string }>(items: T[]): T[] => {
+    return items.filter(item => {
+      if (!date?.from && !date?.to) return true;
+      
+      const itemDate = item.createdAt instanceof Date 
+        ? item.createdAt 
+        : new Date(item.createdAt);
+      
+      if (date?.from && date?.to) {
+        return itemDate >= date.from && itemDate <= date.to;
+      } else if (date?.from) {
+        return itemDate >= date.from;
+      } else if (date?.to) {
+        return itemDate <= date.to;
+      }
+      
+      return true;
+    });
+  };
   
-  // Filter bills based on date
-  const filteredBills = bills.filter(bill => {
-    if (!date?.from && !date?.to) return true;
-    
-    const billDate = new Date(bill.createdAt);
-    
-    if (date?.from && date?.to) {
-      return billDate >= date.from && billDate <= date.to;
-    } else if (date?.from) {
-      return billDate >= date.from;
-    } else if (date?.to) {
-      return billDate <= date.to;
-    }
-    
-    return true;
-  });
+  // Apply filters to data
+  const filteredCustomers = filterByDateRange(customers);
+  const filteredBills = filterByDateRange(bills);
   
-  // Filter sessions based on date
+  // Filter sessions (special case since sessions use startTime instead of createdAt)
   const filteredSessions = sessions.filter(session => {
     if (!date?.from && !date?.to) return true;
     
@@ -176,6 +205,23 @@ const ReportsPage: React.FC = () => {
     const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
     const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
     
+    // Gaming metrics - calculate PS5 vs Pool revenue
+    let ps5Sales = 0;
+    let poolSales = 0;
+    
+    filteredBills.forEach(bill => {
+      bill.items.forEach(item => {
+        if (item.type === 'session') {
+          const itemName = item.name.toLowerCase();
+          if (itemName.includes('ps5') || itemName.includes('playstation')) {
+            ps5Sales += item.total;
+          } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
+            poolSales += item.total;
+          }
+        }
+      });
+    });
+    
     return {
       financial: {
         totalRevenue,
@@ -196,29 +242,23 @@ const ReportsPage: React.FC = () => {
         nonMemberCount,
         loyaltyPointsUsed,
         loyaltyPointsEarned
+      },
+      gaming: {
+        ps5Sales,
+        poolSales
       }
     };
   };
   
   const summaryMetrics = calculateSummaryMetrics();
   
-  // Format duration in hours and minutes (fixed format to match screenshot)
+  // Format duration in hours and minutes
   const formatDuration = (durationInMinutes: number | undefined) => {
     if (!durationInMinutes) return "0h 0m";
     
     const hours = Math.floor(durationInMinutes / 60);
     const minutes = durationInMinutes % 60;
     return `${hours}h ${minutes}m`;
-  };
-  
-  // Format time to show only the hour and minute in 12-hour format with am/pm
-  const formatTimeHM = (date: Date) => {
-    return format(date, 'hh:mm a');
-  };
-  
-  // Format to match the time format in screenshot (09:56 pm)
-  const formatTimeDigital = (date: Date) => {
-    return format(date, 'HH:mm');
   };
   
   // Calculate total time spent by customer
@@ -249,30 +289,10 @@ const ReportsPage: React.FC = () => {
       .reduce((total, bill) => total + bill.total, 0);
   };
   
-  // Extract first item name for bills display
-  const getFirstItemName = (bill: any) => {
-    if (!bill.items || bill.items.length === 0) return 'Unknown item';
-    
-    const firstItem = bill.items[0];
-    return firstItem.name;
-  };
-  
-  // Calculate total item count
-  const getTotalItemCount = (bill: any) => {
-    if (!bill.items) return 0;
-    return bill.items.length;
-  };
-  
   // Get a customer name by ID
   const getCustomerName = (customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
     return customer?.name || 'Unknown';
-  };
-  
-  // Get formatted date for display
-  const getFormattedDate = (dateString: Date | string) => {
-    const date = new Date(dateString);
-    return `${format(date, 'd MMM yyyy')}\n${format(date, 'HH:mm')} pm`;
   };
   
   return (
@@ -281,7 +301,7 @@ const ReportsPage: React.FC = () => {
       <div className="flex justify-between items-center pb-2">
         <h1 className="text-4xl font-bold">Reports</h1>
         <div className="flex items-center gap-4">
-          <Select defaultValue="30days">
+          <Select value={dateRangeKey} onValueChange={handleDateRangeChange}>
             <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
               <SelectValue placeholder="Last 30 days" />
             </SelectTrigger>
@@ -307,7 +327,12 @@ const ReportsPage: React.FC = () => {
                 mode="range"
                 defaultMonth={date?.from}
                 selected={date}
-                onSelect={setDate}
+                onSelect={(newDate) => {
+                  setDate(newDate);
+                  if (newDate?.from && newDate?.to) {
+                    setDateRangeKey('custom');
+                  }
+                }}
                 numberOfMonths={2}
                 className="p-3 pointer-events-auto bg-gray-800 text-white"
               />
@@ -407,10 +432,16 @@ const ReportsPage: React.FC = () => {
                             <div className="text-gray-400 text-xs">{firstItemName}</div>
                           )}
                         </TableCell>
-                        <TableCell className="text-white">₹{bill.subtotal}</TableCell>
-                        <TableCell className="text-white">₹{bill.discountValue || 0}</TableCell>
+                        <TableCell className="text-white">
+                          <CurrencyDisplay amount={bill.subtotal} />
+                        </TableCell>
+                        <TableCell className="text-white">
+                          <CurrencyDisplay amount={bill.discountValue || 0} />
+                        </TableCell>
                         <TableCell className="text-white">{bill.loyaltyPointsUsed || 0}</TableCell>
-                        <TableCell className="text-white font-semibold">₹{bill.total}</TableCell>
+                        <TableCell className="text-white font-semibold">
+                          <CurrencyDisplay amount={bill.total} />
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={
                             bill.paymentMethod === 'upi'
@@ -433,7 +464,13 @@ const ReportsPage: React.FC = () => {
           <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-1">Customer Activity</h2>
-              <p className="text-gray-400">View all customers and their activity</p>
+              <p className="text-gray-400">
+                View all customers and their activity
+                {date?.from && date?.to ? 
+                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
+                  ''
+                }
+              </p>
             </div>
             <div className="rounded-md overflow-hidden">
               <Table>
@@ -465,7 +502,7 @@ const ReportsPage: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-white">
-                        ₹{calculateCustomerTotalSpent(customer.id).toFixed(2)}
+                        <CurrencyDisplay amount={calculateCustomerTotalSpent(customer.id)} />
                       </TableCell>
                       <TableCell className="text-white">{calculateCustomerPlayTime(customer.id)}</TableCell>
                       <TableCell className="text-white">{customer.loyaltyPoints || 0}</TableCell>
@@ -482,7 +519,13 @@ const ReportsPage: React.FC = () => {
           <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-1">Session History</h2>
-              <p className="text-gray-400">View all game sessions and their details</p>
+              <p className="text-gray-400">
+                View all game sessions and their details
+                {date?.from && date?.to ? 
+                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
+                  ''
+                }
+              </p>
             </div>
             <div className="rounded-md overflow-hidden">
               <Table>
@@ -508,6 +551,10 @@ const ReportsPage: React.FC = () => {
                       const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
                       const hours = Math.floor(durationMinutes / 60);
                       const minutes = durationMinutes % 60;
+                      durationDisplay = `${hours}h ${minutes}m`;
+                    } else if (session.duration) {
+                      const hours = Math.floor(session.duration / 60);
+                      const minutes = session.duration % 60;
                       durationDisplay = `${hours}h ${minutes}m`;
                     }
                         
@@ -547,112 +594,140 @@ const ReportsPage: React.FC = () => {
         )}
         
         {activeTab === 'summary' && (
-          <Card className="border-gray-800 bg-[#1A1F2C] shadow-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xl text-white">Business Summary</CardTitle>
-              <CardDescription className="text-gray-400">
-                Overview of key metrics 
-                {date?.from && date?.to 
-                  ? ` from ${format(date.from, 'MMM do, yyyy')} to ${format(date.to, 'MMM do, yyyy')}` 
-                  : ''
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Financial Metrics */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Financial Metrics</h3>
+          <div className="space-y-8">
+            <BusinessSummaryReport startDate={date?.from} endDate={date?.to} onDownload={handleDownloadReport} />
+            
+            <Card className="border-gray-800 bg-[#1A1F2C] shadow-xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl text-white">Detailed Business Metrics</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Overview of key metrics 
+                  {date?.from && date?.to 
+                    ? ` from ${format(date.from, 'MMM do, yyyy')} to ${format(date.to, 'MMM do, yyyy')}` 
+                    : ''
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Financial Metrics */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Financial Metrics</h3>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Revenue</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.financial.totalRevenue} />
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Average Bill Value</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.financial.averageBillValue} showDecimals />
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Discounts Given</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.financial.totalDiscounts} />
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Cash Sales</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.financial.cashSales} />
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">UPI Sales</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.financial.upiSales} />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total Revenue</span>
-                      <span className="font-semibold text-white">₹{summaryMetrics.financial.totalRevenue}</span>
-                    </div>
+                  {/* Operational Metrics */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Operational Metrics</h3>
                     
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Average Bill Value</span>
-                      <span className="font-semibold text-white">₹{summaryMetrics.financial.averageBillValue.toFixed(2)}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Transactions</span>
+                        <span className="font-semibold text-white">{summaryMetrics.operational.totalTransactions}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Active Sessions</span>
+                        <span className="font-semibold text-white">{summaryMetrics.operational.activeSessions}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Completed Sessions</span>
+                        <span className="font-semibold text-white">{summaryMetrics.operational.completedSessions}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Most Popular Product</span>
+                        <span className="font-semibold text-white">{summaryMetrics.operational.mostPopularProduct}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">PS5 Revenue</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.gaming.ps5Sales} />
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">8-Ball Revenue</span>
+                        <span className="font-semibold text-white">
+                          <CurrencyDisplay amount={summaryMetrics.gaming.poolSales} />
+                        </span>
+                      </div>
                     </div>
+                  </div>
+                  
+                  {/* Customer Metrics */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Customer Metrics</h3>
                     
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total Discounts Given</span>
-                      <span className="font-semibold text-white">₹{summaryMetrics.financial.totalDiscounts}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Cash Sales</span>
-                      <span className="font-semibold text-white">₹{summaryMetrics.financial.cashSales}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">UPI Sales</span>
-                      <span className="font-semibold text-white">₹{summaryMetrics.financial.upiSales}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Customers</span>
+                        <span className="font-semibold text-white">{summaryMetrics.customer.totalCustomers}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Members</span>
+                        <span className="font-semibold text-white">{summaryMetrics.customer.memberCount}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Non-Members</span>
+                        <span className="font-semibold text-white">{summaryMetrics.customer.nonMemberCount}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Loyalty Points Used</span>
+                        <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsUsed}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Loyalty Points Earned</span>
+                        <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsEarned}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Operational Metrics */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Operational Metrics</h3>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total Transactions</span>
-                      <span className="font-semibold text-white">{summaryMetrics.operational.totalTransactions}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Active Sessions</span>
-                      <span className="font-semibold text-white">{summaryMetrics.operational.activeSessions}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Completed Sessions</span>
-                      <span className="font-semibold text-white">{summaryMetrics.operational.completedSessions}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Most Popular Product</span>
-                      <span className="font-semibold text-white">{summaryMetrics.operational.mostPopularProduct}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Customer Metrics */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Customer Metrics</h3>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total Customers</span>
-                      <span className="font-semibold text-white">{summaryMetrics.customer.totalCustomers}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Members</span>
-                      <span className="font-semibold text-white">{summaryMetrics.customer.memberCount}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Non-Members</span>
-                      <span className="font-semibold text-white">{summaryMetrics.customer.nonMemberCount}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Loyalty Points Used</span>
-                      <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsUsed}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Loyalty Points Earned</span>
-                      <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsEarned}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>

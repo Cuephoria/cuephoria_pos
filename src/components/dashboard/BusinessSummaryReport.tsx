@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
+import { usePOS } from '@/context/POSContext';
 
 interface BusinessSummaryReportProps {
   startDate?: Date;
@@ -26,6 +27,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   onDownload 
 }) => {
   const { expenses, businessSummary } = useExpenses();
+  const { bills, products } = usePOS();
   
   // Filter expenses based on date range if provided
   const filteredExpenses = expenses.filter(expense => {
@@ -73,6 +75,48 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     return categoryMap[category] || category;
   };
   
+  // Calculate PS5 and 8-Ball sales
+  const calculateGameSales = () => {
+    // Filter bills based on date range
+    const filteredBills = bills.filter(bill => {
+      if (!startDate && !endDate) return true;
+      
+      const billDate = new Date(bill.createdAt);
+      
+      if (startDate && endDate) {
+        return billDate >= startDate && billDate <= endDate;
+      } else if (startDate) {
+        return billDate >= startDate;
+      } else if (endDate) {
+        return billDate <= endDate;
+      }
+      
+      return true;
+    });
+    
+    let ps5Sales = 0;
+    let poolSales = 0;
+    
+    filteredBills.forEach(bill => {
+      bill.items.forEach(item => {
+        // Check if the item is a session
+        if (item.type === 'session') {
+          // Look for PS5 or Pool in the name (case insensitive)
+          const itemName = item.name.toLowerCase();
+          if (itemName.includes('ps5') || itemName.includes('playstation')) {
+            ps5Sales += item.total;
+          } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
+            poolSales += item.total;
+          }
+        }
+      });
+    });
+    
+    return { ps5Sales, poolSales };
+  };
+  
+  const { ps5Sales, poolSales } = calculateGameSales();
+  
   return (
     <Card>
       <CardHeader>
@@ -110,31 +154,79 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           </div>
         </div>
         
-        <h3 className="font-semibold text-base mb-2">Expenses by Category</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Category</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>% of Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {categoryTotals.map(({ category, total }) => (
-              <TableRow key={category}>
-                <TableCell>{formatCategory(category)}</TableCell>
-                <TableCell>
-                  <CurrencyDisplay amount={total} />
-                </TableCell>
-                <TableCell>
-                  {businessSummary.totalExpenses 
-                    ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
-                    : '0.0'}%
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="grid gap-6 md:grid-cols-2 mb-6">
+          <div>
+            <h3 className="font-semibold text-base mb-2">Expenses by Category</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>% of Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categoryTotals.map(({ category, total }) => (
+                  <TableRow key={category}>
+                    <TableCell>{formatCategory(category)}</TableCell>
+                    <TableCell>
+                      <CurrencyDisplay amount={total} />
+                    </TableCell>
+                    <TableCell>
+                      {businessSummary.totalExpenses 
+                        ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
+                        : '0.0'}%
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          
+          <div>
+            <h3 className="font-semibold text-base mb-2">Gaming Station Revenue</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Station Type</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>% of Gaming Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>PS5 Stations</TableCell>
+                  <TableCell>
+                    <CurrencyDisplay amount={ps5Sales} />
+                  </TableCell>
+                  <TableCell>
+                    {ps5Sales + poolSales > 0 
+                      ? ((ps5Sales / (ps5Sales + poolSales)) * 100).toFixed(1) 
+                      : '0.0'}%
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>8-Ball Pool</TableCell>
+                  <TableCell>
+                    <CurrencyDisplay amount={poolSales} />
+                  </TableCell>
+                  <TableCell>
+                    {ps5Sales + poolSales > 0 
+                      ? ((poolSales / (ps5Sales + poolSales)) * 100).toFixed(1) 
+                      : '0.0'}%
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-semibold">Total</TableCell>
+                  <TableCell className="font-semibold">
+                    <CurrencyDisplay amount={ps5Sales + poolSales} />
+                  </TableCell>
+                  <TableCell>100.0%</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
