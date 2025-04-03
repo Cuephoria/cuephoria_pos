@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -29,6 +28,10 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   const { expenses, businessSummary } = useExpenses();
   const { bills, products } = usePOS();
   
+  // Get current month and year
+  const currentDate = new Date();
+  const currentMonthYear = format(currentDate, 'MMMM yyyy');
+
   // Filter expenses based on date range if provided
   const filteredExpenses = expenses.filter(expense => {
     if (!startDate && !endDate) return true;
@@ -128,7 +131,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               ? `From ${format(startDate, 'PP')}`
               : endDate
                 ? `Until ${format(endDate, 'PP')}`
-                : 'All time summary'
+                : `Financial overview for ${currentMonthYear}`
           }
         </CardDescription>
       </CardHeader>
