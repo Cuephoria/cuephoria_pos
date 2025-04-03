@@ -55,27 +55,25 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   initialData,
   onCancel
 }) => {
-  // Ensure initialData.date is a Date object
-  let initialDate: Date;
+  // Initialize with current date if no date is provided
+  const today = new Date();
+  let initialDate = today;
   
   if (initialData?.date) {
+    // Handle different date formats that might come from the API or context
     if (initialData.date instanceof Date) {
       initialDate = initialData.date;
-    } else if (typeof initialData.date === 'object' && initialData.date._type === 'Date') {
-      // Handle serialized date object
-      initialDate = new Date(initialData.date.value.iso);
     } else {
       try {
         initialDate = new Date(initialData.date as any);
         if (isNaN(initialDate.getTime())) {
-          initialDate = new Date(); // Fallback to current date if invalid
+          initialDate = today; // Fallback to current date if invalid
         }
       } catch (e) {
-        initialDate = new Date(); // Fallback to current date
+        console.error('Failed to parse initial date:', e);
+        initialDate = today; // Fallback to current date
       }
     }
-  } else {
-    initialDate = new Date(); // Default to current date
   }
   
   console.log('Form initializing with date:', initialDate);
@@ -95,16 +93,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   const isRecurring = form.watch('isRecurring');
 
-  console.log('Current form values:', form.getValues());
-
   const handleFormSubmit = (data: ExpenseFormData) => {
     console.log('Form submitting with data:', data);
-    // Ensure the date is a clean Date object before submitting
-    const cleanData = {
-      ...data,
-      date: data.date instanceof Date ? data.date : new Date(data.date as any)
-    };
-    onSubmit(cleanData);
+    onSubmit(data);
   };
 
   return (
@@ -234,12 +225,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value instanceof Date ? field.value : new Date(field.value as any)}
+                    selected={field.value}
                     onSelect={(date) => {
                       console.log('Calendar date selected:', date);
                       if (date) {
-                        // Ensure we're passing a clean Date object
-                        field.onChange(new Date(date));
+                        field.onChange(date);
                       }
                     }}
                     initialFocus

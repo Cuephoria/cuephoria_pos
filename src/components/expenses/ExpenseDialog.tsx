@@ -29,60 +29,14 @@ const ExpenseDialog: React.FC<ExpenseDialogProps> = ({ expense, children }) => {
     try {
       console.log('Submitting expense data:', data);
       
-      // Ensure we have a proper Date object
-      let dateObj: Date;
-      
-      if (data.date instanceof Date) {
-        dateObj = data.date;
-      } else if (data.date && typeof data.date === 'object' && data.date._type === 'Date') {
-        // Handle serialized date object from form
-        try {
-          dateObj = new Date(data.date.value.iso);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date format');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', data.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format. Please select a valid date.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      } else {
-        try {
-          dateObj = new Date(data.date as any);
-          if (isNaN(dateObj.getTime())) {
-            throw new Error('Invalid date format');
-          }
-        } catch (err) {
-          console.error('Failed to parse date:', data.date);
-          toast({
-            title: 'Error',
-            description: 'Invalid date format. Please select a valid date.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-      
-      console.log('Valid date confirmed:', dateObj);
-      
-      // Create a clean data object with the correct date
-      const cleanData = {
-        ...data,
-        date: dateObj
-      };
-      
       let success = false;
       
       if (expense) {
         // Update existing expense
-        success = await updateExpense({ ...cleanData, id: expense.id });
+        success = await updateExpense({ ...data, id: expense.id });
       } else {
         // Add new expense
-        success = await addExpense(cleanData);
+        success = await addExpense(data);
       }
       
       console.log('Expense operation result:', success);
