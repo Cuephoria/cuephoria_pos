@@ -11,9 +11,11 @@ const Stations = () => {
   const { stations } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
   
+  // Separate stations by type
   const ps5Stations = stations.filter(station => station.type === 'ps5');
   const ballStations = stations.filter(station => station.type === '8ball');
 
+  // Count active stations
   const activePs5 = ps5Stations.filter(s => s.isOccupied).length;
   const activeBall = ballStations.filter(s => s.isOccupied).length;
 
@@ -31,6 +33,7 @@ const Stations = () => {
         </div>
       </div>
 
+      {/* Add Station Dialog */}
       <AddStationDialog 
         open={openAddDialog} 
         onOpenChange={setOpenAddDialog} 
@@ -49,14 +52,14 @@ const Stations = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-r from-slate-900/20 to-black/10 border-cuephoria-purple/30 border animate-fade-in delay-100">
+        <Card className="bg-gradient-to-r from-green-900/20 to-green-700/10 border-green-500/30 border animate-fade-in delay-100">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">8-Ball Tables</p>
               <p className="text-2xl font-bold">{activeBall} / {ballStations.length} Active</p>
             </div>
-            <div className="rounded-full bg-slate-900/30 p-3">
-              <CircleOff className="h-6 w-6 text-cuephoria-lightpurple" />
+            <div className="rounded-full bg-green-900/30 p-3">
+              <CircleOff className="h-6 w-6 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -82,9 +85,9 @@ const Stations = () => {
 
         <div className="animate-slide-up delay-300">
           <div className="flex items-center mb-4">
-            <CircleOff className="h-5 w-5 text-cuephoria-lightpurple mr-2" />
+            <CircleOff className="h-5 w-5 text-green-500 mr-2" />
             <h3 className="text-xl font-semibold font-heading">8-Ball Tables</h3>
-            <span className="ml-2 bg-slate-900/30 text-cuephoria-lightpurple text-xs px-2 py-1 rounded-full">
+            <span className="ml-2 bg-green-800/30 text-green-400 text-xs px-2 py-1 rounded-full">
               {activeBall} active
             </span>
           </div>
