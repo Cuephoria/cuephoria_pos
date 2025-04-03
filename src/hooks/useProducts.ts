@@ -3,7 +3,7 @@ import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
-import { initialProducts, indianProducts } from '@/data/sampleData';
+import { initialProducts } from '@/data/sampleData';
 
 const membershipProducts: Product[] = [
   { 
@@ -337,40 +337,9 @@ export const useProducts = () => {
   };
   
   const resetToInitialProducts = () => {
-    const allProducts = [...initialProducts, ...indianProducts, ...membershipProducts];
+    const allProducts = [...initialProducts, ...membershipProducts];
     setProducts(allProducts);
     setError(null);
-    
-    const nonMembershipProducts = allProducts.filter(p => p.category !== 'membership');
-    
-    supabase
-      .from('products')
-      .delete()
-      .neq('id', 'dummy')
-      .then(() => {
-        if (nonMembershipProducts.length > 0) {
-          supabase
-            .from('products')
-            .insert(nonMembershipProducts.map(convertToSupabaseProduct))
-            .then(({ error }) => {
-              if (error) {
-                console.error('Error syncing products to DB:', error);
-                toast({
-                  title: 'Error',
-                  description: 'Failed to sync products with database',
-                  variant: 'destructive'
-                });
-              } else {
-                console.log('Successfully reset and synced products to DB');
-                toast({
-                  title: 'Success',
-                  description: `Reset ${nonMembershipProducts.length} products and synced with database`,
-                });
-              }
-            });
-        }
-      });
-    
     console.log('Reset to initial products:', allProducts.length);
     return allProducts;
   };
@@ -442,8 +411,7 @@ export const useProducts = () => {
       } else {
         console.log('No products in DB, using initial data and syncing to DB');
         
-        const initialNonMembershipProducts = [...initialProducts, ...indianProducts]
-          .filter(p => p.category !== 'membership');
+        const initialNonMembershipProducts = initialProducts.filter(p => p.category !== 'membership');
         
         if (initialNonMembershipProducts.length > 0) {
           const { error: insertError } = await supabase
@@ -461,15 +429,12 @@ export const useProducts = () => {
             console.log('Initialized DB with sample products');
             toast({
               title: 'Success',
-              description: 'Initialized database with sample products including Indian items',
+              description: 'Initialized database with sample products',
             });
           }
         }
         
-        const allProducts = [...initialProducts, ...indianProducts, ...membershipProducts];
-        setProducts(allProducts);
-        setError(null);
-        return allProducts;
+        return resetToInitialProducts();
       }
     } catch (error) {
       console.error('Error refreshing products:', error);

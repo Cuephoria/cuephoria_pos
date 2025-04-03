@@ -1,4 +1,3 @@
-
 import { Product, Station, Customer } from '@/types/pos.types';
 
 // Sample data
@@ -35,27 +34,6 @@ export const initialProducts: Product[] = [
   { 
     id: 'ch5', 
     name: 'MetaShot Challenge 3', 
-    price: 249, 
-    category: 'challenges', 
-    stock: 9999 
-  },
-  { 
-    id: 'ch6', 
-    name: 'Carrom Challenge', 
-    price: 149, 
-    category: 'challenges', 
-    stock: 9999 
-  },
-  { 
-    id: 'ch7', 
-    name: 'Kabaddi Virtual Experience', 
-    price: 199, 
-    category: 'challenges', 
-    stock: 9999 
-  },
-  { 
-    id: 'ch8', 
-    name: 'Cricket Simulator', 
     price: 249, 
     category: 'challenges', 
     stock: 9999 
@@ -97,41 +75,6 @@ export const initialProducts: Product[] = [
     category: 'food', 
     stock: 60 
   },
-  { 
-    id: 'f6', 
-    name: 'Butter Naan (2 pcs)', 
-    price: 40, 
-    category: 'food', 
-    stock: 45 
-  },
-  { 
-    id: 'f7', 
-    name: 'Aloo Paratha', 
-    price: 60, 
-    category: 'food', 
-    stock: 35 
-  },
-  { 
-    id: 'f8', 
-    name: 'Panipuri (6 pcs)', 
-    price: 50, 
-    category: 'food', 
-    stock: 40 
-  },
-  { 
-    id: 'f9', 
-    name: 'Chole Bhature', 
-    price: 100, 
-    category: 'food', 
-    stock: 25 
-  },
-  { 
-    id: 'f10', 
-    name: 'Gulab Jamun (2 pcs)', 
-    price: 40, 
-    category: 'food', 
-    stock: 30 
-  },
   
   // Drinks Category
   { 
@@ -169,41 +112,6 @@ export const initialProducts: Product[] = [
     category: 'drinks', 
     stock: 40 
   },
-  { 
-    id: 'd6', 
-    name: 'Sweet Lassi', 
-    price: 50, 
-    category: 'drinks', 
-    stock: 45 
-  },
-  { 
-    id: 'd7', 
-    name: 'Cold Coffee', 
-    price: 70, 
-    category: 'drinks', 
-    stock: 60 
-  },
-  { 
-    id: 'd8', 
-    name: 'Frooti', 
-    price: 35, 
-    category: 'drinks', 
-    stock: 70 
-  },
-  { 
-    id: 'd9', 
-    name: 'Fresh Sugarcane Juice', 
-    price: 45, 
-    category: 'drinks', 
-    stock: 40 
-  },
-  { 
-    id: 'd10', 
-    name: 'Badam Milk', 
-    price: 55, 
-    category: 'drinks', 
-    stock: 35 
-  },
   
   // Tobacco Category
   { 
@@ -240,34 +148,6 @@ export const initialProducts: Product[] = [
     price: 320, 
     category: 'tobacco', 
     stock: 30 
-  },
-  { 
-    id: 't6', 
-    name: 'King Size Filter (Pack)', 
-    price: 330, 
-    category: 'tobacco', 
-    stock: 25 
-  },
-  { 
-    id: 't7', 
-    name: 'Four Square (Pack)', 
-    price: 310, 
-    category: 'tobacco', 
-    stock: 30 
-  },
-  { 
-    id: 't8', 
-    name: 'Charminar (Pack)', 
-    price: 300, 
-    category: 'tobacco', 
-    stock: 35 
-  },
-  { 
-    id: 't9', 
-    name: 'Bristol (Pack)', 
-    price: 290, 
-    category: 'tobacco', 
-    stock: 40 
   },
   { 
     id: 'p1', 
@@ -414,62 +294,6 @@ export const indianProducts: Product[] = [
     id: 'ip7', 
     name: 'Gulab Jamun', 
     price: 35, 
-    category: 'food', 
-    stock: 30 
-  },
-  { 
-    id: 'ip8', 
-    name: 'Kesar Kulfi', 
-    price: 40, 
-    category: 'food', 
-    stock: 35 
-  },
-  { 
-    id: 'ip9', 
-    name: 'Falooda', 
-    price: 80, 
-    category: 'drinks', 
-    stock: 25 
-  },
-  { 
-    id: 'ip10', 
-    name: 'Bhel Puri', 
-    price: 50, 
-    category: 'food', 
-    stock: 40 
-  },
-  { 
-    id: 'ip11', 
-    name: 'Bidi (Pack)', 
-    price: 150, 
-    category: 'tobacco', 
-    stock: 45 
-  },
-  { 
-    id: 'ip12', 
-    name: 'Guthka (Pack)', 
-    price: 120, 
-    category: 'tobacco', 
-    stock: 50 
-  },
-  { 
-    id: 'ip13', 
-    name: 'Kabaddi Tournament Entry', 
-    price: 199, 
-    category: 'challenges', 
-    stock: 9999 
-  },
-  { 
-    id: 'ip14', 
-    name: 'Cricket Video Game Session', 
-    price: 250, 
-    category: 'challenges', 
-    stock: 9999 
-  },
-  { 
-    id: 'ip15', 
-    name: 'Jalebi', 
-    price: 60, 
     category: 'food', 
     stock: 30 
   }
