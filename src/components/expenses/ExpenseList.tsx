@@ -29,6 +29,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface ExpenseListProps {
+  selectedMonth?: string;
+}
+
 const getCategoryColor = (category: string) => {
   switch (category) {
     case 'rent':
@@ -44,8 +48,19 @@ const getCategoryColor = (category: string) => {
   }
 };
 
-const ExpenseList: React.FC = () => {
+const ExpenseList: React.FC<ExpenseListProps> = ({ selectedMonth }) => {
   const { expenses, deleteExpense } = useExpenses();
+  
+  // Filter expenses based on the selected month
+  const filteredExpenses = expenses.filter(expense => {
+    if (!selectedMonth || selectedMonth === 'all') return true;
+    
+    const expenseDate = new Date(expense.date);
+    const currentYear = new Date().getFullYear();
+    const monthIndex = parseInt(selectedMonth);
+    
+    return expenseDate.getMonth() === monthIndex && expenseDate.getFullYear() === currentYear;
+  });
   
   const formatErrorMessage = (error: unknown): string => {
     if (error && typeof error === 'object' && 'message' in error) {
@@ -65,7 +80,12 @@ const ExpenseList: React.FC = () => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Recent Expenses</CardTitle>
+        <CardTitle>
+          {selectedMonth && selectedMonth !== 'all' 
+            ? `Expenses for ${new Date(new Date().getFullYear(), parseInt(selectedMonth)).toLocaleString('default', { month: 'long' })}`
+            : 'Recent Expenses'
+          }
+        </CardTitle>
         <ExpenseDialog>
           <Button variant="default" className="flex items-center gap-2">
             <PlusCircle className="h-4 w-4" />
@@ -74,7 +94,7 @@ const ExpenseList: React.FC = () => {
         </ExpenseDialog>
       </CardHeader>
       <CardContent>
-        {expenses.length === 0 ? (
+        {filteredExpenses.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No expenses found. Add your first expense by clicking the button above.
           </div>
@@ -92,7 +112,7 @@ const ExpenseList: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.map((expense) => (
+                {filteredExpenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>{expense.name}</TableCell>
                     <TableCell>
