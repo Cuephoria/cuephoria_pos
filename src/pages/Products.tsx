@@ -259,13 +259,6 @@ const Products = () => {
         </div>
       </div>
 
-      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
-        <p className="font-medium">Debug Info:</p>
-        <p>Total products: {products.length} | Current tab: {activeTab} | Products in view: {filteredProducts.length}</p>
-        <p>Categories: {Object.entries(categoryCounts).map(([cat, count]) => `${cat}: ${count}`).join(', ')}</p>
-        <p>{debugMessage}</p>
-      </div>
-
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
