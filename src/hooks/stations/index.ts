@@ -94,13 +94,13 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     endSession,
     deleteSession,
     deleteAllSessions,
+    refreshSessions,
     deleteStation,
     stationsLoading,
     stationsError,
     sessionsLoading,
     sessionsError,
     refreshStations,
-    refreshSessions,
     isLoading
   };
 };

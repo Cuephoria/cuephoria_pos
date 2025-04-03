@@ -41,6 +41,7 @@ const POSContext = createContext<POSContextType>({
   endSession: async () => {},
   deleteSession: async () => false,
   deleteAllSessions: async () => false,
+  refreshSessions: async () => {},
   deleteStation: async () => false,
   addCustomer: () => ({}),
   updateCustomer: () => ({}),
@@ -105,6 +106,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     endSession: endSessionBase,
     deleteSession: deleteSessionBase,
     deleteAllSessions: deleteAllSessionsBase,
+    refreshSessions: refreshSessionsBase,
     deleteStation
   } = useStations([], updateCustomer);
   
@@ -188,6 +190,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Add deleteAllSessions function
   const deleteAllSessions = async (): Promise<boolean> => {
     return await deleteAllSessionsBase();
+  };
+
+  // Add refreshSessions function
+  const refreshSessions = async (): Promise<void> => {
+    await refreshSessionsBase();
   };
   
   // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
@@ -415,6 +422,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         endSession,
         deleteSession,
         deleteAllSessions,
+        refreshSessions,
         deleteStation,
         addCustomer,
         updateCustomer,
