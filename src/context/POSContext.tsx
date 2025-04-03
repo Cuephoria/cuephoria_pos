@@ -11,14 +11,11 @@ import {
   Session,
   SessionResult
 } from '@/types/pos.types';
-import { initialProducts, initialStations, initialCustomers } from '@/data/sampleData';
-import { resetToSampleData, addSampleIndianData } from '@/services/dataOperations';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
-import { useToast } from '@/hooks/use-toast';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -69,7 +66,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // State for student discount
   const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
-  const { toast } = useToast();
   
   // Initialize all hooks
   const { 
@@ -79,10 +75,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts, 
     addProduct, 
     updateProduct, 
-    deleteProduct,
-    syncInitialDataToSupabase,
-    refreshFromDB,
-    resetToInitialProducts
+    deleteProduct 
   } = useProducts();
   
   const { 
@@ -97,7 +90,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     selectCustomer,
     checkMembershipValidity,
     deductMembershipHours
-  } = useCustomers(initialCustomers);
+  } = useCustomers([]);
   
   const { 
     stations, 
@@ -107,7 +100,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startSession: startSessionBase, 
     endSession: endSessionBase,
     deleteStation
-  } = useStations(initialStations, updateCustomer);
+  } = useStations([], updateCustomer);
   
   const { 
     cart, 
@@ -337,43 +330,46 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomersBase(customers);
   };
   
-  // Wrapper for sample data functions
-  const handleResetToSampleData = async (options?: ResetOptions) => {
-    try {
-      // Use the refreshFromDB function to sync with Supabase
-      await refreshFromDB();
-      
-      toast({
-        title: 'Data Refreshed',
-        description: 'Data has been refreshed from Supabase.',
-      });
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh data from Supabase.',
-        variant: 'destructive'
-      });
+  // Simplified reset function - only resets local state
+  const handleResetToSampleData = (options?: ResetOptions) => {
+    // Clear all data except for products (maintained by Supabase sync)
+    if (options?.customers || !options) {
+      setCustomers([]);
+      localStorage.removeItem('cuephoriaCustomers');
     }
+    
+    if (options?.sales || !options) {
+      setBills([]);
+      localStorage.removeItem('cuephoriaBills');
+    }
+    
+    if (options?.sessions || !options) {
+      setSessions([]);
+      setStations(stations.map(station => ({
+        ...station,
+        isOccupied: false,
+        currentSession: null
+      })));
+      localStorage.removeItem('cuephoriaSessions');
+      localStorage.removeItem('cuephoriaStations');
+    }
+    
+    // Clear cart regardless
+    setCart([]);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    setSelectedCustomer(null);
+    
+    // Refresh products from DB
+    products[0].refreshFromDB?.();
   };
   
-  const handleAddSampleIndianData = async () => {
-    try {
-      // Sync the initial data to Supabase
-      await syncInitialDataToSupabase();
-      
-      toast({
-        title: 'Data Synced',
-        description: 'Sample data has been synced to Supabase.',
-      });
-    } catch (error) {
-      console.error('Error syncing data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to sync data to Supabase.',
-        variant: 'destructive'
-      });
-    }
+  // This function is no longer needed but kept for API compatibility
+  const handleAddSampleIndianData = () => {
+    toast({
+      title: "Info",
+      description: "Sample data has been disabled. Please add products manually or through database import.",
+    });
   };
   
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {

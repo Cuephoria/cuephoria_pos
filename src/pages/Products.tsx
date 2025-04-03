@@ -13,7 +13,7 @@ import { ProductFormState } from '@/components/product/ProductForm';
 
 const ProductsPage: React.FC = () => {
   const { addProduct, updateProduct, deleteProduct, products } = usePOS();
-  const { resetToInitialProducts, refreshFromDB, syncInitialDataToSupabase } = useProducts();
+  const { resetToInitialProducts, refreshFromDB } = useProducts();
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -24,7 +24,6 @@ const ProductsPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleOpenDialog = () => {
     setIsEditMode(false);
@@ -134,10 +133,10 @@ const ProductsPage: React.FC = () => {
       await resetToInitialProducts();
       toast({
         title: 'Products Reset',
-        description: 'Products have been reset to initial sample data.',
+        description: 'Products have been reset to default values.',
       });
     } catch (error) {
-      console.error('Reset error:', error);
+      console.error('Error resetting products:', error);
       toast({
         title: 'Error',
         description: 'Failed to reset products. Please try again.',
@@ -157,34 +156,14 @@ const ProductsPage: React.FC = () => {
         description: 'Products have been refreshed from the database.',
       });
     } catch (error) {
-      console.error('Refresh error:', error);
+      console.error('Error refreshing products:', error);
       toast({
         title: 'Error',
-        description: 'Failed to refresh products. Please try again.',
+        description: 'Failed to refresh products from database. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsRefreshing(false);
-    }
-  };
-
-  const handleSyncToSupabase = async () => {
-    try {
-      setIsSyncing(true);
-      await syncInitialDataToSupabase();
-      toast({
-        title: 'Data Synced',
-        description: 'Sample data has been synced to Supabase.',
-      });
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to sync data to Supabase. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSyncing(false);
     }
   };
 
@@ -203,41 +182,19 @@ const ProductsPage: React.FC = () => {
   }, [products]);
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <h2 className="text-3xl font-bold tracking-tight flex-grow">Products</h2>
-        <div className="flex flex-wrap justify-end gap-2 w-full md:w-auto">
-          <Button 
-            onClick={handleSyncToSupabase} 
-            variant="outline" 
-            disabled={isSyncing}
-            className="flex items-center justify-center w-full md:w-auto"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} /> 
-            Sync to Supabase
-          </Button>
-          <Button 
-            onClick={handleRefreshProducts} 
-            variant="outline" 
-            disabled={isRefreshing}
-            className="flex items-center justify-center w-full md:w-auto"
-          >
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Products</h2>
+        <div className="flex space-x-2">
+          <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
             Refresh DB
           </Button>
-          <Button 
-            onClick={handleResetProducts} 
-            variant="outline" 
-            disabled={isResetting}
-            className="flex items-center justify-center w-full md:w-auto"
-          >
+          <Button onClick={handleResetProducts} variant="outline" disabled={isResetting}>
             <RotateCcw className={`h-4 w-4 mr-2 ${isResetting ? 'animate-spin' : ''}`} /> 
             Reset
           </Button>
-          <Button 
-            onClick={handleOpenDialog} 
-            className="flex items-center justify-center w-full md:w-auto"
-          >
+          <Button onClick={handleOpenDialog}>
             <Plus className="h-4 w-4 mr-2" /> Add Product
           </Button>
         </div>
