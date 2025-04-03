@@ -150,14 +150,12 @@ const StationActions: React.FC<StationActionsProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0">
           <Command>
-            <div className="flex items-center border-b px-3">
-              <CommandInput 
-                placeholder="Search by phone number..." 
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-                className="h-11 w-full border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
+            <CommandInput 
+              placeholder="Search by phone number..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              className="w-full border-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
             <CommandList>
               <CommandEmpty>
                 <div className="p-2 text-center text-sm">
