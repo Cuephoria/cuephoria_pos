@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Bill } from '@/context/POSContext';
+import { CurrencyDisplay } from '@/components/ui/currency';
 
 interface ReceiptItemsProps {
   bill: Bill;
@@ -16,7 +17,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill }) => {
             <span>{item.name}</span>
             {item.quantity > 1 && <span className="text-gray-600"> x{item.quantity}</span>}
           </div>
-          <span>₹{item.total.toLocaleString('en-IN')}</span>
+          <CurrencyDisplay amount={item.total} />
         </div>
       ))}
     </div>
