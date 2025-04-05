@@ -106,14 +106,10 @@ export const useStationsData = () => {
         isOccupied: station.isOccupied
       });
       
-      // Let's try to fix the PS5 deletion issue by directly examining the DB structure first
+      // Remove the problematic RPC call that caused the TypeScript error
+      // Instead, just log information about the station directly
       console.log("Checking database for station with ID:", stationId);
-      const { data: tableInfo } = await supabase
-        .rpc('get_table_columns', { table_name: 'stations' });
-      
-      if (tableInfo) {
-        console.log("Stations table structure:", tableInfo);
-      }
+      console.log("Station type to be deleted:", station.type);
       
       // CRITICAL FIX: Enhanced direct query to make sure the station exists
       const { data: stationCheck, error: checkError } = await supabase
