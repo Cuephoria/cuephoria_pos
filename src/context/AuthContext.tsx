@@ -7,6 +7,11 @@ interface AdminUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  position?: string;
+  salary?: number;
+  joiningDate?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
 }
 
 interface AuthContextType {
@@ -14,8 +19,10 @@ interface AuthContextType {
   login: (username: string, password: string, isAdminLogin: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
-  addStaffMember: (username: string, password: string) => Promise<boolean>;
+  addStaffMember: (username: string, password: string, position?: string, salary?: number, joiningDate?: string, shiftStart?: string, shiftEnd?: string) => Promise<boolean>;
   getStaffMembers: () => Promise<AdminUser[]>;
+  updateStaffMember: (id: string, data: Partial<AdminUser>) => Promise<boolean>;
+  deleteStaffMember: (id: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,7 +118,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Function for admins to add staff members
-  const addStaffMember = async (username: string, password: string): Promise<boolean> => {
+  const addStaffMember = async (
+    username: string, 
+    password: string, 
+    position?: string, 
+    salary?: number, 
+    joiningDate?: string, 
+    shiftStart?: string, 
+    shiftEnd?: string
+  ): Promise<boolean> => {
     try {
       if (!user?.isAdmin) {
         console.error("Only admins can add staff members");
@@ -135,7 +150,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .insert({
           username,
           password,
-          is_admin: false
+          is_admin: false,
+          position,
+          salary,
+          joining_date: joiningDate,
+          shift_start: shiftStart,
+          shift_end: shiftEnd
         });
       
       if (error) {
@@ -160,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { data, error } = await supabase
         .from('admin_users')
-        .select('id, username, is_admin')
+        .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
         .eq('is_admin', false);
       
       if (error) {
@@ -168,10 +188,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
+      if (!data || !Array.isArray(data)) {
+        return [];
+      }
+      
       return data.map(staff => ({
         id: staff.id,
         username: staff.username,
-        isAdmin: staff.is_admin
+        isAdmin: staff.is_admin,
+        position: staff.position,
+        salary: staff.salary,
+        joiningDate: staff.joining_date,
+        shiftStart: staff.shift_start,
+        shiftEnd: staff.shift_end
       }));
     } catch (error) {
       console.error('Error fetching staff members:', error);
@@ -179,8 +208,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Function to update staff member details
+  const updateStaffMember = async (id: string, updatedData: Partial<AdminUser>): Promise<boolean> => {
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can update staff members");
+        return false;
+      }
+
+      // Convert the AdminUser fields to database column names
+      const dbData: any = {
+        username: updatedData.username,
+        position: updatedData.position,
+        salary: updatedData.salary,
+        joining_date: updatedData.joiningDate,
+        shift_start: updatedData.shiftStart,
+        shift_end: updatedData.shiftEnd
+      };
+      
+      // Remove undefined values
+      Object.keys(dbData).forEach(key => {
+        if (dbData[key] === undefined) {
+          delete dbData[key];
+        }
+      });
+
+      const { error } = await supabase
+        .from('admin_users')
+        .update(dbData)
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error updating staff member:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating staff member:', error);
+      return false;
+    }
+  };
+
+  // Function to delete staff member
+  const deleteStaffMember = async (id: string): Promise<boolean> => {
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can delete staff members");
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error deleting staff member:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting staff member:', error);
+      return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, addStaffMember, getStaffMembers }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      isLoading, 
+      addStaffMember, 
+      getStaffMembers,
+      updateStaffMember,
+      deleteStaffMember 
+    }}>
       {children}
     </AuthContext.Provider>
   );

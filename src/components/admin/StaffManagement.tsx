@@ -6,23 +6,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, UserPlus, Trash2, Users, User } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Users, User, Edit, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface AdminUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  position?: string;
+  salary?: number;
+  joiningDate?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
 }
 
 const StaffManagement: React.FC = () => {
   const [staffMembers, setStaffMembers] = useState<AdminUser[]>([]);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newPosition, setNewPosition] = useState('');
+  const [newSalary, setNewSalary] = useState<number | undefined>(undefined);
+  const [newJoiningDate, setNewJoiningDate] = useState('');
+  const [newShiftStart, setNewShiftStart] = useState('');
+  const [newShiftEnd, setNewShiftEnd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
-  const { user, addStaffMember, getStaffMembers } = useAuth();
+  const [isEditingStaff, setIsEditingStaff] = useState(false);
+  const [currentEditStaff, setCurrentEditStaff] = useState<AdminUser | null>(null);
+  const { user, addStaffMember, getStaffMembers, updateStaffMember, deleteStaffMember } = useAuth();
   const { toast } = useToast();
 
   const loadStaffMembers = async () => {
@@ -57,14 +70,22 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const success = await addStaffMember(newUsername, newPassword);
+      const success = await addStaffMember(
+        newUsername, 
+        newPassword, 
+        newPosition || undefined,
+        newSalary || undefined,
+        newJoiningDate || undefined,
+        newShiftStart || undefined,
+        newShiftEnd || undefined
+      );
+      
       if (success) {
         toast({
           title: 'Success',
           description: 'Staff member added successfully',
         });
-        setNewUsername('');
-        setNewPassword('');
+        resetForm();
         setIsAddingStaff(false);
         loadStaffMembers(); // Refresh staff list
       } else {
@@ -83,6 +104,100 @@ const StaffManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEditStaff = (staff: AdminUser) => {
+    setCurrentEditStaff(staff);
+    setNewUsername(staff.username);
+    setNewPosition(staff.position || '');
+    setNewSalary(staff.salary);
+    setNewJoiningDate(staff.joiningDate || '');
+    setNewShiftStart(staff.shiftStart || '');
+    setNewShiftEnd(staff.shiftEnd || '');
+    setIsEditingStaff(true);
+  };
+
+  const handleUpdateStaff = async () => {
+    if (!currentEditStaff) return;
+
+    setIsLoading(true);
+    try {
+      const updatedData: Partial<AdminUser> = {
+        username: newUsername,
+        position: newPosition || undefined,
+        salary: newSalary || undefined,
+        joiningDate: newJoiningDate || undefined,
+        shiftStart: newShiftStart || undefined,
+        shiftEnd: newShiftEnd || undefined,
+      };
+
+      const success = await updateStaffMember(currentEditStaff.id, updatedData);
+      
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'Staff member updated successfully',
+        });
+        resetForm();
+        setIsEditingStaff(false);
+        loadStaffMembers(); // Refresh staff list
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to update staff member',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An error occurred while updating staff member',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this staff member?')) {
+      return;
+    }
+
+    try {
+      const success = await deleteStaffMember(id);
+      
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'Staff member deleted successfully',
+        });
+        loadStaffMembers(); // Refresh staff list
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to delete staff member',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An error occurred while deleting staff member',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setNewUsername('');
+    setNewPassword('');
+    setNewPosition('');
+    setNewSalary(undefined);
+    setNewJoiningDate('');
+    setNewShiftStart('');
+    setNewShiftEnd('');
+    setCurrentEditStaff(null);
   };
 
   // Only admins can access this component
@@ -115,7 +230,11 @@ const StaffManagement: React.FC = () => {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
+        {/* Add Staff Dialog */}
+        <Dialog open={isAddingStaff} onOpenChange={(open) => {
+          setIsAddingStaff(open);
+          if (!open) resetForm();
+        }}>
           <DialogTrigger asChild>
             <Button 
               className="w-full bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20"
@@ -133,10 +252,11 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
+              {/* Basic Info */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
-                  Username
+                  Username*
                 </label>
                 <Input
                   value={newUsername}
@@ -149,7 +269,7 @@ const StaffManagement: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <Shield className="h-4 w-4" />
-                  Password
+                  Password*
                 </label>
                 <Input
                   type="password"
@@ -158,6 +278,72 @@ const StaffManagement: React.FC = () => {
                   placeholder="Enter password"
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
+              </div>
+
+              {/* Position */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-cuephoria-lightpurple">
+                  Position
+                </label>
+                <Input
+                  value={newPosition}
+                  onChange={(e) => setNewPosition(e.target.value)}
+                  placeholder="Enter position (e.g., Receptionist, Cook)"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Salary */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-cuephoria-lightpurple">
+                  Salary
+                </label>
+                <Input
+                  type="number"
+                  value={newSalary || ''}
+                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="Enter salary"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Joining Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-cuephoria-lightpurple">
+                  Joining Date
+                </label>
+                <Input
+                  type="date"
+                  value={newJoiningDate}
+                  onChange={(e) => setNewJoiningDate(e.target.value)}
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Shift Timings */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-cuephoria-lightpurple">
+                    Shift Start
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftStart}
+                    onChange={(e) => setNewShiftStart(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-cuephoria-lightpurple">
+                    Shift End
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftEnd}
+                    onChange={(e) => setNewShiftEnd(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
               </div>
             </div>
             
@@ -175,24 +361,164 @@ const StaffManagement: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Staff Dialog */}
+        <Dialog open={isEditingStaff} onOpenChange={(open) => {
+          setIsEditingStaff(open);
+          if (!open) resetForm();
+        }}>
+          <DialogContent className="bg-cuephoria-dark border border-cuephoria-lightpurple/30">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Edit Staff Member</DialogTitle>
+              <DialogDescription>
+                Update staff member details
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              {/* Basic Info */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <User className="h-4 w-4" />
+                  Username*
+                </label>
+                <Input
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="Enter username"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Position */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-cuephoria-lightpurple">
+                  Position
+                </label>
+                <Input
+                  value={newPosition}
+                  onChange={(e) => setNewPosition(e.target.value)}
+                  placeholder="Enter position (e.g., Receptionist, Cook)"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Salary */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-cuephoria-lightpurple">
+                  Salary
+                </label>
+                <Input
+                  type="number"
+                  value={newSalary || ''}
+                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="Enter salary"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Joining Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-cuephoria-lightpurple">
+                  Joining Date
+                </label>
+                <Input
+                  type="date"
+                  value={newJoiningDate}
+                  onChange={(e) => setNewJoiningDate(e.target.value)}
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+
+              {/* Shift Timings */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-cuephoria-lightpurple">
+                    Shift Start
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftStart}
+                    onChange={(e) => setNewShiftStart(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-cuephoria-lightpurple">
+                    Shift End
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftEnd}
+                    onChange={(e) => setNewShiftEnd(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditingStaff(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateStaff} 
+                disabled={isLoading}
+                className="bg-cuephoria-lightpurple hover:bg-cuephoria-purple"
+              >
+                {isLoading ? 'Updating...' : 'Update Staff Member'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Current Staff Members</h3>
-          <ScrollArea className="h-[220px] rounded-md border border-cuephoria-lightpurple/20 p-4">
+          <ScrollArea className="h-[320px] rounded-md border border-cuephoria-lightpurple/20 p-2">
             {staffMembers.length > 0 ? (
-              <div className="space-y-3">
-                {staffMembers.map((staff) => (
-                  <div 
-                    key={staff.id}
-                    className="flex items-center justify-between p-2 rounded-md bg-cuephoria-darker/50 border border-cuephoria-lightpurple/10"
-                  >
-                    <div className="flex items-center">
-                      <User className="h-4 w-4 mr-2 text-cuephoria-lightpurple" />
-                      <span className="font-medium text-sm">{staff.username}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Shift</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffMembers.map((staff) => (
+                    <TableRow key={staff.id}>
+                      <TableCell>{staff.username}</TableCell>
+                      <TableCell>{staff.position || 'Not set'}</TableCell>
+                      <TableCell>
+                        {staff.shiftStart && staff.shiftEnd ? 
+                          `${staff.shiftStart} - ${staff.shiftEnd}` : 
+                          'Not set'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleEditStaff(staff)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleDeleteStaff(staff.id)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center p-4">
                 <Users className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
