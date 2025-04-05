@@ -269,14 +269,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // This approach is safer as it will gracefully handle missing columns
       for (const member of staffMembers) {
         try {
-          // Try to fetch position for this specific user
+          // Try to fetch position for this specific user - Properly handle errors
           const positionQuery = await supabase
             .from('admin_users')
             .select('position')
             .eq('id', member.id)
             .single();
           
-          if (positionQuery.data && 'position' in positionQuery.data && typeof positionQuery.data.position === 'string') {
+          if (!positionQuery.error && positionQuery.data && 
+              'position' in positionQuery.data && 
+              typeof positionQuery.data.position === 'string') {
             member.position = positionQuery.data.position;
           }
         } catch (e) {
@@ -284,14 +286,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         try {
-          // Try to fetch salary for this specific user
+          // Try to fetch salary for this specific user - Properly handle errors
           const salaryQuery = await supabase
             .from('admin_users')
             .select('salary')
             .eq('id', member.id)
             .single();
           
-          if (salaryQuery.data && 'salary' in salaryQuery.data && typeof salaryQuery.data.salary === 'number') {
+          if (!salaryQuery.error && salaryQuery.data && 
+              'salary' in salaryQuery.data && 
+              typeof salaryQuery.data.salary === 'number') {
             member.salary = salaryQuery.data.salary;
           }
         } catch (e) {
@@ -299,14 +303,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         try {
-          // Try to fetch joining_date for this specific user
+          // Try to fetch joining_date for this specific user - Properly handle errors
           const dateQuery = await supabase
             .from('admin_users')
             .select('joining_date')
             .eq('id', member.id)
             .single();
           
-          if (dateQuery.data && 'joining_date' in dateQuery.data && typeof dateQuery.data.joining_date === 'string') {
+          if (!dateQuery.error && dateQuery.data && 
+              'joining_date' in dateQuery.data && 
+              typeof dateQuery.data.joining_date === 'string') {
             member.joiningDate = dateQuery.data.joining_date;
           }
         } catch (e) {
@@ -314,18 +320,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         try {
-          // Try to fetch shift_start and shift_end for this specific user
+          // Try to fetch shift_start and shift_end for this specific user - Properly handle errors
           const shiftQuery = await supabase
             .from('admin_users')
             .select('shift_start, shift_end')
             .eq('id', member.id)
             .single();
           
-          if (shiftQuery.data) {
-            if ('shift_start' in shiftQuery.data && typeof shiftQuery.data.shift_start === 'string') {
+          if (!shiftQuery.error && shiftQuery.data) {
+            if ('shift_start' in shiftQuery.data && 
+                typeof shiftQuery.data.shift_start === 'string') {
               member.shiftStart = shiftQuery.data.shift_start;
             }
-            if ('shift_end' in shiftQuery.data && typeof shiftQuery.data.shift_end === 'string') {
+            if ('shift_end' in shiftQuery.data && 
+                typeof shiftQuery.data.shift_end === 'string') {
               member.shiftEnd = shiftQuery.data.shift_end;
             }
           }
