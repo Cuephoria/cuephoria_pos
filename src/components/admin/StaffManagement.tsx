@@ -219,7 +219,7 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
-              {/* Basic Info */}
+              {/* Basic Info - Only Username and Password */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
@@ -277,7 +277,7 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
-              {/* Basic Info */}
+              {/* Basic Info - Only Username */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
