@@ -29,4 +29,7 @@ export interface Tournament {
   matches: Match[];
   winner?: Player;
   status: 'upcoming' | 'in-progress' | 'completed';
+  budget?: number;
+  winnerPrize?: number;
+  runnerUpPrize?: number;
 }

@@ -22,6 +22,7 @@ import { generateId } from '@/utils/pos.utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TournamentPlayerSection from './TournamentPlayerSection';
 import TournamentMatchSection from './TournamentMatchSection';
+import { CurrencyDisplay } from '../ui/currency';
 
 interface TournamentDialogProps {
   open: boolean;
@@ -36,6 +37,9 @@ const formSchema = z.object({
   gameVariant: z.enum(["8 Ball", "Snooker"]).optional(),
   gameTitle: z.string().optional(),
   date: z.string(),
+  budget: z.string().optional(),
+  winnerPrize: z.string().optional(),
+  runnerUpPrize: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -59,6 +63,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       gameType: 'PS5',
       gameTitle: 'FIFA',
       date: new Date().toISOString().split('T')[0],
+      budget: '',
+      winnerPrize: '',
+      runnerUpPrize: '',
     },
   });
 
@@ -70,6 +77,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
         gameVariant: tournament.gameVariant,
         gameTitle: tournament.gameTitle,
         date: tournament.date,
+        budget: tournament.budget?.toString() || '',
+        winnerPrize: tournament.winnerPrize?.toString() || '',
+        runnerUpPrize: tournament.runnerUpPrize?.toString() || '',
       });
       setPlayers(tournament.players);
       setMatches(tournament.matches);
@@ -81,6 +91,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
         gameType: 'PS5',
         gameTitle: 'FIFA',
         date: new Date().toISOString().split('T')[0],
+        budget: '',
+        winnerPrize: '',
+        runnerUpPrize: '',
       });
       setPlayers([]);
       setMatches([]);
@@ -102,6 +115,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       matches: matches,
       status: tournamentStatus,
       ...(winner && { winner }),
+      ...(values.budget && { budget: parseFloat(values.budget) }),
+      ...(values.winnerPrize && { winnerPrize: parseFloat(values.winnerPrize) }),
+      ...(values.runnerUpPrize && { runnerUpPrize: parseFloat(values.runnerUpPrize) }),
     };
     
     onSave(savedTournament);
@@ -294,6 +310,64 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
                     </FormItem>
                   )}
                 />
+                
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="text-md font-medium mb-4">Tournament Finance</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="budget"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tournament Budget (₹)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter budget amount" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="winnerPrize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Winner Prize Money (₹)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter prize for winner" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="runnerUpPrize"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Runner-up Prize Money (₹)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter prize for runner-up" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </form>
             </Form>
           </TabsContent>

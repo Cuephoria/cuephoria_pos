@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash, Trophy, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 
 interface TournamentListProps {
   tournaments: Tournament[];
@@ -44,6 +45,11 @@ const TournamentList: React.FC<TournamentListProps> = ({
     }
   };
 
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '-';
+    return `₹${amount.toLocaleString('en-IN')}`;
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -53,6 +59,7 @@ const TournamentList: React.FC<TournamentListProps> = ({
             <TableHead>Game Type</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Players</TableHead>
+            <TableHead>Budget</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -70,6 +77,7 @@ const TournamentList: React.FC<TournamentListProps> = ({
               </TableCell>
               <TableCell>{format(new Date(tournament.date), 'dd MMM yyyy')}</TableCell>
               <TableCell>{tournament.players.length}</TableCell>
+              <TableCell>{formatCurrency(tournament.budget)}</TableCell>
               <TableCell>{getStatusBadge(tournament.status)}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
