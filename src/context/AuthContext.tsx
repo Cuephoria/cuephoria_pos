@@ -241,7 +241,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', member.id)
             .single();
           
-          if (positionQuery.data && 'position' in positionQuery.data) {
+          if (positionQuery.data && 'position' in positionQuery.data && typeof positionQuery.data.position === 'string') {
             member.position = positionQuery.data.position;
           }
         } catch (e) {
@@ -256,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', member.id)
             .single();
           
-          if (salaryQuery.data && 'salary' in salaryQuery.data) {
+          if (salaryQuery.data && 'salary' in salaryQuery.data && typeof salaryQuery.data.salary === 'number') {
             member.salary = salaryQuery.data.salary;
           }
         } catch (e) {
@@ -271,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('id', member.id)
             .single();
           
-          if (dateQuery.data && 'joining_date' in dateQuery.data) {
+          if (dateQuery.data && 'joining_date' in dateQuery.data && typeof dateQuery.data.joining_date === 'string') {
             member.joiningDate = dateQuery.data.joining_date;
           }
         } catch (e) {
@@ -287,10 +287,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
           
           if (shiftQuery.data) {
-            if ('shift_start' in shiftQuery.data) {
+            if ('shift_start' in shiftQuery.data && typeof shiftQuery.data.shift_start === 'string') {
               member.shiftStart = shiftQuery.data.shift_start;
             }
-            if ('shift_end' in shiftQuery.data) {
+            if ('shift_end' in shiftQuery.data && typeof shiftQuery.data.shift_end === 'string') {
               member.shiftEnd = shiftQuery.data.shift_end;
             }
           }
