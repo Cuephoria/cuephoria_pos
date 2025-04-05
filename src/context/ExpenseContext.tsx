@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary, ExpenseFormData } from '@/types/expense.types';
 import { usePOS } from './POSContext';
@@ -52,6 +51,8 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('expenses' as any)
         .select('*')
         .order('date', { ascending: false }) as any);
+      
+      console.log('Supabase Expenses Fetched:', supabaseExpenses); // Added console log
       
       if (supabaseError) {
         console.error('Error fetching expenses from Supabase:', supabaseError);
