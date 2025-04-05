@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { usePOS, Station } from '@/context/POSContext';
@@ -18,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 interface StationCardProps {
   station: Station;
@@ -25,6 +25,7 @@ interface StationCardProps {
 
 const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const { customers, startSession, endSession, deleteStation } = usePOS();
+  const { toast } = useToast();
   const isPoolTable = station.type === '8ball';
 
   const getCustomer = (id: string) => {
@@ -38,7 +39,29 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const customerName = customer ? customer.name : 'Unknown Customer';
     
   const handleDeleteStation = async () => {
-    await deleteStation(station.id);
+    try {
+      console.log("Delete station button clicked for:", station.name, station.id);
+      const result = await deleteStation(station.id);
+      console.log("Delete station result:", result);
+      
+      if (!result) {
+        toast({
+          title: "Delete Failed",
+          description: `Failed to delete station ${station.name}. Please try again.`,
+          variant: "destructive",
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error in handleDeleteStation:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the station",
+        variant: "destructive",
+      });
+      return false;
+    }
   };
 
   return (
@@ -56,7 +79,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         ${isPoolTable ? 'rounded-xl' : 'rounded-lg'}
       `}
     >
-      {/* Visual elements to enhance the appearance */}
       {isPoolTable && (
         <>
           <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-300"></div>
@@ -76,7 +98,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         </>
       )}
 
-      {/* Membership indicator on top of card */}
       {station.isOccupied && customer && (
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-transparent to-transparent">
           <div className={`h-full ${customer.isMember ? 'bg-green-500' : 'bg-gray-500'} w-2/3 rounded-br-lg`}></div>

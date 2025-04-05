@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 
@@ -74,6 +75,9 @@ export const useStationsData = () => {
   
   const deleteStation = async (stationId: string) => {
     try {
+      setStationsLoading(true);
+      console.log("Starting delete operation for station ID:", stationId);
+      
       // Check if the station is occupied first
       const station = stations.find(s => s.id === stationId);
       if (!station) {
@@ -95,32 +99,39 @@ export const useStationsData = () => {
         return false;
       }
       
-      // Handle newly added stations that might not be in Supabase yet
-      // or stations that don't have a UUID format
-      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stationId);
+      console.log("Station to delete:", {
+        id: station.id,
+        name: station.name,
+        type: station.type,
+        isOccupied: station.isOccupied
+      });
       
-      if (isValidUUID) {
-        // Delete from Supabase only if it's a valid UUID
-        const { error } = await supabase
-          .from('stations')
-          .delete()
-          .eq('id', stationId);
-          
-        if (error) {
-          console.error('Error deleting station from Supabase:', error);
-          toast({
-            title: 'Database Error',
-            description: 'Failed to delete station from database',
-            variant: 'destructive'
-          });
-          return false;
-        }
-      } else {
-        console.log('Skipping Supabase delete for non-UUID station ID:', stationId);
+      // Delete from Supabase with more detailed error handling
+      const { error, count } = await supabase
+        .from('stations')
+        .delete()
+        .eq('id', stationId)
+        .select('count');
+        
+      if (error) {
+        const errorMessage = handleSupabaseError(error, 'delete station');
+        console.error('Supabase error details:', error);
+        toast({
+          title: 'Database Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+        return false;
       }
       
-      // Update local state (do this regardless of Supabase result)
-      setStations(prev => prev.filter(station => station.id !== stationId));
+      console.log(`Deleted ${count} rows from stations table`);
+      
+      // Update local state
+      setStations(prev => {
+        const updatedStations = prev.filter(station => station.id !== stationId);
+        console.log(`Updated stations list: ${updatedStations.length} stations remaining`);
+        return updatedStations;
+      });
       
       toast({
         title: 'Station Deleted',
@@ -132,10 +143,12 @@ export const useStationsData = () => {
       console.error('Error in deleteStation:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete station',
+        description: error instanceof Error ? error.message : 'Failed to delete station',
         variant: 'destructive'
       });
       return false;
+    } finally {
+      setStationsLoading(false);
     }
   };
   
