@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -52,6 +53,7 @@
 
   body {
     @apply bg-background text-foreground font-quicksand;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -96,6 +98,41 @@
 /* Cards hover effects */
 .card-hover {
   @apply transition-all duration-300 hover:shadow-lg hover:shadow-[#9b87f5]/20 hover:translate-y-[-4px];
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .card {
+    @apply p-3 !important;
+  }
+  
+  h1, h2, h3 {
+    @apply text-center;
+  }
+  
+  .table-container {
+    @apply overflow-x-auto -mx-4 px-4;
+  }
+  
+  /* Fix for tables on mobile */
+  table {
+    @apply min-w-full;
+  }
+  
+  /* Improved touch targets */
+  button, a, [role="button"] {
+    @apply min-h-10 min-w-10;
+  }
+  
+  /* Forms on mobile */
+  input, select, textarea {
+    @apply text-base;
+  }
+  
+  /* Grid adjustments */
+  .grid {
+    @apply grid-cols-1;
+  }
 }
 
 /* Animations */
@@ -282,4 +319,27 @@
   margin-top: 1rem;
   padding-top: 0.5rem;
   font-weight: bold;
+}
+
+/* Mobile fixes for common components */
+@media (max-width: 768px) {
+  /* Card adjustments */
+  .card-title {
+    @apply text-lg;
+  }
+  
+  /* Button size adjustments */
+  .btn-mobile {
+    @apply px-2 py-1 text-sm;
+  }
+  
+  /* Fix for forms */
+  .form-group {
+    @apply mb-3;
+  }
+  
+  /* Dashboard stats cards */
+  .stats-card {
+    @apply mx-auto max-w-[320px];
+  }
 }

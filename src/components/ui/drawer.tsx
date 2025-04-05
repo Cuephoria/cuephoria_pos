@@ -1,7 +1,9 @@
+
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const Drawer = ({
   shouldScaleBackground = true,
@@ -35,44 +37,67 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
-        className
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-))
+>(({ className, children, ...props }, ref) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+          isMobile ? "max-h-[85vh]" : "max-h-[95vh]",
+          className
+        )}
+        {...props}
+      >
+        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+        <div className={cn("overflow-auto", isMobile ? "p-4" : "px-6 py-4")}>
+          {children}
+        </div>
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  )
+})
 DrawerContent.displayName = "DrawerContent"
 
 const DrawerHeader = ({
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn("grid gap-1.5 p-4 text-center sm:text-left", className)}
-    {...props}
-  />
-)
+}: React.HTMLAttributes<HTMLDivElement>) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div
+      className={cn(
+        "grid gap-1.5 text-center sm:text-left", 
+        isMobile ? "p-2" : "p-4",
+        className
+      )}
+      {...props}
+    />
+  )
+}
 DrawerHeader.displayName = "DrawerHeader"
 
 const DrawerFooter = ({
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn("mt-auto flex flex-col gap-2 p-4", className)}
-    {...props}
-  />
-)
+}: React.HTMLAttributes<HTMLDivElement>) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div
+      className={cn(
+        "mt-auto flex flex-col gap-2", 
+        isMobile ? "p-3" : "p-4", 
+        className
+      )}
+      {...props}
+    />
+  )
+}
 DrawerFooter.displayName = "DrawerFooter"
 
 const DrawerTitle = React.forwardRef<
