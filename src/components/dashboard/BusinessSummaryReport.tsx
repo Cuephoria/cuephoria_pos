@@ -223,19 +223,27 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categoryTotals.map(({ category, total }) => (
-                  <TableRow key={category}>
-                    <TableCell>{formatCategory(category)}</TableCell>
-                    <TableCell>
-                      <CurrencyDisplay amount={total} />
-                    </TableCell>
-                    <TableCell>
-                      {businessSummary.totalExpenses 
-                        ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
-                        : '0.0'}%
+                {categoryTotals.length > 0 ? (
+                  categoryTotals.map(({ category, total }) => (
+                    <TableRow key={category}>
+                      <TableCell>{formatCategory(category)}</TableCell>
+                      <TableCell>
+                        <CurrencyDisplay amount={total} />
+                      </TableCell>
+                      <TableCell>
+                        {businessSummary.totalExpenses 
+                          ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
+                          : '0.0'}%
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-gray-400">
+                      No expenses found in the selected date range
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
@@ -251,35 +259,45 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell>PS5 Stations</TableCell>
-                  <TableCell>
-                    <CurrencyDisplay amount={ps5Sales} />
-                  </TableCell>
-                  <TableCell>
-                    {ps5Sales + poolSales > 0 
-                      ? ((ps5Sales / (ps5Sales + poolSales)) * 100).toFixed(1) 
-                      : '0.0'}%
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>8-Ball Pool</TableCell>
-                  <TableCell>
-                    <CurrencyDisplay amount={poolSales} />
-                  </TableCell>
-                  <TableCell>
-                    {ps5Sales + poolSales > 0 
-                      ? ((poolSales / (ps5Sales + poolSales)) * 100).toFixed(1) 
-                      : '0.0'}%
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-semibold">Total</TableCell>
-                  <TableCell className="font-semibold">
-                    <CurrencyDisplay amount={ps5Sales + poolSales} />
-                  </TableCell>
-                  <TableCell>100.0%</TableCell>
-                </TableRow>
+                {ps5Sales > 0 || poolSales > 0 ? (
+                  <>
+                    <TableRow>
+                      <TableCell>PS5 Stations</TableCell>
+                      <TableCell>
+                        <CurrencyDisplay amount={ps5Sales} />
+                      </TableCell>
+                      <TableCell>
+                        {ps5Sales + poolSales > 0 
+                          ? ((ps5Sales / (ps5Sales + poolSales)) * 100).toFixed(1) 
+                          : '0.0'}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>8-Ball Pool</TableCell>
+                      <TableCell>
+                        <CurrencyDisplay amount={poolSales} />
+                      </TableCell>
+                      <TableCell>
+                        {ps5Sales + poolSales > 0 
+                          ? ((poolSales / (ps5Sales + poolSales)) * 100).toFixed(1) 
+                          : '0.0'}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-semibold">Total</TableCell>
+                      <TableCell className="font-semibold">
+                        <CurrencyDisplay amount={ps5Sales + poolSales} />
+                      </TableCell>
+                      <TableCell>100.0%</TableCell>
+                    </TableRow>
+                  </>
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-gray-400">
+                      No gaming revenue found in the selected date range
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -296,46 +314,56 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell>Food & Snacks</TableCell>
-                <TableCell>
-                  <CurrencyDisplay amount={foodSales} />
-                </TableCell>
-                <TableCell>
-                  {totalCanteenSales > 0 
-                    ? ((foodSales / totalCanteenSales) * 100).toFixed(1) 
-                    : '0.0'}%
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Beverages & Drinks</TableCell>
-                <TableCell>
-                  <CurrencyDisplay amount={beverageSales} />
-                </TableCell>
-                <TableCell>
-                  {totalCanteenSales > 0 
-                    ? ((beverageSales / totalCanteenSales) * 100).toFixed(1) 
-                    : '0.0'}%
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Tobacco Products</TableCell>
-                <TableCell>
-                  <CurrencyDisplay amount={tobaccoSales} />
-                </TableCell>
-                <TableCell>
-                  {totalCanteenSales > 0 
-                    ? ((tobaccoSales / totalCanteenSales) * 100).toFixed(1) 
-                    : '0.0'}%
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-semibold">Total Canteen</TableCell>
-                <TableCell className="font-semibold">
-                  <CurrencyDisplay amount={totalCanteenSales} />
-                </TableCell>
-                <TableCell>100.0%</TableCell>
-              </TableRow>
+              {totalCanteenSales > 0 ? (
+                <>
+                  <TableRow>
+                    <TableCell>Food & Snacks</TableCell>
+                    <TableCell>
+                      <CurrencyDisplay amount={foodSales} />
+                    </TableCell>
+                    <TableCell>
+                      {totalCanteenSales > 0 
+                        ? ((foodSales / totalCanteenSales) * 100).toFixed(1) 
+                        : '0.0'}%
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Beverages & Drinks</TableCell>
+                    <TableCell>
+                      <CurrencyDisplay amount={beverageSales} />
+                    </TableCell>
+                    <TableCell>
+                      {totalCanteenSales > 0 
+                        ? ((beverageSales / totalCanteenSales) * 100).toFixed(1) 
+                        : '0.0'}%
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Tobacco Products</TableCell>
+                    <TableCell>
+                      <CurrencyDisplay amount={tobaccoSales} />
+                    </TableCell>
+                    <TableCell>
+                      {totalCanteenSales > 0 
+                        ? ((tobaccoSales / totalCanteenSales) * 100).toFixed(1) 
+                        : '0.0'}%
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-semibold">Total Canteen</TableCell>
+                    <TableCell className="font-semibold">
+                      <CurrencyDisplay amount={totalCanteenSales} />
+                    </TableCell>
+                    <TableCell>100.0%</TableCell>
+                  </TableRow>
+                </>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-8 text-gray-400">
+                    No canteen sales found in the selected date range
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

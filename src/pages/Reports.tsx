@@ -501,6 +501,27 @@ const ReportsPage: React.FC = () => {
                       </TableRow>
                     );
                   })}
+                  
+                  {filteredBills.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-16 text-gray-400">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 mb-2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+                          <p className="text-lg font-medium">No bills available</p>
+                          <p className="text-sm">No transactions found in the selected date range</p>
+                          {date?.from || date?.to ? (
+                            <Button 
+                              variant="outline" 
+                              className="mt-2 text-purple-400 border-purple-800 hover:bg-purple-900/20"
+                              onClick={() => setDate(undefined)}
+                            >
+                              Reset date filter
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
