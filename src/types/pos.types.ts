@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;
@@ -86,65 +87,70 @@ export interface SessionResult {
   customer?: Customer;
 }
 
-export type POSContextType = {
-  // Products
+export interface POSContextType {
   products: Product[];
-  productsLoading: boolean;
-  productsError: Error | null;
-  addProduct: (product: Partial<Product>) => Promise<Product>;
-  updateProduct: (productId: string, updatedData: Partial<Product>) => Promise<Product>;
-  deleteProduct: (productId: string) => Promise<void>;
-  
-  // Stations and Sessions
+  productsLoading?: boolean;
+  productsError?: string | null;
   stations: Station[];
-  setStations: React.Dispatch<React.SetStateAction<Station[]>>;
-  sessions: Session[];
-  startSession: (stationId: string, customerId: string) => Promise<void>;
-  endSession: (stationId: string) => Promise<void>;
-  deleteStation: (stationId: string) => Promise<boolean>;
-  deleteSession: (sessionId: string) => Promise<boolean>;
-  
-  // Customers
   customers: Customer[];
-  selectedCustomer: Customer | null;
-  addCustomer: (customer: Partial<Customer>) => Promise<Customer>;
-  updateCustomer: (customer: Partial<Customer>) => Promise<Customer>;
-  updateCustomerMembership: (
-    customerId: string, 
-    membershipData: {
-      membershipPlan?: string;
-      membershipDuration?: 'weekly' | 'monthly';
-      membershipHoursLeft?: number;
-    }
-  ) => Customer | null;
-  deleteCustomer: (customerId: string) => Promise<void>;
-  selectCustomer: (customerId: string | null) => void;
-  checkMembershipValidity: (customerId: string) => boolean;
-  deductMembershipHours: (customerId: string, hours: number) => boolean;
-  
-  // Cart
+  sessions: Session[];
+  bills: Bill[];
   cart: CartItem[];
+  selectedCustomer: Customer | null;
   discount: number;
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
   isStudentDiscount: boolean;
   setIsStudentDiscount: (value: boolean) => void;
-  addToCart: (item: CartItem) => void;
-  removeFromCart: (itemId: string) => void;
-  updateCartItem: (itemId: string, updates: Partial<CartItem>) => void;
+  
+  // Station state setter
+  setStations: (stations: Station[]) => void;
+  
+  // Product functions
+  addProduct: (product: Omit<Product, 'id'>) => void;
+  updateProduct: (product: Product) => void;
+  deleteProduct: (id: string) => void;
+  
+  // Station functions
+  startSession: (stationId: string, customerId: string) => Promise<void>;
+  endSession: (stationId: string) => Promise<void>;
+  deleteStation: (stationId: string) => Promise<boolean>; // Add this new function
+  
+  // Customer functions
+  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
+  updateCustomer: (customer: Customer) => void;
+  updateCustomerMembership: (customerId: string, membershipData: {
+    membershipPlan?: string;
+    membershipDuration?: 'weekly' | 'monthly';
+    membershipHoursLeft?: number;
+  }) => Customer | null;
+  deleteCustomer: (id: string) => void;
+  selectCustomer: (id: string | null) => void;
+  
+  // Membership functions
+  checkMembershipValidity: (customerId: string) => boolean;
+  deductMembershipHours: (customerId: string, hours: number) => boolean;
+  
+  // Cart functions
+  addToCart: (item: Omit<CartItem, 'total'>) => void;
+  removeFromCart: (id: string) => void;
+  updateCartItem: (id: string, quantity: number) => void;
   clearCart: () => void;
-  setDiscount: (value: number, type: 'percentage' | 'fixed') => void;
+  
+  // Billing functions
+  setDiscount: (amount: number, type: 'percentage' | 'fixed') => void;
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
-  
-  // Bills
-  bills: Bill[];
   completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
-  deleteBill: (billId: string, customerId: string) => Promise<boolean>;
+  
+  // Data export
   exportBills: () => void;
   exportCustomers: () => void;
   
-  // Data management
-  resetToSampleData: (options?: ResetOptions) => Promise<boolean>;
+  // Reset and sample data functions
+  resetToSampleData: (options?: ResetOptions) => void;
   addSampleIndianData: () => void;
-};
+  
+  // Delete bill function
+  deleteBill: (billId: string, customerId: string) => Promise<boolean>;
+}

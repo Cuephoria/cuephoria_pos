@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -45,13 +44,16 @@ export const useSessionsData = () => {
           duration: item.duration
         }));
         
+        // Keep all sessions, including those with end time, to maintain history
         setSessions(transformedSessions);
         
+        // Log active sessions (those without end_time)
         const activeSessions = transformedSessions.filter(s => !s.endTime);
         console.log(`Loaded ${activeSessions.length} active sessions from Supabase`);
+        activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
-        setSessions([]);
+        // Don't clear sessions if no data, as it might be a network issue
       }
     } catch (error) {
       console.error('Error in fetchSessions:', error);
@@ -61,50 +63,6 @@ export const useSessionsData = () => {
         description: 'Failed to load sessions',
         variant: 'destructive'
       });
-    } finally {
-      setSessionsLoading(false);
-    }
-  };
-  
-  // New delete session function
-  const deleteSession = async (sessionId: string): Promise<boolean> => {
-    try {
-      setSessionsLoading(true);
-      console.log('Deleting session:', sessionId);
-      
-      // Delete the session from Supabase
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('id', sessionId);
-        
-      if (error) {
-        console.error('Error deleting session:', error);
-        toast({
-          title: 'Database Error',
-          description: `Failed to delete session: ${error.message}`,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Update the local state by removing the deleted session
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
-      
-      toast({
-        title: 'Success',
-        description: 'Session deleted successfully',
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error in deleteSession:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete session',
-        variant: 'destructive'
-      });
-      return false;
     } finally {
       setSessionsLoading(false);
     }
@@ -140,7 +98,6 @@ export const useSessionsData = () => {
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions,
-    deleteSession
+    refreshSessions
   };
 };

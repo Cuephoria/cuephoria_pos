@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
@@ -56,17 +55,6 @@ const ProductsPage: React.FC = () => {
     }
   };
 
-  const handleUpdateProduct = async (product: Product) => {
-    try {
-      await updateProduct(product.id, product);
-      setSelectedProduct(null); // Removed setActiveProduct
-      setIsDialogOpen(false);
-      // Removed refreshProducts call, not needed here
-    } catch (error) {
-      console.error('Error updating product:', error);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent, formData: ProductFormState) => {
     e.preventDefault();
     
@@ -105,7 +93,7 @@ const ProductsPage: React.FC = () => {
       console.log('Submitting product data:', productData);
       
       if (isEditMode && selectedProduct) {
-        await updateProduct(selectedProduct.id, productData);
+        await updateProduct({ ...productData, id: selectedProduct.id });
         toast({
           title: 'Product Updated',
           description: 'The product has been updated successfully.',

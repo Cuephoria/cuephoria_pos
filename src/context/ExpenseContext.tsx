@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary, ExpenseFormData } from '@/types/expense.types';
-import { usePOS } from '@/context';
+import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -45,6 +45,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
     
     try {
+      // Get expenses from localStorage
       const storedExpenses = localStorage.getItem(STORAGE_KEY);
       
       if (storedExpenses) {
@@ -52,6 +53,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setExpenses(parsedExpenses);
         console.log(`Loaded ${parsedExpenses.length} expenses from localStorage`);
       } else {
+        // Initialize with empty array if no data found
         setExpenses([]);
         console.log('No expenses found in localStorage');
       }
@@ -112,13 +114,14 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const id = generateId();
       
+      // The date is already an ISO string from ExpenseDialog
       const newExpense: Expense = {
         id,
         name: formData.name,
         amount: formData.amount,
         category: formData.category,
         frequency: formData.frequency,
-        date: formData.date,
+        date: formData.date, // Already a string from ExpenseDialog
         isRecurring: formData.isRecurring,
         notes: formData.notes
       };
@@ -146,6 +149,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
+      // The date is already an ISO string from ExpenseDialog
       const updatedExpenses = expenses.map(item => 
         item.id === expense.id ? expense : item
       );
