@@ -55,6 +55,7 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
   const [activeTab, setActiveTab] = React.useState('details');
   const [winner, setWinner] = React.useState<Tournament['winner']>();
   const [tournamentStatus, setTournamentStatus] = React.useState<Tournament['status']>('upcoming');
+  const [customGameTitle, setCustomGameTitle] = React.useState<boolean>(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,6 +86,14 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       setMatches(tournament.matches);
       setWinner(tournament.winner);
       setTournamentStatus(tournament.status);
+      
+      // Set customGameTitle state if the tournament has a custom game title
+      const gameTitle = tournament.gameTitle;
+      if (gameTitle && gameTitle !== 'FIFA' && gameTitle !== 'COD') {
+        setCustomGameTitle(true);
+      } else {
+        setCustomGameTitle(false);
+      }
     } else {
       form.reset({
         name: '',
@@ -99,10 +108,12 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       setMatches([]);
       setWinner(undefined);
       setTournamentStatus('upcoming');
+      setCustomGameTitle(false);
     }
   }, [tournament, open]);
 
   const gameType = form.watch('gameType');
+  const gameTitle = form.watch('gameTitle');
 
   const handleSave = (values: FormValues) => {
     const savedTournament: Tournament = {
@@ -243,28 +254,71 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
                   )}
                 />
                 
-                {gameType === 'PS5' && (
+                {gameType === 'PS5' && !customGameTitle && (
                   <FormField
                     control={form.control}
                     name="gameTitle"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Game Title</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select game title" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="FIFA">FIFA</SelectItem>
-                            <SelectItem value="COD">Call of Duty (COD)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
+                        <div className="space-y-2">
+                          <Select
+                            onValueChange={(value) => {
+                              if (value === "custom") {
+                                setCustomGameTitle(true);
+                                field.onChange("");
+                              } else {
+                                field.onChange(value);
+                              }
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select game title" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="FIFA">FIFA</SelectItem>
+                              <SelectItem value="COD">Call of Duty (COD)</SelectItem>
+                              <SelectItem value="custom">Add Custom Game Title</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                {gameType === 'PS5' && customGameTitle && (
+                  <FormField
+                    control={form.control}
+                    name="gameTitle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Game Title</FormLabel>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <FormControl className="flex-1">
+                              <Input 
+                                placeholder="Enter custom game title" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={() => {
+                                setCustomGameTitle(false);
+                                form.setValue("gameTitle", "FIFA");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </div>
                       </FormItem>
                     )}
                   />
