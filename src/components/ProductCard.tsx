@@ -58,7 +58,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       name: product.name,
       price: product.price,
       quantity: 1,
-      total: product.price, // Add this line to calculate the total
+      total: product.price, // Calculate the total as price * quantity
       category: product.category
     });
     
