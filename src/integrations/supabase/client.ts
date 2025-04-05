@@ -82,3 +82,133 @@ export const convertToSupabaseProduct = (product: any): any => {
   console.log('Converting product to Supabase format:', supabaseProduct);
   return supabaseProduct;
 };
+
+// Enhanced utility function to forcefully delete stations by name
+export const deleteStationByName = async (stationName: string): Promise<{success: boolean, message: string}> => {
+  try {
+    console.log(`⚠️ FORCE DELETE: Attempting to delete station with name: "${stationName}"`);
+    
+    // First, let's get all stations to verify what's in the database
+    const { data: allStations, error: listError } = await supabase
+      .from('stations')
+      .select('id, name, type, is_occupied')
+      .order('name', { ascending: true });
+      
+    if (listError) {
+      console.error("Error listing all stations:", listError);
+    } else {
+      console.log(`Found ${allStations?.length || 0} total stations in database:`, allStations);
+    }
+    
+    // Now find the specific station by exact name or partial match
+    const { data: stations, error: findError } = await supabase
+      .from('stations')
+      .select('id, name, type, is_occupied')
+      .ilike('name', `%${stationName}%`);
+      
+    if (findError) {
+      console.error("Error finding station:", findError);
+      return {
+        success: false,
+        message: `Database error looking up station: ${findError.message}`
+      };
+    }
+    
+    if (!stations || stations.length === 0) {
+      console.log(`No station found with name like: ${stationName}`);
+      
+      // Try a more aggressive search approach - get stations with "3" in the name
+      if (stationName.includes("3")) {
+        const { data: stations3, error: find3Error } = await supabase
+          .from('stations')
+          .select('id, name, type, is_occupied')
+          .ilike('name', '%3%');
+          
+        if (!find3Error && stations3 && stations3.length > 0) {
+          console.log(`Found ${stations3.length} stations with '3' in the name:`, stations3);
+          
+          // Try to delete the first PS5 station with '3' in the name
+          const ps5Station = stations3.find(s => s.type === 'ps5');
+          if (ps5Station) {
+            console.log(`Found PS5 station with '3' in name: ${ps5Station.name} (${ps5Station.id})`);
+            
+            const { error: deleteError } = await supabase
+              .from('stations')
+              .delete()
+              .eq('id', ps5Station.id);
+              
+            if (deleteError) {
+              console.error(`Error deleting station ${ps5Station.name}:`, deleteError);
+              return {
+                success: false,
+                message: `Error deleting station "${ps5Station.name}": ${deleteError.message}`
+              };
+            }
+            
+            return {
+              success: true,
+              message: `Successfully deleted "${ps5Station.name}" (ID: ${ps5Station.id})`
+            };
+          }
+        }
+      }
+      
+      return {
+        success: false,
+        message: `No station found with name like: ${stationName}`
+      };
+    }
+    
+    // Log all found stations
+    console.log(`Found ${stations.length} stations matching "${stationName}":`, stations);
+    
+    // Check if any station is occupied
+    const occupiedStation = stations.find(s => s.is_occupied);
+    if (occupiedStation) {
+      console.log(`Cannot delete station "${occupiedStation.name}" because it is occupied`);
+      return {
+        success: false,
+        message: `Cannot delete station "${occupiedStation.name}" because it is occupied`
+      };
+    }
+    
+    // Delete all matching stations with extensive logging
+    for (const station of stations) {
+      console.log(`🗑️ Deleting station: ${station.name} (ID: ${station.id}, Type: ${station.type})`);
+      
+      try {
+        const { error: deleteError } = await supabase
+          .from('stations')
+          .delete()
+          .eq('id', station.id);
+          
+        if (deleteError) {
+          console.error(`Error deleting station ${station.name}:`, deleteError);
+          return {
+            success: false,
+            message: `Error deleting station "${station.name}": ${deleteError.message}`
+          };
+        }
+        
+        console.log(`✅ Successfully deleted station: ${station.name} (ID: ${station.id})`);
+      } catch (innerError) {
+        console.error(`Exception while deleting station ${station.name}:`, innerError);
+        return {
+          success: false,
+          message: `Exception while deleting: ${innerError instanceof Error ? innerError.message : String(innerError)}`
+        };
+      }
+    }
+    
+    return {
+      success: true,
+      message: `Successfully deleted ${stations.length} station(s) matching "${stationName}"`
+    };
+  } catch (error) {
+    console.error("❌ Unexpected error in deleteStationByName:", error);
+    return {
+      success: false,
+      message: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+};
