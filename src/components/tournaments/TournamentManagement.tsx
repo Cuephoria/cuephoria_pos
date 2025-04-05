@@ -41,17 +41,30 @@ const TournamentManagement = () => {
   }, []);
 
   const handleAddTournament = async (tournament: Tournament) => {
+    // Add console logs to debug
+    console.log('Tournament being saved:', tournament);
+    console.log('Is editing mode:', editingTournament !== null);
+    
     const savedTournament = await tournamentOps.saveTournament(tournament);
+    console.log('Result from save operation:', savedTournament);
     
     if (savedTournament) {
       if (editingTournament) {
         // Update existing tournament in local state
-        setTournaments(tournaments.map(t => 
+        setTournaments(prevTournaments => prevTournaments.map(t => 
           t.id === savedTournament.id ? savedTournament : t
         ));
+        toast({
+          title: "Tournament Updated",
+          description: `Tournament "${savedTournament.name}" was updated successfully.`,
+        });
       } else {
         // Add new tournament to local state
-        setTournaments([savedTournament, ...tournaments]);
+        setTournaments(prevTournaments => [savedTournament, ...prevTournaments]);
+        toast({
+          title: "Tournament Created",
+          description: `Tournament "${savedTournament.name}" was created successfully.`,
+        });
       }
       setIsDialogOpen(false);
       setEditingTournament(null);
@@ -69,6 +82,7 @@ const TournamentManagement = () => {
   };
 
   const handleEditTournament = (tournament: Tournament) => {
+    console.log('Editing tournament:', tournament);
     setEditingTournament(tournament);
     setIsDialogOpen(true);
   };

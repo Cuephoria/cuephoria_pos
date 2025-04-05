@@ -68,7 +68,11 @@ const formatTournamentError = (error: PostgrestError): string => {
 // Save a tournament to Supabase (create or update)
 export const saveTournament = async (tournament: Tournament): Promise<{ data: Tournament | null; error: string | null }> => {
   try {
+    // Log the tournament being saved for debugging
+    console.log('Saving tournament to Supabase:', tournament);
+    
     const supabaseTournament = convertToSupabaseTournament(tournament);
+    console.log('Converted to Supabase format:', supabaseTournament);
     
     // Check if the tournament already exists
     const { data: existingTournament, error: checkError } = await tournamentsTable
@@ -85,9 +89,15 @@ export const saveTournament = async (tournament: Tournament): Promise<{ data: To
     let result;
     
     if (existingTournament) {
-      // Update existing tournament
+      // Update existing tournament - set updated_at timestamp
+      console.log('Updating existing tournament with ID:', tournament.id);
+      const updateData = {
+        ...supabaseTournament,
+        updated_at: new Date().toISOString()
+      };
+      
       const { data, error } = await tournamentsTable
-        .update(supabaseTournament)
+        .update(updateData)
         .eq('id', tournament.id)
         .select()
         .single();
@@ -98,8 +108,10 @@ export const saveTournament = async (tournament: Tournament): Promise<{ data: To
       }
       
       result = data;
+      console.log('Tournament updated successfully:', result);
     } else {
       // Create new tournament with created_at timestamp
+      console.log('Creating new tournament');
       const { data, error } = await tournamentsTable
         .insert({ ...supabaseTournament, created_at: new Date().toISOString() })
         .select()
@@ -111,6 +123,7 @@ export const saveTournament = async (tournament: Tournament): Promise<{ data: To
       }
       
       result = data;
+      console.log('Tournament created successfully:', result);
     }
     
     return { data: convertFromSupabaseTournament(result), error: null };
