@@ -18,6 +18,7 @@ import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
 
+// Create the context with proper Promise return types
 const POSContext = createContext<POSContextType>({
   products: [],
   productsLoading: false,
@@ -34,17 +35,17 @@ const POSContext = createContext<POSContextType>({
   isStudentDiscount: false,
   setIsStudentDiscount: () => {},
   setStations: () => {},
-  addProduct: () => ({}),
-  updateProduct: () => ({}),
-  deleteProduct: () => {},
+  addProduct: async () => Promise.resolve({} as Product),
+  updateProduct: async () => Promise.resolve({} as Product),
+  deleteProduct: async () => Promise.resolve(),
   startSession: async () => {},
   endSession: async () => {},
-  deleteStation: async () => false,
-  deleteSession: async () => false,
-  addCustomer: () => ({}),
-  updateCustomer: () => ({}),
+  deleteStation: async () => Promise.resolve(false),
+  deleteSession: async () => Promise.resolve(false),
+  addCustomer: async () => Promise.resolve({} as Customer),
+  updateCustomer: async () => Promise.resolve({} as Customer),
   updateCustomerMembership: () => null,
-  deleteCustomer: () => {},
+  deleteCustomer: async () => Promise.resolve(),
   selectCustomer: () => {},
   checkMembershipValidity: () => false,
   deductMembershipHours: () => false,
@@ -56,10 +57,10 @@ const POSContext = createContext<POSContextType>({
   setLoyaltyPointsUsed: () => {},
   calculateTotal: () => 0,
   completeSale: () => undefined,
-  deleteBill: async () => false,
+  deleteBill: async () => Promise.resolve(false),
   exportBills: () => {},
   exportCustomers: () => {},
-  resetToSampleData: () => {},
+  resetToSampleData: async () => Promise.resolve(false),
   addSampleIndianData: () => {}
 });
 
@@ -117,7 +118,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoyaltyPointsUsedAmount, 
     addToCart, 
     removeFromCart, 
-    updateCartItem, 
+    updateCartItem: baseUpdateCartItem,  // Renamed to avoid conflict 
     clearCart, 
     setDiscount, 
     setLoyaltyPointsUsed, 
@@ -334,14 +335,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomersBase(customers);
   };
   
-  // Simplified reset function - only resets local state
-  const handleResetToSampleData = async (options?: ResetOptions) => {
+  // Fix: Wrap with async to return Promise
+  const handleResetToSampleData = async (options?: ResetOptions): Promise<boolean> => {
     try {
       // Import the reset function from services
       const { resetToSampleData } = await import('@/services/dataOperations');
       
       // Call the async reset function
-      await resetToSampleData(
+      return await resetToSampleData(
         options,
         setProducts,
         setCustomers,
@@ -354,11 +355,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedCustomer,
         refreshFromDB
       );
-      
-      return true;
     } catch (error) {
       console.error('Error in handleResetToSampleData:', error);
-      throw error;
+      return false; // Return false on error
     }
   };
   
@@ -373,8 +372,50 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
     return await deleteBillBase(billId, customerId);
   };
+
+  // Fix updateCartItem to handle Partial<CartItem> type
+  const updateCartItem = (itemId: string, updates: Partial<CartItem>) => {
+    // Handle quantity update or any other properties
+    if (updates.quantity !== undefined) {
+      baseUpdateCartItem(itemId, updates.quantity);
+    } else {
+      // For other properties, find the item and update it
+      const itemIndex = cart.findIndex(item => item.id === itemId);
+      if (itemIndex !== -1) {
+        const updatedCart = [...cart];
+        updatedCart[itemIndex] = { ...updatedCart[itemIndex], ...updates };
+        setCart(updatedCart);
+      }
+    }
+  };
   
   console.log('POSProvider rendering with context value'); // Debug log
+  
+  // Type-safe wrapper for Promise functions
+  const addProductAsync = async (product: Partial<Product>): Promise<Product> => {
+    return Promise.resolve(addProduct(product as Omit<Product, 'id'>));
+  };
+
+  const updateProductAsync = async (productId: string, updatedData: Partial<Product>): Promise<Product> => {
+    // Find the product first
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found`);
+    }
+    // Merge the product with updates
+    const updatedProduct = { ...product, ...updatedData };
+    return Promise.resolve(updateProduct(updatedProduct));
+  };
+
+  const deleteProductAsync = async (productId: string): Promise<void> => {
+    deleteProduct(productId);
+    return Promise.resolve();
+  };
+
+  const deleteCustomerAsync = async (customerId: string): Promise<void> => {
+    deleteCustomer(customerId);
+    return Promise.resolve();
+  };
   
   return (
     <POSContext.Provider
@@ -394,9 +435,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isStudentDiscount,
         setIsStudentDiscount,
         setStations,
-        addProduct,
-        updateProduct,
-        deleteProduct,
+        addProduct: addProductAsync,
+        updateProduct: updateProductAsync,
+        deleteProduct: deleteProductAsync,
         startSession,
         endSession,
         deleteStation,
@@ -404,7 +445,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,
-        deleteCustomer,
+        deleteCustomer: deleteCustomerAsync,
         selectCustomer,
         checkMembershipValidity,
         deductMembershipHours,

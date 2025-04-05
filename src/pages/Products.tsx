@@ -55,6 +55,17 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  const handleUpdateProduct = async (product: Product) => {
+    try {
+      await updateProduct(product.id, product);
+      setActiveProduct(null);
+      setIsDialogOpen(false);
+      refreshProducts();
+    } catch (error) {
+      console.error('Error updating product:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent, formData: ProductFormState) => {
     e.preventDefault();
     
