@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, UserPlus, Trash2, Users, User, Edit, Clock, Briefcase, DollarSign, Calendar } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Users, User, Edit, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,7 +43,6 @@ const StaffManagement: React.FC = () => {
     
     try {
       const members = await getStaffMembers();
-      console.log('Loaded staff members:', members);
       setStaffMembers(members);
     } catch (error) {
       console.error('Failed to load staff members', error);
@@ -70,22 +70,11 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const salaryNum = newSalary !== undefined ? Number(newSalary) : undefined;
-      
-      console.log('Adding staff member with details:', {
-        username: newUsername,
-        position: newPosition,
-        salary: salaryNum,
-        joiningDate: newJoiningDate,
-        shiftStart: newShiftStart,
-        shiftEnd: newShiftEnd
-      });
-      
       const success = await addStaffMember(
         newUsername, 
         newPassword, 
         newPosition || undefined,
-        salaryNum,
+        newSalary || undefined,
         newJoiningDate || undefined,
         newShiftStart || undefined,
         newShiftEnd || undefined
@@ -98,7 +87,7 @@ const StaffManagement: React.FC = () => {
         });
         resetForm();
         setIsAddingStaff(false);
-        loadStaffMembers();
+        loadStaffMembers(); // Refresh staff list
       } else {
         toast({
           title: 'Error',
@@ -133,21 +122,10 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const salaryNum = newSalary !== undefined ? Number(newSalary) : undefined;
-      
-      console.log('Updating staff member with details:', {
-        username: newUsername,
-        position: newPosition,
-        salary: salaryNum,
-        joiningDate: newJoiningDate,
-        shiftStart: newShiftStart,
-        shiftEnd: newShiftEnd
-      });
-      
       const updatedData: Partial<AdminUser> = {
         username: newUsername,
         position: newPosition || undefined,
-        salary: salaryNum,
+        salary: newSalary || undefined,
         joiningDate: newJoiningDate || undefined,
         shiftStart: newShiftStart || undefined,
         shiftEnd: newShiftEnd || undefined,
@@ -162,7 +140,7 @@ const StaffManagement: React.FC = () => {
         });
         resetForm();
         setIsEditingStaff(false);
-        loadStaffMembers();
+        loadStaffMembers(); // Refresh staff list
       } else {
         toast({
           title: 'Error',
@@ -194,7 +172,7 @@ const StaffManagement: React.FC = () => {
           title: 'Success',
           description: 'Staff member deleted successfully',
         });
-        loadStaffMembers();
+        loadStaffMembers(); // Refresh staff list
       } else {
         toast({
           title: 'Error',
@@ -222,6 +200,7 @@ const StaffManagement: React.FC = () => {
     setCurrentEditStaff(null);
   };
 
+  // Only admins can access this component
   if (!user?.isAdmin) {
     return (
       <Card className="border border-cuephoria-lightpurple/30 shadow-md">
@@ -251,6 +230,7 @@ const StaffManagement: React.FC = () => {
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Add Staff Dialog */}
         <Dialog open={isAddingStaff} onOpenChange={(open) => {
           setIsAddingStaff(open);
           if (!open) resetForm();
@@ -272,6 +252,7 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
+              {/* Basic Info */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
@@ -298,73 +279,6 @@ const StaffManagement: React.FC = () => {
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
               </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Briefcase className="h-4 w-4" />
-                  Position
-                </label>
-                <Input
-                  value={newPosition}
-                  onChange={(e) => setNewPosition(e.target.value)}
-                  placeholder="Enter position"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <DollarSign className="h-4 w-4" />
-                  Salary
-                </label>
-                <Input
-                  type="number"
-                  value={newSalary || ''}
-                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="Enter salary"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Calendar className="h-4 w-4" />
-                  Joining Date
-                </label>
-                <Input
-                  type="date"
-                  value={newJoiningDate}
-                  onChange={(e) => setNewJoiningDate(e.target.value)}
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                    <Clock className="h-4 w-4" />
-                    Shift Start
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftStart}
-                    onChange={(e) => setNewShiftStart(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                    <Clock className="h-4 w-4" />
-                    Shift End
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftEnd}
-                    onChange={(e) => setNewShiftEnd(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-              </div>
             </div>
             
             <DialogFooter>
@@ -382,6 +296,7 @@ const StaffManagement: React.FC = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Edit Staff Dialog */}
         <Dialog open={isEditingStaff} onOpenChange={(open) => {
           setIsEditingStaff(open);
           if (!open) resetForm();
@@ -395,6 +310,7 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
+              {/* Basic Info */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
@@ -406,73 +322,6 @@ const StaffManagement: React.FC = () => {
                   placeholder="Enter username"
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Briefcase className="h-4 w-4" />
-                  Position
-                </label>
-                <Input
-                  value={newPosition}
-                  onChange={(e) => setNewPosition(e.target.value)}
-                  placeholder="Enter position"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <DollarSign className="h-4 w-4" />
-                  Salary
-                </label>
-                <Input
-                  type="number"
-                  value={newSalary || ''}
-                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="Enter salary"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Calendar className="h-4 w-4" />
-                  Joining Date
-                </label>
-                <Input
-                  type="date"
-                  value={newJoiningDate}
-                  onChange={(e) => setNewJoiningDate(e.target.value)}
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                    <Clock className="h-4 w-4" />
-                    Shift Start
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftStart}
-                    onChange={(e) => setNewShiftStart(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                    <Clock className="h-4 w-4" />
-                    Shift End
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftEnd}
-                    onChange={(e) => setNewShiftEnd(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
               </div>
             </div>
             
@@ -499,10 +348,6 @@ const StaffManagement: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Username</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Salary</TableHead>
-                    <TableHead>Join Date</TableHead>
-                    <TableHead>Shift Time</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -510,14 +355,6 @@ const StaffManagement: React.FC = () => {
                   {staffMembers.map((staff) => (
                     <TableRow key={staff.id}>
                       <TableCell>{staff.username}</TableCell>
-                      <TableCell>{staff.position || 'Not set'}</TableCell>
-                      <TableCell>{staff.salary ? `$${staff.salary}` : 'Not set'}</TableCell>
-                      <TableCell>{staff.joiningDate || 'Not set'}</TableCell>
-                      <TableCell>
-                        {staff.shiftStart && staff.shiftEnd ? 
-                          `${staff.shiftStart} - ${staff.shiftEnd}` : 
-                          'Not set'}
-                      </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button 

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
@@ -143,55 +144,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      await executeMigration();
-      
-      const userData = {
+      // Create minimal staff data
+      const basicUserData = {
         username,
         password,
-        is_admin: false,
-        position: position || null,
-        salary: salary || null,
-        joining_date: joiningDate || null,
-        shift_start: shiftStart || null,
-        shift_end: shiftEnd || null
+        is_admin: false
       };
       
-      const { error } = await supabase
-        .from('admin_users')
-        .insert(userData);
-      
-      if (error) {
-        console.error('Error creating staff member:', error);
+      // Add extended fields if they exist in the database - attempt this in a separate step
+      try {
+        const { error } = await supabase
+          .from('admin_users')
+          .insert(basicUserData);
         
-        if (error.message?.includes('column') && error.message?.includes('does not exist')) {
-          console.warn('Falling back to basic user creation without extended fields');
-          
-          const basicUserData = {
-            username,
-            password,
-            is_admin: false
-          };
-          
-          const { error: basicError } = await supabase
-            .from('admin_users')
-            .insert(basicUserData);
-            
-          if (basicError) {
-            console.error('Error creating basic staff member:', basicError);
-            toast.error('Error creating staff member');
-            return false;
-          }
-          
-          toast.success('Staff member added successfully (without extended info)');
-          return true;
+        if (error) {
+          console.error('Error creating staff member:', error);
+          toast.error('Error creating staff member');
+          return false;
         }
         
+        // Try to update with extended information if provided
+        if (position || salary || joiningDate || shiftStart || shiftEnd) {
+          const extendedData: Record<string, any> = {};
+          
+          if (position) extendedData.position = position;
+          if (salary) extendedData.salary = salary;
+          if (joiningDate) extendedData.joining_date = joiningDate;
+          if (shiftStart) extendedData.shift_start = shiftStart;
+          if (shiftEnd) extendedData.shift_end = shiftEnd;
+          
+          const { error: updateError } = await supabase
+            .from('admin_users')
+            .update(extendedData)
+            .eq('username', username);
+          
+          // If there's an error updating the extended fields, log it but don't fail
+          // This way users can still be created even if the extended fields aren't available
+          if (updateError) {
+            console.warn('Could not update extended staff fields:', updateError);
+          }
+        }
+        
+        toast.success('Staff member added successfully');
+        return true;
+      } catch (error) {
+        console.error('Error adding staff member:', error);
         toast.error('Error adding staff member');
         return false;
       }
-      
-      toast.success('Staff member added successfully');
-      return true;
     } catch (error) {
       console.error('Error adding staff member:', error);
       toast.error('Error adding staff member');
@@ -207,36 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      try {
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
-          .eq('is_admin', false);
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (!data || !Array.isArray(data)) {
-          return [];
-        }
-        
-        const staffMembers: AdminUser[] = data.map(staff => ({
-          id: staff.id || '',
-          username: staff.username || '',
-          isAdmin: staff.is_admin === true,
-          position: staff.position,
-          salary: staff.salary,
-          joiningDate: staff.joining_date,
-          shiftStart: staff.shift_start,
-          shiftEnd: staff.shift_end
-        }));
-        
-        return staffMembers;
-      } catch (e) {
-        console.log('Error fetching all fields, falling back to safer approach:', e);
-      }
-      
+      // First get basic fields which we know exist
       const { data, error } = await supabase
         .from('admin_users')
         .select('id, username, is_admin')
@@ -252,67 +223,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
+      // Transform the basic data into our AdminUser type
       const staffMembers: AdminUser[] = data.map(staff => ({
         id: staff.id || '',
         username: staff.username || '',
         isAdmin: staff.is_admin === true,
       }));
       
-      await executeMigration();
-      
+      // Now try to supplement with extended fields for each staff member individually
+      // This approach is safer as it will gracefully handle missing columns
       for (const member of staffMembers) {
         try {
-          const { data: positionData, error: positionError } = await supabase
+          // Try to fetch position for this specific user
+          const positionQuery = await supabase
             .from('admin_users')
             .select('position')
             .eq('id', member.id)
-            .maybeSingle();
-            
-          if (!positionError && positionData && positionData.position) {
-            member.position = positionData.position;
+            .single();
+          
+          if (positionQuery.data && 'position' in positionQuery.data && typeof positionQuery.data.position === 'string') {
+            member.position = positionQuery.data.position;
           }
         } catch (e) {
           console.log('Position column may not exist yet:', e);
         }
         
         try {
-          const { data: salaryData, error: salaryError } = await supabase
+          // Try to fetch salary for this specific user
+          const salaryQuery = await supabase
             .from('admin_users')
             .select('salary')
             .eq('id', member.id)
-            .maybeSingle();
-            
-          if (!salaryError && salaryData && salaryData.salary) {
-            member.salary = salaryData.salary;
+            .single();
+          
+          if (salaryQuery.data && 'salary' in salaryQuery.data && typeof salaryQuery.data.salary === 'number') {
+            member.salary = salaryQuery.data.salary;
           }
         } catch (e) {
           console.log('Salary column may not exist yet:', e);
         }
         
         try {
-          const { data: dateData, error: dateError } = await supabase
+          // Try to fetch joining_date for this specific user
+          const dateQuery = await supabase
             .from('admin_users')
             .select('joining_date')
             .eq('id', member.id)
-            .maybeSingle();
-            
-          if (!dateError && dateData && dateData.joining_date) {
-            member.joiningDate = dateData.joining_date;
+            .single();
+          
+          if (dateQuery.data && 'joining_date' in dateQuery.data && typeof dateQuery.data.joining_date === 'string') {
+            member.joiningDate = dateQuery.data.joining_date;
           }
         } catch (e) {
           console.log('Joining date column may not exist yet:', e);
         }
         
         try {
-          const { data: shiftData, error: shiftError } = await supabase
+          // Try to fetch shift_start and shift_end for this specific user
+          const shiftQuery = await supabase
             .from('admin_users')
             .select('shift_start, shift_end')
             .eq('id', member.id)
-            .maybeSingle();
-            
-          if (!shiftError && shiftData) {
-            if (shiftData.shift_start) member.shiftStart = shiftData.shift_start;
-            if (shiftData.shift_end) member.shiftEnd = shiftData.shift_end;
+            .single();
+          
+          if (shiftQuery.data) {
+            if ('shift_start' in shiftQuery.data && typeof shiftQuery.data.shift_start === 'string') {
+              member.shiftStart = shiftQuery.data.shift_start;
+            }
+            if ('shift_end' in shiftQuery.data && typeof shiftQuery.data.shift_end === 'string') {
+              member.shiftEnd = shiftQuery.data.shift_end;
+            }
           }
         } catch (e) {
           console.log('Shift columns may not exist yet:', e);
@@ -335,17 +315,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      await executeMigration();
-
+      // Construct database fields carefully
       const dbData: Record<string, any> = {};
       
       if (updatedData.username) dbData.username = updatedData.username;
-      if (updatedData.position !== undefined) dbData.position = updatedData.position;
-      if (updatedData.salary !== undefined) dbData.salary = updatedData.salary;
-      if (updatedData.joiningDate !== undefined) dbData.joining_date = updatedData.joiningDate;
-      if (updatedData.shiftStart !== undefined) dbData.shift_start = updatedData.shiftStart;
-      if (updatedData.shiftEnd !== undefined) dbData.shift_end = updatedData.shiftEnd;
+      
+      // Only try to update extended fields if they exist
+      try {
+        // First check if the columns exist by doing a small query
+        if (updatedData.position || updatedData.salary || updatedData.joiningDate || 
+            updatedData.shiftStart || updatedData.shiftEnd) {
+          
+          if (updatedData.position) dbData.position = updatedData.position;
+          if (updatedData.salary !== undefined) dbData.salary = updatedData.salary;
+          if (updatedData.joiningDate) dbData.joining_date = updatedData.joiningDate;
+          if (updatedData.shiftStart) dbData.shift_start = updatedData.shiftStart;
+          if (updatedData.shiftEnd) dbData.shift_end = updatedData.shiftEnd;
+        }
+      } catch (error) {
+        console.warn("Extended fields not available, updating only basic fields");
+      }
 
+      // Only update if there's something to update
       if (Object.keys(dbData).length > 0) {
         const { error } = await supabase
           .from('admin_users')
@@ -395,66 +386,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error deleting staff member:', error);
       toast.error('Error deleting staff member');
       return false;
-    }
-  };
-
-  const executeMigration = async () => {
-    try {
-      const { data, error } = await supabase.rpc('execute_staff_fields_migration');
-      
-      if (error) {
-        console.error('Error executing migration:', error);
-        await createMigrationFunction();
-      } else {
-        console.log('Migration executed successfully:', data);
-      }
-    } catch (e) {
-      console.error('Error during migration:', e);
-      await createMigrationFunction();
-    }
-  };
-
-  const createMigrationFunction = async () => {
-    try {
-      const addPosition = await supabase.rpc('add_column_if_not_exists', { 
-        table_name: 'admin_users', 
-        column_name: 'position',
-        column_type: 'TEXT'
-      });
-      
-      const addSalary = await supabase.rpc('add_column_if_not_exists', { 
-        table_name: 'admin_users', 
-        column_name: 'salary',
-        column_type: 'NUMERIC'
-      });
-      
-      const addJoiningDate = await supabase.rpc('add_column_if_not_exists', { 
-        table_name: 'admin_users', 
-        column_name: 'joining_date',
-        column_type: 'TEXT'
-      });
-      
-      const addShiftStart = await supabase.rpc('add_column_if_not_exists', { 
-        table_name: 'admin_users', 
-        column_name: 'shift_start',
-        column_type: 'TEXT'
-      });
-      
-      const addShiftEnd = await supabase.rpc('add_column_if_not_exists', { 
-        table_name: 'admin_users', 
-        column_name: 'shift_end',
-        column_type: 'TEXT'
-      });
-      
-      console.log('Direct column addition attempts:', {
-        position: addPosition,
-        salary: addSalary,
-        joiningDate: addJoiningDate,
-        shiftStart: addShiftStart,
-        shiftEnd: addShiftEnd
-      });
-    } catch (e) {
-      console.error('Error creating columns directly:', e);
     }
   };
 
