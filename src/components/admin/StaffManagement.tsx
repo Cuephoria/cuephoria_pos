@@ -279,72 +279,6 @@ const StaffManagement: React.FC = () => {
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
               </div>
-
-              {/* Position */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-cuephoria-lightpurple">
-                  Position
-                </label>
-                <Input
-                  value={newPosition}
-                  onChange={(e) => setNewPosition(e.target.value)}
-                  placeholder="Enter position (e.g., Receptionist, Cook)"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-
-              {/* Salary */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-cuephoria-lightpurple">
-                  Salary
-                </label>
-                <Input
-                  type="number"
-                  value={newSalary || ''}
-                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="Enter salary"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-
-              {/* Joining Date */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-cuephoria-lightpurple">
-                  Joining Date
-                </label>
-                <Input
-                  type="date"
-                  value={newJoiningDate}
-                  onChange={(e) => setNewJoiningDate(e.target.value)}
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-
-              {/* Shift Timings */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-cuephoria-lightpurple">
-                    Shift Start
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftStart}
-                    onChange={(e) => setNewShiftStart(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-cuephoria-lightpurple">
-                    Shift End
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftEnd}
-                    onChange={(e) => setNewShiftEnd(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-              </div>
             </div>
             
             <DialogFooter>
@@ -389,72 +323,6 @@ const StaffManagement: React.FC = () => {
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
               </div>
-
-              {/* Position */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-cuephoria-lightpurple">
-                  Position
-                </label>
-                <Input
-                  value={newPosition}
-                  onChange={(e) => setNewPosition(e.target.value)}
-                  placeholder="Enter position (e.g., Receptionist, Cook)"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-
-              {/* Salary */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-cuephoria-lightpurple">
-                  Salary
-                </label>
-                <Input
-                  type="number"
-                  value={newSalary || ''}
-                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
-                  placeholder="Enter salary"
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-
-              {/* Joining Date */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-cuephoria-lightpurple">
-                  Joining Date
-                </label>
-                <Input
-                  type="date"
-                  value={newJoiningDate}
-                  onChange={(e) => setNewJoiningDate(e.target.value)}
-                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                />
-              </div>
-
-              {/* Shift Timings */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-cuephoria-lightpurple">
-                    Shift Start
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftStart}
-                    onChange={(e) => setNewShiftStart(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-cuephoria-lightpurple">
-                    Shift End
-                  </label>
-                  <Input
-                    type="time"
-                    value={newShiftEnd}
-                    onChange={(e) => setNewShiftEnd(e.target.value)}
-                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
-                  />
-                </div>
-              </div>
             </div>
             
             <DialogFooter>
@@ -480,8 +348,6 @@ const StaffManagement: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Username</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Shift</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -489,12 +355,6 @@ const StaffManagement: React.FC = () => {
                   {staffMembers.map((staff) => (
                     <TableRow key={staff.id}>
                       <TableCell>{staff.username}</TableCell>
-                      <TableCell>{staff.position || 'Not set'}</TableCell>
-                      <TableCell>
-                        {staff.shiftStart && staff.shiftEnd ? 
-                          `${staff.shiftStart} - ${staff.shiftEnd}` : 
-                          'Not set'}
-                      </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button 
