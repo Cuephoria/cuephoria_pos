@@ -246,14 +246,18 @@ const POS = () => {
             {cart.length > 0 ? (
               <div className="space-y-4">
                 {cart.map((item, index) => (
-                  <div key={item.id} className={`flex items-center justify-between border-b pb-3 animate-fade-in`} style={{animationDelay: `${index * 50}ms`}}>
-                    <div className="flex-1">
-                      <p className="font-medium font-quicksand">{item.name}</p>
-                      <p className="text-sm text-muted-foreground indian-rupee">
+                  <div 
+                    key={item.id} 
+                    className={`flex items-center justify-between border-b pb-3 animate-fade-in grid grid-cols-[2fr_1fr_1fr] gap-2`} 
+                    style={{animationDelay: `${index * 50}ms`}}
+                  >
+                    <div className="flex flex-col justify-center">
+                      <p className="font-medium font-quicksand truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground indian-rupee">
                         {item.price.toLocaleString('en-IN')} each
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-center space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -271,17 +275,19 @@ const POS = () => {
                       >
                         +
                       </Button>
+                    </div>
+                    <div className="flex flex-col items-end">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 text-destructive hover:bg-red-500/10"
+                        className="h-7 w-7 p-0 text-destructive hover:bg-red-500/10 self-end"
                         onClick={() => handleRemoveItem(item.id)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
-                    <div className="w-20 text-right indian-rupee font-mono">
-                      {item.total.toLocaleString('en-IN')}
+                      <div className="indian-rupee font-mono text-right">
+                        {item.total.toLocaleString('en-IN')}
+                      </div>
                     </div>
                   </div>
                 ))}
