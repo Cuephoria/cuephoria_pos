@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
       name: product.name,
       price: product.price,
       quantity: 1,
-      category: product.category
+      category: product.category,
+      total: product.price // Add the total property here
     });
     
     if (product.category === 'membership' && product.studentPrice) {

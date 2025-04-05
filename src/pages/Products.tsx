@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
@@ -93,7 +94,8 @@ const ProductsPage: React.FC = () => {
       console.log('Submitting product data:', productData);
       
       if (isEditMode && selectedProduct) {
-        await updateProduct({ ...productData, id: selectedProduct.id });
+        // Fix: Pass productId and updatedData separately
+        await updateProduct(selectedProduct.id, productData);
         toast({
           title: 'Product Updated',
           description: 'The product has been updated successfully.',
