@@ -2,11 +2,32 @@
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament } from "@/types/tournament.types";
 import { useToast } from '@/hooks/use-toast';
+import { PostgrestError } from "@supabase/supabase-js";
+
+// Define a more specific type for Supabase operations with tournaments
+// This helps us work around the type limitations without modifying the types.ts file
+type SupabaseTournament = {
+  id: string;
+  name: string;
+  game_type: string;
+  game_variant?: string;
+  game_title?: string;
+  date: string;
+  players: any[];
+  matches: any[];
+  status: string;
+  budget?: number;
+  winner_prize?: number;
+  runner_up_prize?: number;
+  winner?: any;
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Fetch all tournaments from Supabase
 export const fetchTournaments = async (): Promise<Tournament[]> => {
   try {
-    // Using type assertion to bypass TypeScript error
+    // Using any type to bypass TypeScript error since we can't modify types.ts
     const { data, error } = await (supabase
       .from('tournaments') as any)
       .select('*')
@@ -30,11 +51,16 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
     const supabaseTournament = convertToSupabaseTournament(tournament);
     
     // Check if the tournament already exists
-    const { data: existingTournament } = await (supabase
+    const { data: existingTournament, error: checkError } = await (supabase
       .from('tournaments') as any)
       .select('id')
       .eq('id', tournament.id)
       .single();
+      
+    if (checkError && checkError.code !== 'PGRST116') { // Not found is not an error in this case
+      console.error('Error checking tournament existence:', checkError);
+      return null;
+    }
       
     let result;
     
