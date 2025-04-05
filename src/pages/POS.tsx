@@ -245,6 +245,7 @@ const POS = () => {
               {cart.length} {cart.length === 1 ? 'item' : 'items'} in cart
             </CardDescription>
           </CardHeader>
+          
           <CardContent className="flex-grow overflow-auto px-6">
             {cart.length > 0 ? (
               <div className="space-y-4">
@@ -305,6 +306,7 @@ const POS = () => {
               </div>
             )}
           </CardContent>
+          
           <CardFooter className="border-t pt-4 flex flex-col bg-gradient-to-r from-transparent to-cuephoria-purple/10">
             <div className="w-full">
               <div className="flex justify-between py-1">
@@ -364,15 +366,15 @@ const POS = () => {
           </CardFooter>
         </Card>
 
-        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200 overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-r from-transparent to-cuephoria-blue/10">
-            <CardTitle className="text-xl font-heading">Products</CardTitle>
+        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200 overflow-hidden bg-slate-950 border-slate-800">
+          <CardHeader className="pb-3 bg-slate-900">
+            <CardTitle className="text-xl font-heading text-white">Products</CardTitle>
             <div className="flex space-x-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products..."
-                  className="pl-8 font-quicksand"
+                  className="pl-8 font-quicksand bg-slate-800 border-slate-700 text-white"
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
                 />
@@ -381,30 +383,32 @@ const POS = () => {
           </CardHeader>
           
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow animate-scale-in">
-            <TabsList className={`px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20 ${isMobile ? 'overflow-x-auto pb-2' : ''}`}>
-              <TabsTrigger value="all" className="font-heading flex-grow basis-0">
-                All ({categoryCounts.all || 0})
-              </TabsTrigger>
-              <TabsTrigger value="food" className="font-heading flex-grow basis-0">
-                Food ({categoryCounts.food || 0})
-              </TabsTrigger>
-              <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">
-                Drinks ({categoryCounts.drinks || 0})
-              </TabsTrigger>
-              <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">
-                Tobacco ({categoryCounts.tobacco || 0})
-              </TabsTrigger>
-              <TabsTrigger value="challenges" className="font-heading flex-grow basis-0">
-                Challenges ({categoryCounts.challenges || 0})
-              </TabsTrigger>
-              <TabsTrigger value="membership" className="font-heading flex-grow basis-0">
-                <Award className="h-4 w-4 mr-1" /> 
-                Membership ({categoryCounts.membership || 0})
-              </TabsTrigger>
-            </TabsList>
+            <div className={`${isMobile ? 'overflow-x-auto' : ''} bg-slate-800`}>
+              <TabsList className="bg-transparent w-full flex flex-nowrap justify-start px-6">
+                <TabsTrigger value="all" className="text-white data-[state=active]:bg-slate-900">
+                  All ({categoryCounts.all || 0})
+                </TabsTrigger>
+                <TabsTrigger value="food" className="text-white data-[state=active]:bg-slate-900">
+                  Food ({categoryCounts.food || 0})
+                </TabsTrigger>
+                <TabsTrigger value="drinks" className="text-white data-[state=active]:bg-slate-900">
+                  Drinks ({categoryCounts.drinks || 0})
+                </TabsTrigger>
+                <TabsTrigger value="tobacco" className="text-white data-[state=active]:bg-slate-900">
+                  Tobacco ({categoryCounts.tobacco || 0})
+                </TabsTrigger>
+                <TabsTrigger value="challenges" className="text-white data-[state=active]:bg-slate-900">
+                  Challenges ({categoryCounts.challenges || 0})
+                </TabsTrigger>
+                <TabsTrigger value="membership" className="text-white data-[state=active]:bg-slate-900">
+                  <Award className="h-4 w-4 mr-1" /> 
+                  Membership ({categoryCounts.membership || 0})
+                </TabsTrigger>
+              </TabsList>
+            </div>
             
             <TabsContent value={activeTab} className="flex-grow overflow-hidden mt-4">
-              <ScrollArea className="h-full">
+              <ScrollArea className="h-full max-h-[calc(100vh-280px)]">
                 <div className="px-4 pb-4">
                   {searchedProducts.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
