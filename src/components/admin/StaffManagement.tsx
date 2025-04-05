@@ -85,13 +85,15 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const success = await addStaffMember(newUsername, newPassword, {
+      const staffData = {
         position: newPosition,
         salary: parseFloat(newSalary),
         joiningDate: newJoiningDate,
         shiftStart: newShiftStart,
         shiftEnd: newShiftEnd,
-      });
+      };
+      
+      const success = await addStaffMember(newUsername, newPassword, staffData);
       
       if (success) {
         toast({

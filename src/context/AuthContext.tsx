@@ -3,10 +3,23 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
 
+interface StaffData {
+  position?: string;
+  salary?: number;
+  joiningDate?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
+}
+
 interface AdminUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  position?: string;
+  salary?: number;
+  joiningDate?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
 }
 
 interface AuthContextType {
@@ -14,7 +27,7 @@ interface AuthContextType {
   login: (username: string, password: string, isAdminLogin: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
-  addStaffMember: (username: string, password: string) => Promise<boolean>;
+  addStaffMember: (username: string, password: string, staffData?: StaffData) => Promise<boolean>;
   getStaffMembers: () => Promise<AdminUser[]>;
 }
 
@@ -111,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Function for admins to add staff members
-  const addStaffMember = async (username: string, password: string): Promise<boolean> => {
+  const addStaffMember = async (username: string, password: string, staffData?: StaffData): Promise<boolean> => {
     try {
       if (!user?.isAdmin) {
         console.error("Only admins can add staff members");
@@ -130,13 +143,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
+      const userData = {
+        username,
+        password,
+        is_admin: false,
+        ...staffData ? {
+          position: staffData.position,
+          salary: staffData.salary,
+          joining_date: staffData.joiningDate,
+          shift_start: staffData.shiftStart,
+          shift_end: staffData.shiftEnd
+        } : {}
+      };
+      
       const { error } = await supabase
         .from('admin_users')
-        .insert({
-          username,
-          password,
-          is_admin: false
-        });
+        .insert(userData);
       
       if (error) {
         console.error('Error creating staff member:', error);
@@ -160,7 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { data, error } = await supabase
         .from('admin_users')
-        .select('id, username, is_admin')
+        .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
         .eq('is_admin', false);
       
       if (error) {
@@ -171,7 +193,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return data.map(staff => ({
         id: staff.id,
         username: staff.username,
-        isAdmin: staff.is_admin
+        isAdmin: staff.is_admin,
+        position: staff.position,
+        salary: staff.salary,
+        joiningDate: staff.joining_date,
+        shiftStart: staff.shift_start,
+        shiftEnd: staff.shift_end
       }));
     } catch (error) {
       console.error('Error fetching staff members:', error);
