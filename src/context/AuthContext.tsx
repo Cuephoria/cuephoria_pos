@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
@@ -77,8 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('admin_users')
         .select('id, username, is_admin, password');
       
-      // If admin login is selected, only check admin accounts
-      // If staff login is selected, only check staff accounts
       if (isAdminLogin) {
         query.eq('is_admin', true);
       } else {
@@ -117,7 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('cuephoriaAdmin');
   };
 
-  // Function for admins to add staff members
   const addStaffMember = async (
     username: string, 
     password: string, 
@@ -133,7 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Check if username already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('admin_users')
         .select('id')
@@ -145,7 +140,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // First, check if the columns exist in the table
       try {
         const { error } = await supabase
           .from('admin_users')
@@ -176,7 +170,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Function to get all staff members (for admin view)
   const getStaffMembers = async (): Promise<AdminUser[]> => {
     try {
       if (!user?.isAdmin) {
@@ -184,18 +177,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      // Try to fetch all fields first
       const { data, error } = await supabase
         .from('admin_users')
         .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
         .eq('is_admin', false);
       
-      // If there's an error (likely because some columns don't exist),
-      // fallback to fetching only the base fields
       if (error) {
         console.error('Error fetching staff members with extended fields:', error);
         
-        // Fallback to basic fields
         const { data: basicData, error: basicError } = await supabase
           .from('admin_users')
           .select('id, username, is_admin')
@@ -206,7 +195,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return [];
         }
         
-        // Return data with only basic fields
         return basicData.map(staff => ({
           id: staff.id,
           username: staff.username,
@@ -214,22 +202,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
       }
       
-      // Check if data exists and is an array
       if (!data || !Array.isArray(data)) {
         return [];
       }
       
-      // If we got here, the extended query worked
-      // Make sure we're safely mapping data only if it's valid
       return data.map(staff => ({
-        id: staff.id,
-        username: staff.username,
-        isAdmin: staff.is_admin,
-        position: staff.position,
-        salary: staff.salary,
-        joiningDate: staff.joining_date,
-        shiftStart: staff.shift_start,
-        shiftEnd: staff.shift_end
+        id: staff.id || '',
+        username: staff.username || '',
+        isAdmin: !!staff.is_admin,
+        position: staff.position || undefined,
+        salary: typeof staff.salary === 'number' ? staff.salary : undefined,
+        joiningDate: staff.joining_date || undefined,
+        shiftStart: staff.shift_start || undefined,
+        shiftEnd: staff.shift_end || undefined
       }));
     } catch (error) {
       console.error('Error fetching staff members:', error);
@@ -237,7 +222,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Function to update staff member details
   const updateStaffMember = async (id: string, updatedData: Partial<AdminUser>): Promise<boolean> => {
     try {
       if (!user?.isAdmin) {
@@ -245,7 +229,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Convert the AdminUser fields to database column names
       const dbData: any = {
         username: updatedData.username,
         position: updatedData.position,
@@ -255,7 +238,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         shift_end: updatedData.shiftEnd
       };
       
-      // Remove undefined values
       Object.keys(dbData).forEach(key => {
         if (dbData[key] === undefined) {
           delete dbData[key];
@@ -279,7 +261,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Function to delete staff member
   const deleteStaffMember = async (id: string): Promise<boolean> => {
     try {
       if (!user?.isAdmin) {
