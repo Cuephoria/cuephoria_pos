@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, UserPlus, Trash2, Users, User, Edit, Clock } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Users, User, Edit, Clock, Briefcase, DollarSign, Calendar } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -279,6 +279,77 @@ const StaffManagement: React.FC = () => {
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
               </div>
+
+              {/* Position */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <Briefcase className="h-4 w-4" />
+                  Position
+                </label>
+                <Input
+                  value={newPosition}
+                  onChange={(e) => setNewPosition(e.target.value)}
+                  placeholder="Enter position"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+              
+              {/* Salary */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <DollarSign className="h-4 w-4" />
+                  Salary
+                </label>
+                <Input
+                  type="number"
+                  value={newSalary || ''}
+                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="Enter salary"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+              
+              {/* Joining Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <Calendar className="h-4 w-4" />
+                  Joining Date
+                </label>
+                <Input
+                  type="date"
+                  value={newJoiningDate}
+                  onChange={(e) => setNewJoiningDate(e.target.value)}
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+              
+              {/* Shift Timings */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                    <Clock className="h-4 w-4" />
+                    Shift Start
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftStart}
+                    onChange={(e) => setNewShiftStart(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                    <Clock className="h-4 w-4" />
+                    Shift End
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftEnd}
+                    onChange={(e) => setNewShiftEnd(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+              </div>
             </div>
             
             <DialogFooter>
@@ -323,6 +394,77 @@ const StaffManagement: React.FC = () => {
                   className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
                 />
               </div>
+              
+              {/* Position */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <Briefcase className="h-4 w-4" />
+                  Position
+                </label>
+                <Input
+                  value={newPosition}
+                  onChange={(e) => setNewPosition(e.target.value)}
+                  placeholder="Enter position"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+              
+              {/* Salary */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <DollarSign className="h-4 w-4" />
+                  Salary
+                </label>
+                <Input
+                  type="number"
+                  value={newSalary || ''}
+                  onChange={(e) => setNewSalary(e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="Enter salary"
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+              
+              {/* Joining Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <Calendar className="h-4 w-4" />
+                  Joining Date
+                </label>
+                <Input
+                  type="date"
+                  value={newJoiningDate}
+                  onChange={(e) => setNewJoiningDate(e.target.value)}
+                  className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                />
+              </div>
+              
+              {/* Shift Timings */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                    <Clock className="h-4 w-4" />
+                    Shift Start
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftStart}
+                    onChange={(e) => setNewShiftStart(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                    <Clock className="h-4 w-4" />
+                    Shift End
+                  </label>
+                  <Input
+                    type="time"
+                    value={newShiftEnd}
+                    onChange={(e) => setNewShiftEnd(e.target.value)}
+                    className="bg-cuephoria-darker border-cuephoria-lightpurple/30"
+                  />
+                </div>
+              </div>
             </div>
             
             <DialogFooter>
@@ -348,6 +490,7 @@ const StaffManagement: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Username</TableHead>
+                    <TableHead>Position</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -355,6 +498,7 @@ const StaffManagement: React.FC = () => {
                   {staffMembers.map((staff) => (
                     <TableRow key={staff.id}>
                       <TableCell>{staff.username}</TableCell>
+                      <TableCell>{staff.position || 'Not set'}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button 
