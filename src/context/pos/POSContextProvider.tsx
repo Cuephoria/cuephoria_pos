@@ -121,12 +121,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const productOperations = useProductOperations(products, setProducts);
   const customerOperations = useCustomerOperations(customers, selectedCustomer, setSelectedCustomer);
   const stationOperations = useStationOperations(stations, sessions, customers);
-  const billOperations = useBillOperations(bills, setBills, customers, products, cart, selectedCustomer, clearCart, setSelectedCustomer, setIsStudentDiscount);
+  const billOperations = useBillOperations(bills, setBills, customers, products, cart, selectedCustomer, clearCart, setSelectedCustomer, isStudentDiscount, setIsStudentDiscount);
   const posUtilities = usePOSUtilities();
   
   console.log('POSProvider rendering with context value'); // Debug log
   
   // Fix for error: Type 'string' is not assignable to type 'Error'
+  const productsErrorObject = typeof productsError === 'string' 
+    ? new Error(productsError) 
+    : productsError;
+  
   if (!customers || !Array.isArray(customers)) {
     throw new Error('Customers must be an array');
   }
@@ -136,7 +140,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         products,
         productsLoading,
-        productsError,
+        productsError: productsErrorObject,
         stations,
         customers,
         sessions,
