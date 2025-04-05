@@ -69,13 +69,28 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     
     try {
       setDeleteInProgress(true);
-      console.log("Delete station button clicked for:", station.name, station.id);
+      console.log("Delete station button clicked for:", station.name, station.id, "Type:", station.type);
       
       // Show deletion in progress toast
       toast({
         title: "Deleting Station",
         description: `Attempting to delete ${station.name}...`,
       });
+      
+      // Extra validation to ensure we have correct data
+      if (!station.id) {
+        toast({
+          title: "Error",
+          description: "Invalid station ID",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Double-check station type to verify data integrity
+      console.log("Station type before deletion:", station.type, 
+                  "Is PS5:", station.type === 'ps5',
+                  "Is 8ball:", station.type === '8ball');
       
       const result = await deleteStation(station.id);
       console.log("Delete station result:", result);
@@ -148,6 +163,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         }
         ${isPoolTable ? 'rounded-xl' : 'rounded-lg'}
       `}
+      data-station-id={station.id}
+      data-station-type={station.type}
     >
       {isPoolTable && (
         <>
@@ -260,7 +277,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                     Are you sure you want to delete {station.name}? This action cannot be undone.
                     <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
                       Station ID: {station.id}<br/>
-                      Type: {station.type}
+                      Type: {station.type}<br/>
+                      Name: {station.name}
                     </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>

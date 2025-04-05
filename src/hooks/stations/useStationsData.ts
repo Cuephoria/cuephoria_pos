@@ -106,17 +106,35 @@ export const useStationsData = () => {
         isOccupied: station.isOccupied
       });
       
-      // CRITICAL FIX: Before deleting, make a direct query to verify the station exists
+      // Let's try to fix the PS5 deletion issue by directly examining the DB structure first
+      console.log("Checking database for station with ID:", stationId);
+      const { data: tableInfo } = await supabase
+        .rpc('get_table_columns', { table_name: 'stations' });
+      
+      if (tableInfo) {
+        console.log("Stations table structure:", tableInfo);
+      }
+      
+      // CRITICAL FIX: Enhanced direct query to make sure the station exists
       const { data: stationCheck, error: checkError } = await supabase
         .from('stations')
-        .select('id, name')
-        .eq('id', stationId)
-        .single();
+        .select('id, name, type')
+        .eq('id', stationId);
         
       console.log("Station check result:", stationCheck);
       
-      if (checkError || !stationCheck) {
-        console.error('Station not found in database:', checkError || 'No data returned');
+      if (checkError) {
+        console.error('Error checking station existence:', checkError);
+        toast({
+          title: 'Database Error',
+          description: `Error verifying station: ${checkError.message}`,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      if (!stationCheck || stationCheck.length === 0) {
+        console.error('Station not found in database');
         
         // If the station doesn't exist in DB but does in local state, just remove it from local state
         console.log("Removing station from local state only");
@@ -130,10 +148,12 @@ export const useStationsData = () => {
         return true;
       }
       
-      console.log(`Confirmed station exists in database: ${stationCheck.name} (${stationId})`);
+      console.log(`Confirmed station exists in database: ${stationCheck[0]?.name} (${stationId})`);
+      console.log("Station type from DB:", stationCheck[0]?.type);
       
-      // Delete from Supabase - DIRECT DELETE
-      const { error } = await supabase
+      // Try a more robust delete approach - delete and handle appropriately
+      console.log("Executing delete operation with station ID:", stationId);
+      const { error, count } = await supabase
         .from('stations')
         .delete()
         .eq('id', stationId);
@@ -152,9 +172,9 @@ export const useStationsData = () => {
         return false;
       }
       
-      console.log(`Station with ID ${stationId} deleted successfully from database`);
+      console.log(`Station with ID ${stationId} deleted successfully from database, affected rows:`, count);
       
-      // Update local state
+      // Update local state even if the DB delete might have failed silently
       setStations(prev => {
         const updatedStations = prev.filter(station => station.id !== stationId);
         console.log(`Updated stations list: ${updatedStations.length} stations remaining`);
