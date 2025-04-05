@@ -223,23 +223,30 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                     
                     {match.status === 'scheduled' && !match.completed && (
                       <>
-                        <div className="mt-4">
-                          <Select
-                            onValueChange={(value) => updateMatchResult(match.id, value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select winner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={match.player1Id}>
-                                {getPlayerName(match.player1Id)}
-                              </SelectItem>
-                              <SelectItem value={match.player2Id}>
-                                {getPlayerName(match.player2Id)}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Only render the Select when both players are valid */}
+                        {match.player1Id && match.player2Id && match.player1Id.trim() !== '' && match.player2Id.trim() !== '' && (
+                          <div className="mt-4">
+                            <Select
+                              onValueChange={(value) => updateMatchResult(match.id, value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select winner" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {match.player1Id && match.player1Id.trim() !== '' && (
+                                  <SelectItem value={match.player1Id}>
+                                    {getPlayerName(match.player1Id)}
+                                  </SelectItem>
+                                )}
+                                {match.player2Id && match.player2Id.trim() !== '' && (
+                                  <SelectItem value={match.player2Id}>
+                                    {getPlayerName(match.player2Id)}
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                         <div className="mt-2">
                           <Button 
                             variant="outline" 
