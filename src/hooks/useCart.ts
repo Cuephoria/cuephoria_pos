@@ -12,11 +12,17 @@ export const useCart = () => {
   
   const addToCart = (item: Omit<CartItem, 'total'>, availableStock?: number) => {
     try {
+      // Calculate total if not provided
+      const itemWithTotal: CartItem = {
+        ...item,
+        total: item.quantity * item.price
+      };
+      
       // For non-membership products, check available stock
-      if (item.type === 'product' && item.category !== 'membership' && typeof availableStock === 'number') {
-        const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
+      if (itemWithTotal.type === 'product' && itemWithTotal.category !== 'membership' && typeof availableStock === 'number') {
+        const existingItem = cart.find(i => i.id === itemWithTotal.id && i.type === itemWithTotal.type);
         const currentCartQuantity = existingItem ? existingItem.quantity : 0;
-        const totalRequestedQuantity = currentCartQuantity + item.quantity;
+        const totalRequestedQuantity = currentCartQuantity + itemWithTotal.quantity;
         
         // Check if we have enough stock
         if (totalRequestedQuantity > availableStock) {
@@ -24,7 +30,7 @@ export const useCart = () => {
           if (availableStock <= currentCartQuantity) {
             toast({
               title: "Insufficient Stock",
-              description: `Only ${availableStock} units of ${item.name} available (${currentCartQuantity} already in cart)`,
+              description: `Only ${availableStock} units of ${itemWithTotal.name} available (${currentCartQuantity} already in cart)`,
               variant: "destructive"
             });
             return;
@@ -34,34 +40,34 @@ export const useCart = () => {
           const adjustedQuantity = availableStock - currentCartQuantity;
           toast({
             title: "Stock Limited",
-            description: `Only added ${adjustedQuantity} units of ${item.name} (stock limit reached)`,
+            description: `Only added ${adjustedQuantity} units of ${itemWithTotal.name} (stock limit reached)`,
             variant: "destructive"
           });
           
           // Update item quantity to what's available
-          item = { ...item, quantity: adjustedQuantity };
+          itemWithTotal.quantity = adjustedQuantity;
+          itemWithTotal.total = adjustedQuantity * itemWithTotal.price;
         }
       }
       
-      const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
+      const existingItem = cart.find(i => i.id === itemWithTotal.id && i.type === itemWithTotal.type);
       
       if (existingItem) {
         const updatedCart = cart.map(i => 
-          i.id === item.id && i.type === item.type
-            ? { ...i, quantity: i.quantity + item.quantity, total: (i.quantity + item.quantity) * i.price }
+          i.id === itemWithTotal.id && i.type === itemWithTotal.type
+            ? { ...i, quantity: i.quantity + itemWithTotal.quantity, total: (i.quantity + itemWithTotal.quantity) * i.price }
             : i
         );
         setCart(updatedCart);
         toast({
           title: "Item Updated",
-          description: `Increased quantity of ${item.name}`,
+          description: `Increased quantity of ${itemWithTotal.name}`,
         });
       } else {
-        const newItem = { ...item, total: item.quantity * item.price };
-        setCart([...cart, newItem]);
+        setCart([...cart, itemWithTotal]);
         toast({
           title: "Item Added",
-          description: `Added ${item.name} to cart`,
+          description: `Added ${itemWithTotal.name} to cart`,
         });
       }
     } catch (error) {

@@ -165,7 +165,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deductMembershipHours: customerOperations.deductMembershipHours,
         addToCart,
         removeFromCart,
-        updateCartItem,
+        // Fix for updateCartItem signature mismatch
+        updateCartItem: (itemId: string, updates: Partial<CartItem>) => {
+          if (typeof updates === 'object' && 'quantity' in updates) {
+            updateCartItem(itemId, updates.quantity as number);
+          }
+        },
         clearCart,
         setDiscount,
         setLoyaltyPointsUsed,
