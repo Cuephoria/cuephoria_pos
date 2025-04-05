@@ -207,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      // First try to get basic fields which we know exist
+      // First get basic fields which we know exist
       const { data, error } = await supabase
         .from('admin_users')
         .select('id, username, is_admin')
@@ -235,14 +235,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       for (const member of staffMembers) {
         try {
           // Try to fetch position for this specific user
-          const { data: positionData } = await supabase
+          const positionQuery = await supabase
             .from('admin_users')
             .select('position')
             .eq('id', member.id)
             .single();
           
-          if (positionData?.position) {
-            member.position = positionData.position;
+          if (positionQuery.data && 'position' in positionQuery.data) {
+            member.position = positionQuery.data.position;
           }
         } catch (e) {
           console.log('Position column may not exist yet:', e);
@@ -250,14 +250,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         try {
           // Try to fetch salary for this specific user
-          const { data: salaryData } = await supabase
+          const salaryQuery = await supabase
             .from('admin_users')
             .select('salary')
             .eq('id', member.id)
             .single();
           
-          if (salaryData?.salary) {
-            member.salary = salaryData.salary;
+          if (salaryQuery.data && 'salary' in salaryQuery.data) {
+            member.salary = salaryQuery.data.salary;
           }
         } catch (e) {
           console.log('Salary column may not exist yet:', e);
@@ -265,14 +265,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         try {
           // Try to fetch joining_date for this specific user
-          const { data: dateData } = await supabase
+          const dateQuery = await supabase
             .from('admin_users')
             .select('joining_date')
             .eq('id', member.id)
             .single();
           
-          if (dateData?.joining_date) {
-            member.joiningDate = dateData.joining_date;
+          if (dateQuery.data && 'joining_date' in dateQuery.data) {
+            member.joiningDate = dateQuery.data.joining_date;
           }
         } catch (e) {
           console.log('Joining date column may not exist yet:', e);
@@ -280,17 +280,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         try {
           // Try to fetch shift_start and shift_end for this specific user
-          const { data: shiftData } = await supabase
+          const shiftQuery = await supabase
             .from('admin_users')
             .select('shift_start, shift_end')
             .eq('id', member.id)
             .single();
           
-          if (shiftData?.shift_start) {
-            member.shiftStart = shiftData.shift_start;
-          }
-          if (shiftData?.shift_end) {
-            member.shiftEnd = shiftData.shift_end;
+          if (shiftQuery.data) {
+            if ('shift_start' in shiftQuery.data) {
+              member.shiftStart = shiftQuery.data.shift_start;
+            }
+            if ('shift_end' in shiftQuery.data) {
+              member.shiftEnd = shiftQuery.data.shift_end;
+            }
           }
         } catch (e) {
           console.log('Shift columns may not exist yet:', e);
