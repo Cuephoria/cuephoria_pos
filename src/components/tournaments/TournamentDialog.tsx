@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, 
@@ -17,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Tournament, GameType, Match, MatchStatus } from '@/types/tournament.types';
+import { Tournament, GameType, Match, MatchStatus, MatchStage } from '@/types/tournament.types';
 import { generateId } from '@/utils/pos.utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TournamentPlayerSection from './TournamentPlayerSection';
@@ -149,76 +148,309 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
     return date;
   };
 
-  const handleGenerateMatches = () => {
+  // Create a tournament bracket based on the number of players
+  const generateBracket = () => {
     if (players.length < 2) return;
     
-    // Simple round-robin tournament generation
-    const generatedMatches: Tournament['matches'] = [];
-    let matchId = 1;
+    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+    const matchesGenerated: Match[] = [];
     const tournamentDate = new Date(form.getValues().date);
+    let matchId = 1;
     
-    for (let i = 0; i < players.length; i++) {
-      for (let j = i + 1; j < players.length; j++) {
-        // Generate weekend date and evening time
-        const matchDate = generateWeekendDate(tournamentDate, matchId - 1);
-        const formattedDate = format(matchDate, 'yyyy-MM-dd');
-        
-        generatedMatches.push({
+    // Determine tournament structure based on player count
+    if (players.length <= 4) {
+      // Simple tournament: semifinals and final only
+      
+      // Create final match
+      const finalMatch: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '', // Will be determined by semifinals
+        player2Id: '', // Will be determined by semifinals
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, 2), 'yyyy-MM-dd'),
+        scheduledTime: '18:00',
+        status: 'scheduled',
+        stage: 'final'
+      };
+      matchesGenerated.push(finalMatch);
+      
+      // Create semifinals
+      if (players.length <= 2) {
+        // Only 2 players, go straight to final
+        finalMatch.player1Id = shuffledPlayers[0].id;
+        finalMatch.player2Id = shuffledPlayers[1].id;
+      } else {
+        // 3-4 players, create semifinals
+        const semifinal1: Match = {
           id: `match-${matchId++}`,
-          round: 1, // All matches in round 1 for simplicity
-          player1Id: players[i].id,
-          player2Id: players[j].id,
+          round: 1,
+          player1Id: shuffledPlayers[0].id,
+          player2Id: shuffledPlayers[1].id,
           completed: false,
-          scheduledDate: formattedDate,
-          scheduledTime: '18:00', // Default to 6 PM
-          status: 'scheduled'
-        });
+          scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
+          scheduledTime: '16:00',
+          status: 'scheduled',
+          stage: 'semi_final',
+          nextMatchId: finalMatch.id
+        };
+        
+        const semifinal2: Match = {
+          id: `match-${matchId++}`,
+          round: 1,
+          player1Id: shuffledPlayers[2].id,
+          player2Id: players.length > 3 ? shuffledPlayers[3].id : '', // Handle bye if 3 players
+          completed: players.length <= 3, // Auto-complete if bye (3 players)
+          winnerId: players.length <= 3 ? shuffledPlayers[2].id : undefined, // Auto-win if bye
+          scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
+          scheduledTime: '17:00',
+          status: players.length <= 3 ? 'completed' : 'scheduled',
+          stage: 'semi_final',
+          nextMatchId: finalMatch.id
+        };
+        
+        matchesGenerated.push(semifinal1, semifinal2);
       }
+    } else if (players.length <= 8) {
+      // Quarter-finals, semifinals, and final
+      
+      // Create final
+      const finalMatch: Match = {
+        id: `match-${matchId++}`,
+        round: 3,
+        player1Id: '', // Will be determined by semifinals
+        player2Id: '', // Will be determined by semifinals
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, 4), 'yyyy-MM-dd'),
+        scheduledTime: '18:00',
+        status: 'scheduled',
+        stage: 'final'
+      };
+      matchesGenerated.push(finalMatch);
+      
+      // Create semifinals
+      const semifinal1: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '', // Will be determined by quarterfinals
+        player2Id: '', // Will be determined by quarterfinals
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, 2), 'yyyy-MM-dd'),
+        scheduledTime: '17:00',
+        status: 'scheduled',
+        stage: 'semi_final',
+        nextMatchId: finalMatch.id
+      };
+      
+      const semifinal2: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '', // Will be determined by quarterfinals
+        player2Id: '', // Will be determined by quarterfinals
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, 2), 'yyyy-MM-dd'),
+        scheduledTime: '18:00',
+        status: 'scheduled',
+        stage: 'semi_final',
+        nextMatchId: finalMatch.id
+      };
+      matchesGenerated.push(semifinal1, semifinal2);
+      
+      // Create quarterfinals
+      for (let i = 0; i < 4; i++) {
+        const quarterFinal: Match = {
+          id: `match-${matchId++}`,
+          round: 1,
+          player1Id: i * 2 < shuffledPlayers.length ? shuffledPlayers[i * 2].id : '',
+          player2Id: i * 2 + 1 < shuffledPlayers.length ? shuffledPlayers[i * 2 + 1].id : '',
+          completed: i * 2 + 1 >= shuffledPlayers.length, // Auto-complete if bye
+          winnerId: i * 2 + 1 >= shuffledPlayers.length ? shuffledPlayers[i * 2].id : undefined, // Auto-win if bye
+          scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
+          scheduledTime: `${15 + i}:00`, // Staggered times
+          status: i * 2 + 1 >= shuffledPlayers.length ? 'completed' : 'scheduled',
+          stage: 'quarter_final',
+          nextMatchId: i < 2 ? semifinal1.id : semifinal2.id
+        };
+        matchesGenerated.push(quarterFinal);
+      }
+    } else {
+      // For more than 8 players, generate traditional round-robin matches
+      for (let i = 0; i < shuffledPlayers.length; i++) {
+        for (let j = i + 1; j < shuffledPlayers.length; j++) {
+          const match: Match = {
+            id: `match-${matchId++}`,
+            round: 1,
+            player1Id: shuffledPlayers[i].id,
+            player2Id: shuffledPlayers[j].id,
+            completed: false,
+            scheduledDate: format(generateWeekendDate(tournamentDate, matchId - 2), 'yyyy-MM-dd'),
+            scheduledTime: '18:00',
+            status: 'scheduled',
+            stage: 'regular'
+          };
+          matchesGenerated.push(match);
+        }
+      }
+      
+      // Add semifinals
+      const semifinal1: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '', // To be determined
+        player2Id: '', // To be determined
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, matchId), 'yyyy-MM-dd'),
+        scheduledTime: '17:00',
+        status: 'scheduled',
+        stage: 'semi_final'
+      };
+      
+      const semifinal2: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '', // To be determined
+        player2Id: '', // To be determined
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, matchId), 'yyyy-MM-dd'),
+        scheduledTime: '18:00',
+        status: 'scheduled',
+        stage: 'semi_final'
+      };
+      
+      // Add final
+      const final: Match = {
+        id: `match-${matchId++}`,
+        round: 3,
+        player1Id: '', // To be determined
+        player2Id: '', // To be determined
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, matchId + 1), 'yyyy-MM-dd'),
+        scheduledTime: '19:00',
+        status: 'scheduled',
+        stage: 'final'
+      };
+      
+      // Link semifinals to final
+      semifinal1.nextMatchId = final.id;
+      semifinal2.nextMatchId = final.id;
+      
+      matchesGenerated.push(semifinal1, semifinal2, final);
     }
     
-    setMatches(generatedMatches);
+    setMatches(matchesGenerated);
     setTournamentStatus('in-progress');
   };
 
   const updateMatchResult = (matchId: string, winnerId: string) => {
-    const updatedMatches = matches.map(match => 
-      match.id === matchId 
-        ? { ...match, winnerId, completed: true, status: 'completed' as MatchStatus } 
-        : match
-    );
-    setMatches(updatedMatches);
+    const updatedMatches = [...matches];
+    const matchIndex = updatedMatches.findIndex(m => m.id === matchId);
     
-    // Check if all matches except cancelled ones are completed
-    const activeMatches = updatedMatches.filter(match => match.status !== 'cancelled');
-    const allCompleted = activeMatches.every(match => match.completed);
+    if (matchIndex === -1) return;
     
-    if (allCompleted && activeMatches.length > 0) {
-      // Find player with most wins
-      const winCounts: Record<string, number> = {};
-      updatedMatches.forEach(match => {
-        if (match.status === 'completed' && match.winnerId) {
-          winCounts[match.winnerId] = (winCounts[match.winnerId] || 0) + 1;
-        }
-      });
-      
-      let maxWins = 0;
-      let tournamentWinnerId = '';
-      
-      Object.entries(winCounts).forEach(([playerId, wins]) => {
-        if (wins > maxWins) {
-          maxWins = wins;
-          tournamentWinnerId = playerId;
-        }
-      });
-      
-      if (tournamentWinnerId) {
-        const winnerPlayer = players.find(p => p.id === tournamentWinnerId);
-        if (winnerPlayer) {
-          setWinner(winnerPlayer);
-          setTournamentStatus('completed');
+    const match = updatedMatches[matchIndex];
+    match.winnerId = winnerId;
+    match.completed = true;
+    match.status = 'completed';
+    
+    // Update next match if there is one
+    if (match.nextMatchId) {
+      const nextMatchIndex = updatedMatches.findIndex(m => m.id === match.nextMatchId);
+      if (nextMatchIndex !== -1) {
+        const nextMatch = updatedMatches[nextMatchIndex];
+        
+        // Find the other match that feeds into this same next match
+        const siblingMatch = updatedMatches.find(m => 
+          m.id !== match.id && m.nextMatchId === match.nextMatchId
+        );
+        
+        // If this is the first winner to advance to this match
+        if (!nextMatch.player1Id || !nextMatch.player2Id) {
+          // If player1 is empty, fill it
+          if (!nextMatch.player1Id) {
+            nextMatch.player1Id = winnerId;
+          } 
+          // If player1 is filled but player2 is empty, fill player2
+          else if (!nextMatch.player2Id) {
+            nextMatch.player2Id = winnerId;
+          }
+          
+          // If both players are set and the other match is completed, 
+          // we can potentially set the tournament winner
+          if (nextMatch.player1Id && nextMatch.player2Id && 
+              (!siblingMatch || siblingMatch.completed)) {
+            
+            // If this is the final match and it's completed
+            if (nextMatch.stage === 'final' && nextMatch.completed) {
+              const winnerPlayer = players.find(p => p.id === nextMatch.winnerId);
+              if (winnerPlayer) {
+                setWinner(winnerPlayer);
+                setTournamentStatus('completed');
+              }
+            }
+          }
         }
       }
     }
+    
+    setMatches(updatedMatches);
+    
+    // Check if we need to determine winners from round robin
+    const finalMatches = updatedMatches.filter(m => m.stage === 'final');
+    const semifinalMatches = updatedMatches.filter(m => m.stage === 'semi_final');
+    
+    // If we have a traditional bracket tournament with empty semifinals
+    if (finalMatches.length > 0 && semifinalMatches.length > 0 && 
+        semifinalMatches.some(m => !m.player1Id || !m.player2Id)) {
+        
+      // Check if all regular matches are completed
+      const regularMatches = updatedMatches.filter(m => m.stage === 'regular');
+      const allRegularCompleted = regularMatches.every(m => m.completed || m.status === 'cancelled');
+      
+      if (allRegularCompleted && regularMatches.length > 0) {
+        // Calculate win counts to find top performers
+        const winCounts: Record<string, number> = {};
+        regularMatches.forEach(match => {
+          if (match.status === 'completed' && match.winnerId) {
+            winCounts[match.winnerId] = (winCounts[match.winnerId] || 0) + 1;
+          }
+        });
+        
+        // Find top 4 players by win count
+        const topPlayers = Object.entries(winCounts)
+          .sort(([, winsA], [, winsB]) => winsB - winsA)
+          .slice(0, 4)
+          .map(([playerId]) => playerId);
+        
+        // Update semifinals with top players if they don't yet have players
+        if (topPlayers.length >= 2) {
+          semifinalMatches.forEach((match, idx) => {
+            if (idx === 0) {
+              if (!match.player1Id && topPlayers[0]) match.player1Id = topPlayers[0];
+              if (!match.player2Id && topPlayers[1]) match.player2Id = topPlayers[1];
+            } else if (idx === 1 && topPlayers.length >= 4) {
+              if (!match.player1Id && topPlayers[2]) match.player1Id = topPlayers[2];
+              if (!match.player2Id && topPlayers[3]) match.player2Id = topPlayers[3];
+            }
+          });
+        }
+      }
+    }
+    
+    // If this is the final match that was completed
+    const completedFinal = updatedMatches.find(m => m.stage === 'final' && m.completed);
+    if (completedFinal?.winnerId) {
+      const winnerPlayer = players.find(p => p.id === completedFinal.winnerId);
+      if (winnerPlayer) {
+        setWinner(winnerPlayer);
+        setTournamentStatus('completed');
+      }
+    }
+    
+    toast({
+      title: "Match Result Recorded",
+      description: `Winner: ${players.find(p => p.id === winnerId)?.name}`,
+      duration: 3000,
+    });
   };
 
   const updateMatchSchedule = (matchId: string, date: string, time: string) => {
@@ -505,7 +737,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
             
             {matches.length === 0 && (
               <div className="mt-4 text-center">
-                <Button onClick={handleGenerateMatches}>Generate Matches</Button>
+                <Button onClick={generateBracket}>
+                  Generate Tournament Bracket
+                </Button>
               </div>
             )}
           </TabsContent>
