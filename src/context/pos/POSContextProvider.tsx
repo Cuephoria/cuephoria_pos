@@ -126,6 +126,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   console.log('POSProvider rendering with context value'); // Debug log
   
+  // Fix for error: Type 'string' is not assignable to type 'Error'
+  if (!customers || !Array.isArray(customers)) {
+    throw new Error('Customers must be an array');
+  }
+  
   return (
     <POSContext.Provider
       value={{

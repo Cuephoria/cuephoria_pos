@@ -1,191 +1,144 @@
-import { Product } from '@/types/pos.types';
+
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
-import { generateId } from '@/utils/pos.utils';
+import { Product } from '@/types/pos.types';
 
 export const useProductOperations = (
-  products: Product[], 
+  products: Product[],
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>
 ) => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const isProductDuplicate = (productName: string, excludeId?: string): boolean => {
-    return products.some(p => 
-      p.name.toLowerCase() === productName.toLowerCase() && 
-      (!excludeId || p.id !== excludeId)
-    );
-  };
-
-  const addProduct = async (product: Partial<Product>): Promise<Product> => {
+  // Add a new product
+  const addProduct = async (productData: Partial<Product>): Promise<Product> => {
     try {
-      if (isProductDuplicate(product.name)) {
-        toast({
-          title: 'Error',
-          description: `A product with name "${product.name}" already exists`,
-          variant: 'destructive'
-        });
-        throw new Error(`Product "${product.name}" already exists`);
-      }
+      setIsLoading(true);
       
-      const newProductId = generateId();
+      // Generate a random ID for the product
+      const productId = crypto.randomUUID();
+      
+      // Create the new product with required fields
       const newProduct: Product = {
-        ...product,
-        id: newProductId
+        id: productId,
+        name: productData.name || '', // Required field, provide default
+        price: productData.price || 0, // Required field, provide default
+        category: productData.category || 'food', // Required field, provide default
+        stock: productData.stock || 0, // Required field, provide default
+        image: productData.image,
+        originalPrice: productData.originalPrice,
+        offerPrice: productData.offerPrice,
+        studentPrice: productData.studentPrice,
+        duration: productData.duration,
+        membershipHours: productData.membershipHours
       };
       
-      setProducts(prev => [...prev, newProduct]);
+      // Update the local state
+      setProducts([...products, newProduct]);
       
-      if (product.category !== 'membership') {
-        supabase
-          .from('products')
-          .insert(convertToSupabaseProduct(newProduct))
-          .then(({ error }) => {
-            if (error) {
-              console.error('Error adding product to DB:', error);
-              toast({
-                title: 'Database Error',
-                description: `Product added locally but failed to sync with database: ${error.message}`,
-                variant: 'destructive'
-              });
-            } else {
-              console.log('Product added to DB:', newProduct.name);
-            }
-          });
-      }
-      
+      // Show success toast
       toast({
-        title: 'Success',
-        description: 'Product added successfully',
+        title: "Product added",
+        description: `${newProduct.name} has been added successfully`,
       });
       
       return newProduct;
     } catch (error) {
       console.error('Error adding product:', error);
-      
-      if (!(error instanceof Error && error.message.includes('already exists'))) {
-        toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to add product',
-          variant: 'destructive'
-        });
-      }
-      
-      throw error;
+      toast({
+        title: "Error",
+        description: "Could not add product. Please try again.",
+        variant: "destructive"
+      });
+      throw new Error('Failed to add product');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updateProduct = async (productId: string, updatedData: Partial<Product>): Promise<Product> => {
+  // Update an existing product
+  const updateProduct = async (
+    productId: string, 
+    updatedData: Partial<Product>
+  ): Promise<Product> => {
     try {
-      const product = products.find(p => p.id === productId);
-      if (!product) {
+      setIsLoading(true);
+      
+      // Find the product to update
+      const productIndex = products.findIndex(p => p.id === productId);
+      
+      if (productIndex === -1) {
         throw new Error(`Product with ID ${productId} not found`);
       }
-
-      if (product.category === 'membership' || product.id.startsWith('mem')) {
-        toast({
-          title: "Info",
-          description: "Membership products are managed by the system and cannot be modified.",
-        });
-        return product;
-      }
       
-      if (isProductDuplicate(updatedData.name as string, productId)) {
-        toast({
-          title: 'Error',
-          description: `Another product with name "${updatedData.name}" already exists`,
-          variant: 'destructive'
-        });
-        throw new Error(`Another product named "${updatedData.name}" already exists`);
-      }
+      // Update the product
+      const updatedProduct = {
+        ...products[productIndex],
+        ...updatedData
+      };
       
-      const updatedProduct = { ...product, ...updatedData };
-      setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+      // Update the local state
+      const updatedProducts = [...products];
+      updatedProducts[productIndex] = updatedProduct;
+      setProducts(updatedProducts);
       
-      supabase
-        .from('products')
-        .update(convertToSupabaseProduct(updatedProduct))
-        .eq('id', productId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error updating product in DB:', error);
-            toast({
-              title: 'Database Sync Error',
-              description: `Product updated locally but failed to sync with database: ${error.message}`,
-              variant: 'destructive'
-            });
-            return supabase
-              .from('products')
-              .insert(convertToSupabaseProduct(updatedProduct));
-          } else {
-            console.log('Product updated in DB:', updatedProduct.name);
-          }
-        })
-        .then(result => {
-          if (result?.error) {
-            console.error('Error inserting product after update failure:', result.error);
-          }
-        });
-      
+      // Show success toast
       toast({
-        title: 'Success',
-        description: 'Product updated successfully',
+        title: "Product updated",
+        description: `${updatedProduct.name} has been updated successfully`,
       });
       
       return updatedProduct;
     } catch (error) {
       console.error('Error updating product:', error);
-      
-      if (!(error instanceof Error && error.message.includes('already exists'))) {
-        toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to update product',
-          variant: 'destructive'
-        });
-      }
-      
-      throw error;
+      toast({
+        title: "Error",
+        description: "Could not update product. Please try again.",
+        variant: "destructive"
+      });
+      throw new Error('Failed to update product');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Delete a product
   const deleteProduct = async (productId: string): Promise<void> => {
     try {
-      setProducts(prev => prev.filter(p => p.id !== productId));
+      setIsLoading(true);
       
-      supabase
-        .from('products')
-        .delete()
-        .eq('id', productId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error deleting product from DB:', error);
-            toast({
-              title: 'Database Sync Error',
-              description: `Product deleted locally but failed to sync with database: ${error.message}`,
-              variant: 'destructive'
-            });
-          } else {
-            console.log('Product deleted from DB:', productId);
-          }
-        });
+      // Find the product to delete
+      const product = products.find(p => p.id === productId);
       
+      if (!product) {
+        throw new Error(`Product with ID ${productId} not found`);
+      }
+      
+      // Remove the product from local state
+      setProducts(products.filter(p => p.id !== productId));
+      
+      // Show success toast
       toast({
-        title: 'Success',
-        description: 'Product deleted successfully',
+        title: "Product deleted",
+        description: `${product.name} has been deleted successfully`,
       });
     } catch (error) {
       console.error('Error deleting product:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete product',
-        variant: 'destructive'
+        title: "Error",
+        description: "Could not delete product. Please try again.",
+        variant: "destructive"
       });
-      throw error;
+      throw new Error('Failed to delete product');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
     addProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    isLoading
   };
 };

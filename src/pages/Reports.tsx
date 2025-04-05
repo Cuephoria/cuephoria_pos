@@ -1,11 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
+import { usePOS } from '@/context';
 import { useExpenses } from '@/context/ExpenseContext';
-import { usePOS } from '@/context/POSContext';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { DateRange } from 'react-day-picker';
-import { CurrencyDisplay } from '@/components/ui/currency';
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Button } from "@/components/ui/button";
+import { CurrencyDisplay } from "@/components/ui/currency";
+import { Separator } from "@/components/ui/separator";
 import { 
   Table, 
   TableBody, 
@@ -13,835 +19,638 @@ import {
   TableHead, 
   TableHeader, 
   TableRow 
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { CalendarIcon, Download, Search, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+} from "@/components/ui/table";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
+  Download,
+  Receipt,
+  CreditCard,
+  Banknote,
+  Search,
+  User,
+  Calendar,
+  Users
+} from "lucide-react";
+import { format } from "date-fns";
+import BusinessSummaryReport from "@/components/dashboard/BusinessSummaryReport";
+import { Bill, Customer } from '@/types/pos.types';
 
-const ReportsPage: React.FC = () => {
-  const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, sessions, products, exportBills, exportCustomers, deleteSession } = usePOS();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date(),
-  });
-  const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
+const Reports = () => {
+  const { bills, exportBills, exportCustomers, customers } = usePOS();
+  const { expenses } = useExpenses();
   
-  const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
+  // Default date range: last 30 days
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date();
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
   
-  // New state for session deletion
-  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [startDate, setStartDate] = useState<Date | undefined>(defaultStartDate);
+  const [endDate, setEndDate] = useState<Date | undefined>(defaultEndDate);
+  const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
   
-  // New state for session search
-  const [searchTerm, setSearchTerm] = useState<string>('');
-
-  // Handle delete session
-  const handleDeleteSession = async () => {
-    if (sessionToDelete) {
-      const success = await deleteSession(sessionToDelete);
-      if (success) {
-        setSessionToDelete(null);
-        setIsDeleteDialogOpen(false);
-      }
-    }
-  };
-  
-  // Handle date range selection from dropdown
-  const handleDateRangeChange = (value: string) => {
-    setDateRangeKey(value);
-    
-    const today = new Date();
-    let from: Date | undefined;
-    let to: Date | undefined = today;
-    
-    switch (value) {
-      case '7days':
-        from = new Date(today);
-        from.setDate(today.getDate() - 7);
-        break;
-      case '30days':
-        from = new Date(today);
-        from.setDate(today.getDate() - 30);
-        break;
-      case '90days':
-        from = new Date(today);
-        from.setDate(today.getDate() - 90);
-        break;
-      case 'year':
-        from = new Date(today.getFullYear(), 0, 1); // Start of current year
-        break;
-      case 'custom':
-        // Keep the current date range for custom
-        from = date?.from;
-        to = date?.to;
-        break;
-      default:
-        from = new Date(today);
-        from.setDate(today.getDate() - 30);
-    }
-    
-    setDate({ from, to });
-  };
-  
-  // Function to handle downloading reports
-  const handleDownloadReport = () => {
-    console.log('Downloading report with date range:', date);
-    switch (activeTab) {
-      case 'bills':
-        exportBills();
-        break;
-      case 'customers':
-        exportCustomers();
-        break;
-      default:
-        // For other tabs, implement specific export functionality
-        console.log(`Exporting ${activeTab} report`);
-    }
-  };
-  
-  // Function to calculate date range string for display
-  const getDateRangeString = () => {
-    if (date?.from && date?.to) {
-      return `${format(date.from, 'dd MMM yyyy')} - ${format(date.to, 'dd MMM yyyy')}`;
-    }
-    return 'Select date range';
-  };
-  
-  // Filter data based on date range
-  const filterByDateRange = <T extends { createdAt: Date | string }>(items: T[]): T[] => {
-    return items.filter(item => {
-      if (!date?.from && !date?.to) return true;
-      
-      const itemDate = item.createdAt instanceof Date 
-        ? item.createdAt 
-        : new Date(item.createdAt);
-      
-      if (date?.from && date?.to) {
-        return itemDate >= date.from && itemDate <= date.to;
-      } else if (date?.from) {
-        return itemDate >= date.from;
-      } else if (date?.to) {
-        return itemDate <= date.to;
-      }
-      
-      return true;
-    });
-  };
-  
-  // Apply filters to data
-  const filteredCustomers = filterByDateRange(customers);
-  const filteredBills = filterByDateRange(bills);
-  
-  // Filter sessions (special case since sessions use startTime instead of createdAt)
-  const filteredSessions = sessions.filter(session => {
-    if (!date?.from && !date?.to) return true;
-    
-    const startTime = new Date(session.startTime);
-    
-    if (date?.from && date?.to) {
-      return startTime >= date.from && startTime <= date.to;
-    } else if (date?.from) {
-      return startTime >= date.from;
-    } else if (date?.to) {
-      return startTime <= date.to;
-    }
-    
-    return true;
-  });
-  
-  // Apply search filter to sessions
-  const searchFilteredSessions = filteredSessions.filter(session => {
-    if (!searchTerm.trim()) return true;
-    
-    const customer = customers.find(c => c.id === session.customerId);
-    if (!customer) return false;
-    
-    const searchTermLower = searchTerm.toLowerCase();
-    
-    // Search by customer name, phone, or email
-    return (
-      customer.name.toLowerCase().includes(searchTermLower) ||
-      customer.phone.toLowerCase().includes(searchTermLower) ||
-      (customer.email && customer.email.toLowerCase().includes(searchTermLower))
-    );
-  });
-  
-  // Calculate business summary metrics
-  const calculateSummaryMetrics = () => {
-    // Financial metrics
-    const totalRevenue = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
-    const averageBillValue = filteredBills.length > 0 ? totalRevenue / filteredBills.length : 0;
-    const totalDiscounts = filteredBills.reduce((sum, bill) => sum + (bill.discountValue || 0), 0);
-    
-    // Payment method breakdown
-    const cashSales = filteredBills
-      .filter(bill => bill.paymentMethod === 'cash')
-      .reduce((sum, bill) => sum + bill.total, 0);
-    
-    const upiSales = filteredBills
-      .filter(bill => bill.paymentMethod === 'upi')
-      .reduce((sum, bill) => sum + bill.total, 0);
-    
-    // Operational metrics
-    const totalTransactions = filteredBills.length;
-    const activeSessions = sessions.filter(s => s.endTime === null).length;
-    const completedSessions = filteredSessions.filter(s => s.endTime !== null).length;
-    
-    // Find most popular product
-    const productFrequency: Record<string, number> = {};
-    filteredBills.forEach(bill => {
-      bill.items.forEach(item => {
-        if (productFrequency[item.id]) {
-          productFrequency[item.id] += item.quantity;
-        } else {
-          productFrequency[item.id] = item.quantity;
-        }
+  // Filter bills by date range
+  useEffect(() => {
+    if (bills.length > 0) {
+      const filtered = bills.filter(bill => {
+        const billDate = new Date(bill.createdAt);
+        const isAfterStart = !startDate || billDate >= startDate;
+        const isBeforeEnd = !endDate || billDate <= endDate;
+        return isAfterStart && isBeforeEnd;
       });
-    });
-    
-    let mostPopularProductId = '';
-    let maxFrequency = 0;
-    
-    Object.entries(productFrequency).forEach(([productId, frequency]) => {
-      if (frequency > maxFrequency) {
-        mostPopularProductId = productId;
-        maxFrequency = frequency;
-      }
-    });
-    
-    const mostPopularProduct = products.find(p => p.id === mostPopularProductId)?.name || 'None';
-    
-    // Customer metrics
-    const totalCustomers = filteredCustomers.length;
-    const memberCount = filteredCustomers.filter(c => c.isMember).length;
-    const nonMemberCount = filteredCustomers.filter(c => !c.isMember).length;
-    
-    // Loyalty metrics
-    const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
-    const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
-    
-    // Gaming metrics - calculate PS5 vs Pool revenue
-    let ps5Sales = 0;
-    let poolSales = 0;
+      setFilteredBills(filtered);
+    } else {
+      setFilteredBills([]);
+    }
+  }, [bills, startDate, endDate]);
+  
+  // Calculate sales metrics
+  const calculateSalesMetrics = () => {
+    let totalSales = 0;
+    let cashSales = 0;
+    let upiSales = 0;
+    let discountAmount = 0;
+    let loyaltyPointsUsed = 0;
+    let loyaltyPointsEarned = 0;
     
     filteredBills.forEach(bill => {
-      bill.items.forEach(item => {
-        if (item.type === 'session') {
-          const itemName = item.name.toLowerCase();
-          if (itemName.includes('ps5') || itemName.includes('playstation')) {
-            ps5Sales += item.total;
-          } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
-            poolSales += item.total;
-          }
-        }
-      });
+      totalSales += bill.total;
+      discountAmount += bill.discountValue;
+      loyaltyPointsUsed += bill.loyaltyPointsUsed || 0;
+      loyaltyPointsEarned += bill.loyaltyPointsEarned || 0;
+      
+      if (bill.paymentMethod === 'cash') {
+        cashSales += bill.total;
+      } else {
+        upiSales += bill.total;
+      }
     });
+    
+    const avgTicketSize = filteredBills.length > 0 ? totalSales / filteredBills.length : 0;
     
     return {
-      financial: {
-        totalRevenue,
-        averageBillValue,
-        totalDiscounts,
-        cashSales,
-        upiSales
-      },
-      operational: {
-        totalTransactions,
-        activeSessions,
-        completedSessions,
-        mostPopularProduct
-      },
-      customer: {
-        totalCustomers,
-        memberCount,
-        nonMemberCount,
-        loyaltyPointsUsed,
-        loyaltyPointsEarned
-      },
-      gaming: {
-        ps5Sales,
-        poolSales
-      }
+      totalSales,
+      cashSales,
+      upiSales,
+      discountAmount,
+      loyaltyPointsUsed,
+      loyaltyPointsEarned,
+      avgTicketSize,
+      totalTransactions: filteredBills.length
     };
   };
   
-  const summaryMetrics = calculateSummaryMetrics();
-  
-  // Format duration in hours and minutes
-  const formatDuration = (durationInMinutes: number | undefined) => {
-    if (!durationInMinutes) return "0h 0m";
+  // Calculate product metrics
+  const calculateProductMetrics = () => {
+    const productSales: Record<string, { count: number; revenue: number }> = {};
+    const productCategories: Record<string, { count: number; revenue: number }> = {};
     
-    const hours = Math.floor(durationInMinutes / 60);
-    const minutes = durationInMinutes % 60;
-    return `${hours}h ${minutes}m`;
+    filteredBills.forEach(bill => {
+      bill.items.forEach(item => {
+        if (item.type === 'product') {
+          // Product level metrics
+          if (!productSales[item.name]) {
+            productSales[item.name] = { count: 0, revenue: 0 };
+          }
+          productSales[item.name].count += item.quantity;
+          productSales[item.name].revenue += item.total;
+          
+          // Category level metrics
+          const category = item.category || 'uncategorized';
+          if (!productCategories[category]) {
+            productCategories[category] = { count: 0, revenue: 0 };
+          }
+          productCategories[category].count += item.quantity;
+          productCategories[category].revenue += item.total;
+        }
+      });
+    });
+    
+    // Convert to arrays and sort by revenue
+    const topProducts = Object.entries(productSales)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+      
+    const categoryBreakdown = Object.entries(productCategories)
+      .map(([category, data]) => ({ category, ...data }))
+      .sort((a, b) => b.revenue - a.revenue);
+      
+    return { topProducts, categoryBreakdown };
   };
   
-  // Calculate total time spent by customer
-  const calculateCustomerPlayTime = (customerId: string) => {
-    const customerSessions = filteredSessions.filter(
-      session => session.customerId === customerId
-    );
+  // Calculate customer metrics
+  const calculateCustomerMetrics = () => {
+    const customerTransactions: Record<string, { 
+      count: number; 
+      revenue: number; 
+      discounts: number;
+      loyaltyUsed: number;
+      loyaltyEarned: number;
+      memberStatus: boolean;
+    }> = {};
     
-    const totalMinutes = customerSessions.reduce((total, session) => {
-      if (session.endTime) {
-        const start = new Date(session.startTime).getTime();
-        const end = new Date(session.endTime).getTime();
-        return total + (end - start) / (1000 * 60);
+    filteredBills.forEach(bill => {
+      const customerId = bill.customerId;
+      const customer = customers.find(c => c.id === customerId);
+      
+      if (!customerTransactions[customerId]) {
+        customerTransactions[customerId] = {
+          count: 0,
+          revenue: 0,
+          discounts: 0,
+          loyaltyUsed: 0,
+          loyaltyEarned: 0,
+          memberStatus: customer?.isMember || false
+        };
       }
-      return total;
-    }, 0);
+      
+      customerTransactions[customerId].count += 1;
+      customerTransactions[customerId].revenue += bill.total;
+      customerTransactions[customerId].discounts += bill.discountValue;
+      customerTransactions[customerId].loyaltyUsed += bill.loyaltyPointsUsed || 0;
+      customerTransactions[customerId].loyaltyEarned += bill.loyaltyPointsEarned || 0;
+    });
     
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = Math.floor(totalMinutes % 60);
+    // Convert to array and sort by revenue
+    const customerData = Object.entries(customerTransactions)
+      .map(([customerId, data]) => {
+        const customer = customers.find(c => c.id === customerId);
+        return {
+          id: customerId,
+          name: customer?.name || "Unknown",
+          ...data
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue);
+      
+    // Count members vs non-members
+    const memberCount = customerData.filter(c => c.memberStatus).length;
+    const nonMemberCount = customerData.length - memberCount;
     
-    return `${hours}h ${minutes}m`;
+    // Calculate member vs non-member revenue
+    const memberRevenue = customerData
+      .filter(c => c.memberStatus)
+      .reduce((sum, c) => sum + c.revenue, 0);
+      
+    const nonMemberRevenue = customerData
+      .filter(c => !c.memberStatus)
+      .reduce((sum, c) => sum + c.revenue, 0);
+      
+    return {
+      topCustomers: customerData.slice(0, 10),
+      memberCount,
+      nonMemberCount,
+      memberRevenue,
+      nonMemberRevenue
+    };
   };
   
-  // Calculate total spent by customer
-  const calculateCustomerTotalSpent = (customerId: string) => {
-    return filteredBills
-      .filter(bill => bill.customerId === customerId)
-      .reduce((total, bill) => total + bill.total, 0);
+  // Handle export
+  const handleExportBills = () => {
+    exportBills();
   };
   
-  // Get a customer name by ID
-  const getCustomerName = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
-    return customer?.name || 'Unknown';
+  const handleExportCustomers = () => {
+    exportCustomers();
+  };
+  
+  // Get metrics
+  const salesMetrics = calculateSalesMetrics();
+  const { topProducts, categoryBreakdown } = calculateProductMetrics();
+  const { topCustomers, memberCount, nonMemberCount, memberRevenue, nonMemberRevenue } = calculateCustomerMetrics();
+  
+  // Format date for display
+  const formatDateRange = () => {
+    if (startDate && endDate) {
+      return `${format(startDate, 'PP')} to ${format(endDate, 'PP')}`;
+    } else if (startDate) {
+      return `From ${format(startDate, 'PP')}`;
+    } else if (endDate) {
+      return `Until ${format(endDate, 'PP')}`;
+    }
+    return 'All time';
   };
   
   return (
-    <div className="p-6 space-y-6 bg-[#1A1F2C] min-h-screen text-white">
-      {/* Header with title, date range, and export button */}
-      <div className="flex justify-between items-center pb-2">
-        <h1 className="text-4xl font-bold">Reports</h1>
-        <div className="flex items-center gap-4">
-          <Select value={dateRangeKey} onValueChange={handleDateRangeChange}>
-            <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
-              <SelectValue placeholder="Last 30 days" />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700 text-white">
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="90days">Last 90 days</SelectItem>
-              <SelectItem value="year">This year</SelectItem>
-              <SelectItem value="custom">Custom range</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 bg-gray-800 border-gray-700 text-white">
-                <CalendarIcon className="h-4 w-4" />
-                {getDateRangeString()}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-gray-800 border-gray-700" align="end">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={(newDate) => {
-                  setDate(newDate);
-                  if (newDate?.from && newDate?.to) {
-                    setDateRangeKey('custom');
-                  }
-                }}
-                numberOfMonths={2}
-                className="p-3 pointer-events-auto bg-gray-800 text-white"
-              />
-            </PopoverContent>
-          </Popover>
-          
-          <Button onClick={handleDownloadReport} className="gap-2 bg-purple-500 hover:bg-purple-600 text-white">
-            <Download className="h-4 w-4" />
-            Export
+    <div className="flex-1 space-y-6 p-6 bg-gray-100 dark:bg-[#1A1F2C]">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold tracking-tight">Reports</h2>
+        <div className="hidden md:flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={handleExportBills}
+            className="flex items-center"
+          >
+            <Download className="mr-2 h-4 w-4" /> Export Bills
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCustomers}
+            className="flex items-center"
+          >
+            <Download className="mr-2 h-4 w-4" /> Export Customers
           </Button>
         </div>
       </div>
-      
-      {/* Navigation tabs */}
-      <div className="bg-gray-800/60 rounded-lg p-1 flex gap-2 w-fit">
-        <Button 
-          onClick={() => setActiveTab('bills')}
-          variant={activeTab === 'bills' ? 'default' : 'ghost'} 
-          className={`gap-2 ${activeTab === 'bills' ? 'bg-gray-700' : 'text-gray-400'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
-          Bills
-        </Button>
-        <Button 
-          onClick={() => setActiveTab('customers')}
-          variant={activeTab === 'customers' ? 'default' : 'ghost'} 
-          className={`gap-2 ${activeTab === 'customers' ? 'bg-gray-700' : 'text-gray-400'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Customers
-        </Button>
-        <Button 
-          onClick={() => setActiveTab('sessions')}
-          variant={activeTab === 'sessions' ? 'default' : 'ghost'} 
-          className={`gap-2 ${activeTab === 'sessions' ? 'bg-gray-700' : 'text-gray-400'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Sessions
-        </Button>
-        <Button 
-          onClick={() => setActiveTab('summary')}
-          variant={activeTab === 'summary' ? 'default' : 'ghost'} 
-          className={`gap-2 ${activeTab === 'summary' ? 'bg-gray-700' : 'text-gray-400'}`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-          Summary
-        </Button>
+
+      <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 items-center">
+        <div className="flex items-center space-x-2 w-full md:w-auto">
+          <div className="flex flex-col">
+            <span className="text-sm mb-1">Start Date</span>
+            <DatePicker date={startDate} setDate={setStartDate} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm mb-1">End Date</span>
+            <DatePicker date={endDate} setDate={setEndDate} />
+          </div>
+        </div>
+        <div className="text-sm flex items-center space-x-2 w-full md:w-auto justify-center">
+          <Calendar className="h-4 w-4" />
+          <span>{formatDateRange()}</span>
+        </div>
+        <div className="flex md:hidden w-full space-x-2">
+          <Button
+            variant="outline"
+            onClick={handleExportBills}
+            className="flex-1 flex items-center justify-center"
+          >
+            <Download className="mr-2 h-4 w-4" /> Export Bills
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCustomers}
+            className="flex-1 flex items-center justify-center"
+          >
+            <Download className="mr-2 h-4 w-4" /> Export Customers
+          </Button>
+        </div>
       </div>
-      
-      {/* Content based on selected tab */}
-      <div className="space-y-6">
-        {activeTab === 'bills' && (
-          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-1">Transaction History</h2>
-              <p className="text-gray-400">
-                View all transactions 
-                {date?.from && date?.to ? 
-                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
-                  ''
-                }
-              </p>
-            </div>
-            <div className="rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Bill ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Subtotal</TableHead>
-                    <TableHead>Discount</TableHead>
-                    <TableHead>Points Used</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Payment</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBills.map(bill => {
-                    const customer = customers.find(c => c.id === bill.customerId);
-                    const billDate = new Date(bill.createdAt);
-                    const firstItemName = bill.items.length > 0 ? bill.items[0].name : '';
-                    const itemCount = bill.items.length;
-                    
-                    return (
-                      <TableRow key={bill.id}>
-                        <TableCell className="text-white">
-                          <div>{format(billDate, 'd MMM yyyy')}</div>
-                          <div className="text-gray-400">{format(billDate, 'HH:mm')} pm</div>
-                        </TableCell>
-                        <TableCell className="text-white font-mono text-xs">{bill.id.substring(0, 30)}</TableCell>
-                        <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
-                        <TableCell className="text-white">
-                          <div>{itemCount} item{itemCount !== 1 ? 's' : ''}</div>
-                          {bill.items.length > 0 && (
-                            <div className="text-gray-400 text-xs">{firstItemName}</div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <CurrencyDisplay amount={bill.subtotal} />
-                        </TableCell>
-                        <TableCell className="text-white">
-                          <CurrencyDisplay amount={bill.discountValue || 0} />
-                        </TableCell>
-                        <TableCell className="text-white">{bill.loyaltyPointsUsed || 0}</TableCell>
-                        <TableCell className="text-white font-semibold">
-                          <CurrencyDisplay amount={bill.total} />
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={
-                            bill.paymentMethod === 'upi'
-                              ? "bg-blue-900/30 text-blue-400 border-blue-800"
-                              : "bg-green-900/30 text-green-400 border-green-800"
-                          }>
-                            {bill.paymentMethod === 'upi' ? 'UPI' : 'Cash'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
+
+      <Tabs defaultValue="sales" className="w-full">
+        <TabsList>
+          <TabsTrigger value="sales">Sales</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="customers">Customers</TabsTrigger>
+          <TabsTrigger value="business">Business</TabsTrigger>
+        </TabsList>
         
-        {activeTab === 'customers' && (
-          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-1">Customer Activity</h2>
-              <p className="text-gray-400">
-                View all customers and their activity
-                {date?.from && date?.to ? 
-                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
-                  ''
-                }
-              </p>
-            </div>
-            <div className="rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Member Status</TableHead>
-                    <TableHead>Total Spent</TableHead>
-                    <TableHead>Play Time</TableHead>
-                    <TableHead>Loyalty Points</TableHead>
-                    <TableHead>Joined On</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.map(customer => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="text-white font-medium">{customer.name}</TableCell>
-                      <TableCell className="text-white">
-                        <div>{customer.phone}</div>
-                        {customer.email && <div className="text-gray-400 text-xs">{customer.email}</div>}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={customer.isMember ? 
-                          "bg-purple-900/30 text-purple-400 border-purple-800" : 
-                          "bg-gray-800/50 text-gray-400 border-gray-700"
-                        }>
-                          {customer.isMember ? "Member" : "Non-Member"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-white">
-                        <CurrencyDisplay amount={calculateCustomerTotalSpent(customer.id)} />
-                      </TableCell>
-                      <TableCell className="text-white">{calculateCustomerPlayTime(customer.id)}</TableCell>
-                      <TableCell className="text-white">{customer.loyaltyPoints || 0}</TableCell>
-                      <TableCell className="text-white">{customer.createdAt ? format(new Date(customer.createdAt), 'd MMM yyyy') : 'N/A'}</TableCell>
+        <TabsContent value="sales" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <CurrencyDisplay amount={salesMetrics.totalSales} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {salesMetrics.totalTransactions} transactions
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Cash Sales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <CurrencyDisplay amount={salesMetrics.cashSales} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {((salesMetrics.cashSales / salesMetrics.totalSales) * 100 || 0).toFixed(1)}% of total
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">UPI Sales</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <CurrencyDisplay amount={salesMetrics.upiSales} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {((salesMetrics.upiSales / salesMetrics.totalSales) * 100 || 0).toFixed(1)}% of total
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Avg Ticket Size</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <CurrencyDisplay amount={salesMetrics.avgTicketSize} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Per transaction
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Transactions</CardTitle>
+                <CardDescription>{filteredBills.length} transactions found</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Method</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'sessions' && (
-          <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-1">Session History</h2>
-              <p className="text-gray-400">
-                View all game sessions and their details
-                {date?.from && date?.to ? 
-                  ` from ${format(date.from, 'MMMM do, yyyy')} to ${format(date.to, 'MMMM do, yyyy')}` : 
-                  ''
-                }
-              </p>
-              
-              {/* Add search input */}
-              <div className="mt-4 relative">
-                <Input
-                  type="text"
-                  placeholder="Search by customer name, phone, or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-gray-800 border-gray-700 text-white pl-10 w-full md:w-1/2"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-            <div className="rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Station</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {searchFilteredSessions.length > 0 ? (
-                    searchFilteredSessions.map(session => {
-                      const customer = customers.find(c => c.id === session.customerId);
-                      
-                      // Calculate session duration properly
-                      let durationDisplay = "0h 1m"; // Default duration
-                      if (session.endTime) {
-                        const startMs = new Date(session.startTime).getTime();
-                        const endMs = new Date(session.endTime).getTime();
-                        const durationInMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
-                        const hours = Math.floor(durationInMinutes / 60);
-                        const minutes = durationInMinutes % 60;
-                        durationDisplay = `${hours}h ${minutes}m`;
-                      } else if (session.duration) {
-                        const hours = Math.floor(session.duration / 60);
-                        const minutes = session.duration % 60;
-                        durationDisplay = `${hours}h ${minutes}m`;
-                      }
-                          
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBills.slice(0, 5).map(bill => {
+                      const customer = customers.find(c => c.id === bill.customerId);
                       return (
-                        <TableRow key={session.id}>
-                          <TableCell className="text-white font-medium">{session.stationId}</TableCell>
-                          <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
-                          <TableCell className="text-white">
-                            <div>{customer?.phone || 'N/A'}</div>
-                            {customer?.email && <div className="text-gray-400 text-xs">{customer.email}</div>}
-                          </TableCell>
-                          <TableCell className="text-white">
-                            <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
-                            <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
-                          </TableCell>
-                          <TableCell className="text-white">
-                            {session.endTime ? (
-                              <>
-                                <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
-                                <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
-                              </>
-                            ) : '-'}
-                          </TableCell>
-                          <TableCell className="text-white">{durationDisplay}</TableCell>
+                        <TableRow key={bill.id}>
+                          <TableCell>{format(new Date(bill.createdAt), 'PP')}</TableCell>
+                          <TableCell>{customer?.name || 'Unknown'}</TableCell>
                           <TableCell>
-                            <Badge className={
-                              !session.endTime
-                                ? "bg-green-900/30 text-green-400 border-green-800"
-                                : "bg-gray-700 text-gray-300"
-                            }>
-                              {session.endTime ? 'Completed' : 'Active'}
-                            </Badge>
+                            <CurrencyDisplay amount={bill.total} />
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100/10"
-                              onClick={() => {
-                                setSessionToDelete(session.id);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                              title="Delete Session"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <TableCell>
+                            {bill.paymentMethod === 'cash' ? (
+                              <span className="flex items-center">
+                                <Banknote className="mr-1 h-4 w-4" /> Cash
+                              </span>
+                            ) : (
+                              <span className="flex items-center">
+                                <CreditCard className="mr-1 h-4 w-4" /> UPI
+                              </span>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-400">
-                        {searchTerm ? 'No sessions found matching your search criteria' : 'No sessions found in the selected date range'}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'summary' && (
-          <div className="space-y-8">
-            <BusinessSummaryReport startDate={date?.from} endDate={date?.to} onDownload={handleDownloadReport} />
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
             
-            <Card className="border-gray-800 bg-[#1A1F2C] shadow-xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl text-white">Detailed Business Metrics</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Overview of key metrics 
-                  {date?.from && date?.to 
-                    ? ` from ${format(date.from, 'MMM do, yyyy')} to ${format(date.to, 'MMM do, yyyy')}` 
-                    : ''
-                  }
-                </CardDescription>
+            <Card>
+              <CardHeader>
+                <CardTitle>Discount & Loyalty Summary</CardTitle>
+                <CardDescription>Impact on revenue</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {/* Financial Metrics */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Financial Metrics</h3>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total Revenue</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.financial.totalRevenue} />
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Average Bill Value</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.financial.averageBillValue} showDecimals />
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total Discounts Given</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.financial.totalDiscounts} />
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Cash Sales</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.financial.cashSales} />
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">UPI Sales</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.financial.upiSales} />
-                        </span>
-                      </div>
-                    </div>
+              <CardContent className="space-y-8">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Discounts Provided</h3>
+                  <div className="flex items-center justify-between">
+                    <span>Total discount amount:</span>
+                    <span className="font-bold">
+                      <CurrencyDisplay amount={salesMetrics.discountAmount} />
+                    </span>
                   </div>
-                  
-                  {/* Operational Metrics */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Operational Metrics</h3>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total Transactions</span>
-                        <span className="font-semibold text-white">{summaryMetrics.operational.totalTransactions}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Active Sessions</span>
-                        <span className="font-semibold text-white">{summaryMetrics.operational.activeSessions}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Completed Sessions</span>
-                        <span className="font-semibold text-white">{summaryMetrics.operational.completedSessions}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Most Popular Product</span>
-                        <span className="font-semibold text-white">{summaryMetrics.operational.mostPopularProduct}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">PS5 Revenue</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.gaming.ps5Sales} />
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">8-Ball Revenue</span>
-                        <span className="font-semibold text-white">
-                          <CurrencyDisplay amount={summaryMetrics.gaming.poolSales} />
-                        </span>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span>Percentage of gross sales:</span>
+                    <span className="font-bold">
+                      {(salesMetrics.discountAmount / (salesMetrics.totalSales + salesMetrics.discountAmount) * 100 || 0).toFixed(1)}%
+                    </span>
                   </div>
-                  
-                  {/* Customer Metrics */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Customer Metrics</h3>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total Customers</span>
-                        <span className="font-semibold text-white">{summaryMetrics.customer.totalCustomers}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Members</span>
-                        <span className="font-semibold text-white">{summaryMetrics.customer.memberCount}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Non-Members</span>
-                        <span className="font-semibold text-white">{summaryMetrics.customer.nonMemberCount}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Loyalty Points Used</span>
-                        <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsUsed}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Loyalty Points Earned</span>
-                        <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsEarned}</span>
-                      </div>
-                    </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Loyalty Program</h3>
+                  <div className="flex items-center justify-between">
+                    <span>Points redeemed:</span>
+                    <span className="font-bold">{salesMetrics.loyaltyPointsUsed}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Points issued:</span>
+                    <span className="font-bold">{salesMetrics.loyaltyPointsEarned}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Net points change:</span>
+                    <span className={`font-bold ${(salesMetrics.loyaltyPointsEarned - salesMetrics.loyaltyPointsUsed) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {salesMetrics.loyaltyPointsEarned - salesMetrics.loyaltyPointsUsed}
+                    </span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-        )}
-      </div>
-
-      {/* Delete Session Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-gray-900 border border-gray-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Session</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to delete this session? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-800 text-white hover:bg-gray-700">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-red-600 text-white hover:bg-red-700"
-              onClick={handleDeleteSession}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </TabsContent>
+        
+        <TabsContent value="products" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Selling Products</CardTitle>
+                <CardDescription>By revenue</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topProducts.map(product => (
+                      <TableRow key={product.name}>
+                        <TableCell>{product.name}</TableCell>
+                        <TableCell className="text-right">{product.count}</TableCell>
+                        <TableCell className="text-right">
+                          <CurrencyDisplay amount={product.revenue} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {topProducts.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-4">
+                          No product sales data available
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales by Category</CardTitle>
+                <CardDescription>Product category breakdown</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categoryBreakdown.map(category => (
+                      <TableRow key={category.category}>
+                        <TableCell className="capitalize">{category.category}</TableCell>
+                        <TableCell className="text-right">{category.count}</TableCell>
+                        <TableCell className="text-right">
+                          <CurrencyDisplay amount={category.revenue} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {categoryBreakdown.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-4">
+                          No category data available
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="customers" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {customers.length}
+                </div>
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Users className="h-3 w-3 mr-1" /> 
+                  Active in system
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Members</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {memberCount}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {((memberCount / (memberCount + nonMemberCount)) * 100 || 0).toFixed(1)}% of active customers
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Member Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <CurrencyDisplay amount={memberRevenue} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {((memberRevenue / (memberRevenue + nonMemberRevenue)) * 100 || 0).toFixed(1)}% of total revenue
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Non-Member Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <CurrencyDisplay amount={nonMemberRevenue} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {((nonMemberRevenue / (memberRevenue + nonMemberRevenue)) * 100 || 0).toFixed(1)}% of total revenue
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Customers</CardTitle>
+              <CardDescription>By spending</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead className="text-right">Visits</TableHead>
+                    <TableHead className="text-right">Total Spent</TableHead>
+                    <TableHead className="text-right">Avg per Visit</TableHead>
+                    <TableHead>Member Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topCustomers.map(customer => {
+                    const customer_obj = customers.find(c => c.id === customer.id);
+                    return (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-2" />
+                            <span>{customer.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">{customer.count}</TableCell>
+                        <TableCell className="text-right">
+                          <CurrencyDisplay amount={customer.revenue} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <CurrencyDisplay amount={customer.revenue / customer.count} />
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs ${customer.memberStatus ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
+                            {customer.memberStatus ? 'Member' : 'Non-Member'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {topCustomers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">
+                        No customer data available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="business" className="space-y-6">
+          <BusinessSummaryReport
+            startDate={startDate}
+            endDate={endDate}
+            onDownload={handleExportBills}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
 
-export default ReportsPage;
+export default Reports;
