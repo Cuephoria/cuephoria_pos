@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -14,7 +15,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Download } from 'lucide-react';
+import { CalendarIcon, Download, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Popover,
@@ -35,11 +36,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, sessions, products, exportBills, exportCustomers } = usePOS();
+  const { customers, bills, sessions, products, exportBills, exportCustomers, deleteSession } = usePOS();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
@@ -47,6 +58,21 @@ const ReportsPage: React.FC = () => {
   const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
+  
+  // New state for session deletion
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Handle delete session
+  const handleDeleteSession = async () => {
+    if (sessionToDelete) {
+      const success = await deleteSession(sessionToDelete);
+      if (success) {
+        setSessionToDelete(null);
+        setIsDeleteDialogOpen(false);
+      }
+    }
+  };
   
   // Handle date range selection from dropdown
   const handleDateRangeChange = (value: string) => {
@@ -537,6 +563,7 @@ const ReportsPage: React.FC = () => {
                     <TableHead>End Time</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -583,6 +610,20 @@ const ReportsPage: React.FC = () => {
                           }>
                             {session.endTime ? 'Completed' : 'Active'}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100/10"
+                            onClick={() => {
+                              setSessionToDelete(session.id);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            title="Delete Session"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -730,6 +771,29 @@ const ReportsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Session Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-gray-900 border border-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Session</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Are you sure you want to delete this session? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-gray-800 text-white hover:bg-gray-700">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={handleDeleteSession}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -21,7 +21,8 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions
+    refreshSessions,
+    deleteSession
   } = useSessionsData();
   
   // Connect active sessions to stations
@@ -91,6 +92,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     startSession,
     endSession,
     deleteStation,
+    deleteSession,
     stationsLoading,
     stationsError,
     sessionsLoading,
