@@ -6,8 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 // Fetch all tournaments from Supabase
 export const fetchTournaments = async (): Promise<Tournament[]> => {
   try {
-    const { data, error } = await supabase
-      .from('tournaments')
+    // Using type assertion to bypass TypeScript error
+    const { data, error } = await (supabase
+      .from('tournaments') as any)
       .select('*')
       .order('created_at', { ascending: false });
       
@@ -29,8 +30,8 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
     const supabaseTournament = convertToSupabaseTournament(tournament);
     
     // Check if the tournament already exists
-    const { data: existingTournament } = await supabase
-      .from('tournaments')
+    const { data: existingTournament } = await (supabase
+      .from('tournaments') as any)
       .select('id')
       .eq('id', tournament.id)
       .single();
@@ -39,8 +40,8 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
     
     if (existingTournament) {
       // Update existing tournament
-      const { data, error } = await supabase
-        .from('tournaments')
+      const { data, error } = await (supabase
+        .from('tournaments') as any)
         .update(supabaseTournament)
         .eq('id', tournament.id)
         .select()
@@ -54,8 +55,8 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
       result = data;
     } else {
       // Create new tournament with created_at timestamp
-      const { data, error } = await supabase
-        .from('tournaments')
+      const { data, error } = await (supabase
+        .from('tournaments') as any)
         .insert({ ...supabaseTournament, created_at: new Date().toISOString() })
         .select()
         .single();
@@ -78,8 +79,8 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
 // Delete a tournament from Supabase
 export const deleteTournament = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('tournaments')
+    const { error } = await (supabase
+      .from('tournaments') as any)
       .delete()
       .eq('id', id);
       
