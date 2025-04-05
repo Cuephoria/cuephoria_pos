@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Expense, BusinessSummary, ExpenseFormData } from '@/types/expense.types';
 import { usePOS } from './POSContext';
 import { generateId } from '@/utils/pos.utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase, handleSupabaseError } from '@/integrations/supabase/client';
 
 interface ExpenseContextType {
   expenses: Expense[];
@@ -45,17 +47,58 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
     
     try {
-      // Get expenses from localStorage
-      const storedExpenses = localStorage.getItem(STORAGE_KEY);
+      // Try to fetch expenses from Supabase
+      const { data: supabaseExpenses, error: supabaseError } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
       
-      if (storedExpenses) {
-        const parsedExpenses = JSON.parse(storedExpenses) as Expense[];
-        setExpenses(parsedExpenses);
-        console.log(`Loaded ${parsedExpenses.length} expenses from localStorage`);
+      if (supabaseError) {
+        console.error('Error fetching expenses from Supabase:', supabaseError);
+        
+        // Fall back to localStorage if Supabase fails
+        const storedExpenses = localStorage.getItem(STORAGE_KEY);
+        
+        if (storedExpenses) {
+          const parsedExpenses = JSON.parse(storedExpenses) as Expense[];
+          setExpenses(parsedExpenses);
+          console.log(`Loaded ${parsedExpenses.length} expenses from localStorage`);
+          
+          // Try to sync localStorage expenses to Supabase
+          parsedExpenses.forEach(async (expense) => {
+            await supabase.from('expenses').upsert({
+              id: expense.id,
+              name: expense.name,
+              amount: expense.amount,
+              category: expense.category,
+              frequency: expense.frequency,
+              date: expense.date,
+              is_recurring: expense.isRecurring,
+              notes: expense.notes || null
+            }, { onConflict: 'id' });
+          });
+        } else {
+          setExpenses([]);
+          console.log('No expenses found in localStorage');
+        }
       } else {
-        // Initialize with empty array if no data found
-        setExpenses([]);
-        console.log('No expenses found in localStorage');
+        // Use Supabase data
+        const formattedExpenses = supabaseExpenses.map(item => ({
+          id: item.id,
+          name: item.name,
+          amount: item.amount,
+          category: item.category as Expense['category'],
+          frequency: item.frequency as Expense['frequency'],
+          date: item.date,
+          isRecurring: item.is_recurring,
+          notes: item.notes || undefined
+        }));
+        
+        setExpenses(formattedExpenses);
+        console.log(`Loaded ${formattedExpenses.length} expenses from Supabase`);
+        
+        // Update localStorage with the latest data from Supabase
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(formattedExpenses));
       }
     } catch (err) {
       console.error('Error in fetchExpenses:', err);
@@ -104,7 +147,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Error saving expenses to localStorage:', err);
       toast({
         title: 'Error',
-        description: 'Failed to save expenses data',
+        description: 'Failed to save expenses data locally',
         variant: 'destructive'
       });
     }
@@ -126,6 +169,31 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         notes: formData.notes
       };
       
+      // Insert to Supabase
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .insert({
+          id: newExpense.id,
+          name: newExpense.name,
+          amount: newExpense.amount,
+          category: newExpense.category,
+          frequency: newExpense.frequency,
+          date: newExpense.date,
+          is_recurring: newExpense.isRecurring,
+          notes: newExpense.notes || null
+        });
+      
+      if (supabaseError) {
+        const errorMessage = handleSupabaseError(supabaseError, 'adding expense');
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
       const updatedExpenses = [newExpense, ...expenses];
       setExpenses(updatedExpenses);
       saveExpensesToStorage(updatedExpenses);
@@ -149,7 +217,31 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
-      // The date is already an ISO string from ExpenseDialog
+      // Update in Supabase
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .update({
+          name: expense.name,
+          amount: expense.amount,
+          category: expense.category,
+          frequency: expense.frequency,
+          date: expense.date,
+          is_recurring: expense.isRecurring,
+          notes: expense.notes || null
+        })
+        .eq('id', expense.id);
+      
+      if (supabaseError) {
+        const errorMessage = handleSupabaseError(supabaseError, 'updating expense');
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
       const updatedExpenses = expenses.map(item => 
         item.id === expense.id ? expense : item
       );
@@ -176,6 +268,23 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
+      // Delete from Supabase
+      const { error: supabaseError } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+      
+      if (supabaseError) {
+        const errorMessage = handleSupabaseError(supabaseError, 'deleting expense');
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
       const updatedExpenses = expenses.filter(item => item.id !== id);
       setExpenses(updatedExpenses);
       saveExpensesToStorage(updatedExpenses);
