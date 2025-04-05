@@ -221,7 +221,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                       </div>
                     </div>
                     
-                    {match.status === 'scheduled' && !match.completed && match.player1Id && match.player2Id && (
+                    {match.status === 'scheduled' && !match.completed && (
                       <>
                         <div className="mt-4">
                           <Select
