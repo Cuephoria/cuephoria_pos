@@ -3,6 +3,7 @@ import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament } from "@/types/tournament.types";
 import { useToast } from '@/hooks/use-toast';
 import { PostgrestError } from "@supabase/supabase-js";
+import { useAuth } from "@/context/AuthContext";
 
 // Define a more specific type for Supabase operations with tournaments
 // This helps us work around the type limitations without modifying the types.ts file
@@ -56,7 +57,10 @@ export const fetchTournaments = async (): Promise<Tournament[]> => {
 // Format error message from Supabase for tournament operations
 const formatTournamentError = (error: PostgrestError): string => {
   if (error.code === '42501') {
-    return 'Permission denied. You may not have the required access rights to perform this operation.';
+    return 'Permission denied. You may not have the required access rights to perform this operation. Only admins can manage tournaments.';
+  }
+  if (error.message?.includes('auth.uid()')) {
+    return 'You need to be authenticated as an admin to perform this operation.';
   }
   return handleSupabaseError(error, 'tournament operation');
 };
@@ -138,6 +142,7 @@ export const deleteTournament = async (id: string): Promise<{ success: boolean; 
 // Custom hook for tournament operations with toast notifications
 export const useTournamentOperations = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   return {
     fetchTournaments: async () => {
@@ -149,6 +154,15 @@ export const useTournamentOperations = () => {
     },
     
     saveTournament: async (tournament: Tournament) => {
+      if (!user?.isAdmin) {
+        toast({
+          title: "Permission denied",
+          description: "Only admin users can create or edit tournaments",
+          variant: "destructive"
+        });
+        return null;
+      }
+      
       const { data, error } = await saveTournament(tournament);
       if (data) {
         toast({
@@ -167,6 +181,15 @@ export const useTournamentOperations = () => {
     },
     
     deleteTournament: async (id: string, name: string) => {
+      if (!user?.isAdmin) {
+        toast({
+          title: "Permission denied",
+          description: "Only admin users can delete tournaments",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
       const { success, error } = await deleteTournament(id);
       if (success) {
         toast({
