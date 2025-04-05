@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 
@@ -75,6 +75,9 @@ export const useStationsData = () => {
   
   const deleteStation = async (stationId: string) => {
     try {
+      setStationsLoading(true);
+      console.log("Starting delete operation for station ID:", stationId);
+      
       // Check if the station is occupied first
       const station = stations.find(s => s.id === stationId);
       if (!station) {
@@ -96,26 +99,39 @@ export const useStationsData = () => {
         return false;
       }
       
-      console.log("Attempting to delete station:", station);
+      console.log("Station to delete:", {
+        id: station.id,
+        name: station.name,
+        type: station.type,
+        isOccupied: station.isOccupied
+      });
       
-      // Delete from Supabase
-      const { error } = await supabase
+      // Delete from Supabase with more detailed error handling
+      const { error, count } = await supabase
         .from('stations')
         .delete()
-        .eq('id', stationId);
+        .eq('id', stationId)
+        .select('count');
         
       if (error) {
-        console.error('Error deleting station from Supabase:', error);
+        const errorMessage = handleSupabaseError(error, 'delete station');
+        console.error('Supabase error details:', error);
         toast({
           title: 'Database Error',
-          description: 'Failed to delete station from database',
+          description: errorMessage,
           variant: 'destructive'
         });
         return false;
       }
       
+      console.log(`Deleted ${count} rows from stations table`);
+      
       // Update local state
-      setStations(prev => prev.filter(station => station.id !== stationId));
+      setStations(prev => {
+        const updatedStations = prev.filter(station => station.id !== stationId);
+        console.log(`Updated stations list: ${updatedStations.length} stations remaining`);
+        return updatedStations;
+      });
       
       toast({
         title: 'Station Deleted',
@@ -127,10 +143,12 @@ export const useStationsData = () => {
       console.error('Error in deleteStation:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete station',
+        description: error instanceof Error ? error.message : 'Failed to delete station',
         variant: 'destructive'
       });
       return false;
+    } finally {
+      setStationsLoading(false);
     }
   };
   
