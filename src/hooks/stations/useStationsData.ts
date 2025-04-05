@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -95,31 +96,25 @@ export const useStationsData = () => {
         return false;
       }
       
-      // Handle newly added stations that might not be in Supabase yet
-      // or stations that don't have a UUID format
-      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stationId);
+      console.log("Attempting to delete station:", station);
       
-      if (isValidUUID) {
-        // Delete from Supabase only if it's a valid UUID
-        const { error } = await supabase
-          .from('stations')
-          .delete()
-          .eq('id', stationId);
-          
-        if (error) {
-          console.error('Error deleting station from Supabase:', error);
-          toast({
-            title: 'Database Error',
-            description: 'Failed to delete station from database',
-            variant: 'destructive'
-          });
-          return false;
-        }
-      } else {
-        console.log('Skipping Supabase delete for non-UUID station ID:', stationId);
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('stations')
+        .delete()
+        .eq('id', stationId);
+        
+      if (error) {
+        console.error('Error deleting station from Supabase:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to delete station from database',
+          variant: 'destructive'
+        });
+        return false;
       }
       
-      // Update local state (do this regardless of Supabase result)
+      // Update local state
       setStations(prev => prev.filter(station => station.id !== stationId));
       
       toast({

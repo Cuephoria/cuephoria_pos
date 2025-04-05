@@ -38,7 +38,10 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const customerName = customer ? customer.name : 'Unknown Customer';
     
   const handleDeleteStation = async () => {
-    await deleteStation(station.id);
+    console.log("Delete station button clicked for:", station.name, station.id);
+    const result = await deleteStation(station.id);
+    console.log("Delete station result:", result);
+    return result;
   };
 
   return (
