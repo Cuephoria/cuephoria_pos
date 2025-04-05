@@ -143,29 +143,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      const userData = {
-        username,
-        password,
-        is_admin: false,
-        ...staffData ? {
-          position: staffData.position,
-          salary: staffData.salary,
-          joining_date: staffData.joiningDate,
-          shift_start: staffData.shiftStart,
-          shift_end: staffData.shiftEnd
-        } : {}
-      };
-      
-      const { error } = await supabase
-        .from('admin_users')
-        .insert(userData);
-      
-      if (error) {
-        console.error('Error creating staff member:', error);
+      // Try to safely insert staff data
+      try {
+        const userData = {
+          username,
+          password,
+          is_admin: false,
+          ...(staffData ? {
+            position: staffData.position,
+            salary: staffData.salary,
+            joining_date: staffData.joiningDate,
+            shift_start: staffData.shiftStart,
+            shift_end: staffData.shiftEnd
+          } : {})
+        };
+        
+        const { error } = await supabase
+          .from('admin_users')
+          .insert(userData);
+        
+        if (error) {
+          // If we get an error about columns not existing, try again with just the basic fields
+          if (error.message && error.message.includes("column") && error.message.includes("does not exist")) {
+            console.warn('Staff data columns do not exist in the database, inserting basic user data only');
+            const basicUserData = {
+              username,
+              password,
+              is_admin: false
+            };
+            
+            const { error: basicError } = await supabase
+              .from('admin_users')
+              .insert(basicUserData);
+              
+            if (basicError) {
+              console.error('Error creating staff member with basic data:', basicError);
+              return false;
+            }
+          } else {
+            console.error('Error creating staff member:', error);
+            return false;
+          }
+        }
+        
+        return true;
+      } catch (insertError) {
+        console.error('Error inserting staff data:', insertError);
         return false;
       }
-      
-      return true;
     } catch (error) {
       console.error('Error adding staff member:', error);
       return false;
@@ -180,26 +205,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
-        .eq('is_admin', false);
-      
-      if (error) {
-        console.error('Error fetching staff members:', error);
-        return [];
+      // Try to get staff members with all fields
+      try {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
+          .eq('is_admin', false);
+        
+        if (error) {
+          // If there's an error about columns not existing, try with just the basic fields
+          if (error.message && error.message.includes("column") && error.message.includes("does not exist")) {
+            const { data: basicData, error: basicError } = await supabase
+              .from('admin_users')
+              .select('id, username, is_admin')
+              .eq('is_admin', false);
+              
+            if (basicError) {
+              console.error('Error fetching basic staff members:', basicError);
+              return [];
+            }
+            
+            return basicData.map(staff => ({
+              id: staff.id,
+              username: staff.username,
+              isAdmin: staff.is_admin
+            }));
+          } else {
+            console.error('Error fetching staff members:', error);
+            return [];
+          }
+        }
+        
+        return data.map(staff => ({
+          id: staff.id,
+          username: staff.username,
+          isAdmin: staff.is_admin,
+          position: staff.position,
+          salary: staff.salary,
+          joiningDate: staff.joining_date,
+          shiftStart: staff.shift_start,
+          shiftEnd: staff.shift_end
+        }));
+      } catch (selectError) {
+        console.error('Error in select query:', selectError);
+        
+        // Fallback to basic staff data
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin')
+          .eq('is_admin', false);
+        
+        if (error) {
+          console.error('Error fetching basic staff members:', error);
+          return [];
+        }
+        
+        return data.map(staff => ({
+          id: staff.id,
+          username: staff.username,
+          isAdmin: staff.is_admin
+        }));
       }
-      
-      return data.map(staff => ({
-        id: staff.id,
-        username: staff.username,
-        isAdmin: staff.is_admin,
-        position: staff.position,
-        salary: staff.salary,
-        joiningDate: staff.joining_date,
-        shiftStart: staff.shift_start,
-        shiftEnd: staff.shift_end
-      }));
     } catch (error) {
       console.error('Error fetching staff members:', error);
       return [];
