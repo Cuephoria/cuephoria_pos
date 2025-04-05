@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
-import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError, deleteStationByName } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 
@@ -106,8 +106,35 @@ export const useStationsData = () => {
         isOccupied: station.isOccupied
       });
       
-      // Remove the problematic RPC call that caused the TypeScript error
-      // Instead, just log information about the station directly
+      // If it's a PS5 station, use our new utility function 
+      if (station.type === 'ps5') {
+        console.log("Using specialized PS5 deletion utility for:", station.name);
+        const result = await deleteStationByName(station.name);
+        
+        if (result.success) {
+          console.log("PS5 station deleted successfully:", result.message);
+          
+          // Update local state
+          setStations(prev => prev.filter(s => s.id !== stationId));
+          
+          toast({
+            title: 'Station Deleted',
+            description: result.message,
+          });
+          
+          return true;
+        } else {
+          console.error("Failed to delete PS5 station:", result.message);
+          toast({
+            title: 'Delete Failed',
+            description: result.message,
+            variant: 'destructive'
+          });
+          return false;
+        }
+      }
+      
+      // For other station types, use the normal deletion process
       console.log("Checking database for station with ID:", stationId);
       console.log("Station type to be deleted:", station.type);
       

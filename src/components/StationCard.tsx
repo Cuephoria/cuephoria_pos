@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { usePOS, Station } from '@/context/POSContext';
@@ -37,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { deleteStationByName } from '@/integrations/supabase/client';
 
 interface StationCardProps {
   station: Station;
@@ -63,21 +63,72 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     : null;
     
   const customerName = customer ? customer.name : 'Unknown Customer';
+  
+  const isConsole3 = station.name.includes('Console 3') || station.name.includes('Console3');
+  
+  const handleDirectDelete = async () => {
+    if (station.isOccupied) {
+      toast({
+        title: 'Cannot Delete',
+        description: 'Cannot delete an occupied station. End the current session first.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
+    try {
+      setDeleteInProgress(true);
+      toast({
+        title: 'Deleting Station',
+        description: `Attempting to delete ${station.name}...`,
+      });
+      
+      const result = await deleteStationByName(station.name);
+      
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: result.message,
+        });
+        
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast({
+          title: 'Error',
+          description: result.message,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error("Error in direct delete:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete station. See console for details.',
+        variant: 'destructive'
+      });
+    } finally {
+      setDeleteInProgress(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   const handleDeleteStation = async () => {
     if (deleteInProgress) return false;
+    
+    if (isConsole3) {
+      await handleDirectDelete();
+      return true;
+    }
     
     try {
       setDeleteInProgress(true);
       console.log("Delete station button clicked for:", station.name, station.id, "Type:", station.type);
       
-      // Show deletion in progress toast
       toast({
         title: "Deleting Station",
         description: `Attempting to delete ${station.name}...`,
       });
       
-      // Extra validation to ensure we have correct data
       if (!station.id) {
         toast({
           title: "Error",
@@ -87,7 +138,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         return false;
       }
       
-      // Double-check station type to verify data integrity
       console.log("Station type before deletion:", station.type, 
                   "Is PS5:", station.type === 'ps5',
                   "Is 8ball:", station.type === '8ball');
@@ -162,9 +212,11 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
             : 'border-cuephoria-purple bg-gradient-to-b from-cuephoria-purple/20 to-black/50'
         }
         ${isPoolTable ? 'rounded-xl' : 'rounded-lg'}
+        ${isConsole3 ? 'border-red-500 border-2' : ''}
       `}
       data-station-id={station.id}
       data-station-type={station.type}
+      data-station-name={station.name}
     >
       {isPoolTable && (
         <>
@@ -264,6 +316,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                       ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
                       : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
                     }
+                    ${isConsole3 ? 'bg-red-500/20 text-red-300 animate-pulse' : ''}
                   `}
                   disabled={station.isOccupied || deleteInProgress}
                 >
@@ -280,6 +333,11 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                       Type: {station.type}<br/>
                       Name: {station.name}
                     </div>
+                    {isConsole3 && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-800 text-sm font-medium">
+                        This is a special deletion using direct method by name
+                      </div>
+                    )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -301,6 +359,11 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         <div className="flex flex-col space-y-2">
           {station.isOccupied && station.currentSession && (
             <StationTimer station={station} />
+          )}
+          {isConsole3 && !station.isOccupied && (
+            <div className="text-xs p-1 rounded bg-red-500/20 text-red-300 mb-2">
+              Use delete button to remove this console
+            </div>
           )}
         </div>
       </CardContent>
