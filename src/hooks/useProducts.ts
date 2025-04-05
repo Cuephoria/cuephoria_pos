@@ -4,131 +4,9 @@ import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSup
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 
-const membershipProducts: Product[] = [
-  { 
-    id: 'mem1', 
-    name: "Silver - PS5 Weekly Pass (2 PAX)",
-    originalPrice: 599,
-    offerPrice: 399,
-    studentPrice: 299,
-    price: 399,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'weekly',
-    membershipHours: 4
-  },
-  { 
-    id: 'mem2', 
-    name: "Gold - PS5 Weekly Pass (4 PAX)", 
-    originalPrice: 1199,
-    offerPrice: 599,
-    studentPrice: 499,
-    price: 599,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'weekly',
-    membershipHours: 4
-  },
-  { 
-    id: 'mem3', 
-    name: "Silver - 8-Ball Weekly Pass (2 PAX)",
-    originalPrice: 599,
-    offerPrice: 399,
-    studentPrice: 299,
-    price: 399,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'weekly',
-    membershipHours: 4
-  },
-  { 
-    id: 'mem4', 
-    name: "Gold - 8-Ball Weekly Pass (4 PAX)",
-    originalPrice: 999,
-    offerPrice: 599,
-    studentPrice: 499,
-    price: 599,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'weekly',
-    membershipHours: 4
-  },
-  { 
-    id: 'mem5', 
-    name: "Platinum - Combo Weekly Pass",
-    originalPrice: 1799,
-    offerPrice: 899,
-    studentPrice: 799,
-    price: 899,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'weekly',
-    membershipHours: 6
-  },
-  { 
-    id: 'mem6', 
-    name: "Silver - 8-Ball Monthly Pass (2 PAX)",
-    originalPrice: 1999,
-    offerPrice: 1499,
-    studentPrice: 1199,
-    price: 1499,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'monthly',
-    membershipHours: 16
-  },
-  { 
-    id: 'mem7', 
-    name: "Silver - PS5 Monthly Pass (2 PAX)",
-    originalPrice: 1999,
-    offerPrice: 1499,
-    studentPrice: 1199,
-    price: 1499,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'monthly',
-    membershipHours: 16
-  },
-  { 
-    id: 'mem8', 
-    name: "Gold - PS5 Monthly Pass (4 PAX)",
-    originalPrice: 3999,
-    offerPrice: 2499,
-    studentPrice: 1999,
-    price: 2499,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'monthly',
-    membershipHours: 16
-  },
-  { 
-    id: 'mem9', 
-    name: "Gold - 8-Ball Monthly Pass (4 PAX)",
-    originalPrice: 3999,
-    offerPrice: 2499,
-    studentPrice: 1999,
-    price: 2499,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'monthly',
-    membershipHours: 16
-  },
-  { 
-    id: 'mem10', 
-    name: "Platinum - Ultimate Monthly Pass",
-    originalPrice: 5999,
-    offerPrice: 3499,
-    studentPrice: 2999,
-    price: 3499,
-    category: 'membership', 
-    stock: 9999,
-    duration: 'monthly',
-    membershipHours: 24
-  }
-];
-
+// Remove hardcoded membership products
 export const useProducts = () => {
-  const [products, setProducts] = useState<Product[]>(membershipProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -136,8 +14,7 @@ export const useProducts = () => {
   const lowStockProducts = products.filter(p => p.stock < 5 && p.category !== 'membership');
   
   useEffect(() => {
-    console.log('useProducts initialized with', products.length, 'products');
-    console.log('Membership products:', membershipProducts.length);
+    console.log('useProducts initialized');
     
     refreshFromDB().catch(err => {
       console.error('Error loading products from DB:', err);
@@ -283,14 +160,6 @@ export const useProducts = () => {
   
   const deleteProduct = (id: string) => {
     try {
-      if (id.startsWith('mem')) {
-        toast({
-          title: "Info",
-          description: "Membership products are managed by the system and cannot be deleted.",
-        });
-        return;
-      }
-      
       setProducts(prev => prev.filter(p => p.id !== id));
       
       supabase
@@ -328,10 +197,10 @@ export const useProducts = () => {
   };
   
   const resetToInitialProducts = () => {
-    setProducts(membershipProducts);
+    setProducts([]);
     setError(null);
-    console.log('Reset to membership products only:', membershipProducts.length);
-    return membershipProducts;
+    console.log('Reset to empty products list');
+    return [];
   };
   
   const refreshFromDB = async () => {
@@ -357,10 +226,6 @@ export const useProducts = () => {
         const uniqueProductsById = new Map<string, Product>();
         const duplicates: string[] = [];
         
-        membershipProducts.forEach(product => {
-          uniqueProductsById.set(product.id, product);
-        });
-        
         dbProducts.forEach(product => {
           if (!uniqueProductsById.has(product.id)) {
             const productNameLower = product.name.toLowerCase();
@@ -373,7 +238,7 @@ export const useProducts = () => {
             } else {
               uniqueProductsById.set(product.id, product);
             }
-          } else if (!product.id.startsWith('mem')) {
+          } else {
             duplicates.push(`${product.name} (ID: ${product.id})`);
           }
         });
