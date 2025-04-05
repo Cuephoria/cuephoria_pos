@@ -106,35 +106,53 @@ export const useStationsData = () => {
         isOccupied: station.isOccupied
       });
       
-      // Add a small delay to ensure any UI operations are completed
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // CRITICAL FIX: Before deleting, make a direct query to verify the station exists
+      const { data: stationCheck, error: checkError } = await supabase
+        .from('stations')
+        .select('id, name')
+        .eq('id', stationId)
+        .single();
+        
+      console.log("Station check result:", stationCheck);
       
-      // Delete from Supabase with more detailed error handling
-      console.log(`Sending delete request to Supabase for station ID: ${stationId}`);
-      const { error, data } = await supabase
+      if (checkError || !stationCheck) {
+        console.error('Station not found in database:', checkError || 'No data returned');
+        
+        // If the station doesn't exist in DB but does in local state, just remove it from local state
+        console.log("Removing station from local state only");
+        setStations(prev => prev.filter(s => s.id !== stationId));
+        
+        toast({
+          title: 'Station Removed',
+          description: 'Station was removed from local state (not found in database)',
+        });
+        
+        return true;
+      }
+      
+      console.log(`Confirmed station exists in database: ${stationCheck.name} (${stationId})`);
+      
+      // Delete from Supabase - DIRECT DELETE
+      const { error } = await supabase
         .from('stations')
         .delete()
-        .eq('id', stationId)
-        .select();
+        .eq('id', stationId);
         
-      console.log("Delete response data:", data);
-      
       if (error) {
-        const errorMessage = handleSupabaseError(error, 'delete station');
-        console.error('Supabase delete error:', error);
+        console.error('Failed to delete station from database:', error);
         console.error('Error code:', error.code);
         console.error('Error message:', error.message);
         console.error('Error details:', error.details);
         
         toast({
           title: 'Database Error',
-          description: `Failed to delete station: ${errorMessage}`,
+          description: `Failed to delete station: ${error.message}`,
           variant: 'destructive'
         });
         return false;
       }
       
-      console.log(`Station with ID ${stationId} deleted successfully`);
+      console.log(`Station with ID ${stationId} deleted successfully from database`);
       
       // Update local state
       setStations(prev => {

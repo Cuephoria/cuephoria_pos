@@ -52,6 +52,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     hourlyRate: station.hourlyRate
   });
   const [deleteInProgress, setDeleteInProgress] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const getCustomer = (id: string) => {
     return customers.find(c => c.id === id);
@@ -64,13 +65,11 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const customerName = customer ? customer.name : 'Unknown Customer';
     
   const handleDeleteStation = async () => {
+    if (deleteInProgress) return false;
+    
     try {
       setDeleteInProgress(true);
       console.log("Delete station button clicked for:", station.name, station.id);
-      console.log("Station type:", station.type);
-
-      // Add more detailed logging for debugging
-      console.log("Full station object:", JSON.stringify(station));
       
       // Show deletion in progress toast
       toast({
@@ -78,13 +77,16 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         description: `Attempting to delete ${station.name}...`,
       });
       
-      // Add small delay to ensure UI updates
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
       const result = await deleteStation(station.id);
       console.log("Delete station result:", result);
       
-      if (!result) {
+      if (result) {
+        toast({
+          title: "Success",
+          description: `Station ${station.name} has been deleted`,
+        });
+        setDeleteDialogOpen(false);
+      } else {
         toast({
           title: "Delete Failed",
           description: `Failed to delete station ${station.name}. Please try again.`,
@@ -234,7 +236,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
               </DialogContent>
             </Dialog>
 
-            <AlertDialog>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button 
                   variant="ghost" 
@@ -256,6 +258,10 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                   <AlertDialogTitle>Delete Station</AlertDialogTitle>
                   <AlertDialogDescription>
                     Are you sure you want to delete {station.name}? This action cannot be undone.
+                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
+                      Station ID: {station.id}<br/>
+                      Type: {station.type}
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
