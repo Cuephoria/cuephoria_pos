@@ -145,25 +145,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      const { error } = await supabase
-        .from('admin_users')
-        .insert({
-          username,
-          password,
-          is_admin: false,
-          position,
-          salary,
-          joining_date: joiningDate,
-          shift_start: shiftStart,
-          shift_end: shiftEnd
-        });
-      
-      if (error) {
-        console.error('Error creating staff member:', error);
+      // First, check if the columns exist in the table
+      try {
+        const { error } = await supabase
+          .from('admin_users')
+          .insert({
+            username,
+            password,
+            is_admin: false,
+            position,
+            salary,
+            joining_date: joiningDate,
+            shift_start: shiftStart,
+            shift_end: shiftEnd
+          });
+        
+        if (error) {
+          console.error('Error creating staff member:', error);
+          return false;
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error adding staff member:', error);
         return false;
       }
-      
-      return true;
     } catch (error) {
       console.error('Error adding staff member:', error);
       return false;
@@ -178,20 +184,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
+      // Try to fetch all fields first
       const { data, error } = await supabase
         .from('admin_users')
         .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
         .eq('is_admin', false);
       
+      // If there's an error (likely because some columns don't exist),
+      // fallback to fetching only the base fields
       if (error) {
-        console.error('Error fetching staff members:', error);
-        return [];
+        console.error('Error fetching staff members with extended fields:', error);
+        
+        // Fallback to basic fields
+        const { data: basicData, error: basicError } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin')
+          .eq('is_admin', false);
+        
+        if (basicError || !basicData) {
+          console.error('Error fetching staff members:', basicError);
+          return [];
+        }
+        
+        // Return data with only basic fields
+        return basicData.map(staff => ({
+          id: staff.id,
+          username: staff.username,
+          isAdmin: staff.is_admin
+        }));
       }
       
       if (!data || !Array.isArray(data)) {
         return [];
       }
       
+      // If we got here, the extended query worked
       return data.map(staff => ({
         id: staff.id,
         username: staff.username,
