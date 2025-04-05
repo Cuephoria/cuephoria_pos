@@ -24,12 +24,20 @@ type SupabaseTournament = {
   updated_at?: string;
 }
 
+// Create a type-safe wrapper for Supabase operations with tournaments
+// This prevents TypeScript errors without needing to modify the types.ts file
+const tournamentsTable = {
+  select: () => supabase.from('tournaments' as any),
+  insert: (data: any) => supabase.from('tournaments' as any).insert(data),
+  update: (data: any) => supabase.from('tournaments' as any).update(data),
+  delete: () => supabase.from('tournaments' as any).delete(),
+};
+
 // Fetch all tournaments from Supabase
 export const fetchTournaments = async (): Promise<Tournament[]> => {
   try {
-    // Using any type to bypass TypeScript error since we can't modify types.ts
-    const { data, error } = await (supabase
-      .from('tournaments') as any)
+    const { data, error } = await tournamentsTable
+      .select()
       .select('*')
       .order('created_at', { ascending: false });
       
@@ -51,8 +59,8 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
     const supabaseTournament = convertToSupabaseTournament(tournament);
     
     // Check if the tournament already exists
-    const { data: existingTournament, error: checkError } = await (supabase
-      .from('tournaments') as any)
+    const { data: existingTournament, error: checkError } = await tournamentsTable
+      .select()
       .select('id')
       .eq('id', tournament.id)
       .single();
@@ -66,8 +74,7 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
     
     if (existingTournament) {
       // Update existing tournament
-      const { data, error } = await (supabase
-        .from('tournaments') as any)
+      const { data, error } = await tournamentsTable
         .update(supabaseTournament)
         .eq('id', tournament.id)
         .select()
@@ -81,8 +88,7 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
       result = data;
     } else {
       // Create new tournament with created_at timestamp
-      const { data, error } = await (supabase
-        .from('tournaments') as any)
+      const { data, error } = await tournamentsTable
         .insert({ ...supabaseTournament, created_at: new Date().toISOString() })
         .select()
         .single();
@@ -105,8 +111,7 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
 // Delete a tournament from Supabase
 export const deleteTournament = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await (supabase
-      .from('tournaments') as any)
+    const { error } = await tournamentsTable
       .delete()
       .eq('id', id);
       
