@@ -4,7 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import StaffManagement from '@/components/admin/StaffManagement';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Settings as SettingsIcon, Users, Shield } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Trophy } from 'lucide-react';
+import TournamentManagement from '@/components/tournaments/TournamentManagement';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -24,6 +25,10 @@ const Settings = () => {
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
             General
+          </TabsTrigger>
+          <TabsTrigger value="tournaments" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            Tournaments
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="staff" className="flex items-center gap-2">
@@ -45,6 +50,10 @@ const Settings = () => {
               </p>
             </div>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="tournaments" className="space-y-4">
+          <TournamentManagement />
         </TabsContent>
         
         {isAdmin && (
