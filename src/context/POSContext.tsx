@@ -7,8 +7,7 @@ import {
   Bill,
   Product,
   Station,
-  Session,
-  SessionResult
+  Session
 } from '@/types/pos.types';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
@@ -359,13 +358,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // This function is no longer needed but kept for API compatibility
+  // Remove sample data functionality
   const handleAddSampleIndianData = () => {
-    // Use imported toast from use-toast
     const { toast } = useToast();
     toast({
       title: "Info",
-      description: "Sample data has been disabled. Please add products manually or through database import.",
+      description: "Sample data functionality has been removed. Please add products manually or through database import.",
     });
   };
   

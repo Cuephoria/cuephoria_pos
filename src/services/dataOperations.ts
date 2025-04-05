@@ -17,8 +17,8 @@ export const resetToSampleData = async (
   refreshFromDB?: () => Promise<Product[]>
 ) => {
   const defaultOptions = {
-    products: true,
-    customers: true,
+    products: false,
+    customers: false,
     sales: true,
     sessions: true
   };

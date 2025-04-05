@@ -1,24 +1,20 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
   
-  // Load data from Supabase
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        // First check if we already have customers in localStorage (for backward compatibility)
         const storedCustomers = localStorage.getItem('cuephoriaCustomers');
         if (storedCustomers) {
           const parsedCustomers = JSON.parse(storedCustomers);
           
-          // Convert date strings to actual Date objects
           const customersWithDates = parsedCustomers.map((customer: any) => ({
             ...customer,
             createdAt: new Date(customer.createdAt),
@@ -28,7 +24,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           
           setCustomers(customersWithDates);
           
-          // Migrate localStorage data to Supabase
           for (const customer of customersWithDates) {
             await supabase.from('customers').upsert({
                 id: customer.id,
@@ -50,12 +45,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             );
           }
           
-          // Clear localStorage after migration
           localStorage.removeItem('cuephoriaCustomers');
           return;
         }
         
-        // Fetch customers from Supabase
         const { data, error } = await supabase
           .from('customers')
           .select('*');
@@ -70,7 +63,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           return;
         }
         
-        // Transform data to match our Customer type
         if (data && data.length > 0) {
           const transformedCustomers = data.map(item => ({
             id: item.id,
@@ -91,7 +83,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           
           setCustomers(transformedCustomers);
         } else {
-          setCustomers(initialCustomers);
+          setCustomers([]);
         }
       } catch (error) {
         console.error('Error in fetchCustomers:', error);
@@ -100,15 +92,13 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           description: 'Failed to load customers',
           variant: 'destructive'
         });
-        // Fallback to initialCustomers
-        setCustomers(initialCustomers);
+        setCustomers([]);
       }
     };
     
     fetchCustomers();
-  }, [initialCustomers, toast]);
+  }, []);
   
-  // Check for expired memberships
   useEffect(() => {
     const now = new Date();
     let customersUpdated = false;
@@ -133,7 +123,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       if (customersUpdated) {
         setCustomers(updatedCustomers);
         
-        // Update expired memberships in Supabase
         for (const customer of updatedCustomers) {
           if (!customer.isMember) {
             await supabase
@@ -148,15 +137,12 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     checkExpirations();
   }, [customers]);
   
-  // Check if customer with same phone or email already exists
   const isDuplicateCustomer = (phone: string, email?: string): { isDuplicate: boolean, existingCustomer?: Customer } => {
-    // Check for duplicate phone number (required field)
     const existingByPhone = customers.find(c => c.phone === phone);
     if (existingByPhone) {
       return { isDuplicate: true, existingCustomer: existingByPhone };
     }
     
-    // Check for duplicate email (optional field)
     if (email) {
       const existingByEmail = customers.find(c => c.email === email);
       if (existingByEmail) {
@@ -169,7 +155,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const addCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'>) => {
     try {
-      // Check for duplicate customer
       const { isDuplicate, existingCustomer } = isDuplicateCustomer(customer.phone, customer.email);
       
       if (isDuplicate && existingCustomer) {
@@ -178,10 +163,9 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           description: `A customer with this ${existingCustomer.phone === customer.phone ? 'phone number' : 'email'} already exists.`,
           variant: 'destructive'
         });
-        return existingCustomer; // Return existing customer instead of null
+        return existingCustomer;
       }
       
-      // Create a new customer in Supabase
       const { data, error } = await supabase
         .from('customers')
         .insert({
@@ -212,7 +196,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       }
       
       if (data) {
-        // Transform response to our Customer type
         const newCustomer: Customer = {
           id: data.id,
           name: data.name,
@@ -230,7 +213,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           createdAt: new Date(data.created_at)
         };
         
-        // Update local state
         setCustomers(prev => [...prev, newCustomer]);
         
         toast({
@@ -260,19 +242,16 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return null;
     
-    // Calculate membership dates
     const now = new Date();
     const membershipStartDate = now;
     let membershipExpiryDate = new Date(now);
     
-    // Calculate expiry date based on duration
     if (membershipData.membershipDuration === 'weekly') {
       membershipExpiryDate.setDate(membershipExpiryDate.getDate() + 7);
     } else if (membershipData.membershipDuration === 'monthly') {
       membershipExpiryDate.setMonth(membershipExpiryDate.getMonth() + 1);
     }
     
-    // Prepare updated customer data
     const updatedCustomer = {
       ...customer,
       isMember: true,
@@ -285,10 +264,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       membershipExpiryDate
     };
     
-    // Update in database
     const result = await updateCustomer(updatedCustomer);
     
-    // Notify user about the membership update
     toast({
       title: "Membership Updated",
       description: `${customer.name}'s membership has been updated successfully.`,
@@ -300,12 +277,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const updateCustomer = async (customer: Customer) => {
     try {
-      // Check for duplicate phone/email only if they've changed
       const existingCustomer = customers.find(c => c.id === customer.id);
       
       if (existingCustomer) {
         if (existingCustomer.phone !== customer.phone) {
-          // Phone number has changed, check if the new one is already used
           const duplicatePhone = customers.find(c => c.id !== customer.id && c.phone === customer.phone);
           if (duplicatePhone) {
             toast({
@@ -318,7 +293,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
         
         if (existingCustomer.email !== customer.email && customer.email) {
-          // Email has changed, check if the new one is already used
           const duplicateEmail = customers.find(c => c.id !== customer.id && c.email === customer.email);
           if (duplicateEmail) {
             toast({
@@ -331,7 +305,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
-      // Update customer in Supabase
       const { error } = await supabase
         .from('customers')
         .update({
@@ -360,10 +333,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return null;
       }
       
-      // Update local state
       setCustomers(customers.map(c => c.id === customer.id ? customer : c));
       
-      // If we're updating the currently selected customer, update that too
       if (selectedCustomer && selectedCustomer.id === customer.id) {
         setSelectedCustomer(customer);
       }
@@ -404,7 +375,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       
       setCustomers(customers.filter(c => c.id !== id));
       
-      // If we're deleting the currently selected customer, clear the selection
       if (selectedCustomer && selectedCustomer.id === id) {
         setSelectedCustomer(null);
       }
@@ -427,7 +397,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const customer = customers.find(c => c.id === id);
     
     if (customer) {
-      // Check if membership is expired before selecting
       if (customer.isMember && customer.membershipExpiryDate) {
         const expiryDate = new Date(customer.membershipExpiryDate);
         
@@ -438,7 +407,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             variant: "destructive"
           });
           
-          // Update the customer to mark membership as inactive
           const updatedCustomer = {
             ...customer,
             isMember: false
@@ -470,7 +438,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     if (!customer) return false;
     if (!customer.isMember) return false;
     
-    // Check expiry date
     if (customer.membershipExpiryDate) {
       const expiryDate = new Date(customer.membershipExpiryDate);
       if (expiryDate < new Date()) {
@@ -480,7 +447,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           variant: "destructive"
         });
         
-        // Update the customer status
         updateCustomer({
           ...customer,
           isMember: false
@@ -490,7 +456,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       }
     }
     
-    // Check hours remaining
     if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
       toast({
         title: "No Hours Remaining",
@@ -519,7 +484,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       return false;
     }
     
-    // Deduct hours
     const updatedCustomer = {
       ...customer,
       membershipHoursLeft: customer.membershipHoursLeft - hours

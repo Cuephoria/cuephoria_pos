@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,10 +89,8 @@ const Settings = () => {
     setIsResetting(true);
     
     try {
-      // Use the resetToSampleData function from context with specific options
       await resetToSampleData(resetOptions);
       
-      // Build message based on what was reset
       const resetItems = [];
       if (resetOptions.products) resetItems.push('products');
       if (resetOptions.customers) resetItems.push('customers');
@@ -121,7 +118,6 @@ const Settings = () => {
     setIsResetting(true);
     
     try {
-      // Reset only transactions and sessions
       await resetToSampleData({
         products: false,
         customers: false,
@@ -146,13 +142,7 @@ const Settings = () => {
   };
   
   const handleAddSampleData = () => {
-    // Call function to add sample Indian data
     addSampleIndianData();
-    
-    toast({
-      title: 'Sample Data Added',
-      description: 'Indian sample data has been added to your system.',
-    });
   };
 
   return (
@@ -192,7 +182,6 @@ const Settings = () => {
           </TabsTrigger>
         </TabsList>
         
-        {/* General Settings */}
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
@@ -255,7 +244,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* Billing Settings */}
         <TabsContent value="billing" className="space-y-4">
           <Card>
             <CardHeader>
@@ -344,7 +332,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* System Settings */}
         <TabsContent value="system" className="space-y-4">
           <Card>
             <CardHeader>
@@ -395,41 +382,13 @@ const Settings = () => {
               <div className="space-y-2 pt-4 border-t">
                 <h3 className="text-lg font-medium">Sample Data</h3>
                 <p className="text-sm text-muted-foreground">
-                  Add sample Indian data with realistic names, products, and sales records
+                  Sample data functionality has been removed. Please add products manually or through database import.
                 </p>
                 <div className="flex space-x-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
-                        Add Sample Indian Data
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add Sample Indian Data</DialogTitle>
-                        <DialogDescription>
-                          This will add new sample data with Indian names, products, and transactions to your system.
-                          Existing data will not be modified.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Sample data will include:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1 text-sm">
-                          <li>Customers with Indian names and contact information</li>
-                          <li>Indian snacks and beverages as products</li>
-                          <li>Sample bills and transactions</li>
-                          <li>Gaming sessions with realistic durations</li>
-                        </ul>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => {}}>Cancel</Button>
-                        <Button onClick={handleAddSampleData}>Add Sample Data</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                  <Button variant="outline" className="flex items-center gap-2" disabled>
+                    <Plus className="h-4 w-4" />
+                    Add Sample Data (Disabled)
+                  </Button>
                 </div>
               </div>
               
