@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
@@ -177,13 +178,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
-        .eq('is_admin', false);
-      
-      if (error) {
-        console.error('Error fetching staff members with extended fields:', error);
+      try {
+        // First attempt to fetch with all extended fields
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
+          .eq('is_admin', false);
+        
+        if (error) {
+          console.error('Error fetching staff members with extended fields:', error);
+          throw error; // Throw to be caught by the inner catch block
+        }
+        
+        if (!data || !Array.isArray(data)) {
+          return [];
+        }
+        
+        // Process the complete data
+        return data.map(staff => ({
+          id: staff.id || '',
+          username: staff.username || '',
+          isAdmin: !!staff.is_admin,
+          position: staff.position || undefined,
+          salary: typeof staff.salary === 'number' ? staff.salary : undefined,
+          joiningDate: staff.joining_date || undefined,
+          shiftStart: staff.shift_start || undefined,
+          shiftEnd: staff.shift_end || undefined
+        }));
+      } catch (queryError) {
+        // Fallback to basic fields if extended query fails
+        console.log('Falling back to basic staff member query');
         
         const { data: basicData, error: basicError } = await supabase
           .from('admin_users')
@@ -191,31 +215,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('is_admin', false);
         
         if (basicError || !basicData) {
-          console.error('Error fetching staff members:', basicError);
+          console.error('Error fetching basic staff member data:', basicError);
           return [];
         }
         
+        // Return data with only basic fields
         return basicData.map(staff => ({
-          id: staff.id,
-          username: staff.username,
-          isAdmin: staff.is_admin
+          id: staff.id || '',
+          username: staff.username || '',
+          isAdmin: !!staff.is_admin
         }));
       }
-      
-      if (!data || !Array.isArray(data)) {
-        return [];
-      }
-      
-      return data.map(staff => ({
-        id: staff.id || '',
-        username: staff.username || '',
-        isAdmin: !!staff.is_admin,
-        position: staff.position || undefined,
-        salary: typeof staff.salary === 'number' ? staff.salary : undefined,
-        joiningDate: staff.joining_date || undefined,
-        shiftStart: staff.shift_start || undefined,
-        shiftEnd: staff.shift_end || undefined
-      }));
     } catch (error) {
       console.error('Error fetching staff members:', error);
       return [];
