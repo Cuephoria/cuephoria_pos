@@ -102,12 +102,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const isOutOfStock = product.category !== 'membership' && remainingStock <= 0;
 
   return (
-    <Card className={`flex flex-col h-full bg-slate-900 dark:bg-slate-900 border-slate-800 ${className}`}>
+    <Card className={`flex flex-col h-full ${className}`}>
       <CardHeader className="pb-2 space-y-1">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap text-white">
-            {product.name}
-          </CardTitle>
+          <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap">{product.name}</CardTitle>
           <Badge className={getCategoryColor(product.category)}>
             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
           </Badge>
@@ -115,7 +113,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </CardHeader>
       <CardContent className="flex-grow py-3">
         <div className="flex flex-col space-y-2">
-          <div className="flex justify-between text-sm font-medium text-white">
+          <div className="flex justify-between text-sm font-medium">
             <span>Price:</span>
             <CurrencyDisplay amount={product.price} />
           </div>
@@ -156,7 +154,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
           
           {product.category !== 'membership' && (
-            <div className="flex justify-between text-sm text-white">
+            <div className="flex justify-between text-sm">
               <span>Available:</span>
               <span className={remainingStock <= 10 ? 'text-red-500' : ''}>
                 {remainingStock} / {product.stock}
@@ -188,11 +186,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
         ) : (
           <Button 
             variant="default" 
-            className={`w-full bg-purple-400 hover:bg-purple-500 text-white`}
+            className={`w-full ${product.category === 'membership' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700' : ''}`}
             disabled={isOutOfStock}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+            {isOutOfStock ? (
+              "Out of Stock"
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+              </>
+            )}
           </Button>
         )}
       </CardFooter>
