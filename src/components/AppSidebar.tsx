@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Menu } from 'lucide-react';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Menu, Shield } from 'lucide-react';
 import { 
   Sidebar, 
   SidebarContent, 
@@ -29,18 +29,30 @@ const AppSidebar: React.FC = () => {
   const shouldHide = hideOnPaths.some(path => location.pathname.includes(path));
   const isMobile = useIsMobile();
   const { toggleSidebar } = useSidebar();
+  
+  const isAdmin = user?.isAdmin || false;
 
   if (!user || shouldHide) return null;
 
-  const menuItems = [
+  // Base menu items that both admin and staff can see
+  const baseMenuItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: ShoppingCart, label: 'POS', path: '/pos' },
     { icon: Clock, label: 'Gaming Stations', path: '/stations' },
     { icon: Package, label: 'Products', path: '/products' },
     { icon: Users, label: 'Customers', path: '/customers' },
+  ];
+  
+  // Admin-only menu items
+  const adminOnlyMenuItems = [
     { icon: BarChart2, label: 'Reports', path: '/reports' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
+  
+  // Combine menu items based on user role
+  const menuItems = isAdmin ? 
+    [...baseMenuItems, ...adminOnlyMenuItems] : 
+    baseMenuItems;
 
   // Mobile version with sheet
   if (isMobile) {
@@ -80,8 +92,14 @@ const AppSidebar: React.FC = () => {
                   <div className="p-4">
                     <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 shadow-md">
                       <div className="flex items-center">
-                        <User className="h-5 w-5 text-cuephoria-lightpurple" />
-                        <span className="ml-2 text-sm font-medium font-quicksand text-white">{user.username}</span>
+                        {isAdmin ? (
+                          <Shield className="h-5 w-5 text-cuephoria-lightpurple" />
+                        ) : (
+                          <User className="h-5 w-5 text-cuephoria-blue" />
+                        )}
+                        <span className="ml-2 text-sm font-medium font-quicksand text-white">
+                          {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
+                        </span>
                       </div>
                       <button 
                         onClick={logout}
@@ -133,8 +151,14 @@ const AppSidebar: React.FC = () => {
       <SidebarFooter className="p-4">
         <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 animate-scale-in shadow-md">
           <div className="flex items-center">
-            <User className="h-6 w-6 text-cuephoria-lightpurple" />
-            <span className="ml-2 text-sm font-medium font-quicksand">{user.username}</span>
+            {isAdmin ? (
+              <Shield className="h-6 w-6 text-cuephoria-lightpurple" />
+            ) : (
+              <User className="h-6 w-6 text-cuephoria-blue" />
+            )}
+            <span className="ml-2 text-sm font-medium font-quicksand">
+              {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
+            </span>
           </div>
           <button 
             onClick={logout}

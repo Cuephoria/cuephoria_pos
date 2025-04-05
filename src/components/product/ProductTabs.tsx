@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Product } from '@/types/pos.types';
 import ProductCard from '@/components/ProductCard';
 import NoProductsFound from './NoProductsFound';
+import { useAuth } from '@/context/AuthContext';
 
 interface ProductTabsProps {
   products: Product[];
@@ -24,6 +25,9 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
   onDelete,
   onAddProduct
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin || false;
+  
   const filteredProducts = activeTab === 'all' 
     ? products 
     : products.filter(product => product.category === activeTab);
@@ -46,16 +50,16 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
               <div key={product.id} className="flex h-full">
                 <ProductCard
                   product={product}
-                  isAdmin={true}
+                  isAdmin={isAdmin} // Pass the user's admin status
                   onEdit={onEdit}
-                  onDelete={onDelete}
+                  onDelete={isAdmin ? onDelete : undefined} // Only allow delete for admins
                   className="w-full"
                 />
               </div>
             ))}
           </div>
         ) : (
-          <NoProductsFound activeTab={activeTab} onAddProduct={onAddProduct} />
+          <NoProductsFound activeTab={activeTab} onAddProduct={isAdmin ? onAddProduct : undefined} />
         )}
       </TabsContent>
     </Tabs>

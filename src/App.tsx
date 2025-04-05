@@ -32,8 +32,13 @@ const queryClient = new QueryClient({
   },
 });
 
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireAdmin?: boolean;
+}
+
 // Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
@@ -44,6 +49,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  
+  // If route requires admin access and user is not admin, redirect to dashboard
+  if (requireAdmin && !user.isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
   
   return (
@@ -111,7 +121,7 @@ const App = () => (
                 } />
                 
                 <Route path="/settings" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requireAdmin={true}>
                     <Settings />
                   </ProtectedRoute>
                 } />

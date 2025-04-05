@@ -11,9 +11,11 @@ interface AdminUser {
 
 interface AuthContextType {
   user: AdminUser | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, isAdminLogin: boolean) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  addStaffMember: (username: string, password: string) => Promise<boolean>;
+  getStaffMembers: () => Promise<AdminUser[]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,13 +64,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkExistingUser();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string, isAdminLogin: boolean): Promise<boolean> => {
     try {
-      const { data, error } = await supabase
+      const query = supabase
         .from('admin_users')
-        .select('id, username, is_admin, password')
-        .eq('username', username)
-        .single();
+        .select('id, username, is_admin, password');
+      
+      // If admin login is selected, only check admin accounts
+      // If staff login is selected, only check staff accounts
+      if (isAdminLogin) {
+        query.eq('is_admin', true);
+      } else {
+        query.eq('is_admin', false);
+      }
+      
+      query.eq('username', username);
+      
+      const { data, error } = await query.single();
 
       if (error || !data) {
         console.error('Login error:', error);
@@ -98,8 +110,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('cuephoriaAdmin');
   };
 
+  // Function for admins to add staff members
+  const addStaffMember = async (username: string, password: string): Promise<boolean> => {
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can add staff members");
+        return false;
+      }
+
+      // Check if username already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('username', username)
+        .single();
+      
+      if (existingUser) {
+        console.error('Username already exists');
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('admin_users')
+        .insert({
+          username,
+          password,
+          is_admin: false
+        });
+      
+      if (error) {
+        console.error('Error creating staff member:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding staff member:', error);
+      return false;
+    }
+  };
+
+  // Function to get all staff members (for admin view)
+  const getStaffMembers = async (): Promise<AdminUser[]> => {
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can view staff members");
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id, username, is_admin')
+        .eq('is_admin', false);
+      
+      if (error) {
+        console.error('Error fetching staff members:', error);
+        return [];
+      }
+      
+      return data.map(staff => ({
+        id: staff.id,
+        username: staff.username,
+        isAdmin: staff.is_admin
+      }));
+    } catch (error) {
+      console.error('Error fetching staff members:', error);
+      return [];
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, addStaffMember, getStaffMembers }}>
       {children}
     </AuthContext.Provider>
   );

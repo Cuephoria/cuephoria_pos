@@ -6,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick } from 'lucide-react';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginType, setLoginType] = useState('admin');
   const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -40,17 +42,18 @@ const Login = () => {
     
     setIsLoading(true);
     try {
-      const success = await login(username, password);
+      const isAdminLogin = loginType === 'admin';
+      const success = await login(username, password, isAdminLogin);
       if (success) {
         toast({
           title: 'Success',
-          description: 'Admin logged in successfully!',
+          description: `${isAdminLogin ? 'Admin' : 'Staff'} logged in successfully!`,
         });
         navigate('/dashboard');
       } else {
         toast({
           title: 'Error',
-          description: 'Invalid admin credentials',
+          description: `Invalid ${isAdminLogin ? 'admin' : 'staff'} credentials`,
           variant: 'destructive',
         });
       }
@@ -135,16 +138,31 @@ const Login = () => {
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="flex justify-center mb-4">
+                <Tabs defaultValue="admin" value={loginType} onValueChange={setLoginType} className="w-full max-w-xs">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="admin" className="flex items-center gap-2">
+                      <Shield size={14} />
+                      Admin
+                    </TabsTrigger>
+                    <TabsTrigger value="staff" className="flex items-center gap-2">
+                      <Users size={14} />
+                      Staff
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
               <div className="space-y-2 group">
                 <label htmlFor="username" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
-                  <Gamepad size={14} className="inline-block" />
-                  Player ID
+                  <User size={14} className="inline-block" />
+                  Username
                   <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
                 </label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your ID"
+                  placeholder="Enter your username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
@@ -154,7 +172,7 @@ const Login = () => {
               <div className="space-y-2 group">
                 <label htmlFor="password" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
                   <ZapIcon size={14} className="inline-block" />
-                  Access Code
+                  Password
                   <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
                 </label>
                 <Input
@@ -185,8 +203,8 @@ const Login = () => {
                     </>
                   ) : (
                     <>
-                      <Trophy size={16} />
-                      Start Session
+                      {loginType === 'admin' ? <Shield size={16} /> : <Users size={16} />}
+                      {loginType === 'admin' ? 'Admin Login' : 'Staff Login'}
                     </>
                   )}
                 </span>
