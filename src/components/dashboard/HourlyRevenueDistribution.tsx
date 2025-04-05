@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Clock } from 'lucide-react';
-import { usePOS } from '@/context/POSContext';
+import { usePOS } from '@/context';
 
 const HourlyRevenueDistribution: React.FC = () => {
   const { bills } = usePOS();
