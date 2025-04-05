@@ -106,18 +106,29 @@ export const useStationsData = () => {
         isOccupied: station.isOccupied
       });
       
+      // Add a small delay to ensure any UI operations are completed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Delete from Supabase with more detailed error handling
-      const { error } = await supabase
+      console.log(`Sending delete request to Supabase for station ID: ${stationId}`);
+      const { error, data } = await supabase
         .from('stations')
         .delete()
-        .eq('id', stationId);
+        .eq('id', stationId)
+        .select();
         
+      console.log("Delete response data:", data);
+      
       if (error) {
         const errorMessage = handleSupabaseError(error, 'delete station');
-        console.error('Supabase error details:', error);
+        console.error('Supabase delete error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        
         toast({
           title: 'Database Error',
-          description: errorMessage,
+          description: `Failed to delete station: ${errorMessage}`,
           variant: 'destructive'
         });
         return false;

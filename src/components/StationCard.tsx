@@ -51,6 +51,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     name: station.name,
     hourlyRate: station.hourlyRate
   });
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
 
   const getCustomer = (id: string) => {
     return customers.find(c => c.id === id);
@@ -64,11 +65,21 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     
   const handleDeleteStation = async () => {
     try {
+      setDeleteInProgress(true);
       console.log("Delete station button clicked for:", station.name, station.id);
       console.log("Station type:", station.type);
 
       // Add more detailed logging for debugging
       console.log("Full station object:", JSON.stringify(station));
+      
+      // Show deletion in progress toast
+      toast({
+        title: "Deleting Station",
+        description: `Attempting to delete ${station.name}...`,
+      });
+      
+      // Add small delay to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const result = await deleteStation(station.id);
       console.log("Delete station result:", result);
@@ -90,6 +101,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         variant: "destructive",
       });
       return false;
+    } finally {
+      setDeleteInProgress(false);
     }
   };
 
@@ -233,7 +246,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                       : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
                     }
                   `}
-                  disabled={station.isOccupied}
+                  disabled={station.isOccupied || deleteInProgress}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -249,9 +262,10 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction 
                     onClick={handleDeleteStation}
+                    disabled={deleteInProgress}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Delete
+                    {deleteInProgress ? "Deleting..." : "Delete"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
