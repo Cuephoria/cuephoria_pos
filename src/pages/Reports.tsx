@@ -15,8 +15,9 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Download, Trash2 } from 'lucide-react';
+import { CalendarIcon, Download, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
@@ -62,6 +63,9 @@ const ReportsPage: React.FC = () => {
   // New state for session deletion
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
+  // New state for session search
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Handle delete session
   const handleDeleteSession = async () => {
@@ -175,6 +179,23 @@ const ReportsPage: React.FC = () => {
     }
     
     return true;
+  });
+  
+  // Apply search filter to sessions
+  const searchFilteredSessions = filteredSessions.filter(session => {
+    if (!searchTerm.trim()) return true;
+    
+    const customer = customers.find(c => c.id === session.customerId);
+    if (!customer) return false;
+    
+    const searchTermLower = searchTerm.toLowerCase();
+    
+    // Search by customer name, phone, or email
+    return (
+      customer.name.toLowerCase().includes(searchTermLower) ||
+      customer.phone.toLowerCase().includes(searchTermLower) ||
+      (customer.email && customer.email.toLowerCase().includes(searchTermLower))
+    );
   });
   
   // Calculate business summary metrics
@@ -552,6 +573,18 @@ const ReportsPage: React.FC = () => {
                   ''
                 }
               </p>
+              
+              {/* Add search input */}
+              <div className="mt-4 relative">
+                <Input
+                  type="text"
+                  placeholder="Search by customer name, phone, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white pl-10 w-full md:w-1/2"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+              </div>
             </div>
             <div className="rounded-md overflow-hidden">
               <Table>
@@ -559,6 +592,7 @@ const ReportsPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Station</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
                     <TableHead>Start Time</TableHead>
                     <TableHead>End Time</TableHead>
                     <TableHead>Duration</TableHead>
@@ -567,67 +601,79 @@ const ReportsPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSessions.map(session => {
-                    const customer = customers.find(c => c.id === session.customerId);
-                    
-                    // Calculate session duration properly
-                    let durationDisplay = "0h 1m"; // Default duration
-                    if (session.endTime) {
-                      const startMs = new Date(session.startTime).getTime();
-                      const endMs = new Date(session.endTime).getTime();
-                      const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
-                      const hours = Math.floor(durationMinutes / 60);
-                      const minutes = durationMinutes % 60;
-                      durationDisplay = `${hours}h ${minutes}m`;
-                    } else if (session.duration) {
-                      const hours = Math.floor(session.duration / 60);
-                      const minutes = session.duration % 60;
-                      durationDisplay = `${hours}h ${minutes}m`;
-                    }
-                        
-                    return (
-                      <TableRow key={session.id}>
-                        <TableCell className="text-white font-medium">{session.stationId}</TableCell>
-                        <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
-                        <TableCell className="text-white">
-                          <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
-                          <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
-                        </TableCell>
-                        <TableCell className="text-white">
-                          {session.endTime ? (
-                            <>
-                              <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
-                              <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
-                            </>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell className="text-white">{durationDisplay}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            !session.endTime
-                              ? "bg-green-900/30 text-green-400 border-green-800"
-                              : "bg-gray-700 text-gray-300"
-                          }>
-                            {session.endTime ? 'Completed' : 'Active'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100/10"
-                            onClick={() => {
-                              setSessionToDelete(session.id);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                            title="Delete Session"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {searchFilteredSessions.length > 0 ? (
+                    searchFilteredSessions.map(session => {
+                      const customer = customers.find(c => c.id === session.customerId);
+                      
+                      // Calculate session duration properly
+                      let durationDisplay = "0h 1m"; // Default duration
+                      if (session.endTime) {
+                        const startMs = new Date(session.startTime).getTime();
+                        const endMs = new Date(session.endTime).getTime();
+                        const durationInMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+                        const hours = Math.floor(durationInMinutes / 60);
+                        const minutes = durationInMinutes % 60;
+                        durationDisplay = `${hours}h ${minutes}m`;
+                      } else if (session.duration) {
+                        const hours = Math.floor(session.duration / 60);
+                        const minutes = session.duration % 60;
+                        durationDisplay = `${hours}h ${minutes}m`;
+                      }
+                          
+                      return (
+                        <TableRow key={session.id}>
+                          <TableCell className="text-white font-medium">{session.stationId}</TableCell>
+                          <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
+                          <TableCell className="text-white">
+                            <div>{customer?.phone || 'N/A'}</div>
+                            {customer?.email && <div className="text-gray-400 text-xs">{customer.email}</div>}
+                          </TableCell>
+                          <TableCell className="text-white">
+                            <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
+                            <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
+                          </TableCell>
+                          <TableCell className="text-white">
+                            {session.endTime ? (
+                              <>
+                                <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
+                                <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
+                              </>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-white">{durationDisplay}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              !session.endTime
+                                ? "bg-green-900/30 text-green-400 border-green-800"
+                                : "bg-gray-700 text-gray-300"
+                            }>
+                              {session.endTime ? 'Completed' : 'Active'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100/10"
+                              onClick={() => {
+                                setSessionToDelete(session.id);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              title="Delete Session"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-400">
+                        {searchTerm ? 'No sessions found matching your search criteria' : 'No sessions found in the selected date range'}
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
