@@ -14,8 +14,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { CalendarIcon, Download, Trash2 } from 'lucide-react';
+import { CalendarIcon, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Popover,
@@ -36,12 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, sessions, products, exportBills, exportCustomers, deleteSession } = usePOS();
+  const { customers, bills, sessions, products, exportBills, exportCustomers } = usePOS();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
@@ -50,9 +48,7 @@ const ReportsPage: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
-  
+  // Handle date range selection from dropdown
   const handleDateRangeChange = (value: string) => {
     setDateRangeKey(value);
     
@@ -77,6 +73,7 @@ const ReportsPage: React.FC = () => {
         from = new Date(today.getFullYear(), 0, 1); // Start of current year
         break;
       case 'custom':
+        // Keep the current date range for custom
         from = date?.from;
         to = date?.to;
         break;
@@ -88,6 +85,7 @@ const ReportsPage: React.FC = () => {
     setDate({ from, to });
   };
   
+  // Function to handle downloading reports
   const handleDownloadReport = () => {
     console.log('Downloading report with date range:', date);
     switch (activeTab) {
@@ -98,10 +96,12 @@ const ReportsPage: React.FC = () => {
         exportCustomers();
         break;
       default:
+        // For other tabs, implement specific export functionality
         console.log(`Exporting ${activeTab} report`);
     }
   };
   
+  // Function to calculate date range string for display
   const getDateRangeString = () => {
     if (date?.from && date?.to) {
       return `${format(date.from, 'dd MMM yyyy')} - ${format(date.to, 'dd MMM yyyy')}`;
@@ -109,6 +109,7 @@ const ReportsPage: React.FC = () => {
     return 'Select date range';
   };
   
+  // Filter data based on date range
   const filterByDateRange = <T extends { createdAt: Date | string }>(items: T[]): T[] => {
     return items.filter(item => {
       if (!date?.from && !date?.to) return true;
@@ -129,9 +130,11 @@ const ReportsPage: React.FC = () => {
     });
   };
   
+  // Apply filters to data
   const filteredCustomers = filterByDateRange(customers);
   const filteredBills = filterByDateRange(bills);
   
+  // Filter sessions (special case since sessions use startTime instead of createdAt)
   const filteredSessions = sessions.filter(session => {
     if (!date?.from && !date?.to) return true;
     
@@ -148,36 +151,14 @@ const ReportsPage: React.FC = () => {
     return true;
   });
   
-  const handleDeleteSession = async () => {
-    if (!sessionToDelete) return;
-    
-    try {
-      const success = await deleteSession(sessionToDelete);
-      
-      if (success) {
-        toast.success("Session deleted successfully");
-      } else {
-        toast.error("Failed to delete session");
-      }
-    } catch (error) {
-      console.error("Error deleting session:", error);
-      toast.error("An error occurred while deleting the session");
-    } finally {
-      setSessionToDelete(null);
-      setDeleteDialogOpen(false);
-    }
-  };
-  
-  const confirmDeleteSession = (sessionId: string) => {
-    setSessionToDelete(sessionId);
-    setDeleteDialogOpen(true);
-  };
-  
+  // Calculate business summary metrics
   const calculateSummaryMetrics = () => {
+    // Financial metrics
     const totalRevenue = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
     const averageBillValue = filteredBills.length > 0 ? totalRevenue / filteredBills.length : 0;
     const totalDiscounts = filteredBills.reduce((sum, bill) => sum + (bill.discountValue || 0), 0);
     
+    // Payment method breakdown
     const cashSales = filteredBills
       .filter(bill => bill.paymentMethod === 'cash')
       .reduce((sum, bill) => sum + bill.total, 0);
@@ -186,10 +167,12 @@ const ReportsPage: React.FC = () => {
       .filter(bill => bill.paymentMethod === 'upi')
       .reduce((sum, bill) => sum + bill.total, 0);
     
+    // Operational metrics
     const totalTransactions = filteredBills.length;
     const activeSessions = sessions.filter(s => s.endTime === null).length;
     const completedSessions = filteredSessions.filter(s => s.endTime !== null).length;
     
+    // Find most popular product
     const productFrequency: Record<string, number> = {};
     filteredBills.forEach(bill => {
       bill.items.forEach(item => {
@@ -213,13 +196,16 @@ const ReportsPage: React.FC = () => {
     
     const mostPopularProduct = products.find(p => p.id === mostPopularProductId)?.name || 'None';
     
+    // Customer metrics
     const totalCustomers = filteredCustomers.length;
     const memberCount = filteredCustomers.filter(c => c.isMember).length;
     const nonMemberCount = filteredCustomers.filter(c => !c.isMember).length;
     
+    // Loyalty metrics
     const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
     const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
     
+    // Gaming metrics - calculate PS5 vs Pool revenue
     let ps5Sales = 0;
     let poolSales = 0;
     
@@ -266,6 +252,7 @@ const ReportsPage: React.FC = () => {
   
   const summaryMetrics = calculateSummaryMetrics();
   
+  // Format duration in hours and minutes
   const formatDuration = (durationInMinutes: number | undefined) => {
     if (!durationInMinutes) return "0h 0m";
     
@@ -274,6 +261,7 @@ const ReportsPage: React.FC = () => {
     return `${hours}h ${minutes}m`;
   };
   
+  // Calculate total time spent by customer
   const calculateCustomerPlayTime = (customerId: string) => {
     const customerSessions = filteredSessions.filter(
       session => session.customerId === customerId
@@ -294,12 +282,14 @@ const ReportsPage: React.FC = () => {
     return `${hours}h ${minutes}m`;
   };
   
+  // Calculate total spent by customer
   const calculateCustomerTotalSpent = (customerId: string) => {
     return filteredBills
       .filter(bill => bill.customerId === customerId)
       .reduce((total, bill) => total + bill.total, 0);
   };
   
+  // Get a customer name by ID
   const getCustomerName = (customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
     return customer?.name || 'Unknown';
@@ -307,6 +297,7 @@ const ReportsPage: React.FC = () => {
   
   return (
     <div className="p-6 space-y-6 bg-[#1A1F2C] min-h-screen text-white">
+      {/* Header with title, date range, and export button */}
       <div className="flex justify-between items-center pb-2">
         <h1 className="text-4xl font-bold">Reports</h1>
         <div className="flex items-center gap-4">
@@ -355,6 +346,7 @@ const ReportsPage: React.FC = () => {
         </div>
       </div>
       
+      {/* Navigation tabs */}
       <div className="bg-gray-800/60 rounded-lg p-1 flex gap-2 w-fit">
         <Button 
           onClick={() => setActiveTab('bills')}
@@ -390,6 +382,7 @@ const ReportsPage: React.FC = () => {
         </Button>
       </div>
       
+      {/* Content based on selected tab */}
       <div className="space-y-6">
         {activeTab === 'bills' && (
           <div className="bg-[#1A1F2C] border border-gray-800 rounded-lg overflow-hidden">
@@ -544,20 +537,20 @@ const ReportsPage: React.FC = () => {
                     <TableHead>End Time</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredSessions.map(session => {
                     const customer = customers.find(c => c.id === session.customerId);
                     
+                    // Calculate session duration properly
                     let durationDisplay = "0h 1m"; // Default duration
                     if (session.endTime) {
                       const startMs = new Date(session.startTime).getTime();
                       const endMs = new Date(session.endTime).getTime();
-                      const durationMin = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
-                      const hours = Math.floor(durationMin / 60);
-                      const minutes = durationMin % 60;
+                      const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+                      const hours = Math.floor(durationMinutes / 60);
+                      const minutes = durationMinutes % 60;
                       durationDisplay = `${hours}h ${minutes}m`;
                     } else if (session.duration) {
                       const hours = Math.floor(session.duration / 60);
@@ -591,19 +584,6 @@ const ReportsPage: React.FC = () => {
                             {session.endTime ? 'Completed' : 'Active'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {session.endTime && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => confirmDeleteSession(session.id)}
-                              className="hover:bg-red-900/20 hover:text-red-400"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete session</span>
-                            </Button>
-                          )}
-                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -630,6 +610,7 @@ const ReportsPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Financial Metrics */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-white">Financial Metrics</h3>
                     
@@ -671,6 +652,7 @@ const ReportsPage: React.FC = () => {
                     </div>
                   </div>
                   
+                  {/* Operational Metrics */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-white">Operational Metrics</h3>
                     
@@ -711,6 +693,7 @@ const ReportsPage: React.FC = () => {
                     </div>
                   </div>
                   
+                  {/* Customer Metrics */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-white">Customer Metrics</h3>
                     
@@ -747,26 +730,6 @@ const ReportsPage: React.FC = () => {
           </div>
         )}
       </div>
-      
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Session</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this session? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteSession}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

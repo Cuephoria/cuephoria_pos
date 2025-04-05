@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * Hook to load and manage session data from Supabase
@@ -11,6 +10,7 @@ export const useSessionsData = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
   const [sessionsError, setSessionsError] = useState<Error | null>(null);
+  const { toast } = useToast();
   
   const refreshSessions = async () => {
     setSessionsLoading(true);
@@ -25,7 +25,11 @@ export const useSessionsData = () => {
       if (error) {
         console.error('Error fetching sessions:', error);
         setSessionsError(new Error(`Failed to fetch sessions: ${error.message}`));
-        toast.error('Failed to fetch sessions from database');
+        toast({
+          title: 'Database Error',
+          description: 'Failed to fetch sessions from database',
+          variant: 'destructive'
+        });
         return;
       }
       
@@ -54,41 +58,11 @@ export const useSessionsData = () => {
     } catch (error) {
       console.error('Error in fetchSessions:', error);
       setSessionsError(error instanceof Error ? error : new Error('Unknown error fetching sessions'));
-      toast.error('Failed to load sessions');
-    } finally {
-      setSessionsLoading(false);
-    }
-  };
-  
-  // New function to delete a session
-  const deleteSession = async (sessionId: string): Promise<boolean> => {
-    try {
-      console.log(`Attempting to delete session with ID: ${sessionId}`);
-      setSessionsLoading(true);
-      
-      // Delete the session from Supabase
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('id', sessionId);
-      
-      if (error) {
-        console.error('Error deleting session:', error);
-        toast.error('Failed to delete session');
-        return false;
-      }
-      
-      // Update local state by removing the deleted session
-      setSessions(prevSessions => 
-        prevSessions.filter(session => session.id !== sessionId)
-      );
-      
-      toast.success('Session deleted successfully');
-      return true;
-    } catch (error) {
-      console.error('Error in deleteSession:', error);
-      toast.error('An error occurred while deleting the session');
-      return false;
+      toast({
+        title: 'Error',
+        description: 'Failed to load sessions',
+        variant: 'destructive'
+      });
     } finally {
       setSessionsLoading(false);
     }
@@ -124,7 +98,6 @@ export const useSessionsData = () => {
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions,
-    deleteSession
+    refreshSessions
   };
 };
