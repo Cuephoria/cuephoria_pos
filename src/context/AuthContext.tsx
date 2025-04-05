@@ -144,54 +144,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // Create minimal staff data
-      const basicUserData = {
+      // Create full staff data with all fields in a single insert operation
+      const userData = {
         username,
         password,
-        is_admin: false
+        is_admin: false,
+        position: position || null,
+        salary: salary || null,
+        joining_date: joiningDate || null,
+        shift_start: shiftStart || null,
+        shift_end: shiftEnd || null
       };
       
-      // Add extended fields if they exist in the database - attempt this in a separate step
-      try {
-        const { error } = await supabase
-          .from('admin_users')
-          .insert(basicUserData);
+      // Try to insert all data at once
+      const { error } = await supabase
+        .from('admin_users')
+        .insert(userData);
+      
+      if (error) {
+        console.error('Error creating staff member:', error);
         
-        if (error) {
-          console.error('Error creating staff member:', error);
-          toast.error('Error creating staff member');
-          return false;
-        }
-        
-        // Try to update with extended information if provided
-        if (position || salary || joiningDate || shiftStart || shiftEnd) {
-          const extendedData: Record<string, any> = {};
+        // If the error is due to missing columns, fall back to inserting only basic fields
+        if (error.message?.includes('column') && error.message?.includes('does not exist')) {
+          console.warn('Falling back to basic user creation without extended fields');
           
-          if (position) extendedData.position = position;
-          if (salary) extendedData.salary = salary;
-          if (joiningDate) extendedData.joining_date = joiningDate;
-          if (shiftStart) extendedData.shift_start = shiftStart;
-          if (shiftEnd) extendedData.shift_end = shiftEnd;
+          const basicUserData = {
+            username,
+            password,
+            is_admin: false
+          };
           
-          const { error: updateError } = await supabase
+          const { error: basicError } = await supabase
             .from('admin_users')
-            .update(extendedData)
-            .eq('username', username);
-          
-          // If there's an error updating the extended fields, log it but don't fail
-          // This way users can still be created even if the extended fields aren't available
-          if (updateError) {
-            console.warn('Could not update extended staff fields:', updateError);
+            .insert(basicUserData);
+            
+          if (basicError) {
+            console.error('Error creating basic staff member:', basicError);
+            toast.error('Error creating staff member');
+            return false;
           }
+          
+          toast.success('Staff member added successfully (without extended info)');
+          return true;
         }
         
-        toast.success('Staff member added successfully');
-        return true;
-      } catch (error) {
-        console.error('Error adding staff member:', error);
         toast.error('Error adding staff member');
         return false;
       }
+      
+      toast.success('Staff member added successfully');
+      return true;
     } catch (error) {
       console.error('Error adding staff member:', error);
       toast.error('Error adding staff member');
@@ -205,6 +207,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Only admins can view staff members");
         toast.error("Only admins can view staff members");
         return [];
+      }
+      
+      // Try to get all fields in one query first
+      try {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin, position, salary, joining_date, shift_start, shift_end')
+          .eq('is_admin', false);
+        
+        if (error) {
+          // If this fails, we'll fall back to the more careful approach
+          throw error;
+        }
+        
+        if (!data || !Array.isArray(data)) {
+          return [];
+        }
+        
+        // Transform the data into our AdminUser type
+        const staffMembers: AdminUser[] = data.map(staff => ({
+          id: staff.id || '',
+          username: staff.username || '',
+          isAdmin: staff.is_admin === true,
+          position: staff.position,
+          salary: staff.salary,
+          joiningDate: staff.joining_date,
+          shiftStart: staff.shift_start,
+          shiftEnd: staff.shift_end
+        }));
+        
+        return staffMembers;
+      } catch (e) {
+        console.log('Error fetching all fields, falling back to safer approach:', e);
       }
       
       // First get basic fields which we know exist
@@ -319,22 +354,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const dbData: Record<string, any> = {};
       
       if (updatedData.username) dbData.username = updatedData.username;
-      
-      // Only try to update extended fields if they exist
-      try {
-        // First check if the columns exist by doing a small query
-        if (updatedData.position || updatedData.salary || updatedData.joiningDate || 
-            updatedData.shiftStart || updatedData.shiftEnd) {
-          
-          if (updatedData.position) dbData.position = updatedData.position;
-          if (updatedData.salary !== undefined) dbData.salary = updatedData.salary;
-          if (updatedData.joiningDate) dbData.joining_date = updatedData.joiningDate;
-          if (updatedData.shiftStart) dbData.shift_start = updatedData.shiftStart;
-          if (updatedData.shiftEnd) dbData.shift_end = updatedData.shiftEnd;
-        }
-      } catch (error) {
-        console.warn("Extended fields not available, updating only basic fields");
-      }
+      if (updatedData.position !== undefined) dbData.position = updatedData.position;
+      if (updatedData.salary !== undefined) dbData.salary = updatedData.salary;
+      if (updatedData.joiningDate !== undefined) dbData.joining_date = updatedData.joiningDate;
+      if (updatedData.shiftStart !== undefined) dbData.shift_start = updatedData.shiftStart;
+      if (updatedData.shiftEnd !== undefined) dbData.shift_end = updatedData.shiftEnd;
 
       // Only update if there's something to update
       if (Object.keys(dbData).length > 0) {

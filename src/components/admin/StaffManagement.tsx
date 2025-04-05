@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +42,7 @@ const StaffManagement: React.FC = () => {
     
     try {
       const members = await getStaffMembers();
+      console.log('Loaded staff members:', members);
       setStaffMembers(members);
     } catch (error) {
       console.error('Failed to load staff members', error);
@@ -70,11 +70,22 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
+      const salaryNum = newSalary !== undefined ? Number(newSalary) : undefined;
+      
+      console.log('Adding staff member with details:', {
+        username: newUsername,
+        position: newPosition,
+        salary: salaryNum,
+        joiningDate: newJoiningDate,
+        shiftStart: newShiftStart,
+        shiftEnd: newShiftEnd
+      });
+      
       const success = await addStaffMember(
         newUsername, 
         newPassword, 
         newPosition || undefined,
-        newSalary || undefined,
+        salaryNum,
         newJoiningDate || undefined,
         newShiftStart || undefined,
         newShiftEnd || undefined
@@ -87,7 +98,7 @@ const StaffManagement: React.FC = () => {
         });
         resetForm();
         setIsAddingStaff(false);
-        loadStaffMembers(); // Refresh staff list
+        loadStaffMembers();
       } else {
         toast({
           title: 'Error',
@@ -122,10 +133,21 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
+      const salaryNum = newSalary !== undefined ? Number(newSalary) : undefined;
+      
+      console.log('Updating staff member with details:', {
+        username: newUsername,
+        position: newPosition,
+        salary: salaryNum,
+        joiningDate: newJoiningDate,
+        shiftStart: newShiftStart,
+        shiftEnd: newShiftEnd
+      });
+      
       const updatedData: Partial<AdminUser> = {
         username: newUsername,
         position: newPosition || undefined,
-        salary: newSalary || undefined,
+        salary: salaryNum,
         joiningDate: newJoiningDate || undefined,
         shiftStart: newShiftStart || undefined,
         shiftEnd: newShiftEnd || undefined,
@@ -140,7 +162,7 @@ const StaffManagement: React.FC = () => {
         });
         resetForm();
         setIsEditingStaff(false);
-        loadStaffMembers(); // Refresh staff list
+        loadStaffMembers();
       } else {
         toast({
           title: 'Error',
@@ -172,7 +194,7 @@ const StaffManagement: React.FC = () => {
           title: 'Success',
           description: 'Staff member deleted successfully',
         });
-        loadStaffMembers(); // Refresh staff list
+        loadStaffMembers();
       } else {
         toast({
           title: 'Error',
@@ -200,7 +222,6 @@ const StaffManagement: React.FC = () => {
     setCurrentEditStaff(null);
   };
 
-  // Only admins can access this component
   if (!user?.isAdmin) {
     return (
       <Card className="border border-cuephoria-lightpurple/30 shadow-md">
@@ -230,7 +251,6 @@ const StaffManagement: React.FC = () => {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Add Staff Dialog */}
         <Dialog open={isAddingStaff} onOpenChange={(open) => {
           setIsAddingStaff(open);
           if (!open) resetForm();
@@ -252,7 +272,6 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
-              {/* Basic Info */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
@@ -280,7 +299,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
 
-              {/* Position */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <Briefcase className="h-4 w-4" />
@@ -294,7 +312,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Salary */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <DollarSign className="h-4 w-4" />
@@ -309,7 +326,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Joining Date */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <Calendar className="h-4 w-4" />
@@ -323,7 +339,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Shift Timings */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
@@ -367,7 +382,6 @@ const StaffManagement: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Staff Dialog */}
         <Dialog open={isEditingStaff} onOpenChange={(open) => {
           setIsEditingStaff(open);
           if (!open) resetForm();
@@ -381,7 +395,6 @@ const StaffManagement: React.FC = () => {
             </DialogHeader>
             
             <div className="space-y-4 py-4">
-              {/* Basic Info */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <User className="h-4 w-4" />
@@ -395,7 +408,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Position */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <Briefcase className="h-4 w-4" />
@@ -409,7 +421,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Salary */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <DollarSign className="h-4 w-4" />
@@ -424,7 +435,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Joining Date */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <Calendar className="h-4 w-4" />
@@ -438,7 +448,6 @@ const StaffManagement: React.FC = () => {
                 />
               </div>
               
-              {/* Shift Timings */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
@@ -491,6 +500,9 @@ const StaffManagement: React.FC = () => {
                   <TableRow>
                     <TableHead>Username</TableHead>
                     <TableHead>Position</TableHead>
+                    <TableHead>Salary</TableHead>
+                    <TableHead>Join Date</TableHead>
+                    <TableHead>Shift Time</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -499,6 +511,13 @@ const StaffManagement: React.FC = () => {
                     <TableRow key={staff.id}>
                       <TableCell>{staff.username}</TableCell>
                       <TableCell>{staff.position || 'Not set'}</TableCell>
+                      <TableCell>{staff.salary ? `$${staff.salary}` : 'Not set'}</TableCell>
+                      <TableCell>{staff.joiningDate || 'Not set'}</TableCell>
+                      <TableCell>
+                        {staff.shiftStart && staff.shiftEnd ? 
+                          `${staff.shiftStart} - ${staff.shiftEnd}` : 
+                          'Not set'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button 
