@@ -308,7 +308,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const handleResetToSampleData = async (options?: ResetOptions): Promise<boolean> => {
     try {
       const { resetToSampleData } = await import('@/services/dataOperations');
-      return await resetToSampleData(
+      const result = await resetToSampleData(
         options,
         setProducts,
         setCustomers,
@@ -321,6 +321,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedCustomer,
         refreshFromDB
       );
+      return result || false;
     } catch (error) {
       console.error('Error in handleResetToSampleData:', error);
       return false;
