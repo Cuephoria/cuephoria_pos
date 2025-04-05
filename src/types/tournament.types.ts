@@ -2,6 +2,7 @@
 export type GameType = 'PS5' | 'Pool';
 export type PoolGameVariant = '8 Ball' | 'Snooker';
 export type PS5GameTitle = 'FIFA' | 'COD' | string;
+export type MatchStatus = 'scheduled' | 'completed' | 'cancelled';
 
 export interface Player {
   id: string;
@@ -16,6 +17,9 @@ export interface Match {
   player2Id: string;
   winnerId?: string;
   completed: boolean;
+  scheduledDate: string; // ISO date string
+  scheduledTime: string; // 24-hour format "HH:MM"
+  status: MatchStatus;
 }
 
 export interface Tournament {

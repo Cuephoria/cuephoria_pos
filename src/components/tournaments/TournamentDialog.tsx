@@ -17,12 +17,13 @@ import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Tournament, GameType } from '@/types/tournament.types';
+import { Tournament, GameType, Match, MatchStatus } from '@/types/tournament.types';
 import { generateId } from '@/utils/pos.utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import TournamentPlayerSection from './TournamentPlayerSection';
 import TournamentMatchSection from './TournamentMatchSection';
-import { CurrencyDisplay } from '../ui/currency';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface TournamentDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
   const [winner, setWinner] = React.useState<Tournament['winner']>();
   const [tournamentStatus, setTournamentStatus] = React.useState<Tournament['status']>('upcoming');
   const [customGameTitle, setCustomGameTitle] = React.useState<boolean>(false);
+  const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -134,21 +136,42 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
     onSave(savedTournament);
   };
 
+  // Generate weekend date for matches starting from tournament date
+  const generateWeekendDate = (startDate: Date, matchIndex: number): Date => {
+    const date = new Date(startDate);
+    // Add days until we reach weekend (Saturday or Sunday)
+    date.setDate(date.getDate() + matchIndex * 2); // Space matches 2 days apart initially
+    
+    while (date.getDay() !== 0 && date.getDay() !== 6) {
+      date.setDate(date.getDate() + 1);
+    }
+    
+    return date;
+  };
+
   const handleGenerateMatches = () => {
     if (players.length < 2) return;
     
     // Simple round-robin tournament generation
     const generatedMatches: Tournament['matches'] = [];
     let matchId = 1;
+    const tournamentDate = new Date(form.getValues().date);
     
     for (let i = 0; i < players.length; i++) {
       for (let j = i + 1; j < players.length; j++) {
+        // Generate weekend date and evening time
+        const matchDate = generateWeekendDate(tournamentDate, matchId - 1);
+        const formattedDate = format(matchDate, 'yyyy-MM-dd');
+        
         generatedMatches.push({
           id: `match-${matchId++}`,
           round: 1, // All matches in round 1 for simplicity
           player1Id: players[i].id,
           player2Id: players[j].id,
           completed: false,
+          scheduledDate: formattedDate,
+          scheduledTime: '18:00', // Default to 6 PM
+          status: 'scheduled'
         });
       }
     }
@@ -160,18 +183,20 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
   const updateMatchResult = (matchId: string, winnerId: string) => {
     const updatedMatches = matches.map(match => 
       match.id === matchId 
-        ? { ...match, winnerId, completed: true } 
+        ? { ...match, winnerId, completed: true, status: 'completed' as MatchStatus } 
         : match
     );
     setMatches(updatedMatches);
     
-    // Check if all matches are completed
-    const allCompleted = updatedMatches.every(match => match.completed);
-    if (allCompleted) {
+    // Check if all matches except cancelled ones are completed
+    const activeMatches = updatedMatches.filter(match => match.status !== 'cancelled');
+    const allCompleted = activeMatches.every(match => match.completed);
+    
+    if (allCompleted && activeMatches.length > 0) {
       // Find player with most wins
       const winCounts: Record<string, number> = {};
       updatedMatches.forEach(match => {
-        if (match.winnerId) {
+        if (match.status === 'completed' && match.winnerId) {
           winCounts[match.winnerId] = (winCounts[match.winnerId] || 0) + 1;
         }
       });
@@ -193,6 +218,40 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
           setTournamentStatus('completed');
         }
       }
+    }
+  };
+
+  const updateMatchSchedule = (matchId: string, date: string, time: string) => {
+    const updatedMatches = matches.map(match => 
+      match.id === matchId 
+        ? { ...match, scheduledDate: date, scheduledTime: time } 
+        : match
+    );
+    setMatches(updatedMatches);
+    toast({
+      title: "Schedule Updated",
+      description: "Match schedule has been updated successfully.",
+    });
+  };
+
+  const updateMatchStatus = (matchId: string, status: MatchStatus) => {
+    const updatedMatches = matches.map(match => 
+      match.id === matchId 
+        ? { ...match, status, completed: status === 'completed' } 
+        : match
+    );
+    setMatches(updatedMatches);
+    
+    if (status === 'cancelled') {
+      toast({
+        title: "Match Cancelled",
+        description: "The match has been cancelled.",
+      });
+    } else if (status === 'scheduled') {
+      toast({
+        title: "Match Rescheduled",
+        description: "The match has been rescheduled.",
+      });
     }
   };
 
@@ -439,6 +498,8 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
               matches={matches}
               players={players}
               updateMatchResult={updateMatchResult}
+              updateMatchSchedule={updateMatchSchedule}
+              updateMatchStatus={updateMatchStatus}
               winner={winner}
             />
             
