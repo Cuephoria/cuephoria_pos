@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { CartItem } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
@@ -9,28 +10,28 @@ export const useCart = () => {
   const [loyaltyPointsUsed, setLoyaltyPointsUsedAmount] = useState<number>(0);
   const { toast } = useToast();
   
-  const addToCart = (item: CartItem) => {
+  const addToCart = (item: Omit<CartItem, 'total'>, availableStock?: number) => {
     try {
       // For non-membership products, check available stock
-      if (item.type === 'product' && item.category !== 'membership') {
+      if (item.type === 'product' && item.category !== 'membership' && typeof availableStock === 'number') {
         const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
         const currentCartQuantity = existingItem ? existingItem.quantity : 0;
         const totalRequestedQuantity = currentCartQuantity + item.quantity;
         
         // Check if we have enough stock
-        if (totalRequestedQuantity > item.availableStock) {
+        if (totalRequestedQuantity > availableStock) {
           // If not enough stock, adjust quantity or show error
-          if (item.availableStock <= currentCartQuantity) {
+          if (availableStock <= currentCartQuantity) {
             toast({
               title: "Insufficient Stock",
-              description: `Only ${item.availableStock} units of ${item.name} available (${currentCartQuantity} already in cart)`,
+              description: `Only ${availableStock} units of ${item.name} available (${currentCartQuantity} already in cart)`,
               variant: "destructive"
             });
             return;
           }
           
           // Adjust quantity to match available stock
-          const adjustedQuantity = item.availableStock - currentCartQuantity;
+          const adjustedQuantity = availableStock - currentCartQuantity;
           toast({
             title: "Stock Limited",
             description: `Only added ${adjustedQuantity} units of ${item.name} (stock limit reached)`,
@@ -56,11 +57,7 @@ export const useCart = () => {
           description: `Increased quantity of ${item.name}`,
         });
       } else {
-        // Make sure the total is calculated if not provided
-        const newItem = { 
-          ...item, 
-          total: item.total !== undefined ? item.total : item.quantity * item.price 
-        };
+        const newItem = { ...item, total: item.quantity * item.price };
         setCart([...cart, newItem]);
         toast({
           title: "Item Added",

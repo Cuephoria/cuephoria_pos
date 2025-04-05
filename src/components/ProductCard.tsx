@@ -51,14 +51,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
       }
     }
     
+    // Fix: Include the total property in the CartItem object
     addToCart({
       id: product.id,
       type: 'product',
       name: product.name,
       price: product.price,
       quantity: 1,
-      category: product.category,
-      total: product.price // Add the total property here
+      total: product.price, // Calculate the total as price * quantity
+      category: product.category
     });
     
     if (product.category === 'membership' && product.studentPrice) {

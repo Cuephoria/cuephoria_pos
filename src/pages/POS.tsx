@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
+import { usePOS, Customer, Product, Bill } from '@/context'; // Updated import path
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';
@@ -206,6 +207,13 @@ const POS = () => {
     }
   };
 
+  const incrementQuantity = (itemId: string) => {
+    const item = cart.find(item => item.id === itemId);
+    if (item) {
+      updateCartItem(itemId, { quantity: item.quantity + 1 });
+    }
+  };
+
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
   let discountValue = 0;
   if (discountType === 'percentage') {
@@ -267,7 +275,7 @@ const POS = () => {
                         variant="outline"
                         size="sm"
                         className="h-7 w-7 p-0"
-                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => incrementQuantity(item.id)}
                       >
                         +
                       </Button>
