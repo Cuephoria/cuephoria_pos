@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -14,7 +15,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Download } from 'lucide-react';
+import { CalendarIcon, Download, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Popover,
@@ -35,11 +36,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
+import { useSessionsData } from '@/hooks/stations/useSessionsData';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, sessions, products, exportBills, exportCustomers } = usePOS();
+  const { customers, bills, products, exportBills, exportCustomers } = usePOS();
+  const { sessions, sessionsLoading, deleteSession } = useSessionsData();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
@@ -47,6 +52,7 @@ const ReportsPage: React.FC = () => {
   const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   // Handle date range selection from dropdown
   const handleDateRangeChange = (value: string) => {
@@ -135,21 +141,50 @@ const ReportsPage: React.FC = () => {
   const filteredBills = filterByDateRange(bills);
   
   // Filter sessions (special case since sessions use startTime instead of createdAt)
-  const filteredSessions = sessions.filter(session => {
-    if (!date?.from && !date?.to) return true;
+  const filterSessions = () => {
+    let filtered = sessions.filter(session => {
+      if (!date?.from && !date?.to) return true;
+      
+      const startTime = new Date(session.startTime);
+      
+      if (date?.from && date?.to) {
+        return startTime >= date.from && startTime <= date.to;
+      } else if (date?.from) {
+        return startTime >= date.from;
+      } else if (date?.to) {
+        return startTime <= date.to;
+      }
+      
+      return true;
+    });
     
-    const startTime = new Date(session.startTime);
-    
-    if (date?.from && date?.to) {
-      return startTime >= date.from && startTime <= date.to;
-    } else if (date?.from) {
-      return startTime >= date.from;
-    } else if (date?.to) {
-      return startTime <= date.to;
+    // Apply search filtering if search query exists
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(session => {
+        const customer = customers.find(c => c.id === session.customerId);
+        if (!customer) return false;
+        
+        return (
+          customer.name.toLowerCase().includes(query) || 
+          (customer.email && customer.email.toLowerCase().includes(query)) || 
+          customer.phone.includes(query)
+        );
+      });
     }
     
-    return true;
-  });
+    return filtered;
+  };
+  
+  const filteredSessions = filterSessions();
+  
+  // Handle session deletion
+  const handleDeleteSession = async (sessionId: string) => {
+    const success = await deleteSession(sessionId);
+    if (success) {
+      console.log(`Session ${sessionId} deleted successfully`);
+    }
+  };
   
   // Calculate business summary metrics
   const calculateSummaryMetrics = () => {
@@ -293,6 +328,18 @@ const ReportsPage: React.FC = () => {
   const getCustomerName = (customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
     return customer?.name || 'Unknown';
+  };
+  
+  // Get customer email by ID
+  const getCustomerEmail = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    return customer?.email || '';
+  };
+  
+  // Get customer phone by ID
+  const getCustomerPhone = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    return customer?.phone || '';
   };
   
   return (
@@ -526,6 +573,24 @@ const ReportsPage: React.FC = () => {
                   ''
                 }
               </p>
+              
+              {/* Search bar for sessions */}
+              <div className="mt-4 relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+                  <Input 
+                    placeholder="Search by customer name, email or phone" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-gray-800 border-gray-700 text-white w-full md:w-96"
+                  />
+                </div>
+                {searchQuery && (
+                  <p className="text-sm text-gray-400 mt-2">
+                    Found {filteredSessions.length} matching sessions
+                  </p>
+                )}
+              </div>
             </div>
             <div className="rounded-md overflow-hidden">
               <Table>
@@ -533,10 +598,12 @@ const ReportsPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Station</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
                     <TableHead>Start Time</TableHead>
                     <TableHead>End Time</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -562,15 +629,19 @@ const ReportsPage: React.FC = () => {
                       <TableRow key={session.id}>
                         <TableCell className="text-white font-medium">{session.stationId}</TableCell>
                         <TableCell className="text-white">{customer?.name || 'Unknown'}</TableCell>
+                        <TableCell className="text-white text-sm">
+                          {customer?.phone}
+                          {customer?.email && <div className="text-gray-400">{customer.email}</div>}
+                        </TableCell>
                         <TableCell className="text-white">
                           <div>{format(new Date(session.startTime), 'd MMM yyyy')}</div>
-                          <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')} pm</div>
+                          <div className="text-gray-400">{format(new Date(session.startTime), 'HH:mm')}</div>
                         </TableCell>
                         <TableCell className="text-white">
                           {session.endTime ? (
                             <>
                               <div>{format(new Date(session.endTime), 'd MMM yyyy')}</div>
-                              <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')} pm</div>
+                              <div className="text-gray-400">{format(new Date(session.endTime), 'HH:mm')}</div>
                             </>
                           ) : '-'}
                         </TableCell>
@@ -584,9 +655,65 @@ const ReportsPage: React.FC = () => {
                             {session.endTime ? 'Completed' : 'Active'}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete session</span>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-gray-900 border-gray-800 text-white">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Session</AlertDialogTitle>
+                                <AlertDialogDescription className="text-gray-400">
+                                  Are you sure you want to delete this session? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-gray-800 text-white hover:bg-gray-700">Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  className="bg-red-900 hover:bg-red-800 focus:ring-red-800" 
+                                  onClick={() => handleDeleteSession(session.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
+                  {filteredSessions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-400">
+                        {sessionsLoading ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cuephoria-purple"></div>
+                            <span className="ml-3">Loading sessions...</span>
+                          </div>
+                        ) : searchQuery ? (
+                          <div>
+                            <p>No sessions found matching "{searchQuery}"</p>
+                            <Button 
+                              variant="link" 
+                              className="text-cuephoria-purple"
+                              onClick={() => setSearchQuery('')}
+                            >
+                              Clear search
+                            </Button>
+                          </div>
+                        ) : (
+                          "No sessions found in the selected date range"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>

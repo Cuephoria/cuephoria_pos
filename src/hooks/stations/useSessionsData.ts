@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -68,6 +69,42 @@ export const useSessionsData = () => {
     }
   };
   
+  // Add delete session functionality
+  const deleteSession = async (sessionId: string): Promise<boolean> => {
+    try {
+      setSessionsLoading(true);
+      
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+        
+      if (error) {
+        throw new Error(handleSupabaseError(error, 'delete session'));
+      }
+      
+      // Update local state to remove the deleted session
+      setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId));
+      
+      toast({
+        title: 'Success',
+        description: 'Session deleted successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete session',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+  
   useEffect(() => {
     refreshSessions();
     
@@ -98,6 +135,7 @@ export const useSessionsData = () => {
     setSessions,
     sessionsLoading,
     sessionsError,
-    refreshSessions
+    refreshSessions,
+    deleteSession
   };
 };
