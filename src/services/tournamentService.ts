@@ -53,8 +53,16 @@ export const fetchTournaments = async (): Promise<Tournament[]> => {
   }
 };
 
+// Format error message from Supabase for tournament operations
+const formatTournamentError = (error: PostgrestError): string => {
+  if (error.code === '42501') {
+    return 'Permission denied. You may not have the required access rights to perform this operation.';
+  }
+  return handleSupabaseError(error, 'tournament operation');
+};
+
 // Save a tournament to Supabase (create or update)
-export const saveTournament = async (tournament: Tournament): Promise<Tournament | null> => {
+export const saveTournament = async (tournament: Tournament): Promise<{ data: Tournament | null; error: string | null }> => {
   try {
     const supabaseTournament = convertToSupabaseTournament(tournament);
     
@@ -67,7 +75,7 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
       
     if (checkError && checkError.code !== 'PGRST116') { // Not found is not an error in this case
       console.error('Error checking tournament existence:', checkError);
-      return null;
+      return { data: null, error: formatTournamentError(checkError) };
     }
       
     let result;
@@ -82,7 +90,7 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
         
       if (error) {
         console.error('Error updating tournament:', error);
-        return null;
+        return { data: null, error: formatTournamentError(error) };
       }
       
       result = data;
@@ -95,21 +103,21 @@ export const saveTournament = async (tournament: Tournament): Promise<Tournament
         
       if (error) {
         console.error('Error creating tournament:', error);
-        return null;
+        return { data: null, error: formatTournamentError(error) };
       }
       
       result = data;
     }
     
-    return convertFromSupabaseTournament(result);
+    return { data: convertFromSupabaseTournament(result), error: null };
   } catch (error) {
     console.error('Unexpected error saving tournament:', error);
-    return null;
+    return { data: null, error: 'An unexpected error occurred while saving the tournament.' };
   }
 };
 
 // Delete a tournament from Supabase
-export const deleteTournament = async (id: string): Promise<boolean> => {
+export const deleteTournament = async (id: string): Promise<{ success: boolean; error: string | null }> => {
   try {
     const { error } = await tournamentsTable
       .delete()
@@ -117,13 +125,13 @@ export const deleteTournament = async (id: string): Promise<boolean> => {
       
     if (error) {
       console.error('Error deleting tournament:', error);
-      return false;
+      return { success: false, error: formatTournamentError(error) };
     }
     
-    return true;
+    return { success: true, error: null };
   } catch (error) {
     console.error('Unexpected error deleting tournament:', error);
-    return false;
+    return { success: false, error: 'An unexpected error occurred while deleting the tournament.' };
   }
 };
 
@@ -141,17 +149,17 @@ export const useTournamentOperations = () => {
     },
     
     saveTournament: async (tournament: Tournament) => {
-      const result = await saveTournament(tournament);
-      if (result) {
+      const { data, error } = await saveTournament(tournament);
+      if (data) {
         toast({
           title: "Success",
-          description: `Tournament "${tournament.name}" ${tournament.id === result.id ? "updated" : "created"} successfully`,
+          description: `Tournament "${tournament.name}" ${tournament.id === data.id ? "updated" : "created"} successfully`,
         });
-        return result;
+        return data;
       } else {
         toast({
-          title: "Error",
-          description: `Failed to save tournament "${tournament.name}"`,
+          title: "Failed to save tournament",
+          description: error || `Could not save tournament "${tournament.name}"`,
           variant: "destructive"
         });
         return null;
@@ -159,7 +167,7 @@ export const useTournamentOperations = () => {
     },
     
     deleteTournament: async (id: string, name: string) => {
-      const success = await deleteTournament(id);
+      const { success, error } = await deleteTournament(id);
       if (success) {
         toast({
           title: "Success",
@@ -169,7 +177,7 @@ export const useTournamentOperations = () => {
       } else {
         toast({
           title: "Error",
-          description: `Failed to delete tournament "${name}"`,
+          description: error || `Failed to delete tournament "${name}"`,
           variant: "destructive"
         });
         return false;
