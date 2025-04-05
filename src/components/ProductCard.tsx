@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,14 +50,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       }
     }
     
-    // Fix: Include the total property in the CartItem object
     addToCart({
       id: product.id,
       type: 'product',
       name: product.name,
       price: product.price,
       quantity: 1,
-      total: product.price, // Calculate the total as price * quantity
       category: product.category
     });
     

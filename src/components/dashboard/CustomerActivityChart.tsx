@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users } from 'lucide-react';
-import { usePOS } from '@/context';
+import { usePOS } from '@/context/POSContext';
 
 const CustomerActivityChart: React.FC = () => {
   const { customers, bills } = usePOS();
