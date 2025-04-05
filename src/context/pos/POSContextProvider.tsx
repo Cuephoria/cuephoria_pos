@@ -121,7 +121,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const productOperations = useProductOperations(products, setProducts);
   const customerOperations = useCustomerOperations(customers, selectedCustomer, setSelectedCustomer);
   const stationOperations = useStationOperations(stations, sessions, customers);
-  const billOperations = useBillOperations(bills, setBills, customers, products, cart, selectedCustomer, clearCart, setSelectedCustomer, isStudentDiscount, setIsStudentDiscount);
+  // Fix: Pass only expected 9 arguments to useBillOperations
+  const billOperations = useBillOperations(bills, setBills, customers, products, cart, selectedCustomer, clearCart, setSelectedCustomer, setIsStudentDiscount);
   const posUtilities = usePOSUtilities();
   
   console.log('POSProvider rendering with context value'); // Debug log
