@@ -111,7 +111,7 @@ const POS = () => {
 
   const handleUpdateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    updateCartItem(id, newQuantity);
+    updateCartItem(id, { quantity: newQuantity });
   };
 
   const handleRemoveItem = (id: string) => {
