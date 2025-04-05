@@ -96,6 +96,14 @@ export const saveTournament = async (tournament: Tournament): Promise<{ data: To
         updated_at: new Date().toISOString()
       };
       
+      // Clean up any undefined or malformed values before sending to Supabase
+      Object.keys(updateData).forEach(key => {
+        const value = updateData[key];
+        if (value && typeof value === 'object' && value._type === 'undefined') {
+          updateData[key] = null;
+        }
+      });
+      
       const { data, error } = await tournamentsTable
         .update(updateData)
         .eq('id', tournament.id)
@@ -112,8 +120,18 @@ export const saveTournament = async (tournament: Tournament): Promise<{ data: To
     } else {
       // Create new tournament with created_at timestamp
       console.log('Creating new tournament');
+      
+      // Clean up any undefined or malformed values before sending to Supabase
+      const insertData = { ...supabaseTournament, created_at: new Date().toISOString() };
+      Object.keys(insertData).forEach(key => {
+        const value = insertData[key];
+        if (value && typeof value === 'object' && value._type === 'undefined') {
+          insertData[key] = null;
+        }
+      });
+      
       const { data, error } = await tournamentsTable
-        .insert({ ...supabaseTournament, created_at: new Date().toISOString() })
+        .insert(insertData)
         .select()
         .single();
         

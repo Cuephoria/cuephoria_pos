@@ -47,36 +47,40 @@ export const convertFromSupabaseTournament = (item: any): Tournament => {
     id: item.id,
     name: item.name,
     gameType: item.game_type,
-    gameVariant: item.game_variant,
-    gameTitle: item.game_title,
+    gameVariant: item.game_variant || undefined,
+    gameTitle: item.game_title || undefined,
     date: item.date,
     players: item.players || [],
     matches: item.matches || [],
     status: item.status,
-    budget: item.budget,
-    winnerPrize: item.winner_prize,
-    runnerUpPrize: item.runner_up_prize,
-    winner: item.winner,
+    budget: item.budget || undefined,
+    winnerPrize: item.winner_prize || undefined,
+    runnerUpPrize: item.runner_up_prize || undefined,
+    winner: item.winner || undefined,
     created_at: item.created_at,
     updated_at: item.updated_at
   };
 };
 
 export const convertToSupabaseTournament = (tournament: Tournament): any => {
-  return {
+  // Create a clean object with only defined values
+  const cleanObject: any = {
     id: tournament.id,
     name: tournament.name,
     game_type: tournament.gameType,
-    game_variant: tournament.gameVariant,
-    game_title: tournament.gameTitle,
     date: tournament.date,
-    players: tournament.players,
-    matches: tournament.matches,
+    players: tournament.players || [],
+    matches: tournament.matches || [],
     status: tournament.status,
-    budget: tournament.budget,
-    winner_prize: tournament.winnerPrize,
-    runner_up_prize: tournament.runnerUpPrize,
-    winner: tournament.winner,
-    updated_at: new Date().toISOString()
   };
+  
+  // Only add optional fields if they have values
+  if (tournament.gameVariant) cleanObject.game_variant = tournament.gameVariant;
+  if (tournament.gameTitle) cleanObject.game_title = tournament.gameTitle;
+  if (tournament.budget !== undefined) cleanObject.budget = tournament.budget;
+  if (tournament.winnerPrize !== undefined) cleanObject.winner_prize = tournament.winnerPrize;
+  if (tournament.runnerUpPrize !== undefined) cleanObject.runner_up_prize = tournament.runnerUpPrize;
+  if (tournament.winner) cleanObject.winner = tournament.winner;
+  
+  return cleanObject;
 };
