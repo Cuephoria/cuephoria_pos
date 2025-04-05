@@ -6,7 +6,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Settings as SettingsIcon, Users, Shield, Trophy } from 'lucide-react';
 import TournamentManagement from '@/components/tournaments/TournamentManagement';
-import GeneralSettings from '@/components/settings/GeneralSettings';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -22,7 +21,7 @@ const Settings = () => {
       </div>
       
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="mb-4">
+        <TabsList>
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
             General
@@ -40,7 +39,17 @@ const Settings = () => {
         </TabsList>
         
         <TabsContent value="general" className="space-y-4">
-          <GeneralSettings />
+          <div className="grid gap-4">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <SettingsIcon className="h-5 w-5 text-cuephoria-lightpurple" /> 
+                <h3 className="text-lg font-medium">General Settings</h3>
+              </div>
+              <p className="text-muted-foreground">
+                General settings will be available here.
+              </p>
+            </div>
+          </div>
         </TabsContent>
         
         <TabsContent value="tournaments" className="space-y-4">
@@ -49,7 +58,9 @@ const Settings = () => {
         
         {isAdmin && (
           <TabsContent value="staff" className="space-y-4">
-            <StaffManagement />
+            <div className="grid gap-4">
+              <StaffManagement />
+            </div>
           </TabsContent>
         )}
       </Tabs>

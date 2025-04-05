@@ -6,20 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, Lock } from 'lucide-react';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { toast } from 'sonner';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -31,14 +20,6 @@ const Login = () => {
   const navigate = useNavigate();
   const [animationClass, setAnimationClass] = useState('');
   const isMobile = useIsMobile();
-  
-  // Forgot password states
-  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const [masterKey, setMasterKey] = useState('');
-  const [resetUsername, setResetUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [resetStep, setResetStep] = useState('input'); // 'input', 'verify', 'reset'
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -80,85 +61,6 @@ const Login = () => {
       toast({
         title: 'Error',
         description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleForgotPassword = () => {
-    setForgotPasswordOpen(true);
-    setResetUsername(username);
-    setResetStep('input');
-  };
-  
-  const validateMasterKey = () => {
-    if (masterKey === '2580') {
-      setResetStep('reset');
-      toast({
-        title: 'Verified',
-        description: 'Master key validated. Please set a new password.',
-      });
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Invalid master key. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  const handlePasswordReset = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (newPassword.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters long.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      
-      if (loginType === 'admin') {
-        // Update admin password in Supabase
-        const { error } = await supabase
-          .from('admin_users')
-          .update({ password: newPassword })
-          .eq('username', resetUsername)
-          .eq('is_admin', true);
-        
-        if (error) {
-          throw new Error(error.message);
-        }
-        
-        toast({
-          title: 'Success',
-          description: 'Admin password has been reset successfully.',
-        });
-        
-        setForgotPasswordOpen(false);
-        setMasterKey('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setResetStep('input');
-      }
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reset password. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -282,18 +184,6 @@ const Login = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
                 />
               </div>
-              
-              <div className="flex justify-end">
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-cuephoria-lightpurple hover:text-accent transition-colors duration-300 text-xs p-0"
-                >
-                  Forgot Password?
-                </Button>
-              </div>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
@@ -323,136 +213,6 @@ const Login = () => {
           </form>
         </Card>
       </div>
-      
-      {/* Forgot Password Dialog */}
-      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 backdrop-blur-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-cuephoria-lightpurple">
-              <Lock size={18} />
-              Forgot Password
-            </DialogTitle>
-            <DialogDescription>
-              {loginType === 'admin' 
-                ? 'Reset your admin password by verifying with the master key.'
-                : 'Please contact an administrator to reset your password.'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {loginType === 'admin' ? (
-            <>
-              {resetStep === 'input' && (
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label htmlFor="resetUsername" className="text-sm font-medium text-cuephoria-lightpurple">
-                      Admin Username
-                    </label>
-                    <Input
-                      id="resetUsername"
-                      value={resetUsername}
-                      onChange={(e) => setResetUsername(e.target.value)}
-                      placeholder="Enter your admin username"
-                      className="bg-background/50 border-cuephoria-lightpurple/30"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="masterKey" className="text-sm font-medium text-cuephoria-lightpurple">
-                      Master Key
-                    </label>
-                    <Input
-                      id="masterKey"
-                      value={masterKey}
-                      onChange={(e) => setMasterKey(e.target.value)}
-                      type="password"
-                      placeholder="Enter the master key"
-                      className="bg-background/50 border-cuephoria-lightpurple/30"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {resetStep === 'reset' && (
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label htmlFor="newPassword" className="text-sm font-medium text-cuephoria-lightpurple">
-                      New Password
-                    </label>
-                    <Input
-                      id="newPassword"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      type="password"
-                      placeholder="Enter new password"
-                      className="bg-background/50 border-cuephoria-lightpurple/30"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="confirmPassword" className="text-sm font-medium text-cuephoria-lightpurple">
-                      Confirm Password
-                    </label>
-                    <Input
-                      id="confirmPassword"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      type="password"
-                      placeholder="Confirm new password"
-                      className="bg-background/50 border-cuephoria-lightpurple/30"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setForgotPasswordOpen(false)}
-                >
-                  Cancel
-                </Button>
-                {resetStep === 'input' ? (
-                  <Button 
-                    onClick={validateMasterKey} 
-                    disabled={!masterKey || !resetUsername}
-                    className="bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/80"
-                  >
-                    Verify
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={handlePasswordReset} 
-                    disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword}
-                    className="bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/80"
-                  >
-                    Reset Password
-                  </Button>
-                )}
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <div className="py-6">
-                <div className="rounded-lg bg-amber-50 p-4 text-amber-800 text-sm">
-                  <p className="flex items-center">
-                    <ZapIcon className="mr-2 h-4 w-4" />
-                    Please contact your administrator to reset your staff password.
-                  </p>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button 
-                  onClick={() => setForgotPasswordOpen(false)}
-                  className="bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/80"
-                >
-                  Close
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

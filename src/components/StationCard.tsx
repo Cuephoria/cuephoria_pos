@@ -1,12 +1,12 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { usePOS, Station } from '@/context/POSContext';
 import StationInfo from '@/components/station/StationInfo';
 import StationTimer from '@/components/station/StationTimer';
 import StationActions from '@/components/station/StationActions';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit, X, Check } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,41 +18,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface StationCardProps {
   station: Station;
 }
 
 const StationCard: React.FC<StationCardProps> = ({ station }) => {
-  const { customers, startSession, endSession, deleteStation, updateStation } = usePOS();
-  const { toast } = useToast();
+  const { customers, startSession, endSession, deleteStation } = usePOS();
   const isPoolTable = station.type === '8ball';
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editData, setEditData] = useState({
-    name: station.name,
-    hourlyRate: station.hourlyRate
-  });
-  const [deleteInProgress, setDeleteInProgress] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const getCustomer = (id: string) => {
     return customers.find(c => c.id === id);
@@ -63,87 +36,9 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     : null;
     
   const customerName = customer ? customer.name : 'Unknown Customer';
-
-  const handleDeleteStation = async () => {
-    if (deleteInProgress) return false;
     
-    try {
-      setDeleteInProgress(true);
-      console.log("Delete station button clicked for:", station.name, station.id, "Type:", station.type);
-      
-      toast({
-        title: "Deleting Station",
-        description: `Attempting to delete ${station.name}...`,
-      });
-      
-      if (!station.id) {
-        toast({
-          title: "Error",
-          description: "Invalid station ID",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      console.log("Station type before deletion:", station.type, 
-                  "Is PS5:", station.type === 'ps5',
-                  "Is 8ball:", station.type === '8ball');
-      
-      const result = await deleteStation(station.id);
-      console.log("Delete station result:", result);
-      
-      if (result) {
-        toast({
-          title: "Success",
-          description: `Station ${station.name} has been deleted`,
-        });
-        setDeleteDialogOpen(false);
-        return true;
-      } else {
-        toast({
-          title: "Delete Failed",
-          description: `Failed to delete station ${station.name}. Please try again.`,
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error("Error in handleDeleteStation:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while deleting the station",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setDeleteInProgress(false);
-    }
-  };
-
-  const handleEditSubmit = async () => {
-    try {
-      const updatedStation = {
-        ...station,
-        name: editData.name,
-        hourlyRate: editData.hourlyRate
-      };
-      
-      const result = await updateStation(updatedStation);
-      
-      if (result) {
-        setEditDialogOpen(false);
-      }
-      
-      return result;
-    } catch (error) {
-      console.error("Error updating station:", error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update station. Please try again.",
-        variant: "destructive",
-      });
-      return false;
-    }
+  const handleDeleteStation = async () => {
+    await deleteStation(station.id);
   };
 
   return (
@@ -160,10 +55,8 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         }
         ${isPoolTable ? 'rounded-xl' : 'rounded-lg'}
       `}
-      data-station-id={station.id}
-      data-station-type={station.type}
-      data-station-name={station.name}
     >
+      {/* Visual elements to enhance the appearance */}
       {isPoolTable && (
         <>
           <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-300"></div>
@@ -183,6 +76,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
         </>
       )}
 
+      {/* Membership indicator on top of card */}
       {station.isOccupied && customer && (
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-transparent to-transparent">
           <div className={`h-full ${customer.isMember ? 'bg-green-500' : 'bg-gray-500'} w-2/3 rounded-br-lg`}></div>
@@ -194,105 +88,41 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
           <div className="flex-grow">
             <StationInfo station={station} customerName={customerName} customerData={customer} />
           </div>
-          <div className="flex space-x-1">
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={`
-                    h-8 w-8 shrink-0 
-                    ${isPoolTable 
-                      ? 'text-green-300 hover:text-blue-500 hover:bg-green-950/50' 
-                      : 'text-cuephoria-lightpurple hover:text-blue-500 hover:bg-cuephoria-purple/20'
-                    }
-                  `}
-                  disabled={station.isOccupied}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`
+                  h-8 w-8 shrink-0 
+                  ${isPoolTable 
+                    ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
+                    : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
+                  }
+                `}
+                disabled={station.isOccupied}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className={isPoolTable ? 'border-green-500' : 'border-cuephoria-purple'}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Station</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete {station.name}? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteStation}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Edit Station</DialogTitle>
-                  <DialogDescription>
-                    Make changes to the station settings here. Click save when you're done.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Name
-                    </Label>
-                    <Input
-                      id="name"
-                      value={editData.name}
-                      onChange={(e) => setEditData({...editData, name: e.target.value})}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="hourlyRate" className="text-right">
-                      Hourly Rate
-                    </Label>
-                    <Input
-                      id="hourlyRate"
-                      type="number"
-                      value={editData.hourlyRate}
-                      onChange={(e) => setEditData({...editData, hourlyRate: parseFloat(e.target.value) || 0})}
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleEditSubmit}>Save changes</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={`
-                    h-8 w-8 shrink-0 
-                    ${isPoolTable 
-                      ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
-                      : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
-                    }
-                  `}
-                  disabled={station.isOccupied || deleteInProgress}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className={isPoolTable ? 'border-green-500' : 'border-cuephoria-purple'}>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Station</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete {station.name}? This action cannot be undone.
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-sm">
-                      Station ID: {station.id}<br/>
-                      Type: {station.type}<br/>
-                      Name: {station.name}
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleDeleteStation}
-                    disabled={deleteInProgress}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {deleteInProgress ? "Deleting..." : "Delete"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardHeader>
       <CardContent className="pb-2">
