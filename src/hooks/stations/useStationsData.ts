@@ -107,11 +107,10 @@ export const useStationsData = () => {
       });
       
       // Delete from Supabase with more detailed error handling
-      const { error, count } = await supabase
+      const { error } = await supabase
         .from('stations')
         .delete()
-        .eq('id', stationId)
-        .select('count');
+        .eq('id', stationId);
         
       if (error) {
         const errorMessage = handleSupabaseError(error, 'delete station');
@@ -124,7 +123,7 @@ export const useStationsData = () => {
         return false;
       }
       
-      console.log(`Deleted ${count} rows from stations table`);
+      console.log(`Station with ID ${stationId} deleted successfully`);
       
       // Update local state
       setStations(prev => {
@@ -152,6 +151,75 @@ export const useStationsData = () => {
     }
   };
   
+  const updateStation = async (station: Station) => {
+    try {
+      setStationsLoading(true);
+      console.log("Starting update operation for station:", station);
+      
+      if (!station.id) {
+        console.error('Cannot update station without an ID');
+        toast({
+          title: 'Error',
+          description: 'Invalid station data',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // If station is occupied, we shouldn't allow changing certain properties
+      if (station.isOccupied) {
+        toast({
+          title: 'Warning',
+          description: 'Some properties cannot be changed while the station is occupied',
+        });
+      }
+      
+      // Map to database format
+      const { error } = await supabase
+        .from('stations')
+        .update({
+          name: station.name,
+          type: station.type,
+          hourly_rate: station.hourlyRate,
+          is_occupied: station.isOccupied
+        })
+        .eq('id', station.id);
+        
+      if (error) {
+        const errorMessage = handleSupabaseError(error, 'update station');
+        console.error('Supabase error details:', error);
+        toast({
+          title: 'Database Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
+      setStations(prev => prev.map(s => 
+        s.id === station.id ? station : s
+      ));
+      
+      toast({
+        title: 'Station Updated',
+        description: 'The station has been updated successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in updateStation:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update station',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setStationsLoading(false);
+    }
+  };
+  
   useEffect(() => {
     refreshStations();
   }, []);
@@ -162,6 +230,7 @@ export const useStationsData = () => {
     stationsLoading,
     stationsError,
     refreshStations,
-    deleteStation
+    deleteStation,
+    updateStation
   };
 };
