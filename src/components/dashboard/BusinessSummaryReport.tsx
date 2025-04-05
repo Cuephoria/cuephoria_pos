@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -32,54 +32,25 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   // Current date for display
   const currentDate = new Date();
   
-  // Filter expenses based on date range if provided
-  const filteredExpenses = expenses.filter(expense => {
-    if (!startDate && !endDate) return true;
+  // Memoize all calculations to improve performance
+  const reportData = useMemo(() => {
+    // Filter expenses based on date range
+    const filteredExpenses = expenses.filter(expense => {
+      if (!startDate && !endDate) return true;
+      
+      const expenseDate = new Date(expense.date);
+      
+      if (startDate && endDate) {
+        return expenseDate >= startDate && expenseDate <= endDate;
+      } else if (startDate) {
+        return expenseDate >= startDate;
+      } else if (endDate) {
+        return expenseDate <= endDate;
+      }
+      
+      return true;
+    });
     
-    const expenseDate = new Date(expense.date);
-    
-    if (startDate && endDate) {
-      return expenseDate >= startDate && expenseDate <= endDate;
-    } else if (startDate) {
-      return expenseDate >= startDate;
-    } else if (endDate) {
-      return expenseDate <= endDate;
-    }
-    
-    return true;
-  });
-  
-  // Group expenses by category
-  const expensesByCategory = filteredExpenses.reduce((acc, expense) => {
-    const { category } = expense;
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(expense);
-    return acc;
-  }, {} as Record<string, Expense[]>);
-  
-  // Calculate total per category
-  const categoryTotals = Object.entries(expensesByCategory).map(([category, expenses]) => {
-    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    return { category, total };
-  }).sort((a, b) => b.total - a.total);
-  
-  // Format category name
-  const formatCategory = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      'rent': 'Rent',
-      'utilities': 'Utilities',
-      'salary': 'Salary',
-      'restock': 'Restock',
-      'misc': 'Miscellaneous',
-    };
-    
-    return categoryMap[category] || category;
-  };
-  
-  // Calculate PS5 and 8-Ball sales
-  const calculateGameSales = () => {
     // Filter bills based on date range
     const filteredBills = bills.filter(bill => {
       if (!startDate && !endDate) return true;
@@ -96,10 +67,33 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       
       return true;
     });
+
+    // Group expenses by category
+    const expensesByCategory = filteredExpenses.reduce((acc, expense) => {
+      const { category } = expense;
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(expense);
+      return acc;
+    }, {} as Record<string, Expense[]>);
     
+    // Calculate total per category
+    const categoryTotals = Object.entries(expensesByCategory).map(([category, expenses]) => {
+      const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      return { category, total };
+    }).sort((a, b) => b.total - a.total);
+    
+    // Calculate game sales (PS5 and Pool)
     let ps5Sales = 0;
     let poolSales = 0;
     
+    // Calculate canteen sales
+    let foodSales = 0;
+    let beverageSales = 0;
+    let tobaccoSales = 0;
+    
+    // Process all bills at once to improve performance
     filteredBills.forEach(bill => {
       bill.items.forEach(item => {
         // Check if the item is a session
@@ -111,40 +105,9 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
             poolSales += item.total;
           }
-        }
-      });
-    });
-    
-    return { ps5Sales, poolSales };
-  };
-  
-  // Calculate canteen sales (food, beverages, and tobacco)
-  const calculateCanteenSales = () => {
-    // Filter bills based on date range
-    const filteredBills = bills.filter(bill => {
-      if (!startDate && !endDate) return true;
-      
-      const billDate = new Date(bill.createdAt);
-      
-      if (startDate && endDate) {
-        return billDate >= startDate && billDate <= endDate;
-      } else if (startDate) {
-        return billDate >= startDate;
-      } else if (endDate) {
-        return billDate <= endDate;
-      }
-      
-      return true;
-    });
-    
-    let foodSales = 0;
-    let beverageSales = 0;
-    let tobaccoSales = 0;
-    
-    filteredBills.forEach(bill => {
-      bill.items.forEach(item => {
+        } 
         // Check if the item is a product
-        if (item.type === 'product') {
+        else if (item.type === 'product') {
           // Find the product to check its category
           const product = products.find(p => p.id === item.id);
           if (product) {
@@ -163,16 +126,34 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     
     const totalCanteenSales = foodSales + beverageSales + tobaccoSales;
     
-    return { foodSales, beverageSales, tobaccoSales, totalCanteenSales };
+    return {
+      categoryTotals,
+      gameSales: {
+        ps5Sales,
+        poolSales,
+        totalGameSales: ps5Sales + poolSales
+      },
+      canteenSales: {
+        foodSales,
+        beverageSales,
+        tobaccoSales,
+        totalCanteenSales
+      }
+    };
+  }, [expenses, bills, products, startDate, endDate]);
+
+  // Format category name
+  const formatCategory = (category: string) => {
+    const categoryMap: Record<string, string> = {
+      'rent': 'Rent',
+      'utilities': 'Utilities',
+      'salary': 'Salary',
+      'restock': 'Restock',
+      'misc': 'Miscellaneous',
+    };
+    
+    return categoryMap[category] || category;
   };
-  
-  const { ps5Sales, poolSales } = calculateGameSales();
-  const { foodSales, beverageSales, tobaccoSales, totalCanteenSales } = calculateCanteenSales();
-  
-  // Debug logs to trace the issue
-  console.log('Canteen sales calculation:', { foodSales, beverageSales, tobaccoSales, totalCanteenSales });
-  console.log('Products available:', products.length);
-  console.log('Bills available:', bills.length);
   
   return (
     <Card className="w-full">
@@ -223,8 +204,8 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categoryTotals.length > 0 ? (
-                  categoryTotals.map(({ category, total }) => (
+                {reportData.categoryTotals.length > 0 ? (
+                  reportData.categoryTotals.map(({ category, total }) => (
                     <TableRow key={category}>
                       <TableCell>{formatCategory(category)}</TableCell>
                       <TableCell>
@@ -259,34 +240,34 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ps5Sales > 0 || poolSales > 0 ? (
+                {reportData.gameSales.ps5Sales > 0 || reportData.gameSales.poolSales > 0 ? (
                   <>
                     <TableRow>
                       <TableCell>PS5 Stations</TableCell>
                       <TableCell>
-                        <CurrencyDisplay amount={ps5Sales} />
+                        <CurrencyDisplay amount={reportData.gameSales.ps5Sales} />
                       </TableCell>
                       <TableCell>
-                        {ps5Sales + poolSales > 0 
-                          ? ((ps5Sales / (ps5Sales + poolSales)) * 100).toFixed(1) 
+                        {reportData.gameSales.totalGameSales > 0 
+                          ? ((reportData.gameSales.ps5Sales / reportData.gameSales.totalGameSales) * 100).toFixed(1) 
                           : '0.0'}%
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell>8-Ball Pool</TableCell>
                       <TableCell>
-                        <CurrencyDisplay amount={poolSales} />
+                        <CurrencyDisplay amount={reportData.gameSales.poolSales} />
                       </TableCell>
                       <TableCell>
-                        {ps5Sales + poolSales > 0 
-                          ? ((poolSales / (ps5Sales + poolSales)) * 100).toFixed(1) 
+                        {reportData.gameSales.totalGameSales > 0 
+                          ? ((reportData.gameSales.poolSales / reportData.gameSales.totalGameSales) * 100).toFixed(1) 
                           : '0.0'}%
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell className="font-semibold">Total</TableCell>
                       <TableCell className="font-semibold">
-                        <CurrencyDisplay amount={ps5Sales + poolSales} />
+                        <CurrencyDisplay amount={reportData.gameSales.totalGameSales} />
                       </TableCell>
                       <TableCell>100.0%</TableCell>
                     </TableRow>
@@ -314,45 +295,45 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {totalCanteenSales > 0 ? (
+              {reportData.canteenSales.totalCanteenSales > 0 ? (
                 <>
                   <TableRow>
                     <TableCell>Food & Snacks</TableCell>
                     <TableCell>
-                      <CurrencyDisplay amount={foodSales} />
+                      <CurrencyDisplay amount={reportData.canteenSales.foodSales} />
                     </TableCell>
                     <TableCell>
-                      {totalCanteenSales > 0 
-                        ? ((foodSales / totalCanteenSales) * 100).toFixed(1) 
+                      {reportData.canteenSales.totalCanteenSales > 0 
+                        ? ((reportData.canteenSales.foodSales / reportData.canteenSales.totalCanteenSales) * 100).toFixed(1) 
                         : '0.0'}%
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Beverages & Drinks</TableCell>
                     <TableCell>
-                      <CurrencyDisplay amount={beverageSales} />
+                      <CurrencyDisplay amount={reportData.canteenSales.beverageSales} />
                     </TableCell>
                     <TableCell>
-                      {totalCanteenSales > 0 
-                        ? ((beverageSales / totalCanteenSales) * 100).toFixed(1) 
+                      {reportData.canteenSales.totalCanteenSales > 0 
+                        ? ((reportData.canteenSales.beverageSales / reportData.canteenSales.totalCanteenSales) * 100).toFixed(1) 
                         : '0.0'}%
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Tobacco Products</TableCell>
                     <TableCell>
-                      <CurrencyDisplay amount={tobaccoSales} />
+                      <CurrencyDisplay amount={reportData.canteenSales.tobaccoSales} />
                     </TableCell>
                     <TableCell>
-                      {totalCanteenSales > 0 
-                        ? ((tobaccoSales / totalCanteenSales) * 100).toFixed(1) 
+                      {reportData.canteenSales.totalCanteenSales > 0 
+                        ? ((reportData.canteenSales.tobaccoSales / reportData.canteenSales.totalCanteenSales) * 100).toFixed(1) 
                         : '0.0'}%
                     </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-semibold">Total Canteen</TableCell>
                     <TableCell className="font-semibold">
-                      <CurrencyDisplay amount={totalCanteenSales} />
+                      <CurrencyDisplay amount={reportData.canteenSales.totalCanteenSales} />
                     </TableCell>
                     <TableCell>100.0%</TableCell>
                   </TableRow>
