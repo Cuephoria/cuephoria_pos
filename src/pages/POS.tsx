@@ -14,6 +14,8 @@ import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const POS = () => {
   const {
@@ -36,6 +38,7 @@ const POS = () => {
     completeSale,
   } = usePOS();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [activeTab, setActiveTab] = useState('all');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -378,7 +381,7 @@ const POS = () => {
           </CardHeader>
           
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow animate-scale-in">
-            <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+            <TabsList className={`px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20 ${isMobile ? 'overflow-x-auto pb-2' : ''}`}>
               <TabsTrigger value="all" className="font-heading flex-grow basis-0">
                 All ({categoryCounts.all || 0})
               </TabsTrigger>
@@ -400,27 +403,31 @@ const POS = () => {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value={activeTab} className="flex-grow overflow-auto px-4 mt-4">
-              {searchedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
-                  {searchedProducts.map((product, index) => (
-                    <div 
-                      key={product.id} 
-                      className="animate-scale-in h-full"
-                      style={{animationDelay: `${(index % 5) * 100}ms`}}
-                    >
-                      <ProductCard product={product} className="h-full" />
+            <TabsContent value={activeTab} className="flex-grow overflow-hidden mt-4">
+              <ScrollArea className="h-full">
+                <div className="px-4 pb-4">
+                  {searchedProducts.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {searchedProducts.map((product, index) => (
+                        <div 
+                          key={product.id} 
+                          className="animate-scale-in h-full"
+                          style={{animationDelay: `${(index % 5) * 100}ms`}}
+                        >
+                          <ProductCard product={product} className="h-full" />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full py-10 animate-fade-in">
+                      <h3 className="text-xl font-medium font-heading">No Products Found</h3>
+                      <p className="text-muted-foreground mt-2">
+                        Try a different search or category
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full animate-fade-in">
-                  <h3 className="text-xl font-medium font-heading">No Products Found</h3>
-                  <p className="text-muted-foreground mt-2">
-                    Try a different search or category
-                  </p>
-                </div>
-              )}
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         </Card>
