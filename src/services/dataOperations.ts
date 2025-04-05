@@ -15,7 +15,7 @@ export const resetToSampleData = async (
   setLoyaltyPointsUsedAmount: React.Dispatch<React.SetStateAction<number>>,
   setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | null>>,
   refreshFromDB?: () => Promise<Product[]>
-): Promise<boolean> {
+): Promise<boolean> => {
   try {
     const defaultOptions = {
       products: true,
