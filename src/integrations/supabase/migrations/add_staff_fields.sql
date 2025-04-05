@@ -1,5 +1,7 @@
 
 -- Add extended fields to the admin_users table
+-- This migration is maintained for documentation purposes
+-- but the fields are not currently used in the application
 ALTER TABLE admin_users 
 ADD COLUMN IF NOT EXISTS position TEXT,
 ADD COLUMN IF NOT EXISTS salary NUMERIC,

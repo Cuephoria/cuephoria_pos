@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, UserPlus, Trash2, Users, User, Edit, Clock } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Users, User, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,22 +15,12 @@ interface AdminUser {
   id: string;
   username: string;
   isAdmin: boolean;
-  position?: string;
-  salary?: number;
-  joiningDate?: string;
-  shiftStart?: string;
-  shiftEnd?: string;
 }
 
 const StaffManagement: React.FC = () => {
   const [staffMembers, setStaffMembers] = useState<AdminUser[]>([]);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newPosition, setNewPosition] = useState('');
-  const [newSalary, setNewSalary] = useState<number | undefined>(undefined);
-  const [newJoiningDate, setNewJoiningDate] = useState('');
-  const [newShiftStart, setNewShiftStart] = useState('');
-  const [newShiftEnd, setNewShiftEnd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [isEditingStaff, setIsEditingStaff] = useState(false);
@@ -70,15 +60,7 @@ const StaffManagement: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const success = await addStaffMember(
-        newUsername, 
-        newPassword, 
-        newPosition || undefined,
-        newSalary || undefined,
-        newJoiningDate || undefined,
-        newShiftStart || undefined,
-        newShiftEnd || undefined
-      );
+      const success = await addStaffMember(newUsername, newPassword);
       
       if (success) {
         toast({
@@ -109,11 +91,6 @@ const StaffManagement: React.FC = () => {
   const handleEditStaff = (staff: AdminUser) => {
     setCurrentEditStaff(staff);
     setNewUsername(staff.username);
-    setNewPosition(staff.position || '');
-    setNewSalary(staff.salary);
-    setNewJoiningDate(staff.joiningDate || '');
-    setNewShiftStart(staff.shiftStart || '');
-    setNewShiftEnd(staff.shiftEnd || '');
     setIsEditingStaff(true);
   };
 
@@ -124,11 +101,6 @@ const StaffManagement: React.FC = () => {
     try {
       const updatedData: Partial<AdminUser> = {
         username: newUsername,
-        position: newPosition || undefined,
-        salary: newSalary || undefined,
-        joiningDate: newJoiningDate || undefined,
-        shiftStart: newShiftStart || undefined,
-        shiftEnd: newShiftEnd || undefined,
       };
 
       const success = await updateStaffMember(currentEditStaff.id, updatedData);
@@ -192,11 +164,6 @@ const StaffManagement: React.FC = () => {
   const resetForm = () => {
     setNewUsername('');
     setNewPassword('');
-    setNewPosition('');
-    setNewSalary(undefined);
-    setNewJoiningDate('');
-    setNewShiftStart('');
-    setNewShiftEnd('');
     setCurrentEditStaff(null);
   };
 
