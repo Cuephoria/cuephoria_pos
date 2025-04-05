@@ -214,11 +214,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
       }
       
+      // Check if data exists and is an array
       if (!data || !Array.isArray(data)) {
         return [];
       }
       
       // If we got here, the extended query worked
+      // Make sure we're safely mapping data only if it's valid
       return data.map(staff => ({
         id: staff.id,
         username: staff.username,
