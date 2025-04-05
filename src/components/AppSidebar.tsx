@@ -11,7 +11,8 @@ import {
   SidebarHeader, 
   SidebarMenu, 
   SidebarMenuButton, 
-  SidebarMenuItem 
+  SidebarMenuItem,
+  SidebarSeparator 
 } from '@/components/ui/sidebar';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
@@ -35,22 +36,23 @@ const AppSidebar: React.FC = () => {
   ];
 
   return (
-    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white">
-      <SidebarHeader className="p-4 flex items-center gap-2">
-        <div className="h-9 w-9 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow relative">
-          <Joystick className="h-5 w-5 text-white absolute animate-bounce" />
+    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white w-[250px]">
+      <SidebarHeader className="p-4 flex items-center gap-3">
+        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow relative">
+          <Joystick className="h-7 w-7 text-white absolute animate-bounce" />
         </div>
-        <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
+        <span className="text-2xl font-bold gradient-text font-heading">Cuephoria</span>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarSeparator className="mx-4 bg-cuephoria-purple/30" />
+      <SidebarContent className="mt-2">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {menuItems.map((item, index) => (
-                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100}`}>
+                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100} text-base`}>
                   <SidebarMenuButton asChild isActive={location.pathname === item.path}>
-                    <Link to={item.path} className="flex items-center menu-item">
-                      <item.icon className={`mr-2 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
+                    <Link to={item.path} className="flex items-center menu-item py-2.5">
+                      <item.icon className={`mr-3 h-6 w-6 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
                       <span className="font-quicksand">{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
