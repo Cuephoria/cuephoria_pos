@@ -101,8 +101,8 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
         };
       default:
         return {
-          label: '',
-          color: '',
+          label: 'REGULAR MATCH',
+          color: 'bg-gray-500 text-white hover:bg-gray-600',
           icon: null
         };
     }
@@ -224,12 +224,16 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                               <SelectValue placeholder="Select winner" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value={match.player1Id}>
-                                {getPlayerName(match.player1Id)}
-                              </SelectItem>
-                              <SelectItem value={match.player2Id}>
-                                {getPlayerName(match.player2Id)}
-                              </SelectItem>
+                              {match.player1Id && (
+                                <SelectItem value={match.player1Id}>
+                                  {getPlayerName(match.player1Id)}
+                                </SelectItem>
+                              )}
+                              {match.player2Id && (
+                                <SelectItem value={match.player2Id}>
+                                  {getPlayerName(match.player2Id)}
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
