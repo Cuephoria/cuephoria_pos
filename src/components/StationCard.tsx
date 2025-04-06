@@ -6,7 +6,7 @@ import StationInfo from '@/components/station/StationInfo';
 import StationTimer from '@/components/station/StationTimer';
 import StationActions from '@/components/station/StationActions';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,10 +21,9 @@ import {
 
 interface StationCardProps {
   station: Station;
-  onEdit?: () => void;
 }
 
-const StationCard: React.FC<StationCardProps> = ({ station, onEdit }) => {
+const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const { customers, startSession, endSession, deleteStation } = usePOS();
   const isPoolTable = station.type === '8ball';
 
@@ -89,63 +88,41 @@ const StationCard: React.FC<StationCardProps> = ({ station, onEdit }) => {
           <div className="flex-grow">
             <StationInfo station={station} customerName={customerName} customerData={customer} />
           </div>
-          <div className="flex space-x-1">
-            {/* Edit button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={`
-                h-8 w-8 shrink-0 
-                ${isPoolTable 
-                  ? 'text-green-300 hover:text-blue-400 hover:bg-green-950/50' 
-                  : 'text-cuephoria-lightpurple hover:text-blue-400 hover:bg-cuephoria-purple/20'
-                }
-              `}
-              onClick={onEdit}
-              disabled={station.isOccupied}
-              title="Edit station"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            
-            {/* Delete button */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className={`
-                    h-8 w-8 shrink-0 
-                    ${isPoolTable 
-                      ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
-                      : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
-                    }
-                  `}
-                  disabled={station.isOccupied}
-                  title="Delete station"
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`
+                  h-8 w-8 shrink-0 
+                  ${isPoolTable 
+                    ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
+                    : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
+                  }
+                `}
+                disabled={station.isOccupied}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className={isPoolTable ? 'border-green-500' : 'border-cuephoria-purple'}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Station</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete {station.name}? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleDeleteStation}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className={isPoolTable ? 'border-green-500' : 'border-cuephoria-purple'}>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Station</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete {station.name}? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleDeleteStation}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardHeader>
       <CardContent className="pb-2">

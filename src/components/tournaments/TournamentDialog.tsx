@@ -150,14 +150,7 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
 
   // Create a tournament bracket based on the number of players
   const generateBracket = () => {
-    if (players.length < 2) {
-      toast({
-        title: "Not enough players",
-        description: "You need at least 2 players to generate a tournament bracket.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (players.length < 2) return;
     
     const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
     const matchesGenerated: Match[] = [];
@@ -346,11 +339,6 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
     
     setMatches(matchesGenerated);
     setTournamentStatus('in-progress');
-    
-    toast({
-      title: "Tournament Bracket Generated",
-      description: `Created ${matchesGenerated.length} matches for ${players.length} players.`,
-    });
   };
 
   const updateMatchResult = (matchId: string, winnerId: string) => {
@@ -738,32 +726,21 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
           </TabsContent>
           
           <TabsContent value="matches">
-            {matches.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">
-                  No matches generated yet. Click the button below to generate matches.
-                </p>
-                <Button 
-                  onClick={generateBracket}
-                  disabled={players.length < 2}
-                >
+            <TournamentMatchSection 
+              matches={matches}
+              players={players}
+              updateMatchResult={updateMatchResult}
+              updateMatchSchedule={updateMatchSchedule}
+              updateMatchStatus={updateMatchStatus}
+              winner={winner}
+            />
+            
+            {matches.length === 0 && (
+              <div className="mt-4 text-center">
+                <Button onClick={generateBracket}>
                   Generate Tournament Bracket
                 </Button>
-                {players.length < 2 && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Add at least 2 players in the Players tab first
-                  </p>
-                )}
               </div>
-            ) : (
-              <TournamentMatchSection 
-                matches={matches}
-                players={players}
-                updateMatchResult={updateMatchResult}
-                updateMatchSchedule={updateMatchSchedule}
-                updateMatchStatus={updateMatchStatus}
-                winner={winner}
-              />
             )}
           </TabsContent>
         </Tabs>
