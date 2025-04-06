@@ -49,8 +49,8 @@ const Stations = () => {
         return false;
       }
 
-      // Update local state
-      setStations(prev => prev.map(station => 
+      // Fix: Update local state with correct typing
+      setStations(stations.map(station => 
         station.id === stationId 
           ? { ...station, name, hourlyRate } 
           : station
