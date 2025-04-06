@@ -2,7 +2,7 @@
 import React from 'react';
 import { Match, Player, Tournament, MatchStatus, MatchStage } from '@/types/tournament.types';
 import { Button } from '@/components/ui/button';
-import { Check, Trophy, Calendar, Clock, AlertTriangle, Flag } from 'lucide-react';
+import { Check, Trophy, Calendar, Clock, AlertTriangle, Flag, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import {
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
 
 interface TournamentMatchSectionProps {
   matches: Match[];
@@ -45,7 +46,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
   
   const getPlayerName = (playerId: string) => {
     const player = players.find(player => player.id === playerId);
-    return player ? player.name : 'Unknown';
+    return player ? player.name : 'Bye';
   };
   
   const handleOpenScheduleDialog = (match: Match) => {
@@ -84,25 +85,25 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
       case 'final':
         return {
           label: 'FINAL',
-          color: 'bg-yellow-500 text-white hover:bg-yellow-600',
+          color: 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white',
           icon: <Trophy className="h-4 w-4 mr-1" />
         };
       case 'semi_final':
         return {
           label: 'SEMI FINAL',
-          color: 'bg-purple-500 text-white hover:bg-purple-600',
+          color: 'bg-gradient-to-r from-purple-500 to-purple-700 text-white',
           icon: <Flag className="h-4 w-4 mr-1" />
         };
       case 'quarter_final':
         return {
           label: 'QUARTER FINAL',
-          color: 'bg-blue-500 text-white hover:bg-blue-600',
+          color: 'bg-gradient-to-r from-blue-500 to-blue-700 text-white',
           icon: <Flag className="h-4 w-4 mr-1" />
         };
       default:
         return {
           label: 'REGULAR MATCH',
-          color: 'bg-gray-500 text-white hover:bg-gray-600',
+          color: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white',
           icon: null
         };
     }
@@ -124,155 +125,236 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
     return displayOrder.filter(stage => (groups[stage]?.length ?? 0) > 0);
   }, [matches]);
 
+  const matchVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5,
+        ease: "easeOut"
+      }
+    })
+  };
+  
+  const stageVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
   if (winner) {
     return (
-      <div className="p-6 text-center">
-        <div className="flex justify-center mb-4">
-          <Trophy className="h-16 w-16 text-yellow-500" />
-        </div>
-        <h3 className="text-2xl font-bold">Tournament Winner</h3>
-        <p className="text-xl font-medium mt-2">{winner.name}</p>
-        <p className="text-muted-foreground mt-4">
-          Congratulations to {winner.name} for winning the tournament!
-        </p>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="p-6 text-center bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl shadow-lg"
+      >
+        <motion.div 
+          className="flex justify-center mb-4"
+          initial={{ y: -50 }}
+          animate={{ y: 0, rotate: [0, 15, -15, 0] }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <Trophy className="h-24 w-24 text-yellow-500" />
+        </motion.div>
+        <motion.h3 
+          className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-amber-600"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+        >
+          Tournament Winner
+        </motion.h3>
+        <motion.p 
+          className="text-2xl font-medium mt-4 text-yellow-800"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
+        >
+          {winner.name}
+        </motion.p>
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+          className="mt-8 px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-600 rounded-lg shadow-md text-white"
+        >
+          <p className="font-medium">
+            Congratulations to {winner.name} for winning the tournament!
+          </p>
+        </motion.div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {groupedMatches.map((stage) => {
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={stageVariants}
+      className="space-y-12"
+    >
+      {groupedMatches.map((stage, stageIndex) => {
         const stageMatches = matches.filter(match => match.stage === stage);
         if (stageMatches.length === 0) return null;
         
         const stageInfo = getStageDisplayInfo(stage);
         
         return (
-          <div key={stage} className="space-y-2">
+          <motion.div 
+            key={stage}
+            variants={stageVariants}
+            className="space-y-6 relative"
+          >
             {stageInfo.label && (
-              <div className="flex items-center justify-center mb-4">
-                <Badge className={`text-md px-4 py-1 ${stageInfo.color}`}>
+              <motion.div 
+                className="flex items-center justify-center mb-6"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Badge className={`text-md px-6 py-2 ${stageInfo.color} shadow-md`}>
                   {stageInfo.icon}
                   {stageInfo.label}
                 </Badge>
-              </div>
+              </motion.div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {stageMatches.map((match) => (
-                <Card key={match.id} className={match.status === 'cancelled' ? 'bg-gray-100' : match.completed ? 'bg-gray-50' : ''}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium">
-                        Match #{match.id.split('-')[1]}
-                        {match.stage !== 'regular' && (
-                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-200">
-                            {match.stage.replace('_', ' ').toUpperCase()}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {stageMatches.map((match, i) => (
+                <motion.div
+                  key={match.id}
+                  custom={i}
+                  variants={matchVariants}
+                  className="h-full"
+                >
+                  <Card className={`h-full transition-all duration-300 hover:shadow-lg border-l-4 ${match.status === 'cancelled' ? 'border-l-gray-400 bg-gray-50' : match.completed ? 'border-l-green-500 bg-green-50/30' : 'border-l-amber-500'}`}>
+                    <CardContent className="p-5">
+                      <div className="flex justify-between items-center">
+                        <div className="font-medium flex items-center space-x-2">
+                          <span className="px-2 py-1 bg-gray-100 rounded-md text-sm">
+                            #{match.id.split('-')[1]}
                           </span>
-                        )}
-                      </div>
-                      <div className={`text-sm flex items-center ${
-                        match.status === 'completed' ? 'text-green-600' : 
-                        match.status === 'cancelled' ? 'text-red-600' : 
-                        'text-amber-600'
-                      }`}>
-                        {getStatusIcon(match.status)}
-                        {match.status === 'completed' ? (
-                          `Winner: ${getPlayerName(match.winnerId || '')}`
-                        ) : (
-                          getStatusLabel(match.status)
-                        )}
-                      </div>
-                    </div>
-                    
-                    {match.scheduledDate && match.scheduledTime && (
-                      <div className="mt-2 flex items-center text-xs text-gray-600">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        <span>{format(new Date(match.scheduledDate), 'dd MMM yyyy')}</span>
-                        <Clock className="h-3 w-3 ml-2 mr-1" />
-                        <span>{match.scheduledTime}</span>
-                        {match.status !== 'cancelled' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="ml-1 h-5 text-xs p-0 hover:bg-transparent"
-                            onClick={() => handleOpenScheduleDialog(match)}
-                          >
-                            (Edit)
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="mt-4 flex justify-between items-center">
-                      <div className={`flex-1 text-center p-2 ${match.status !== 'cancelled' && match.winnerId === match.player1Id ? 'bg-green-100 rounded' : ''}`}>
-                        {getPlayerName(match.player1Id)}
-                      </div>
-                      <div className="mx-2 text-lg">vs</div>
-                      <div className={`flex-1 text-center p-2 ${match.status !== 'cancelled' && match.winnerId === match.player2Id ? 'bg-green-100 rounded' : ''}`}>
-                        {getPlayerName(match.player2Id)}
-                      </div>
-                    </div>
-                    
-                    {match.status === 'scheduled' && !match.completed && (
-                      <>
-                        <div className="mt-4">
-                          <Select
-                            onValueChange={(value) => updateMatchResult(match.id, value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select winner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {match.player1Id && (
-                                <SelectItem value={match.player1Id}>
-                                  {getPlayerName(match.player1Id)}
-                                </SelectItem>
-                              )}
-                              {match.player2Id && (
-                                <SelectItem value={match.player2Id}>
-                                  {getPlayerName(match.player2Id)}
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
+                          {match.stage !== 'regular' && (
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-200 uppercase">
+                              {match.stage.replace('_', ' ')}
+                            </span>
+                          )}
                         </div>
-                        <div className="mt-2">
+                        <div className={`text-sm flex items-center ${
+                          match.status === 'completed' ? 'text-green-600' : 
+                          match.status === 'cancelled' ? 'text-red-600' : 
+                          'text-amber-600'
+                        }`}>
+                          {getStatusIcon(match.status)}
+                          {match.status === 'completed' ? (
+                            `Winner: ${getPlayerName(match.winnerId || '')}`
+                          ) : (
+                            getStatusLabel(match.status)
+                          )}
+                        </div>
+                      </div>
+                      
+                      {match.scheduledDate && match.scheduledTime && (
+                        <div className="mt-3 flex items-center text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span>{format(new Date(match.scheduledDate), 'dd MMM yyyy')}</span>
+                          <Clock className="h-3 w-3 ml-3 mr-1" />
+                          <span>{match.scheduledTime}</span>
+                          {match.status !== 'cancelled' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="ml-1 h-5 text-xs p-0 hover:bg-transparent text-blue-500"
+                              onClick={() => handleOpenScheduleDialog(match)}
+                            >
+                              (Edit)
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="mt-5 flex justify-between items-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 shadow-sm">
+                        <div className={`flex-1 text-center p-2 font-medium ${match.status !== 'cancelled' && match.winnerId === match.player1Id ? 'bg-green-100 rounded text-green-800' : ''}`}>
+                          {getPlayerName(match.player1Id)}
+                        </div>
+                        <div className="mx-2 text-lg flex items-center justify-center w-8 h-8 rounded-full bg-gray-200">
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
+                        <div className={`flex-1 text-center p-2 font-medium ${match.status !== 'cancelled' && match.winnerId === match.player2Id ? 'bg-green-100 rounded text-green-800' : ''}`}>
+                          {match.player2Id ? getPlayerName(match.player2Id) : (
+                            <span className="text-gray-500 italic">Bye</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {match.status === 'scheduled' && !match.completed && (
+                        <>
+                          <div className="mt-4">
+                            <Select
+                              onValueChange={(value) => updateMatchResult(match.id, value)}
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Select winner" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {match.player1Id && (
+                                  <SelectItem value={match.player1Id}>
+                                    {getPlayerName(match.player1Id)}
+                                  </SelectItem>
+                                )}
+                                {match.player2Id && (
+                                  <SelectItem value={match.player2Id}>
+                                    {getPlayerName(match.player2Id)}
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="mt-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => updateMatchStatus(match.id, 'cancelled')}
+                            >
+                              <AlertTriangle className="h-4 w-4 mr-2" /> Cancel Match
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                      
+                      {match.status === 'cancelled' && (
+                        <div className="mt-3">
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => updateMatchStatus(match.id, 'cancelled')}
+                            className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                            onClick={() => updateMatchStatus(match.id, 'scheduled')}
                           >
-                            <AlertTriangle className="h-4 w-4 mr-2" /> Cancel Match
+                            <Calendar className="h-4 w-4 mr-2" /> Reschedule Match
                           </Button>
                         </div>
-                      </>
-                    )}
-                    
-                    {match.status === 'cancelled' && (
-                      <div className="mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
-                          onClick={() => updateMatchStatus(match.id, 'scheduled')}
-                        >
-                          <Calendar className="h-4 w-4 mr-2" /> Reschedule Match
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {match.nextMatchId && (
-                      <div className="mt-2 text-xs text-gray-500 text-center">
-                        Winner advances to match #{match.nextMatchId.split('-')[1]}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      )}
+                      
+                      {match.nextMatchId && (
+                        <div className="mt-3 text-xs text-gray-500 text-center italic">
+                          Winner advances to match #{match.nextMatchId.split('-')[1]}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         );
       })}
 
@@ -311,7 +393,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };
 
