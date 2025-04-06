@@ -44,7 +44,8 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
   const [editTime, setEditTime] = React.useState('');
   
   const getPlayerName = (playerId: string) => {
-    return players.find(player => player.id === playerId)?.name || 'Unknown';
+    const player = players.find(player => player.id === playerId);
+    return player ? player.name : 'Unknown';
   };
   
   const handleOpenScheduleDialog = (match: Match) => {
@@ -120,7 +121,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
       groups[stage] = matches.filter(match => match.stage === stage);
     });
     
-    return displayOrder.filter(stage => groups[stage]?.length);
+    return displayOrder.filter(stage => (groups[stage]?.length ?? 0) > 0);
   }, [matches]);
 
   if (winner) {
@@ -134,14 +135,6 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
         <p className="text-muted-foreground mt-4">
           Congratulations to {winner.name} for winning the tournament!
         </p>
-      </div>
-    );
-  }
-
-  if (matches.length === 0) {
-    return (
-      <div className="text-center py-4 text-muted-foreground">
-        No matches generated yet. Click the button below to generate matches.
       </div>
     );
   }
