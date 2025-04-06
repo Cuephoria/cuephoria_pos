@@ -199,7 +199,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
       initial="hidden"
       animate="visible"
       variants={stageVariants}
-      className="space-y-12"
+      className="space-y-12 bg-background"
     >
       {groupedMatches.map((stage, stageIndex) => {
         const stageMatches = matches.filter(match => match.stage === stage);
@@ -235,24 +235,50 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                   variants={matchVariants}
                   className="h-full"
                 >
-                  <Card className={`h-full transition-all duration-300 hover:shadow-lg border-l-4 ${match.status === 'cancelled' ? 'border-l-gray-400 bg-gray-50' : match.completed ? 'border-l-green-500 bg-green-50/30' : 'border-l-amber-500'}`}>
-                    <CardContent className="p-5">
-                      <div className="flex justify-between items-center">
+                  <Card 
+                    className={`
+                      h-full 
+                      transition-all 
+                      duration-300 
+                      hover:shadow-lg 
+                      border-l-4 
+                      bg-card 
+                      ${match.status === 'cancelled' ? 'border-l-gray-400' : 
+                        match.completed ? 'border-l-green-500' : 
+                        'border-l-amber-500'}
+                      relative 
+                      overflow-hidden 
+                      group
+                    `}
+                  >
+                    {/* Subtle gradient overlay */}
+                    <div 
+                      className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity 
+                      bg-gradient-to-br from-primary to-secondary"
+                    ></div>
+
+                    <CardContent className="p-5 relative z-10">
+                      <div className="flex justify-between items-center mb-3">
                         <div className="font-medium flex items-center space-x-2">
-                          <span className="px-2 py-1 bg-gray-100 rounded-md text-sm">
+                          <span className="px-2 py-1 bg-muted/20 rounded-md text-sm text-muted-foreground">
                             #{match.id.split('-')[1]}
                           </span>
                           {match.stage !== 'regular' && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-gray-200 uppercase">
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-muted/30 uppercase text-muted-foreground">
                               {match.stage.replace('_', ' ')}
                             </span>
                           )}
                         </div>
-                        <div className={`text-sm flex items-center ${
-                          match.status === 'completed' ? 'text-green-600' : 
-                          match.status === 'cancelled' ? 'text-red-600' : 
-                          'text-amber-600'
-                        }`}>
+                        <div 
+                          className={`
+                            text-sm 
+                            flex 
+                            items-center 
+                            ${match.status === 'completed' ? 'text-green-600' : 
+                              match.status === 'cancelled' ? 'text-red-600' : 
+                              'text-amber-600'}
+                          `}
+                        >
                           {getStatusIcon(match.status)}
                           {match.status === 'completed' ? (
                             `Winner: ${getPlayerName(match.winnerId || '')}`
@@ -263,7 +289,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                       </div>
                       
                       {match.scheduledDate && match.scheduledTime && (
-                        <div className="mt-3 flex items-center text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <div className="mt-3 flex items-center text-xs text-muted-foreground bg-muted/10 p-2 rounded">
                           <Calendar className="h-3 w-3 mr-1" />
                           <span>{format(new Date(match.scheduledDate), 'dd MMM yyyy')}</span>
                           <Clock className="h-3 w-3 ml-3 mr-1" />
@@ -272,7 +298,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="ml-1 h-5 text-xs p-0 hover:bg-transparent text-blue-500"
+                              className="ml-1 h-5 text-xs p-0 hover:bg-transparent text-primary"
                               onClick={() => handleOpenScheduleDialog(match)}
                             >
                               (Edit)
@@ -281,16 +307,65 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                         </div>
                       )}
                       
-                      <div className="mt-5 flex justify-between items-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 shadow-sm">
-                        <div className={`flex-1 text-center p-2 font-medium ${match.status !== 'cancelled' && match.winnerId === match.player1Id ? 'bg-green-100 rounded text-green-800' : ''}`}>
+                      <div 
+                        className="
+                          mt-5 
+                          flex 
+                          justify-between 
+                          items-center 
+                          bg-muted/10 
+                          rounded-lg 
+                          p-3 
+                          shadow-sm 
+                          border 
+                          border-muted/20
+                        "
+                      >
+                        <div 
+                          className={`
+                            flex-1 
+                            text-center 
+                            p-2 
+                            font-medium 
+                            rounded 
+                            transition-colors 
+                            ${match.status !== 'cancelled' && match.winnerId === match.player1Id 
+                              ? 'bg-green-100/30 text-green-800' 
+                              : 'text-foreground'}
+                          `}
+                        >
                           {getPlayerName(match.player1Id)}
                         </div>
-                        <div className="mx-2 text-lg flex items-center justify-center w-8 h-8 rounded-full bg-gray-200">
-                          <ArrowRight className="h-4 w-4" />
+                        <div 
+                          className="
+                            mx-2 
+                            text-lg 
+                            flex 
+                            items-center 
+                            justify-center 
+                            w-8 
+                            h-8 
+                            rounded-full 
+                            bg-muted/20
+                          "
+                        >
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        <div className={`flex-1 text-center p-2 font-medium ${match.status !== 'cancelled' && match.winnerId === match.player2Id ? 'bg-green-100 rounded text-green-800' : ''}`}>
+                        <div 
+                          className={`
+                            flex-1 
+                            text-center 
+                            p-2 
+                            font-medium 
+                            rounded 
+                            transition-colors 
+                            ${match.status !== 'cancelled' && match.winnerId === match.player2Id 
+                              ? 'bg-green-100/30 text-green-800' 
+                              : 'text-foreground'}
+                          `}
+                        >
                           {match.player2Id ? getPlayerName(match.player2Id) : (
-                            <span className="text-gray-500 italic">Bye</span>
+                            <span className="text-muted-foreground italic">Bye</span>
                           )}
                         </div>
                       </div>
@@ -301,7 +376,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             <Select
                               onValueChange={(value) => updateMatchResult(match.id, value)}
                             >
-                              <SelectTrigger className="bg-white">
+                              <SelectTrigger className="bg-muted/10 border-muted/20">
                                 <SelectValue placeholder="Select winner" />
                               </SelectTrigger>
                               <SelectContent>
@@ -322,7 +397,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             <Button 
                               variant="outline" 
                               size="sm"
-                              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                              className="w-full text-destructive border-destructive/20 hover:bg-destructive/10"
                               onClick={() => updateMatchStatus(match.id, 'cancelled')}
                             >
                               <AlertTriangle className="h-4 w-4 mr-2" /> Cancel Match
@@ -345,7 +420,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                       )}
                       
                       {match.nextMatchId && (
-                        <div className="mt-3 text-xs text-gray-500 text-center italic">
+                        <div className="mt-3 text-xs text-muted-foreground text-center italic">
                           Winner advances to match #{match.nextMatchId.split('-')[1]}
                         </div>
                       )}
