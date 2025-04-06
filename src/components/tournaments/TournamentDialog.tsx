@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogHeader, 
@@ -23,6 +24,7 @@ import TournamentPlayerSection from './TournamentPlayerSection';
 import TournamentMatchSection from './TournamentMatchSection';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { AlertOctagon } from 'lucide-react';
 
 interface TournamentDialogProps {
   open: boolean;
@@ -146,10 +148,21 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
   };
 
   const generateBracket = () => {
+    // Check for even number of players
     if (players.length < 2) {
       toast({
         title: "Not enough players",
         description: "You need at least 2 players to generate a tournament bracket.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate even number of players
+    if (players.length % 2 !== 0) {
+      toast({
+        title: "Invalid number of players",
+        description: "Tournament requires an even number of players to generate fair brackets.",
         variant: "destructive"
       });
       return;
@@ -177,24 +190,7 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       if (players.length === 2) {
         finalMatch.player1Id = shuffledPlayers[0].id;
         finalMatch.player2Id = shuffledPlayers[1].id;
-      } else if (players.length === 3) {
-        finalMatch.player1Id = shuffledPlayers[0].id;
-        
-        const semifinal: Match = {
-          id: `match-${matchId++}`,
-          round: 1,
-          player1Id: shuffledPlayers[1].id,
-          player2Id: shuffledPlayers[2].id,
-          completed: false,
-          scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
-          scheduledTime: '16:00',
-          status: 'scheduled',
-          stage: 'semi_final',
-          nextMatchId: finalMatch.id
-        };
-        
-        matchesGenerated.push(semifinal);
-      } else {
+      } else if (players.length === 4) {
         const semifinal1: Match = {
           id: `match-${matchId++}`,
           round: 1,
@@ -264,31 +260,27 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       };
       matchesGenerated.push(semifinal1, semifinal2);
       
-      const byeCount = 8 - players.length;
-      const playerIndices = Array.from({ length: 8 }, (_, i) => i < players.length ? i : -1);
-      
+      // All quarter-finals (everyone has a match)
       for (let i = 0; i < 4; i++) {
-        const player1Index = playerIndices[i * 2];
-        const player2Index = playerIndices[i * 2 + 1];
-        
-        const hasBye = player1Index >= 0 && player2Index < 0;
+        const player1Index = i * 2;
+        const player2Index = i * 2 + 1;
         
         const quarterFinal: Match = {
           id: `match-${matchId++}`,
           round: 1,
-          player1Id: player1Index >= 0 ? shuffledPlayers[player1Index].id : '',
-          player2Id: player2Index >= 0 ? shuffledPlayers[player2Index].id : '',
-          completed: hasBye,
-          winnerId: hasBye ? shuffledPlayers[player1Index].id : undefined,
+          player1Id: shuffledPlayers[player1Index].id,
+          player2Id: shuffledPlayers[player2Index].id,
+          completed: false,
           scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
           scheduledTime: `${15 + i}:00`,
-          status: hasBye ? 'completed' : 'scheduled',
+          status: 'scheduled',
           stage: 'quarter_final',
           nextMatchId: i < 2 ? semifinal1.id : semifinal2.id
         };
         matchesGenerated.push(quarterFinal);
       }
     } else {
+      // For larger tournaments - everyone plays round robin first
       for (let i = 0; i < shuffledPlayers.length; i++) {
         for (let j = i + 1; j < shuffledPlayers.length; j++) {
           const match: Match = {
@@ -728,20 +720,43 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
           
           <TabsContent value="matches">
             {matches.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 border border-muted/20 rounded-lg bg-muted/5">
                 <p className="text-muted-foreground mb-4">
                   No matches generated yet. Click the button below to generate matches.
                 </p>
-                <Button 
-                  onClick={generateBracket}
-                  disabled={players.length < 2}
-                >
-                  Generate Tournament Bracket
-                </Button>
-                {players.length < 2 && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Add at least 2 players in the Players tab first
-                  </p>
+                
+                {players.length < 2 ? (
+                  <div className="space-y-2">
+                    <Button 
+                      disabled
+                      variant="outline"
+                    >
+                      Generate Tournament Bracket
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Add at least 2 players in the Players tab first
+                    </p>
+                  </div>
+                ) : players.length % 2 !== 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200">
+                      <AlertOctagon className="h-5 w-5" />
+                      <p className="font-medium">Tournament requires an even number of players</p>
+                    </div>
+                    <Button 
+                      disabled
+                      variant="outline"
+                    >
+                      Generate Tournament Bracket
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Add one more player or remove a player to have an even number
+                    </p>
+                  </div>
+                ) : (
+                  <Button onClick={generateBracket}>
+                    Generate Tournament Bracket
+                  </Button>
                 )}
               </div>
             ) : (

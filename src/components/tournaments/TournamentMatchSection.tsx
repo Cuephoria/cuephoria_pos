@@ -46,7 +46,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
   
   const getPlayerName = (playerId: string) => {
     const player = players.find(player => player.id === playerId);
-    return player ? player.name : 'Bye';
+    return player ? player.name : 'Unknown Player';
   };
   
   const handleOpenScheduleDialog = (match: Match) => {
@@ -154,7 +154,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
-        className="p-6 text-center bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl shadow-lg"
+        className="p-6 text-center bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl shadow-lg border border-yellow-200"
       >
         <motion.div 
           className="flex justify-center mb-4"
@@ -165,7 +165,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
           <Trophy className="h-24 w-24 text-yellow-500" />
         </motion.div>
         <motion.h3 
-          className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-amber-600"
+          className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-600 to-amber-600 border-b-2 border-yellow-200 pb-2 inline-block"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
@@ -173,7 +173,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
           Tournament Winner
         </motion.h3>
         <motion.p 
-          className="text-2xl font-medium mt-4 text-yellow-800"
+          className="text-2xl font-medium mt-4 text-yellow-800 border border-yellow-300 px-6 py-3 rounded-md inline-block bg-yellow-50"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.8, duration: 0.5 }}
@@ -184,7 +184,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 1, duration: 0.5 }}
-          className="mt-8 px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-600 rounded-lg shadow-md text-white"
+          className="mt-8 px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-600 rounded-lg shadow-md text-white border border-amber-500"
         >
           <p className="font-medium">
             Congratulations to {winner.name} for winning the tournament!
@@ -220,7 +220,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
-                <Badge className={`text-md px-6 py-2 ${stageInfo.color} shadow-md`}>
+                <Badge className={`text-md px-6 py-2 ${stageInfo.color} shadow-md border border-white/20`}>
                   {stageInfo.icon}
                   {stageInfo.label}
                 </Badge>
@@ -242,13 +242,14 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                       duration-300 
                       hover:shadow-lg 
                       border-l-4 
-                      bg-card 
+                      bg-background 
                       ${match.status === 'cancelled' ? 'border-l-gray-400' : 
                         match.completed ? 'border-l-green-500' : 
                         'border-l-amber-500'}
                       relative 
                       overflow-hidden 
                       group
+                      border border-muted/30
                     `}
                   >
                     {/* Subtle gradient overlay */}
@@ -260,11 +261,11 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                     <CardContent className="p-5 relative z-10">
                       <div className="flex justify-between items-center mb-3">
                         <div className="font-medium flex items-center space-x-2">
-                          <span className="px-2 py-1 bg-muted/20 rounded-md text-sm text-muted-foreground">
+                          <span className="px-2 py-1 bg-muted/20 rounded-md text-sm text-muted-foreground border border-muted/30">
                             #{match.id.split('-')[1]}
                           </span>
                           {match.stage !== 'regular' && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-muted/30 uppercase text-muted-foreground">
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded bg-muted/30 uppercase text-muted-foreground border border-muted/40">
                               {match.stage.replace('_', ' ')}
                             </span>
                           )}
@@ -277,6 +278,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             ${match.status === 'completed' ? 'text-green-600' : 
                               match.status === 'cancelled' ? 'text-red-600' : 
                               'text-amber-600'}
+                            border border-muted/30 px-2 py-1 rounded
                           `}
                         >
                           {getStatusIcon(match.status)}
@@ -289,7 +291,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                       </div>
                       
                       {match.scheduledDate && match.scheduledTime && (
-                        <div className="mt-3 flex items-center text-xs text-muted-foreground bg-muted/10 p-2 rounded">
+                        <div className="mt-3 flex items-center text-xs text-muted-foreground bg-muted/10 p-2 rounded border border-muted/20">
                           <Calendar className="h-3 w-3 mr-1" />
                           <span>{format(new Date(match.scheduledDate), 'dd MMM yyyy')}</span>
                           <Clock className="h-3 w-3 ml-3 mr-1" />
@@ -330,8 +332,8 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             rounded 
                             transition-colors 
                             ${match.status !== 'cancelled' && match.winnerId === match.player1Id 
-                              ? 'bg-green-100/30 text-green-800' 
-                              : 'text-foreground'}
+                              ? 'bg-green-100/30 text-green-800 border border-green-200' 
+                              : 'text-foreground border border-muted/20'}
                           `}
                         >
                           {getPlayerName(match.player1Id)}
@@ -347,6 +349,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             h-8 
                             rounded-full 
                             bg-muted/20
+                            border border-muted/30
                           "
                         >
                           <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -360,13 +363,11 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                             rounded 
                             transition-colors 
                             ${match.status !== 'cancelled' && match.winnerId === match.player2Id 
-                              ? 'bg-green-100/30 text-green-800' 
-                              : 'text-foreground'}
+                              ? 'bg-green-100/30 text-green-800 border border-green-200' 
+                              : 'text-foreground border border-muted/20'}
                           `}
                         >
-                          {match.player2Id ? getPlayerName(match.player2Id) : (
-                            <span className="text-muted-foreground italic">Bye</span>
-                          )}
+                          {getPlayerName(match.player2Id)}
                         </div>
                       </div>
                       
@@ -420,7 +421,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
                       )}
                       
                       {match.nextMatchId && (
-                        <div className="mt-3 text-xs text-muted-foreground text-center italic">
+                        <div className="mt-3 text-xs text-muted-foreground text-center italic border-t border-muted/20 pt-2">
                           Winner advances to match #{match.nextMatchId.split('-')[1]}
                         </div>
                       )}
