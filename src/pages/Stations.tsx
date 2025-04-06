@@ -6,10 +6,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Gamepad2, Plus, Table2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AddStationDialog from '@/components/AddStationDialog';
+import EditStationDialog from '@/components/EditStationDialog';
+import { Station } from '@/types/pos.types';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Stations = () => {
-  const { stations } = usePOS();
+  const { stations, setStations } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [editingStation, setEditingStation] = useState<Station | null>(null);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
   
   // Separate stations by type
   const ps5Stations = stations.filter(station => station.type === 'ps5');
@@ -18,6 +24,46 @@ const Stations = () => {
   // Count active stations
   const activePs5 = ps5Stations.filter(s => s.isOccupied).length;
   const activeBall = ballStations.filter(s => s.isOccupied).length;
+
+  // Edit station handler
+  const handleEditStation = (station: Station) => {
+    setEditingStation(station);
+    setOpenEditDialog(true);
+  };
+
+  // Save edited station details
+  const saveStationEdit = async (stationId: string, name: string, hourlyRate: number): Promise<boolean> => {
+    try {
+      // Update in Supabase
+      const { error } = await supabase
+        .from('stations')
+        .update({
+          name: name,
+          hourly_rate: hourlyRate
+        })
+        .eq('id', stationId);
+
+      if (error) {
+        console.error('Error updating station:', error);
+        toast.error('Failed to update station details');
+        return false;
+      }
+
+      // Update local state
+      setStations(prev => prev.map(station => 
+        station.id === stationId 
+          ? { ...station, name, hourlyRate } 
+          : station
+      ));
+      
+      toast.success('Station updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error in saveStationEdit:', error);
+      toast.error('An error occurred while updating station');
+      return false;
+    }
+  };
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
@@ -37,6 +83,14 @@ const Stations = () => {
       <AddStationDialog 
         open={openAddDialog} 
         onOpenChange={setOpenAddDialog} 
+      />
+
+      {/* Edit Station Dialog */}
+      <EditStationDialog
+        open={openEditDialog}
+        onOpenChange={setOpenEditDialog}
+        station={editingStation}
+        onSave={saveStationEdit}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
@@ -84,7 +138,10 @@ const Stations = () => {
               })
               .map((station, index) => (
                 <div key={station.id} className="animate-scale-in" style={{animationDelay: `${index * 100}ms`}}>
-                  <StationCard station={station} />
+                  <StationCard 
+                    station={station} 
+                    onEdit={() => handleEditStation(station)}
+                  />
                 </div>
               ))
             }
@@ -110,7 +167,10 @@ const Stations = () => {
               })
               .map((station, index) => (
                 <div key={station.id} className="animate-scale-in" style={{animationDelay: `${index * 100 + 300}ms`}}>
-                  <StationCard station={station} />
+                  <StationCard 
+                    station={station} 
+                    onEdit={() => handleEditStation(station)}
+                  />
                 </div>
               ))
             }

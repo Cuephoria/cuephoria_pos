@@ -6,16 +6,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield } from 'lucide-react';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, HelpCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ForgotPasswordDialog from '@/components/ForgotPasswordDialog';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loginType, setLoginType] = useState('admin');
-  const { login } = useAuth();
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const { login, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [animationClass, setAnimationClass] = useState('');
@@ -66,6 +68,10 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePasswordReset = async (username: string, newPassword: string, masterKey?: string) => {
+    return await resetPassword(username, newPassword, masterKey);
   };
 
   return (
@@ -184,6 +190,18 @@ const Login = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
                 />
               </div>
+              
+              <div className="flex justify-end">
+                <Button 
+                  variant="link" 
+                  type="button"
+                  className="text-cuephoria-lightpurple/80 hover:text-cuephoria-lightpurple p-0 h-auto text-xs"
+                  onClick={() => setForgotPasswordOpen(true)}
+                >
+                  <HelpCircle className="h-3 w-3 mr-1" />
+                  Forgot Password?
+                </Button>
+              </div>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
@@ -213,6 +231,14 @@ const Login = () => {
           </form>
         </Card>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <ForgotPasswordDialog
+        open={forgotPasswordOpen}
+        onOpenChange={setForgotPasswordOpen}
+        isAdmin={loginType === 'admin'}
+        onResetPassword={handlePasswordReset}
+      />
     </div>
   );
 };
