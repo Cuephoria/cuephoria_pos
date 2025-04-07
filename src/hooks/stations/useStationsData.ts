@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -69,6 +70,66 @@ export const useStationsData = () => {
       setStations([]);
     } finally {
       setStationsLoading(false);
+    }
+  };
+  
+  const updateStation = async (stationId: string, name: string, hourlyRate: number) => {
+    try {
+      // Check if the station exists and is not occupied
+      const station = stations.find(s => s.id === stationId);
+      if (!station) {
+        console.error('Station not found:', stationId);
+        toast({
+          title: 'Error',
+          description: 'Station not found',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Format data for update
+      const updateData = {
+        name,
+        hourly_rate: hourlyRate
+      };
+      
+      // Update in Supabase
+      const { error } = await supabase
+        .from('stations')
+        .update(updateData)
+        .eq('id', stationId);
+        
+      if (error) {
+        console.error('Error updating station in Supabase:', error);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to update station in database',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      // Update local state
+      setStations(prev => prev.map(s => 
+        s.id === stationId 
+          ? { ...s, name, hourlyRate } 
+          : s
+      ));
+      
+      toast({
+        title: 'Station Updated',
+        description: 'The station has been updated successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in updateStation:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update station',
+        variant: 'destructive'
+      });
+      return false;
     }
   };
   
@@ -149,6 +210,7 @@ export const useStationsData = () => {
     stationsLoading,
     stationsError,
     refreshStations,
-    deleteStation
+    deleteStation,
+    updateStation
   };
 };

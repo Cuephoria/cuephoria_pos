@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,20 +5,38 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield } from 'lucide-react';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loginType, setLoginType] = useState('admin');
-  const { login } = useAuth();
+  const { login, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [animationClass, setAnimationClass] = useState('');
   const isMobile = useIsMobile();
+  
+  const [forgotDialogOpen, setForgotDialogOpen] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState('');
+  const [masterKey, setMasterKey] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1);
+  const [forgotPasswordType, setForgotPasswordType] = useState('admin');
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -68,6 +85,262 @@ const Login = () => {
     }
   };
 
+  const handleForgotPasswordClick = (type: string) => {
+    setForgotPasswordType(type);
+    setForgotPasswordStep(1);
+    setForgotUsername('');
+    setMasterKey('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setForgotDialogOpen(true);
+  };
+
+  const handleNextStep = () => {
+    if (forgotPasswordType === 'staff') {
+      toast({
+        title: 'Staff Password Reset',
+        description: 'Please contact your administrator to reset your password.',
+      });
+      setForgotDialogOpen(false);
+      return;
+    }
+
+    if (forgotPasswordStep === 1) {
+      if (!forgotUsername) {
+        toast({
+          title: 'Error',
+          description: 'Please enter your username',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setForgotPasswordStep(2);
+    } else if (forgotPasswordStep === 2) {
+      if (masterKey === '2580') {
+        setForgotPasswordStep(3);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Incorrect master key',
+          variant: 'destructive',
+        });
+      }
+    } else if (forgotPasswordStep === 3) {
+      handleResetPassword();
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Please enter and confirm your new password',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const success = await resetPassword(forgotUsername, newPassword);
+      
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'Password has been reset successfully',
+        });
+        setForgotDialogOpen(false);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to reset password. Username may not exist.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const renderForgotPasswordContent = () => {
+    if (forgotPasswordType === 'staff') {
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound size={16} className="text-cuephoria-orange" />
+              Staff Password Reset
+            </DialogTitle>
+            <DialogDescription>
+              Staff members need to contact an administrator to reset their password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 text-center">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              Please contact your administrator for password assistance.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => setForgotDialogOpen(false)}
+              className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </>
+      );
+    }
+
+    if (forgotPasswordStep === 1) {
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound size={16} className="text-cuephoria-orange" />
+              Admin Password Reset
+            </DialogTitle>
+            <DialogDescription>
+              Enter your admin username to begin the password reset process.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="forgotUsername" className="text-sm font-medium">Username</label>
+                <Input
+                  id="forgotUsername"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={forgotUsername}
+                  onChange={(e) => setForgotUsername(e.target.value)}
+                  className="bg-background/50 border-cuephoria-lightpurple/30"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForgotDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleNextStep} 
+              disabled={!forgotUsername}
+              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+            >
+              Next
+            </Button>
+          </DialogFooter>
+        </>
+      );
+    }
+
+    if (forgotPasswordStep === 2) {
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield size={16} className="text-cuephoria-orange" />
+              Master Key Verification
+            </DialogTitle>
+            <DialogDescription>
+              Enter the master key to verify your identity.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="masterKey" className="text-sm font-medium">Master Key</label>
+                <Input
+                  id="masterKey"
+                  type="password"
+                  placeholder="Enter master key"
+                  value={masterKey}
+                  onChange={(e) => setMasterKey(e.target.value)}
+                  className="bg-background/50 border-cuephoria-lightpurple/30"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForgotDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleNextStep} 
+              disabled={!masterKey}
+              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+            >
+              Verify
+            </Button>
+          </DialogFooter>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Lock size={16} className="text-cuephoria-orange" />
+            Set New Password
+          </DialogTitle>
+          <DialogDescription>
+            Create a new password for your account.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="newPassword" className="text-sm font-medium">New Password</label>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="bg-background/50 border-cuephoria-lightpurple/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="bg-background/50 border-cuephoria-lightpurple/30"
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setForgotDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleResetPassword} 
+            disabled={!newPassword || !confirmPassword || resetLoading}
+            className="bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+          >
+            {resetLoading ? "Resetting..." : "Reset Password"}
+          </Button>
+        </DialogFooter>
+      </>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4">
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -76,7 +349,6 @@ const Login = () => {
         
         <div className="absolute top-1/3 right-1/4 w-48 h-64 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent rounded-tr-[50%]"></div>
         
-        {/* Game-themed floating icons */}
         <div className="absolute top-[8%] left-[12%] text-cuephoria-lightpurple opacity-20 animate-float">
           <Gamepad size={isMobile ? 24 : 36} className="animate-wiggle" />
         </div>
@@ -102,13 +374,11 @@ const Login = () => {
           <Joystick size={isMobile ? 28 : 38} className="animate-wiggle" />
         </div>
         
-        {/* Decorative lines */}
         <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent"></div>
         <div className="absolute top-0 left-1/2 h-full w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent"></div>
         <div className="absolute top-1/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent"></div>
         <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-green/20 to-transparent"></div>
         
-        {/* Grid background */}
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
       </div>
       
@@ -184,6 +454,17 @@ const Login = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
                 />
               </div>
+
+              <div className="text-right">
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-cuephoria-lightpurple hover:text-accent p-0 h-auto text-xs"
+                  onClick={() => handleForgotPasswordClick(loginType)}
+                >
+                  Forgot password?
+                </Button>
+              </div>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
@@ -213,6 +494,12 @@ const Login = () => {
           </form>
         </Card>
       </div>
+
+      <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-background border-cuephoria-purple">
+          {renderForgotPasswordContent()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
