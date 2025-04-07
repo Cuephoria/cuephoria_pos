@@ -1,212 +1,138 @@
 
-// Import necessary components and update the component to include player name editing functionality
-
 import React, { useState, useEffect } from 'react';
-import { Tournament, Player, Match, MatchStatus } from '@/types/tournament.types';
-import TournamentPlayerSection from './TournamentPlayerSection';
-import TournamentMatchSection from './TournamentMatchSection';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
-import { generateMatches, determineWinner } from '@/services/tournamentService';
-import { toast } from 'sonner';
-import { generateId } from '@/utils/pos.utils';
-import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { convertToSupabaseTournament } from '@/types/tournament.types';
+import { Plus, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import TournamentList from './TournamentList';
+import TournamentDialog from './TournamentDialog';
+import { Tournament } from '@/types/tournament.types';
+import { useTournamentOperations } from '@/services/tournamentService';
+import { useToast } from '@/hooks/use-toast';
 
-interface TournamentManagementProps {
-  tournament: Tournament;
-  onSave: (updatedTournament: Tournament) => Promise<void>;
-  isLoading?: boolean;
-}
+const TournamentManagement = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const tournamentOps = useTournamentOperations();
+  const { toast } = useToast();
 
-const TournamentManagement: React.FC<TournamentManagementProps> = ({
-  tournament,
-  onSave,
-  isLoading = false
-}) => {
-  const [players, setPlayers] = useState<Player[]>(tournament.players || []);
-  const [matches, setMatches] = useState<Match[]>(tournament.matches || []);
-  const [activeTab, setActiveTab] = useState('players');
-  const [saving, setSaving] = useState(false);
-  const [winner, setWinner] = useState<Player | undefined>(tournament.winner);
-
+  // Fetch tournaments from Supabase on component mount
   useEffect(() => {
-    setPlayers(tournament.players || []);
-    setMatches(tournament.matches || []);
-    setWinner(tournament.winner);
-  }, [tournament]);
-
-  const handleGenerateMatches = () => {
-    if (players.length < 2) {
-      toast.error('You need at least 2 players to generate matches.');
-      return;
-    }
-
-    const generatedMatches = generateMatches(players);
-    setMatches(generatedMatches);
-    setActiveTab('matches');
-    
-    handleSave(players, generatedMatches, winner);
-  };
-
-  const handleUpdateMatchResult = (matchId: string, winnerId: string) => {
-    const updatedMatches = [...matches];
-    const matchIndex = updatedMatches.findIndex(m => m.id === matchId);
-    
-    if (matchIndex === -1) return;
-    
-    // Update the current match
-    updatedMatches[matchIndex] = {
-      ...updatedMatches[matchIndex],
-      winnerId,
-      completed: true,
-      status: 'completed' as MatchStatus
+    const fetchTournamentsData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await tournamentOps.fetchTournaments();
+        setTournaments(data);
+      } catch (error) {
+        console.error('Error fetching tournaments:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load tournaments. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
     
-    // Find and update the next match if it exists
-    const currentMatch = updatedMatches[matchIndex];
-    if (currentMatch.nextMatchId) {
-      const nextMatchIndex = updatedMatches.findIndex(m => m.id === currentMatch.nextMatchId);
-      
-      if (nextMatchIndex !== -1) {
-        const nextMatch = updatedMatches[nextMatchIndex];
-        
-        // Determine which player slot to update in the next match
-        if (nextMatch.player1Id === '') {
-          updatedMatches[nextMatchIndex] = {
-            ...nextMatch,
-            player1Id: winnerId
-          };
-        } else if (nextMatch.player2Id === '') {
-          updatedMatches[nextMatchIndex] = {
-            ...nextMatch,
-            player2Id: winnerId
-          };
-        }
-      }
-    }
-    
-    // Determine if we have a tournament winner
-    const updatedWinner = determineWinner(updatedMatches, players);
-    setWinner(updatedWinner);
-    
-    setMatches(updatedMatches);
-    handleSave(players, updatedMatches, updatedWinner);
-  };
+    fetchTournamentsData();
+  }, []);
 
-  const handleUpdateMatchSchedule = (matchId: string, date: string, time: string) => {
-    const updatedMatches = matches.map(match => {
-      if (match.id === matchId) {
-        return {
-          ...match,
-          scheduledDate: date,
-          scheduledTime: time
-        };
+  const handleAddTournament = async (tournament: Tournament) => {
+    // Add console logs to debug
+    console.log('Tournament being saved:', tournament);
+    console.log('Is editing mode:', editingTournament !== null);
+    
+    const savedTournament = await tournamentOps.saveTournament(tournament);
+    console.log('Result from save operation:', savedTournament);
+    
+    if (savedTournament) {
+      if (editingTournament) {
+        // Update existing tournament in local state
+        setTournaments(prevTournaments => prevTournaments.map(t => 
+          t.id === savedTournament.id ? savedTournament : t
+        ));
+        toast({
+          title: "Tournament Updated",
+          description: `Tournament "${savedTournament.name}" was updated successfully.`,
+        });
+      } else {
+        // Add new tournament to local state
+        setTournaments(prevTournaments => [savedTournament, ...prevTournaments]);
+        toast({
+          title: "Tournament Created",
+          description: `Tournament "${savedTournament.name}" was created successfully.`,
+        });
       }
-      return match;
-    });
-    
-    setMatches(updatedMatches);
-    handleSave(players, updatedMatches, winner);
-  };
-
-  const handleUpdateMatchStatus = (matchId: string, status: MatchStatus) => {
-    const updatedMatches = matches.map(match => {
-      if (match.id === matchId) {
-        return {
-          ...match,
-          status
-        };
-      }
-      return match;
-    });
-    
-    setMatches(updatedMatches);
-    handleSave(players, updatedMatches, winner);
-  };
-  
-  // New function to update player names across all matches
-  const updatePlayerName = (playerId: string, newName: string) => {
-    // Update the player list first
-    const updatedPlayers = players.map(player => 
-      player.id === playerId ? { ...player, name: newName } : player
-    );
-    setPlayers(updatedPlayers);
-    
-    // No need to update matches since we reference players by ID
-    handleSave(updatedPlayers, matches, winner);
-  };
-
-  const handleSave = async (
-    currentPlayers: Player[], 
-    currentMatches: Match[], 
-    currentWinner?: Player
-  ) => {
-    setSaving(true);
-    
-    try {
-      const updatedTournament: Tournament = {
-        ...tournament,
-        players: currentPlayers,
-        matches: currentMatches,
-        winner: currentWinner,
-        status: currentWinner ? 'completed' : currentMatches.length > 0 ? 'in-progress' : 'upcoming'
-      };
-      
-      await onSave(updatedTournament);
-      toast.success('Tournament saved successfully.');
-    } catch (error) {
-      console.error('Error saving tournament:', error);
-      toast.error('Failed to save tournament changes.');
-    } finally {
-      setSaving(false);
+      setIsDialogOpen(false);
+      setEditingTournament(null);
     }
   };
+
+  const handleDeleteTournament = async (id: string) => {
+    const tournament = tournaments.find(t => t.id === id);
+    if (!tournament) return;
+    
+    const success = await tournamentOps.deleteTournament(id, tournament.name);
+    if (success) {
+      setTournaments(tournaments.filter(t => t.id !== id));
+    }
+  };
+
+  const handleEditTournament = (tournament: Tournament) => {
+    console.log('Editing tournament:', tournament);
+    setEditingTournament(tournament);
+    setIsDialogOpen(true);
+  };
+
+  const filteredTournaments = searchQuery 
+    ? tournaments.filter(t => 
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.gameType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.gameTitle?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : tournaments;
 
   return (
-    <Card className="bg-gray-950/50 border-gray-800">
-      <CardContent className="p-5 sm:p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="players">Players</TabsTrigger>
-            <TabsTrigger value="matches">Fixtures</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="players" className="space-y-4 animate-fade-in">
-            <TournamentPlayerSection 
-              players={players} 
-              setPlayers={setPlayers} 
-              matchesExist={matches.length > 0}
-              updatePlayerName={updatePlayerName} // Pass the new function
-            />
-            
-            <div className="flex justify-end pt-4">
-              <Button 
-                onClick={handleGenerateMatches} 
-                disabled={players.length < 2 || saving || isLoading}
-                className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
-              >
-                {(saving || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {matches.length > 0 ? 'Regenerate Fixtures' : 'Generate Fixtures'}
-              </Button>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="matches" className="animate-fade-in">
-            <TournamentMatchSection 
-              matches={matches}
-              players={players}
-              updateMatchResult={handleUpdateMatchResult}
-              updateMatchSchedule={handleUpdateMatchSchedule}
-              updateMatchStatus={handleUpdateMatchStatus}
-              winner={winner}
-            />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Tournament Management</h2>
+        <Button onClick={() => setIsDialogOpen(true)} className="bg-cuephoria-purple hover:bg-cuephoria-lightpurple">
+          <Plus className="mr-2 h-4 w-4" /> Add Tournament
+        </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search tournaments..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin h-8 w-8 border-4 border-cuephoria-purple border-t-transparent rounded-full"></div>
+        </div>
+      ) : (
+        <TournamentList 
+          tournaments={filteredTournaments} 
+          onEdit={handleEditTournament}
+          onDelete={handleDeleteTournament}
+        />
+      )}
+
+      <TournamentDialog 
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleAddTournament}
+        tournament={editingTournament}
+      />
+    </div>
   );
 };
 
