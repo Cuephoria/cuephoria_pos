@@ -88,7 +88,6 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       setWinner(tournament.winner);
       setTournamentStatus(tournament.status);
       
-      // Set customGameTitle state if the tournament has a custom game title
       const gameTitle = tournament.gameTitle;
       if (gameTitle && gameTitle !== 'FIFA' && gameTitle !== 'COD') {
         setCustomGameTitle(true);
@@ -135,38 +134,45 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
     onSave(savedTournament);
   };
 
-  // Generate weekend date for matches starting from tournament date
   const generateWeekendDate = (startDate: Date, matchIndex: number): Date => {
     const date = new Date(startDate);
-    // Add days until we reach weekend (Saturday or Sunday)
-    date.setDate(date.getDate() + matchIndex * 2); // Space matches 2 days apart initially
-    
+    date.setDate(date.getDate() + matchIndex * 2);
     while (date.getDay() !== 0 && date.getDay() !== 6) {
       date.setDate(date.getDate() + 1);
     }
-    
     return date;
   };
 
-  // Create a tournament bracket based on the number of players
   const generateBracket = () => {
-    if (players.length < 2) return;
+    if (players.length < 2) {
+      toast({
+        title: "Invalid number of players",
+        description: "You need at least 2 players to generate a tournament bracket.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (players.length % 2 !== 0) {
+      toast({
+        title: "Invalid number of players",
+        description: "Tournament requires an even number of players. Please add or remove a player.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
     const matchesGenerated: Match[] = [];
     const tournamentDate = new Date(form.getValues().date);
     let matchId = 1;
     
-    // Determine tournament structure based on player count
     if (players.length <= 4) {
-      // Simple tournament: semifinals and final only
-      
-      // Create final match
       const finalMatch: Match = {
         id: `match-${matchId++}`,
         round: 2,
-        player1Id: '', // Will be determined by semifinals
-        player2Id: '', // Will be determined by semifinals
+        player1Id: '',
+        player2Id: '',
         completed: false,
         scheduledDate: format(generateWeekendDate(tournamentDate, 2), 'yyyy-MM-dd'),
         scheduledTime: '18:00',
@@ -175,13 +181,10 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       };
       matchesGenerated.push(finalMatch);
       
-      // Create semifinals
       if (players.length <= 2) {
-        // Only 2 players, go straight to final
         finalMatch.player1Id = shuffledPlayers[0].id;
         finalMatch.player2Id = shuffledPlayers[1].id;
       } else {
-        // 3-4 players, create semifinals
         const semifinal1: Match = {
           id: `match-${matchId++}`,
           round: 1,
@@ -199,12 +202,11 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
           id: `match-${matchId++}`,
           round: 1,
           player1Id: shuffledPlayers[2].id,
-          player2Id: players.length > 3 ? shuffledPlayers[3].id : '', // Handle bye if 3 players
-          completed: players.length <= 3, // Auto-complete if bye (3 players)
-          winnerId: players.length <= 3 ? shuffledPlayers[2].id : undefined, // Auto-win if bye
+          player2Id: shuffledPlayers[3].id,
+          completed: false,
           scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
           scheduledTime: '17:00',
-          status: players.length <= 3 ? 'completed' : 'scheduled',
+          status: 'scheduled',
           stage: 'semi_final',
           nextMatchId: finalMatch.id
         };
@@ -212,14 +214,11 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
         matchesGenerated.push(semifinal1, semifinal2);
       }
     } else if (players.length <= 8) {
-      // Quarter-finals, semifinals, and final
-      
-      // Create final
       const finalMatch: Match = {
         id: `match-${matchId++}`,
         round: 3,
-        player1Id: '', // Will be determined by semifinals
-        player2Id: '', // Will be determined by semifinals
+        player1Id: '',
+        player2Id: '',
         completed: false,
         scheduledDate: format(generateWeekendDate(tournamentDate, 4), 'yyyy-MM-dd'),
         scheduledTime: '18:00',
@@ -228,12 +227,11 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       };
       matchesGenerated.push(finalMatch);
       
-      // Create semifinals
       const semifinal1: Match = {
         id: `match-${matchId++}`,
         round: 2,
-        player1Id: '', // Will be determined by quarterfinals
-        player2Id: '', // Will be determined by quarterfinals
+        player1Id: '',
+        player2Id: '',
         completed: false,
         scheduledDate: format(generateWeekendDate(tournamentDate, 2), 'yyyy-MM-dd'),
         scheduledTime: '17:00',
@@ -245,8 +243,8 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       const semifinal2: Match = {
         id: `match-${matchId++}`,
         round: 2,
-        player1Id: '', // Will be determined by quarterfinals
-        player2Id: '', // Will be determined by quarterfinals
+        player1Id: '',
+        player2Id: '',
         completed: false,
         scheduledDate: format(generateWeekendDate(tournamentDate, 2), 'yyyy-MM-dd'),
         scheduledTime: '18:00',
@@ -256,25 +254,63 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       };
       matchesGenerated.push(semifinal1, semifinal2);
       
-      // Create quarterfinals
       for (let i = 0; i < 4; i++) {
         const quarterFinal: Match = {
           id: `match-${matchId++}`,
           round: 1,
-          player1Id: i * 2 < shuffledPlayers.length ? shuffledPlayers[i * 2].id : '',
-          player2Id: i * 2 + 1 < shuffledPlayers.length ? shuffledPlayers[i * 2 + 1].id : '',
-          completed: i * 2 + 1 >= shuffledPlayers.length, // Auto-complete if bye
-          winnerId: i * 2 + 1 >= shuffledPlayers.length ? shuffledPlayers[i * 2].id : undefined, // Auto-win if bye
+          player1Id: shuffledPlayers[i * 2].id,
+          player2Id: shuffledPlayers[i * 2 + 1].id,
+          completed: false,
           scheduledDate: format(generateWeekendDate(tournamentDate, 0), 'yyyy-MM-dd'),
-          scheduledTime: `${15 + i}:00`, // Staggered times
-          status: i * 2 + 1 >= shuffledPlayers.length ? 'completed' : 'scheduled',
+          scheduledTime: `${15 + i}:00`,
+          status: 'scheduled',
           stage: 'quarter_final',
           nextMatchId: i < 2 ? semifinal1.id : semifinal2.id
         };
         matchesGenerated.push(quarterFinal);
       }
     } else {
-      // For more than 8 players, generate traditional round-robin matches
+      const semifinal1: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '',
+        player2Id: '',
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, matchId), 'yyyy-MM-dd'),
+        scheduledTime: '17:00',
+        status: 'scheduled',
+        stage: 'semi_final'
+      };
+      
+      const semifinal2: Match = {
+        id: `match-${matchId++}`,
+        round: 2,
+        player1Id: '',
+        player2Id: '',
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, matchId), 'yyyy-MM-dd'),
+        scheduledTime: '18:00',
+        status: 'scheduled',
+        stage: 'semi_final'
+      };
+      
+      const final: Match = {
+        id: `match-${matchId++}`,
+        round: 3,
+        player1Id: '',
+        player2Id: '',
+        completed: false,
+        scheduledDate: format(generateWeekendDate(tournamentDate, matchId + 1), 'yyyy-MM-dd'),
+        scheduledTime: '19:00',
+        status: 'scheduled',
+        stage: 'final'
+      };
+      
+      semifinal1.nextMatchId = final.id;
+      semifinal2.nextMatchId = final.id;
+      
+      matchesGenerated.push(semifinal1, semifinal2, final);
+      
       for (let i = 0; i < shuffledPlayers.length; i++) {
         for (let j = i + 1; j < shuffledPlayers.length; j++) {
           const match: Match = {
@@ -291,54 +327,15 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
           matchesGenerated.push(match);
         }
       }
-      
-      // Add semifinals
-      const semifinal1: Match = {
-        id: `match-${matchId++}`,
-        round: 2,
-        player1Id: '', // To be determined
-        player2Id: '', // To be determined
-        completed: false,
-        scheduledDate: format(generateWeekendDate(tournamentDate, matchId), 'yyyy-MM-dd'),
-        scheduledTime: '17:00',
-        status: 'scheduled',
-        stage: 'semi_final'
-      };
-      
-      const semifinal2: Match = {
-        id: `match-${matchId++}`,
-        round: 2,
-        player1Id: '', // To be determined
-        player2Id: '', // To be determined
-        completed: false,
-        scheduledDate: format(generateWeekendDate(tournamentDate, matchId), 'yyyy-MM-dd'),
-        scheduledTime: '18:00',
-        status: 'scheduled',
-        stage: 'semi_final'
-      };
-      
-      // Add final
-      const final: Match = {
-        id: `match-${matchId++}`,
-        round: 3,
-        player1Id: '', // To be determined
-        player2Id: '', // To be determined
-        completed: false,
-        scheduledDate: format(generateWeekendDate(tournamentDate, matchId + 1), 'yyyy-MM-dd'),
-        scheduledTime: '19:00',
-        status: 'scheduled',
-        stage: 'final'
-      };
-      
-      // Link semifinals to final
-      semifinal1.nextMatchId = final.id;
-      semifinal2.nextMatchId = final.id;
-      
-      matchesGenerated.push(semifinal1, semifinal2, final);
     }
     
     setMatches(matchesGenerated);
     setTournamentStatus('in-progress');
+    
+    toast({
+      title: "Tournament Bracket Generated",
+      description: `Created ${matchesGenerated.length} matches for ${players.length} players`,
+    });
   };
 
   const updateMatchResult = (matchId: string, winnerId: string) => {
@@ -352,34 +349,26 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
     match.completed = true;
     match.status = 'completed';
     
-    // Update next match if there is one
     if (match.nextMatchId) {
       const nextMatchIndex = updatedMatches.findIndex(m => m.id === match.nextMatchId);
       if (nextMatchIndex !== -1) {
         const nextMatch = updatedMatches[nextMatchIndex];
         
-        // Find the other match that feeds into this same next match
         const siblingMatch = updatedMatches.find(m => 
           m.id !== match.id && m.nextMatchId === match.nextMatchId
         );
         
-        // If this is the first winner to advance to this match
         if (!nextMatch.player1Id || !nextMatch.player2Id) {
-          // If player1 is empty, fill it
           if (!nextMatch.player1Id) {
             nextMatch.player1Id = winnerId;
           } 
-          // If player1 is filled but player2 is empty, fill player2
           else if (!nextMatch.player2Id) {
             nextMatch.player2Id = winnerId;
           }
           
-          // If both players are set and the other match is completed, 
-          // we can potentially set the tournament winner
           if (nextMatch.player1Id && nextMatch.player2Id && 
               (!siblingMatch || siblingMatch.completed)) {
             
-            // If this is the final match and it's completed
             if (nextMatch.stage === 'final' && nextMatch.completed) {
               const winnerPlayer = players.find(p => p.id === nextMatch.winnerId);
               if (winnerPlayer) {
@@ -394,20 +383,16 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
     
     setMatches(updatedMatches);
     
-    // Check if we need to determine winners from round robin
     const finalMatches = updatedMatches.filter(m => m.stage === 'final');
     const semifinalMatches = updatedMatches.filter(m => m.stage === 'semi_final');
     
-    // If we have a traditional bracket tournament with empty semifinals
     if (finalMatches.length > 0 && semifinalMatches.length > 0 && 
         semifinalMatches.some(m => !m.player1Id || !m.player2Id)) {
-        
-      // Check if all regular matches are completed
+      
       const regularMatches = updatedMatches.filter(m => m.stage === 'regular');
       const allRegularCompleted = regularMatches.every(m => m.completed || m.status === 'cancelled');
       
       if (allRegularCompleted && regularMatches.length > 0) {
-        // Calculate win counts to find top performers
         const winCounts: Record<string, number> = {};
         regularMatches.forEach(match => {
           if (match.status === 'completed' && match.winnerId) {
@@ -415,13 +400,11 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
           }
         });
         
-        // Find top 4 players by win count
         const topPlayers = Object.entries(winCounts)
           .sort(([, winsA], [, winsB]) => winsB - winsA)
           .slice(0, 4)
           .map(([playerId]) => playerId);
         
-        // Update semifinals with top players if they don't yet have players
         if (topPlayers.length >= 2) {
           semifinalMatches.forEach((match, idx) => {
             if (idx === 0) {
@@ -436,7 +419,6 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
       }
     }
     
-    // If this is the final match that was completed
     const completedFinal = updatedMatches.find(m => m.stage === 'final' && m.completed);
     if (completedFinal?.winnerId) {
       const winnerPlayer = players.find(p => p.id === completedFinal.winnerId);
@@ -737,9 +719,17 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
             
             {matches.length === 0 && (
               <div className="mt-4 text-center">
-                <Button onClick={generateBracket}>
+                <Button 
+                  onClick={generateBracket}
+                  disabled={players.length < 2 || players.length % 2 !== 0}
+                >
                   Generate Tournament Bracket
                 </Button>
+                {players.length > 0 && players.length % 2 !== 0 && (
+                  <p className="text-sm text-amber-500 mt-2">
+                    Tournament requires an even number of players. Please add or remove a player.
+                  </p>
+                )}
               </div>
             )}
           </TabsContent>

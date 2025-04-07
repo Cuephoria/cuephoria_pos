@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -38,6 +39,7 @@ const POSContext = createContext<POSContextType>({
   startSession: async () => {},
   endSession: async () => {},
   deleteStation: async () => false,
+  updateStation: async () => false,  // Add default implementation
   addCustomer: () => ({}),
   updateCustomer: () => ({}),
   updateCustomerMembership: () => null,
@@ -99,7 +101,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSessions, 
     startSession: startSessionBase, 
     endSession: endSessionBase,
-    deleteStation
+    deleteStation,
+    updateStation  // Make sure to destructure updateStation from the hook
   } = useStations([], updateCustomer);
   
   const { 
@@ -397,6 +400,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startSession,
         endSession,
         deleteStation,
+        updateStation,  // Include updateStation in the context value
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from '@/integrations/supabase/types';
@@ -19,6 +18,7 @@ interface AuthContextType {
   getStaffMembers: () => Promise<AdminUser[]>;
   updateStaffMember: (id: string, data: Partial<AdminUser>) => Promise<boolean>;
   deleteStaffMember: (id: string) => Promise<boolean>;
+  resetPassword: (username: string, newPassword: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -131,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // Create staff data with only basic fields
       const basicUserData = {
         username,
         password,
@@ -165,7 +164,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      // Get only basic fields
       const { data, error } = await supabase
         .from('admin_users')
         .select('id, username, is_admin')
@@ -181,7 +179,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return [];
       }
       
-      // Transform the data into our AdminUser type
       const staffMembers: AdminUser[] = data.map(staff => ({
         id: staff.id || '',
         username: staff.username || '',
@@ -204,12 +201,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Construct database fields
       const dbData: Record<string, any> = {};
       
       if (updatedData.username) dbData.username = updatedData.username;
 
-      // Only update if there's something to update
       if (Object.keys(dbData).length > 0) {
         const { error } = await supabase
           .from('admin_users')
@@ -262,6 +257,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (username: string, newPassword: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('username', username)
+        .single();
+        
+      if (error || !data) {
+        console.error('Error finding user for password reset:', error);
+        return false;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('admin_users')
+        .update({ password: newPassword })
+        .eq('id', data.id);
+        
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error in resetPassword:', error);
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -271,7 +296,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addStaffMember, 
       getStaffMembers,
       updateStaffMember,
-      deleteStaffMember 
+      deleteStaffMember,
+      resetPassword
     }}>
       {children}
     </AuthContext.Provider>

@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { POSProvider } from "@/context/POSContext";
 import { ExpenseProvider } from "@/context/ExpenseContext";
@@ -37,9 +37,10 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
-// Protected route component
+// Enhanced Protected route component that checks for authentication
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
   
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
@@ -48,7 +49,8 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   }
   
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Redirect to login page while preserving the intended destination
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   
   // If route requires admin access and user is not admin, redirect to dashboard

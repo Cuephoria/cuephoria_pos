@@ -123,9 +123,12 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
     return displayOrder.filter(stage => groups[stage]?.length);
   }, [matches]);
 
-  if (winner) {
+  // Show tournament winner announcement if there is one
+  const renderWinnerSection = () => {
+    if (!winner) return null;
+    
     return (
-      <div className="p-6 text-center animate-fade-in">
+      <div className="p-6 text-center animate-fade-in mb-8">
         <div className="flex justify-center mb-4 animate-scale-in">
           <div className="relative">
             <div className="absolute inset-0 bg-yellow-400 rounded-full blur-md opacity-50 animate-pulse-glow"></div>
@@ -141,7 +144,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
         </p>
       </div>
     );
-  }
+  };
 
   if (matches.length === 0) {
     return (
@@ -158,6 +161,9 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
 
   return (
     <div className="space-y-12">
+      {/* Always render the winner section if we have a winner */}
+      {renderWinnerSection()}
+      
       {groupedMatches.map((stage) => {
         const stageMatches = matches.filter(match => match.stage === stage);
         if (stageMatches.length === 0) return null;
