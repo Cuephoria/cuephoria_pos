@@ -22,7 +22,7 @@ const Settings = () => {
       </div>
       
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="mb-4">
+        <TabsList>
           <TabsTrigger value="general" className="flex items-center gap-2">
             <SettingsIcon className="h-4 w-4" />
             General
@@ -40,7 +40,9 @@ const Settings = () => {
         </TabsList>
         
         <TabsContent value="general" className="space-y-4">
-          <GeneralSettings />
+          <div className="grid gap-4">
+            <GeneralSettings />
+          </div>
         </TabsContent>
         
         <TabsContent value="tournaments" className="space-y-4">
@@ -49,7 +51,9 @@ const Settings = () => {
         
         {isAdmin && (
           <TabsContent value="staff" className="space-y-4">
-            <StaffManagement />
+            <div className="grid gap-4">
+              <StaffManagement />
+            </div>
           </TabsContent>
         )}
       </Tabs>
