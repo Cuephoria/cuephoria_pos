@@ -1,9 +1,10 @@
 
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
-import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament } from "@/types/tournament.types";
+import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament, Player, Match, MatchStage } from "@/types/tournament.types";
 import { useToast } from '@/hooks/use-toast';
 import { PostgrestError } from "@supabase/supabase-js";
 import { useAuth } from "@/context/AuthContext";
+import { generateId } from "@/utils/pos.utils";
 
 // Define a more specific type for Supabase operations with tournaments
 // This helps us work around the type limitations without modifying the types.ts file
@@ -32,6 +33,209 @@ const tournamentsTable = {
   insert: (data: any) => supabase.from('tournaments' as any).insert(data),
   update: (data: any) => supabase.from('tournaments' as any).update(data),
   delete: () => supabase.from('tournaments' as any).delete(),
+};
+
+// Function to generate tournament matches from a list of players
+export const generateMatches = (players: Player[]): Match[] => {
+  if (players.length < 2) {
+    return [];
+  }
+  
+  const matches: Match[] = [];
+  let matchId = 1;
+  const currentDate = new Date();
+  
+  // For a simple tournament structure, create a single elimination bracket
+  if (players.length === 2) {
+    // If there are only two players, create a final match directly
+    matches.push({
+      id: `match-${matchId++}`,
+      round: 1,
+      player1Id: players[0].id,
+      player2Id: players[1].id,
+      completed: false,
+      scheduledDate: currentDate.toISOString().split('T')[0],
+      scheduledTime: '18:00',
+      status: 'scheduled',
+      stage: 'final'
+    });
+    
+    return matches;
+  }
+  
+  // For more players, create a proper bracket
+  const rounds = Math.ceil(Math.log2(players.length));
+  const totalMatches = Math.pow(2, rounds) - 1;
+  
+  // Create the final match
+  const finalMatch: Match = {
+    id: `match-${matchId++}`,
+    round: rounds,
+    player1Id: '',
+    player2Id: '',
+    completed: false,
+    scheduledDate: new Date(currentDate.getTime() + (rounds - 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledTime: '19:00',
+    status: 'scheduled',
+    stage: 'final'
+  };
+  matches.push(finalMatch);
+  
+  // Create semi-finals
+  if (rounds > 1) {
+    const semifinal1: Match = {
+      id: `match-${matchId++}`,
+      round: rounds - 1,
+      player1Id: '',
+      player2Id: '',
+      completed: false,
+      scheduledDate: new Date(currentDate.getTime() + (rounds - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      scheduledTime: '17:00',
+      status: 'scheduled',
+      stage: 'semi_final',
+      nextMatchId: finalMatch.id
+    };
+    
+    const semifinal2: Match = {
+      id: `match-${matchId++}`,
+      round: rounds - 1,
+      player1Id: '',
+      player2Id: '',
+      completed: false,
+      scheduledDate: new Date(currentDate.getTime() + (rounds - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      scheduledTime: '18:00',
+      status: 'scheduled',
+      stage: 'semi_final',
+      nextMatchId: finalMatch.id
+    };
+    
+    matches.push(semifinal1, semifinal2);
+    
+    // Create quarter-finals if needed
+    if (rounds > 2) {
+      createPreviousRoundMatches(matches, rounds - 1, matchId, currentDate);
+    }
+  }
+  
+  // Assign players to the first round matches
+  assignPlayersToFirstRoundMatches(matches, players);
+  
+  return matches;
+};
+
+// Helper function to create matches for previous rounds
+const createPreviousRoundMatches = (matches: Match[], currentRound: number, matchId: number, currentDate: Date): number => {
+  const parentMatches = matches.filter(m => m.round === currentRound);
+  
+  for (const parentMatch of parentMatches) {
+    if (currentRound > 1) {
+      const match1: Match = {
+        id: `match-${matchId++}`,
+        round: currentRound - 1,
+        player1Id: '',
+        player2Id: '',
+        completed: false,
+        scheduledDate: new Date(currentDate.getTime() + (currentRound - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        scheduledTime: `${16 + (matchId % 4)}:00`,
+        status: 'scheduled',
+        stage: currentRound === 2 ? 'quarter_final' : 'regular',
+        nextMatchId: parentMatch.id
+      };
+      
+      const match2: Match = {
+        id: `match-${matchId++}`,
+        round: currentRound - 1,
+        player1Id: '',
+        player2Id: '',
+        completed: false,
+        scheduledDate: new Date(currentDate.getTime() + (currentRound - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        scheduledTime: `${17 + (matchId % 4)}:00`,
+        status: 'scheduled',
+        stage: currentRound === 2 ? 'quarter_final' : 'regular',
+        nextMatchId: parentMatch.id
+      };
+      
+      matches.push(match1, match2);
+      
+      if (currentRound > 2) {
+        matchId = createPreviousRoundMatches(matches, currentRound - 1, matchId, currentDate);
+      }
+    }
+  }
+  
+  return matchId;
+};
+
+// Helper function to assign players to first round matches
+const assignPlayersToFirstRoundMatches = (matches: Match[], players: Player[]) => {
+  // Shuffle players to randomize the tournament brackets
+  const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+  
+  // Find the first-round matches (lowest round number)
+  const firstRound = Math.min(...matches.map(m => m.round));
+  const firstRoundMatches = matches.filter(m => m.round === firstRound);
+  
+  // For a perfect bracket, we need 2^n players
+  // If we don't have enough, some players get a "bye" to the next round
+  const requiredPlayersCount = Math.pow(2, firstRound);
+  
+  if (shuffledPlayers.length <= firstRoundMatches.length * 2) {
+    // Simple case: assign players to first round matches
+    let playerIndex = 0;
+    for (const match of firstRoundMatches) {
+      if (playerIndex < shuffledPlayers.length) {
+        match.player1Id = shuffledPlayers[playerIndex++].id;
+      }
+      if (playerIndex < shuffledPlayers.length) {
+        match.player2Id = shuffledPlayers[playerIndex++].id;
+      }
+    }
+  } else {
+    // More complex case: some players get a "bye" to the next round
+    // This would require a more sophisticated algorithm
+    // For simplicity, we'll just assign players to first round matches and move up extras
+    const secondRoundMatches = matches.filter(m => m.round === firstRound + 1);
+    let playerIndex = 0;
+    
+    // Fill first round
+    for (const match of firstRoundMatches) {
+      if (playerIndex < shuffledPlayers.length) {
+        match.player1Id = shuffledPlayers[playerIndex++].id;
+      }
+      if (playerIndex < shuffledPlayers.length) {
+        match.player2Id = shuffledPlayers[playerIndex++].id;
+      }
+    }
+    
+    // If we have extra players, assign them to second round
+    for (const match of secondRoundMatches) {
+      if (!match.player1Id && playerIndex < shuffledPlayers.length) {
+        match.player1Id = shuffledPlayers[playerIndex++].id;
+      }
+      if (!match.player2Id && playerIndex < shuffledPlayers.length) {
+        match.player2Id = shuffledPlayers[playerIndex++].id;
+      }
+    }
+  }
+};
+
+// Function to determine tournament winner based on matches
+export const determineWinner = (matches: Match[], players: Player[]): Player | undefined => {
+  // Find the final match (highest round number or one marked as 'final')
+  const finalMatches = matches.filter(m => m.stage === 'final');
+  
+  if (finalMatches.length === 0) {
+    return undefined;
+  }
+  
+  const finalMatch = finalMatches[0];
+  
+  // If the final match is completed and has a winner, return that player
+  if (finalMatch.completed && finalMatch.winnerId) {
+    return players.find(p => p.id === finalMatch.winnerId);
+  }
+  
+  return undefined;
 };
 
 // Fetch all tournaments from Supabase
