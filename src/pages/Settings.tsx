@@ -33,23 +33,6 @@ const Settings = () => {
       try {
         const fetchedTournaments = await tournamentOps.fetchTournaments();
         setTournaments(fetchedTournaments);
-        // If tournaments exist, set the first one as current
-        if (fetchedTournaments.length > 0) {
-          setCurrentTournament(fetchedTournaments[0]);
-        } else {
-          // If no tournaments exist, create a default one
-          const defaultTournament: Tournament = {
-            id: generateId(),
-            name: "New Tournament",
-            gameType: "Pool",
-            gameVariant: "8 Ball",
-            date: new Date().toISOString().split('T')[0],
-            players: [],
-            matches: [],
-            status: "upcoming"
-          };
-          setCurrentTournament(defaultTournament);
-        }
       } catch (error) {
         console.error("Error loading tournaments:", error);
         toast({
@@ -70,7 +53,6 @@ const Settings = () => {
     try {
       const savedTournament = await tournamentOps.saveTournament(updatedTournament);
       if (savedTournament) {
-        setCurrentTournament(savedTournament);
         // Update tournaments list if this tournament already exists
         setTournaments(prev => {
           const exists = prev.some(t => t.id === savedTournament.id);
@@ -111,16 +93,6 @@ const Settings = () => {
           const deleted = await tournamentOps.deleteTournament(id, tournamentToDelete.name);
           if (deleted) {
             setTournaments(prev => prev.filter(t => t.id !== id));
-            
-            // If current tournament was deleted, set a new current tournament
-            if (currentTournament && currentTournament.id === id) {
-              if (tournaments.length > 1) {
-                const newCurrent = tournaments.find(t => t.id !== id);
-                setCurrentTournament(newCurrent || null);
-              } else {
-                setCurrentTournament(null);
-              }
-            }
           }
         }
       } catch (error) {
@@ -172,7 +144,17 @@ const Settings = () => {
             <h2 className="text-xl font-semibold">Tournaments</h2>
             <Button 
               onClick={() => {
-                setEditingTournament(null);
+                const defaultTournament: Tournament = {
+                  id: generateId(),
+                  name: "New Tournament",
+                  gameType: "Pool",
+                  gameVariant: "8 Ball",
+                  date: new Date().toISOString().split('T')[0],
+                  players: [],
+                  matches: [],
+                  status: "upcoming"
+                };
+                setEditingTournament(defaultTournament);
                 setDialogOpen(true);
               }}
               className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
@@ -187,17 +169,6 @@ const Settings = () => {
             onEdit={handleEditTournament}
             onDelete={handleDeleteTournament}
           />
-          
-          {currentTournament && dialogOpen === false && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-4">Tournament Details</h3>
-              <TournamentManagement 
-                tournament={currentTournament} 
-                onSave={handleSaveTournament}
-                isLoading={loading}
-              />
-            </div>
-          )}
           
           <TournamentDialog 
             open={dialogOpen}

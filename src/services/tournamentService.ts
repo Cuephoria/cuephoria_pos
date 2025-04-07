@@ -64,159 +64,76 @@ export const generateMatches = (players: Player[]): Match[] => {
   }
   
   // For more players, create a proper bracket
-  const rounds = Math.ceil(Math.log2(players.length));
-  const totalMatches = Math.pow(2, rounds) - 1;
+  const numPlayers = players.length;
+  const rounds = Math.ceil(Math.log2(numPlayers));
   
-  // Create the final match
-  const finalMatch: Match = {
-    id: `match-${matchId++}`,
-    round: rounds,
-    player1Id: '',
-    player2Id: '',
-    completed: false,
-    scheduledDate: new Date(currentDate.getTime() + (rounds - 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    scheduledTime: '19:00',
-    status: 'scheduled',
-    stage: 'final'
-  };
-  matches.push(finalMatch);
-  
-  // Create semi-finals
-  if (rounds > 1) {
-    const semifinal1: Match = {
-      id: `match-${matchId++}`,
-      round: rounds - 1,
-      player1Id: '',
-      player2Id: '',
-      completed: false,
-      scheduledDate: new Date(currentDate.getTime() + (rounds - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      scheduledTime: '17:00',
-      status: 'scheduled',
-      stage: 'semi_final',
-      nextMatchId: finalMatch.id
-    };
+  // Create all rounds starting from the final
+  for (let round = rounds; round >= 1; round--) {
+    const matchesInRound = Math.pow(2, rounds - round);
+    let stage: MatchStage = 'regular';
     
-    const semifinal2: Match = {
-      id: `match-${matchId++}`,
-      round: rounds - 1,
-      player1Id: '',
-      player2Id: '',
-      completed: false,
-      scheduledDate: new Date(currentDate.getTime() + (rounds - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      scheduledTime: '18:00',
-      status: 'scheduled',
-      stage: 'semi_final',
-      nextMatchId: finalMatch.id
-    };
+    // Determine stage based on round
+    if (round === rounds) stage = 'final';
+    else if (round === rounds - 1) stage = 'semi_final';
+    else if (round === rounds - 2) stage = 'quarter_final';
     
-    matches.push(semifinal1, semifinal2);
-    
-    // Create quarter-finals if needed
-    if (rounds > 2) {
-      createPreviousRoundMatches(matches, rounds - 1, matchId, currentDate);
-    }
-  }
-  
-  // Assign players to the first round matches
-  assignPlayersToFirstRoundMatches(matches, players);
-  
-  return matches;
-};
-
-// Helper function to create matches for previous rounds
-const createPreviousRoundMatches = (matches: Match[], currentRound: number, matchId: number, currentDate: Date): number => {
-  const parentMatches = matches.filter(m => m.round === currentRound);
-  
-  for (const parentMatch of parentMatches) {
-    if (currentRound > 1) {
-      const match1: Match = {
+    for (let i = 0; i < matchesInRound; i++) {
+      const match: Match = {
         id: `match-${matchId++}`,
-        round: currentRound - 1,
+        round,
         player1Id: '',
         player2Id: '',
         completed: false,
-        scheduledDate: new Date(currentDate.getTime() + (currentRound - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        scheduledTime: `${16 + (matchId % 4)}:00`,
+        scheduledDate: new Date(currentDate.getTime() + (round - 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        scheduledTime: `${16 + (i % 8)}:00`,
         status: 'scheduled',
-        stage: currentRound === 2 ? 'quarter_final' : 'regular',
-        nextMatchId: parentMatch.id
+        stage
       };
       
-      const match2: Match = {
-        id: `match-${matchId++}`,
-        round: currentRound - 1,
-        player1Id: '',
-        player2Id: '',
-        completed: false,
-        scheduledDate: new Date(currentDate.getTime() + (currentRound - 2) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        scheduledTime: `${17 + (matchId % 4)}:00`,
-        status: 'scheduled',
-        stage: currentRound === 2 ? 'quarter_final' : 'regular',
-        nextMatchId: parentMatch.id
-      };
-      
-      matches.push(match1, match2);
-      
-      if (currentRound > 2) {
-        matchId = createPreviousRoundMatches(matches, currentRound - 1, matchId, currentDate);
+      if (round < rounds) {
+        // Find the next match this feeds into
+        const nextRoundIndex = Math.floor(i / 2);
+        const nextRoundMatches = matches.filter(m => m.round === round + 1);
+        if (nextRoundMatches[nextRoundIndex]) {
+          match.nextMatchId = nextRoundMatches[nextRoundIndex].id;
+        }
       }
+      
+      matches.push(match);
     }
   }
   
-  return matchId;
-};
-
-// Helper function to assign players to first round matches
-const assignPlayersToFirstRoundMatches = (matches: Match[], players: Player[]) => {
-  // Shuffle players to randomize the tournament brackets
+  // Shuffle players for randomized seeding
   const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
   
-  // Find the first-round matches (lowest round number)
-  const firstRound = Math.min(...matches.map(m => m.round));
-  const firstRoundMatches = matches.filter(m => m.round === firstRound);
+  // Get first round matches
+  const firstRoundMatches = matches.filter(m => m.round === 1);
   
-  // For a perfect bracket, we need 2^n players
-  // If we don't have enough, some players get a "bye" to the next round
-  const requiredPlayersCount = Math.pow(2, firstRound);
+  // Assign players to first round matches
+  let playerIndex = 0;
+  for (const match of firstRoundMatches) {
+    if (playerIndex < shuffledPlayers.length) {
+      match.player1Id = shuffledPlayers[playerIndex++].id;
+    }
+    if (playerIndex < shuffledPlayers.length) {
+      match.player2Id = shuffledPlayers[playerIndex++].id;
+    }
+  }
   
-  if (shuffledPlayers.length <= firstRoundMatches.length * 2) {
-    // Simple case: assign players to first round matches
-    let playerIndex = 0;
-    for (const match of firstRoundMatches) {
-      if (playerIndex < shuffledPlayers.length) {
-        match.player1Id = shuffledPlayers[playerIndex++].id;
-      }
-      if (playerIndex < shuffledPlayers.length) {
-        match.player2Id = shuffledPlayers[playerIndex++].id;
-      }
-    }
-  } else {
-    // More complex case: some players get a "bye" to the next round
-    // This would require a more sophisticated algorithm
-    // For simplicity, we'll just assign players to first round matches and move up extras
-    const secondRoundMatches = matches.filter(m => m.round === firstRound + 1);
-    let playerIndex = 0;
-    
-    // Fill first round
-    for (const match of firstRoundMatches) {
-      if (playerIndex < shuffledPlayers.length) {
-        match.player1Id = shuffledPlayers[playerIndex++].id;
-      }
-      if (playerIndex < shuffledPlayers.length) {
-        match.player2Id = shuffledPlayers[playerIndex++].id;
-      }
-    }
-    
-    // If we have extra players, assign them to second round
+  // If there are any players left (in case of byes), assign them to second round
+  if (playerIndex < shuffledPlayers.length) {
+    const secondRoundMatches = matches.filter(m => m.round === 2);
     for (const match of secondRoundMatches) {
-      if (!match.player1Id && playerIndex < shuffledPlayers.length) {
+      if (playerIndex < shuffledPlayers.length && !match.player1Id) {
         match.player1Id = shuffledPlayers[playerIndex++].id;
       }
-      if (!match.player2Id && playerIndex < shuffledPlayers.length) {
+      if (playerIndex < shuffledPlayers.length && !match.player2Id) {
         match.player2Id = shuffledPlayers[playerIndex++].id;
       }
     }
   }
+  
+  return matches.sort((a, b) => a.round - b.round);
 };
 
 // Function to determine tournament winner based on matches

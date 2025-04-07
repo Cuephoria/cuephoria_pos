@@ -10,10 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { generateMatches, determineWinner } from '@/services/tournamentService';
 import { toast } from 'sonner';
-import { generateId } from '@/utils/pos.utils';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { convertToSupabaseTournament } from '@/types/tournament.types';
 
 interface TournamentManagementProps {
   tournament: Tournament;
@@ -39,8 +36,14 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({
   }, [tournament]);
 
   const handleGenerateMatches = () => {
+    // Ensure we have at least 2 players and an even number of players
     if (players.length < 2) {
       toast.error('You need at least 2 players to generate matches.');
+      return;
+    }
+    
+    if (players.length % 2 !== 0) {
+      toast.error('You need an even number of players to generate matches.');
       return;
     }
 
@@ -127,7 +130,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({
     handleSave(players, updatedMatches, winner);
   };
   
-  // New function to update player names across all matches
+  // Function to update player names across all matches
   const updatePlayerName = (playerId: string, newName: string) => {
     // Update the player list first
     const updatedPlayers = players.map(player => 
@@ -165,6 +168,9 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({
     }
   };
 
+  // Check if tournament is completed
+  const isCompleted = tournament.status === 'completed' || !!winner;
+
   return (
     <Card className="bg-gray-950/50 border-gray-800">
       <CardContent className="p-5 sm:p-6">
@@ -179,19 +185,24 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({
               players={players} 
               setPlayers={setPlayers} 
               matchesExist={matches.length > 0}
-              updatePlayerName={updatePlayerName} // Pass the new function
+              updatePlayerName={updatePlayerName}
             />
             
             <div className="flex justify-end pt-4">
               <Button 
                 onClick={handleGenerateMatches} 
-                disabled={players.length < 2 || saving || isLoading}
+                disabled={players.length < 2 || saving || isLoading || isCompleted}
                 className="bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
               >
                 {(saving || isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {matches.length > 0 ? 'Regenerate Fixtures' : 'Generate Fixtures'}
               </Button>
             </div>
+            {isCompleted && matches.length > 0 && (
+              <div className="text-amber-400 text-sm mt-2 text-center">
+                Cannot regenerate fixtures for completed tournaments.
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="matches" className="animate-fade-in">
