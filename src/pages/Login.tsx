@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+interface LocationState {
+  from?: string;
+}
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +30,8 @@ const Login = () => {
   const { login, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LocationState;
   const [animationClass, setAnimationClass] = useState('');
   const isMobile = useIsMobile();
   
@@ -66,7 +72,9 @@ const Login = () => {
           title: 'Success',
           description: `${isAdminLogin ? 'Admin' : 'Staff'} logged in successfully!`,
         });
-        navigate('/dashboard');
+        
+        const redirectTo = locationState?.from || '/dashboard';
+        navigate(redirectTo);
       } else {
         toast({
           title: 'Error',

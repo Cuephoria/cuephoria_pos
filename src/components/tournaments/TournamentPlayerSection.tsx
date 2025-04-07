@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash } from 'lucide-react';
+import { Plus, Trash, Edit2, Check, X } from 'lucide-react';
 import { Player } from '@/types/tournament.types';
 import { generateId } from '@/utils/pos.utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +20,7 @@ interface TournamentPlayerSectionProps {
   players: Player[];
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
   matchesExist: boolean;
+  updatePlayerName?: (playerId: string, newName: string) => void;
 }
 
 interface Customer {
@@ -28,14 +29,21 @@ interface Customer {
   phone: string;
 }
 
+interface EditingPlayer {
+  id: string;
+  name: string;
+}
+
 const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({ 
   players, 
   setPlayers,
-  matchesExist 
+  matchesExist,
+  updatePlayerName 
 }) => {
   const [playerName, setPlayerName] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [editingPlayer, setEditingPlayer] = useState<EditingPlayer | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -120,6 +128,56 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
   const removePlayer = (id: string) => {
     setPlayers(players.filter(player => player.id !== id));
   };
+  
+  const handleEditClick = (player: Player) => {
+    setEditingPlayer({
+      id: player.id,
+      name: player.name
+    });
+  };
+  
+  const handleCancelEdit = () => {
+    setEditingPlayer(null);
+  };
+  
+  const handleSaveEdit = (playerId: string) => {
+    if (!editingPlayer || editingPlayer.name.trim() === '') return;
+    
+    // Check if name is duplicate
+    const isDuplicate = players.some(p => 
+      p.id !== playerId && 
+      p.name.toLowerCase() === editingPlayer.name.trim().toLowerCase()
+    );
+    
+    if (isDuplicate) {
+      toast({
+        title: 'Duplicate Name',
+        description: 'Another player with this name already exists.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Update player name in the main player list
+    setPlayers(players.map(p => 
+      p.id === playerId 
+        ? { ...p, name: editingPlayer.name.trim() } 
+        : p
+    ));
+    
+    // Update matches if the callback is provided
+    if (updatePlayerName) {
+      updatePlayerName(playerId, editingPlayer.name.trim());
+    }
+    
+    // Reset editing state
+    setEditingPlayer(null);
+    
+    toast({
+      title: 'Player Updated',
+      description: 'Player name has been updated successfully.',
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -174,17 +232,60 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
           <TableBody>
             {players.map((player) => (
               <TableRow key={player.id}>
-                <TableCell>{player.name}</TableCell>
+                <TableCell>
+                  {editingPlayer && editingPlayer.id === player.id ? (
+                    <Input 
+                      value={editingPlayer.name} 
+                      onChange={(e) => setEditingPlayer({...editingPlayer, name: e.target.value})}
+                      autoFocus
+                    />
+                  ) : (
+                    player.name
+                  )}
+                </TableCell>
                 <TableCell>{player.customerId ? 'Customer' : 'Guest'}</TableCell>
                 <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => removePlayer(player.id)}
-                    disabled={matchesExist}
-                  >
-                    <Trash className="h-4 w-4 text-red-500" />
-                  </Button>
+                  {editingPlayer && editingPlayer.id === player.id ? (
+                    <div className="flex items-center space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleSaveEdit(player.id)}
+                        className="text-green-500"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleCancelEdit}
+                        className="text-red-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEditClick(player)}
+                        className="text-blue-500"
+                        disabled={!matchesExist && false} // Allow editing if matches exist
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removePlayer(player.id)}
+                        disabled={matchesExist}
+                        className="text-red-500"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -198,7 +299,7 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
       
       {matchesExist && (
         <div className="text-sm text-amber-600">
-          Note: Players cannot be removed after matches have been generated.
+          Note: Players cannot be removed after matches have been generated, but you can edit their names.
         </div>
       )}
     </div>
