@@ -170,13 +170,13 @@ export const useEndSession = ({
             toast({
               title: "Membership Hours Depleted",
               description: `${updatedCustomer.name} has used all allocated hours in their membership plan`,
-              variant: "warning"
+              variant: "destructive"
             });
           } else if (remainingHours <= 2) {
             toast({
               title: "Low Membership Hours",
               description: `${updatedCustomer.name} has only ${remainingHours} hours left in their membership plan`,
-              variant: "warning"
+              variant: "default"
             });
           }
         } else {
@@ -184,7 +184,7 @@ export const useEndSession = ({
           toast({
             title: "Membership Expired",
             description: `${customer.name}'s membership has expired`,
-            variant: "warning"
+            variant: "destructive"
           });
           
           // Update customer to mark membership as inactive
@@ -201,7 +201,7 @@ export const useEndSession = ({
         toast({
           title: "No Membership Hours",
           description: `${customer.name} has no remaining hours in their membership plan`,
-          variant: "warning"
+          variant: "default"
         });
         
         // Update customer's play time
@@ -264,3 +264,4 @@ export const useEndSession = ({
   
   return { endSession };
 };
+
