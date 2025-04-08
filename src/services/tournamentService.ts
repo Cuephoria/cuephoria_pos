@@ -1,3 +1,4 @@
+
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament, Player, Match, MatchStage } from "@/types/tournament.types";
 import { useToast } from '@/hooks/use-toast';
@@ -66,8 +67,84 @@ export const generateMatches = (players: Player[]): Match[] => {
     
     return matches;
   }
+
+  // Special case for 6 players
+  if (players.length === 6) {
+    // Create first round with 4 players (2 matches)
+    for (let i = 0; i < 2; i++) {
+      matches.push({
+        id: `match-${matchId++}`,
+        round: 1,
+        player1Id: players[i*2].id,
+        player2Id: players[i*2+1].id,
+        completed: false,
+        scheduledDate: currentDate.toISOString().split('T')[0],
+        scheduledTime: `${17 + i}:00`,
+        status: 'scheduled',
+        stage: 'quarter_final',
+        nextMatchId: `match-5` // Both winners go to first semifinal
+      });
+    }
+
+    // Create a bye match for the remaining 2 players directly to second semifinal
+    matches.push({
+      id: `match-${matchId++}`,
+      round: 1,
+      player1Id: players[4].id,
+      player2Id: players[5].id,
+      completed: false,
+      scheduledDate: currentDate.toISOString().split('T')[0],
+      scheduledTime: '19:00',
+      status: 'scheduled',
+      stage: 'quarter_final',
+      nextMatchId: `match-6` // These winners go to second semifinal
+    });
+
+    // Create semifinal 1
+    matches.push({
+      id: `match-5`,
+      round: 2,
+      player1Id: '',
+      player2Id: '',
+      completed: false,
+      scheduledDate: new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      scheduledTime: '17:00',
+      status: 'scheduled',
+      stage: 'semi_final',
+      nextMatchId: `match-7`
+    });
+
+    // Create semifinal 2
+    matches.push({
+      id: `match-6`,
+      round: 2,
+      player1Id: '',
+      player2Id: '',
+      completed: false,
+      scheduledDate: new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      scheduledTime: '18:00',
+      status: 'scheduled',
+      stage: 'semi_final',
+      nextMatchId: `match-7`
+    });
+
+    // Create the final
+    matches.push({
+      id: `match-7`,
+      round: 3,
+      player1Id: '',
+      player2Id: '',
+      completed: false,
+      scheduledDate: new Date(currentDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      scheduledTime: '19:00',
+      status: 'scheduled',
+      stage: 'final'
+    });
+
+    return matches;
+  }
   
-  // For more players, create a proper bracket
+  // For other player counts, create a proper bracket
   const numPlayers = players.length;
   const numRounds = Math.ceil(Math.log2(numPlayers));
   const totalMatches = numPlayers - 1; // In a single elimination tournament with n players, there are always n-1 matches
@@ -99,7 +176,7 @@ export const generateMatches = (players: Player[]): Match[] => {
       // Link to next match if it's not the final
       if (round < numRounds) {
         const nextRoundMatchIndex = Math.floor(i / 2);
-        match.nextMatchId = `match-${numRounds - round + 1 + nextRoundMatchIndex}`;
+        match.nextMatchId = `match-${totalMatches - matchesInRound / 2 + nextRoundMatchIndex + 1}`;
       }
       
       matches.push(match);
@@ -109,55 +186,16 @@ export const generateMatches = (players: Player[]): Match[] => {
   // Shuffle players for randomized seeding
   const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
   
-  // Special handling for 6 players: create 3 first-round matches, then a bye for one winner
-  if (numPlayers === 6) {
-    // First round: 3 matches with 6 players
-    for (let i = 0; i < 3; i++) {
-      matches[i].player1Id = shuffledPlayers[i*2].id;
-      matches[i].player2Id = shuffledPlayers[i*2+1].id;
+  // Assign players to first round matches
+  const firstRoundMatches = matches.filter(m => m.round === 1);
+  let playerIndex = 0;
+  
+  for (const match of firstRoundMatches) {
+    if (playerIndex < shuffledPlayers.length) {
+      match.player1Id = shuffledPlayers[playerIndex++].id;
     }
-    
-    // Second round (semi-finals): One match will have a player waiting from first round
-    // The other match will have two first-round winners compete
-    if (matches.length >= 5) { // Ensure we have enough matches
-      // One semi-final gets winner from match 1
-      matches[3].player1Id = ''; // Will be filled by winner of match 0
-      matches[3].player2Id = ''; // Will be filled by winner of match 1
-      
-      // Other semi-final gets winner from match 2 directly
-      matches[4].player1Id = ''; // Will be filled by winner of match 2
-      matches[4].player2Id = '';
-    }
-    
-    // Update nextMatchId references for all matches
-    matches[0].nextMatchId = 'match-4'; // Winner goes to first semi-final
-    matches[1].nextMatchId = 'match-4'; // Winner goes to first semi-final
-    matches[2].nextMatchId = 'match-5'; // Winner goes to second semi-final
-  } 
-  else {
-    // Standard bracket assignment for any even number of players
-    const firstRoundMatches = matches.filter(m => m.round === 1);
-    
-    // Assign players to first round matches
-    let playerIndex = 0;
-    for (const match of firstRoundMatches) {
-      if (playerIndex < shuffledPlayers.length) {
-        match.player1Id = shuffledPlayers[playerIndex++].id;
-      }
-      if (playerIndex < shuffledPlayers.length) {
-        match.player2Id = shuffledPlayers[playerIndex++].id;
-      }
-    }
-    
-    // Fix nextMatchId references for all matches
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      if (match.round < numRounds) {
-        const nextRoundMatchIndex = Math.floor(i / 2) + Math.pow(2, numRounds - match.round - 1);
-        if (matches[nextRoundMatchIndex]) {
-          match.nextMatchId = matches[nextRoundMatchIndex].id;
-        }
-      }
+    if (playerIndex < shuffledPlayers.length) {
+      match.player2Id = shuffledPlayers[playerIndex++].id;
     }
   }
   

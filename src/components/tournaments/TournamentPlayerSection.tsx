@@ -187,6 +187,7 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
           <Select
             value={selectedCustomerId}
             onValueChange={setSelectedCustomerId}
+            disabled={matchesExist}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a customer" />
@@ -210,10 +211,11 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
               onChange={(e) => setPlayerName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
               className="mt-1"
+              disabled={matchesExist}
             />
           </div>
           <div className="pt-6">
-            <Button onClick={addPlayer} disabled={matchesExist && players.length > 0}>
+            <Button onClick={addPlayer} disabled={matchesExist}>
               <Plus className="mr-2 h-4 w-4" /> Add Player
             </Button>
           </div>
@@ -298,7 +300,7 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
       
       {matchesExist && (
         <div className="text-sm text-amber-600">
-          Note: Players cannot be removed after matches have been generated, but you can edit their names.
+          Note: Players cannot be added or removed after matches have been generated, but you can edit their names.
         </div>
       )}
     </div>
