@@ -1,4 +1,3 @@
-
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament, Player, Match, MatchStage } from "@/types/tournament.types";
 import { useToast } from '@/hooks/use-toast';
@@ -70,25 +69,35 @@ export const generateMatches = (players: Player[]): Match[] => {
 
   // Special case for 6 players
   if (players.length === 6) {
-    // Create first round with 4 players (2 matches)
-    for (let i = 0; i < 2; i++) {
-      matches.push({
-        id: `match-${matchId++}`,
-        round: 1,
-        player1Id: players[i*2].id,
-        player2Id: players[i*2+1].id,
-        completed: false,
-        scheduledDate: currentDate.toISOString().split('T')[0],
-        scheduledTime: `${17 + i}:00`,
-        status: 'scheduled',
-        stage: 'quarter_final',
-        nextMatchId: `match-5` // Both winners go to first semifinal
-      });
-    }
-
-    // Create a bye match for the remaining 2 players directly to second semifinal
+    // Create first round with 2 matches (4 players)
     matches.push({
-      id: `match-${matchId++}`,
+      id: `match-1`,
+      round: 1,
+      player1Id: players[0].id,
+      player2Id: players[1].id,
+      completed: false,
+      scheduledDate: currentDate.toISOString().split('T')[0],
+      scheduledTime: '17:00',
+      status: 'scheduled',
+      stage: 'quarter_final',
+      nextMatchId: `match-4` // Winner goes to first semifinal
+    });
+
+    matches.push({
+      id: `match-2`,
+      round: 1,
+      player1Id: players[2].id,
+      player2Id: players[3].id,
+      completed: false,
+      scheduledDate: currentDate.toISOString().split('T')[0],
+      scheduledTime: '18:00',
+      status: 'scheduled',
+      stage: 'quarter_final',
+      nextMatchId: `match-4` // Winner goes to first semifinal
+    });
+
+    matches.push({
+      id: `match-3`,
       round: 1,
       player1Id: players[4].id,
       player2Id: players[5].id,
@@ -97,12 +106,12 @@ export const generateMatches = (players: Player[]): Match[] => {
       scheduledTime: '19:00',
       status: 'scheduled',
       stage: 'quarter_final',
-      nextMatchId: `match-6` // These winners go to second semifinal
+      nextMatchId: `match-5` // Winner goes directly to second semifinal
     });
 
-    // Create semifinal 1
+    // Create semifinal match for players coming from matches 1 and 2
     matches.push({
-      id: `match-5`,
+      id: `match-4`,
       round: 2,
       player1Id: '',
       player2Id: '',
@@ -111,12 +120,12 @@ export const generateMatches = (players: Player[]): Match[] => {
       scheduledTime: '17:00',
       status: 'scheduled',
       stage: 'semi_final',
-      nextMatchId: `match-7`
+      nextMatchId: `match-6`
     });
 
-    // Create semifinal 2
+    // Create semifinal "match" for winner of match 3 (directly goes to semi)
     matches.push({
-      id: `match-6`,
+      id: `match-5`,
       round: 2,
       player1Id: '',
       player2Id: '',
@@ -125,12 +134,12 @@ export const generateMatches = (players: Player[]): Match[] => {
       scheduledTime: '18:00',
       status: 'scheduled',
       stage: 'semi_final',
-      nextMatchId: `match-7`
+      nextMatchId: `match-6`
     });
 
     // Create the final
     matches.push({
-      id: `match-7`,
+      id: `match-6`,
       round: 3,
       player1Id: '',
       player2Id: '',
