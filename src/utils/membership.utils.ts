@@ -2,58 +2,63 @@
 import { Customer } from '@/types/pos.types';
 
 /**
- * Determines if a customer's membership is currently active
+ * Check if customer has an active membership
  */
 export const isMembershipActive = (customer: Customer): boolean => {
-  if (!customer.isMember || !customer.membershipExpiryDate) return false;
-  const expiryDate = new Date(customer.membershipExpiryDate);
-  return expiryDate > new Date();
+  if (!customer.isMember) return false;
+  
+  // Check expiry date
+  if (customer.membershipExpiryDate) {
+    const expiryDate = new Date(customer.membershipExpiryDate);
+    if (expiryDate < new Date()) return false;
+  }
+  
+  // Check if hours are depleted
+  if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
+    return false;
+  }
+  
+  return true;
 };
 
 /**
- * Generates the text to display on a membership badge
+ * Get text for the membership badge
  */
 export const getMembershipBadgeText = (customer: Customer): string => {
   if (!customer.isMember) return 'Non-Member';
   
-  const duration = customer.membershipDuration || 
-                   (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'Weekly' : 
-                    customer.membershipPlan?.toLowerCase().includes('monthly') ? 'Monthly' : '');
-  
-  let tier = '';
-  if (customer.membershipPlan) {
-    if (customer.membershipPlan.includes('Silver')) {
-      tier = 'Silver';
-    } else if (customer.membershipPlan.includes('Gold')) {
-      tier = 'Gold';
-    } else if (customer.membershipPlan.includes('Platinum')) {
-      tier = 'Platinum';
+  if (!isMembershipActive(customer)) {
+    if (customer.membershipExpiryDate && new Date(customer.membershipExpiryDate) < new Date()) {
+      return 'Expired';
     }
+    if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
+      return 'Hours Used';
+    }
+    return 'Inactive';
   }
   
-  let type = '';
-  if (customer.membershipPlan) {
-    if (customer.membershipPlan.includes('PS5')) {
-      type = 'PS5';
-    } else if (customer.membershipPlan.includes('8-Ball')) {
-      type = '8-Ball';
-    } else if (customer.membershipPlan.includes('Combo')) {
-      type = 'Combo';
-    } else if (customer.membershipPlan.includes('Ultimate')) {
-      type = 'Ultimate';
-    }
+  if (customer.membershipDuration === 'weekly') {
+    return 'Weekly';
+  } else if (customer.membershipDuration === 'monthly') {
+    return 'Monthly';
+  } else if (customer.membershipPlan) {
+    return customer.membershipPlan;
+  } else {
+    return 'Member';
   }
-  
-  return `${tier} ${type} ${duration}`;
 };
 
 /**
- * Gets the appropriate color class for hours left indicator
+ * Get color class for hours left display
  */
-export const getHoursLeftColor = (hoursLeft: number | undefined): string => {
-  if (hoursLeft === undefined) return '';
-  
-  if (hoursLeft <= 0) return 'text-red-600';
-  if (hoursLeft < 2) return 'text-orange-500';
-  return 'text-green-600';
+export const getHoursLeftColor = (hoursLeft: number): string => {
+  if (hoursLeft <= 0) {
+    return 'text-red-500 font-bold';
+  } else if (hoursLeft <= 2) {
+    return 'text-amber-500 font-bold';
+  } else if (hoursLeft <= 5) {
+    return 'text-amber-400';
+  } else {
+    return 'text-green-500';
+  }
 };
