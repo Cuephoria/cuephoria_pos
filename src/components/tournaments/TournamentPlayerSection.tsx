@@ -213,7 +213,7 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
             />
           </div>
           <div className="pt-6">
-            <Button onClick={addPlayer}>
+            <Button onClick={addPlayer} disabled={matchesExist && players.length > 0}>
               <Plus className="mr-2 h-4 w-4" /> Add Player
             </Button>
           </div>
@@ -271,7 +271,6 @@ const TournamentPlayerSection: React.FC<TournamentPlayerSectionProps> = ({
                         size="sm" 
                         onClick={() => handleEditClick(player)}
                         className="text-blue-500"
-                        disabled={!matchesExist && false} // Allow editing if matches exist
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

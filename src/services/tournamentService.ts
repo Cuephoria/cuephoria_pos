@@ -1,4 +1,3 @@
-
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { Tournament, convertFromSupabaseTournament, convertToSupabaseTournament, Player, Match, MatchStage } from "@/types/tournament.types";
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +40,11 @@ export const generateMatches = (players: Player[]): Match[] => {
     return [];
   }
   
+  if (players.length % 2 !== 0) {
+    console.error("Tournament requires an even number of players");
+    return [];
+  }
+  
   const matches: Match[] = [];
   let matchId = 1;
   const currentDate = new Date();
@@ -65,22 +69,24 @@ export const generateMatches = (players: Player[]): Match[] => {
   
   // For more players, create a proper bracket
   const numPlayers = players.length;
-  const rounds = Math.ceil(Math.log2(numPlayers));
+  const numRounds = Math.ceil(Math.log2(numPlayers));
+  const totalMatches = numPlayers - 1; // In a single elimination tournament with n players, there are always n-1 matches
   
-  // Create all rounds starting from the final
-  for (let round = rounds; round >= 1; round--) {
-    const matchesInRound = Math.pow(2, rounds - round);
-    let stage: MatchStage = 'regular';
-    
-    // Determine stage based on round
-    if (round === rounds) stage = 'final';
-    else if (round === rounds - 1) stage = 'semi_final';
-    else if (round === rounds - 2) stage = 'quarter_final';
+  // Create empty structure for all matches
+  for (let round = 1; round <= numRounds; round++) {
+    // Calculate matches in this round
+    const matchesInRound = Math.floor(Math.pow(2, numRounds - round));
     
     for (let i = 0; i < matchesInRound; i++) {
+      // Determine stage based on round
+      let stage: MatchStage = 'regular';
+      if (round === numRounds) stage = 'final';
+      else if (round === numRounds - 1) stage = 'semi_final';
+      else if (round === numRounds - 2) stage = 'quarter_final';
+      
       const match: Match = {
         id: `match-${matchId++}`,
-        round,
+        round: round,
         player1Id: '',
         player2Id: '',
         completed: false,
@@ -90,13 +96,10 @@ export const generateMatches = (players: Player[]): Match[] => {
         stage
       };
       
-      if (round < rounds) {
-        // Find the next match this feeds into
-        const nextRoundIndex = Math.floor(i / 2);
-        const nextRoundMatches = matches.filter(m => m.round === round + 1);
-        if (nextRoundMatches[nextRoundIndex]) {
-          match.nextMatchId = nextRoundMatches[nextRoundIndex].id;
-        }
+      // Link to next match if it's not the final
+      if (round < numRounds) {
+        const nextRoundMatchIndex = Math.floor(i / 2);
+        match.nextMatchId = `match-${numRounds - round + 1 + nextRoundMatchIndex}`;
       }
       
       matches.push(match);
@@ -106,34 +109,59 @@ export const generateMatches = (players: Player[]): Match[] => {
   // Shuffle players for randomized seeding
   const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
   
-  // Get first round matches
-  const firstRoundMatches = matches.filter(m => m.round === 1);
-  
-  // Assign players to first round matches
-  let playerIndex = 0;
-  for (const match of firstRoundMatches) {
-    if (playerIndex < shuffledPlayers.length) {
-      match.player1Id = shuffledPlayers[playerIndex++].id;
+  // Special handling for 6 players: create 3 first-round matches, then a bye for one winner
+  if (numPlayers === 6) {
+    // First round: 3 matches with 6 players
+    for (let i = 0; i < 3; i++) {
+      matches[i].player1Id = shuffledPlayers[i*2].id;
+      matches[i].player2Id = shuffledPlayers[i*2+1].id;
     }
-    if (playerIndex < shuffledPlayers.length) {
-      match.player2Id = shuffledPlayers[playerIndex++].id;
+    
+    // Second round (semi-finals): One match will have a player waiting from first round
+    // The other match will have two first-round winners compete
+    if (matches.length >= 5) { // Ensure we have enough matches
+      // One semi-final gets winner from match 1
+      matches[3].player1Id = ''; // Will be filled by winner of match 0
+      matches[3].player2Id = ''; // Will be filled by winner of match 1
+      
+      // Other semi-final gets winner from match 2 directly
+      matches[4].player1Id = ''; // Will be filled by winner of match 2
+      matches[4].player2Id = '';
     }
-  }
-  
-  // If there are any players left (in case of byes), assign them to second round
-  if (playerIndex < shuffledPlayers.length) {
-    const secondRoundMatches = matches.filter(m => m.round === 2);
-    for (const match of secondRoundMatches) {
-      if (playerIndex < shuffledPlayers.length && !match.player1Id) {
+    
+    // Update nextMatchId references for all matches
+    matches[0].nextMatchId = 'match-4'; // Winner goes to first semi-final
+    matches[1].nextMatchId = 'match-4'; // Winner goes to first semi-final
+    matches[2].nextMatchId = 'match-5'; // Winner goes to second semi-final
+  } 
+  else {
+    // Standard bracket assignment for any even number of players
+    const firstRoundMatches = matches.filter(m => m.round === 1);
+    
+    // Assign players to first round matches
+    let playerIndex = 0;
+    for (const match of firstRoundMatches) {
+      if (playerIndex < shuffledPlayers.length) {
         match.player1Id = shuffledPlayers[playerIndex++].id;
       }
-      if (playerIndex < shuffledPlayers.length && !match.player2Id) {
+      if (playerIndex < shuffledPlayers.length) {
         match.player2Id = shuffledPlayers[playerIndex++].id;
       }
     }
+    
+    // Fix nextMatchId references for all matches
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      if (match.round < numRounds) {
+        const nextRoundMatchIndex = Math.floor(i / 2) + Math.pow(2, numRounds - match.round - 1);
+        if (matches[nextRoundMatchIndex]) {
+          match.nextMatchId = matches[nextRoundMatchIndex].id;
+        }
+      }
+    }
   }
   
-  return matches.sort((a, b) => a.round - b.round);
+  return matches.sort((a, b) => a.round - b.round || parseInt(a.id.split('-')[1]) - parseInt(b.id.split('-')[1]));
 };
 
 // Function to determine tournament winner based on matches

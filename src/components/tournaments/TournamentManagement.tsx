@@ -1,6 +1,4 @@
 
-// Import necessary components and update the component to include player name editing functionality
-
 import React, { useState, useEffect } from 'react';
 import { Tournament, Player, Match, MatchStatus } from '@/types/tournament.types';
 import TournamentPlayerSection from './TournamentPlayerSection';
