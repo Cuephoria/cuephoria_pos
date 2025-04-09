@@ -46,6 +46,11 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   // Highlight card if customer has an active session
   const hasActiveSession = !!activeSession;
 
+  // Display membership hours in HH:MM:SS format
+  const formattedMembershipHours = customer.membershipHoursLeft !== undefined 
+    ? formatHoursAsDuration(customer.membershipHoursLeft)
+    : 'N/A';
+
   return (
     <Card className={hasActiveSession ? "border-2 border-cuephoria-orange" : ""}>
       <CardHeader className="pb-2">
@@ -110,7 +115,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
                     <Clock className="h-4 w-4 mr-1" /> Hours Left:
                   </span>
                   <span className={getHoursLeftColor(customer.membershipHoursLeft)}>
-                    {formatHoursAsDuration(customer.membershipHoursLeft)}
+                    {formattedMembershipHours}
                     {customer.membershipHoursLeft <= 2 && customer.membershipHoursLeft > 0 && 
                       <span className="ml-1 text-amber-500">⚠️</span>}
                     {customer.membershipHoursLeft <= 0 && 
