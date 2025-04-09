@@ -377,9 +377,10 @@ export const useEndSession = ({
           hoursToRestore = secondsToHours(secondsPlayed);
         } else if (data) {
           // If we have duration_seconds, use that for precise restoration
-          if (data.duration_seconds !== null && data.duration_seconds !== undefined) {
-            hoursToRestore = secondsToHours(data.duration_seconds);
-            console.log(`Using exact seconds (${data.duration_seconds}) for hour restoration: ${hoursToRestore}`);
+          const durationSeconds = data.duration_seconds;
+          if (durationSeconds !== null && durationSeconds !== undefined) {
+            hoursToRestore = secondsToHours(durationSeconds);
+            console.log(`Using exact seconds (${durationSeconds}) for hour restoration: ${hoursToRestore}`);
           } else {
             // Fallback to minutes
             const minutesPlayed = data.duration || session.duration;
