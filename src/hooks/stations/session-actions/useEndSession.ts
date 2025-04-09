@@ -376,14 +376,18 @@ export const useEndSession = ({
           const secondsPlayed = minutesPlayed * 60;
           hoursToRestore = secondsToHours(secondsPlayed);
         } else if (data) {
-          // If we have duration_seconds, use that for precise restoration
-          const durationSeconds = data.duration_seconds;
+          // Extract data safely with type checking
+          const durationSeconds = typeof data === 'object' && data !== null ? 
+            (data as any).duration_seconds : undefined;
+            
           if (durationSeconds !== null && durationSeconds !== undefined) {
             hoursToRestore = secondsToHours(durationSeconds);
             console.log(`Using exact seconds (${durationSeconds}) for hour restoration: ${hoursToRestore}`);
           } else {
             // Fallback to minutes
-            const minutesPlayed = data.duration || session.duration;
+            const minutesPlayed = typeof data === 'object' && data !== null ? 
+              (data as any).duration || session.duration : session.duration;
+              
             const secondsPlayed = minutesPlayed * 60;
             hoursToRestore = secondsToHours(secondsPlayed);
             console.log(`Using minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
