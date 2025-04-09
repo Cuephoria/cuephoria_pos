@@ -52,10 +52,15 @@ export const getMembershipBadgeText = (customer: Customer): string => {
  * Format hours as a duration string (hh:mm:ss)
  */
 export const formatHoursAsDuration = (hours: number): string => {
-  const totalMinutes = Math.floor(hours * 60);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  const s = Math.round((hours * 3600) % 60);
+  if (hours === undefined || hours === null) return "00:00:00";
+  
+  // Ensure we don't have negative hours
+  const positiveHours = Math.max(0, hours);
+  
+  const totalSeconds = Math.floor(positiveHours * 3600);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
   
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
@@ -65,6 +70,21 @@ export const formatHoursAsDuration = (hours: number): string => {
  */
 export const minutesToHours = (minutes: number): number => {
   return minutes / 60;
+};
+
+/**
+ * Convert seconds to hours (decimal)
+ */
+export const secondsToHours = (seconds: number): number => {
+  return seconds / 3600;
+};
+
+/**
+ * Calculate how many hours to deduct based on elapsed time
+ * For real-time tracking, we use precise seconds
+ */
+export const calculateHoursToDeduct = (elapsedSeconds: number): number => {
+  return secondsToHours(elapsedSeconds);
 };
 
 /**

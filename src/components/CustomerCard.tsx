@@ -24,6 +24,14 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onSelect,
   isSelectable = false
 }) => {
+  // Find if this customer has any active sessions
+  const { stations } = usePOS();
+  const activeSession = stations.find(s => 
+    s.isOccupied && 
+    s.currentSession && 
+    s.currentSession.customerId === customer.id
+  );
+
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-IN');
@@ -35,13 +43,19 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return `${hours}h ${mins}m`;
   };
 
+  // Highlight card if customer has an active session
+  const hasActiveSession = !!activeSession;
+
   return (
-    <Card>
+    <Card className={hasActiveSession ? "border-2 border-cuephoria-orange" : ""}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center text-lg">
             <User className="h-5 w-5 mr-2" />
             {customer.name}
+            {hasActiveSession && (
+              <Badge className="ml-2 bg-cuephoria-orange">Active</Badge>
+            )}
           </CardTitle>
           <Badge className={isMembershipActive(customer) ? 'bg-cuephoria-purple' : 'bg-gray-500'}>
             {getMembershipBadgeText(customer)}
