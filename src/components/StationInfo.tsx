@@ -2,10 +2,10 @@
 import React from 'react';
 import { Station } from '@/context/POSContext';
 import { Badge } from '@/components/ui/badge';
-import { Gamepad2, Table2, UserCheck, User } from 'lucide-react';
+import { Gamepad2, Table2, UserCheck, User, Clock } from 'lucide-react';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Customer } from '@/types/pos.types';
-import { isMembershipActive, getMembershipBadgeText } from '@/utils/membership.utils';
+import { isMembershipActive, getMembershipBadgeText, formatHoursAsDuration } from '@/utils/membership.utils';
 
 interface StationInfoProps {
   station: Station;
@@ -90,6 +90,12 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
                 {membershipText}
               </Badge>
             </div>
+            {isMember && customerData?.membershipHoursLeft !== undefined && (
+              <div className="flex justify-between items-center text-xs text-green-500">
+                <Clock className="h-3 w-3" />
+                <span>{formatHoursAsDuration(customerData.membershipHoursLeft)} remaining</span>
+              </div>
+            )}
             {isMember && (
               <div className="text-xs text-right mt-0 text-green-500">
                 50% discount applied

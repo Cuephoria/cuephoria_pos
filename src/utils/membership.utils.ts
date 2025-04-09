@@ -49,6 +49,25 @@ export const getMembershipBadgeText = (customer: Customer): string => {
 };
 
 /**
+ * Format hours as a duration string (hh:mm:ss)
+ */
+export const formatHoursAsDuration = (hours: number): string => {
+  const totalMinutes = Math.floor(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  const s = Math.round((hours * 3600) % 60);
+  
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Convert a duration in minutes to hours (decimal)
+ */
+export const minutesToHours = (minutes: number): number => {
+  return minutes / 60;
+};
+
+/**
  * Get color class for hours left display
  */
 export const getHoursLeftColor = (hoursLeft: number): string => {

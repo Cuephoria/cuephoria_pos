@@ -167,9 +167,97 @@ export const useSessionActions = (props: SessionActionsProps) => {
     }
   };
   
+  // Delete a session and restore membership hours if applicable
+  const deleteSession = async (sessionId: string, customersList?: Customer[]): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      console.log('Deleting session:', sessionId);
+      
+      // Find the session
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        console.error('Session not found:', sessionId);
+        throw new Error('Session not found');
+      }
+      
+      // Find the customer
+      const customer = customersList?.find(c => c.id === session.customerId);
+      if (customer && session.duration && customer.isMember) {
+        // Restore hours to the customer's membership if they're a member and session was completed
+        await endSessionHook.restoreSessionHours(session, customer);
+      }
+      
+      // Delete from Supabase
+      try {
+        const { error } = await supabase
+          .from('sessions')
+          .delete()
+          .eq('id', sessionId);
+          
+        if (error) {
+          console.error('Error deleting session from Supabase:', error);
+        }
+      } catch (error) {
+        console.error('Supabase delete error:', error);
+      }
+      
+      // Update local state
+      setSessions(sessions.filter(s => s.id !== sessionId));
+      
+      // If the session is active, update the station too
+      if (!session.endTime) {
+        const stationId = session.stationId;
+        const station = stations.find(s => s.id === stationId);
+        
+        if (station) {
+          // Update station
+          setStations(stations.map(s => 
+            s.id === stationId 
+              ? { ...s, isOccupied: false, currentSession: null } 
+              : s
+          ));
+          
+          // Update Supabase station
+          if (stationId.includes('-')) {
+            try {
+              const { error } = await supabase
+                .from('stations')
+                .update({ is_occupied: false })
+                .eq('id', stationId);
+                
+              if (error) {
+                console.error('Error updating station in Supabase:', error);
+              }
+            } catch (error) {
+              console.error('Supabase station update error:', error);
+            }
+          }
+        }
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Session deleted successfully',
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error in deleteSession:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete session',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return {
     startSession,
     endSession,
+    deleteSession,
     isLoading
   };
 };

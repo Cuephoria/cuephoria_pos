@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
+import { isMembershipActive } from '@/utils/membership.utils';
 
 interface StationTimerProps {
   station: Station;
@@ -14,6 +16,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
+  const [projectedHoursUsed, setProjectedHoursUsed] = useState<number>(0);
   const { toast } = useToast();
   const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
@@ -31,6 +34,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(0);
       setSeconds(0);
       setCost(0);
+      setProjectedHoursUsed(0);
       
       // Clear any existing timer
       if (timerRef.current) {
@@ -55,7 +59,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
 
     // Find the customer to check if they are a member
     const customer = customers.find(c => c.id === station.currentSession?.customerId);
-    const isMember = customer?.isMember || false;
+    const isMember = customer ? isMembershipActive(customer) : false;
 
     // Initial calculation based on local session data
     const updateTimerFromLocalData = () => {
@@ -73,8 +77,11 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(minutesTotal % 60);
       setHours(hoursTotal);
       
-      // Calculate cost based on hourly rate
+      // Calculate projected hours used (for membership deduction)
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
+      setProjectedHoursUsed(Math.ceil(hoursElapsed)); // Round up to nearest hour
+      
+      // Calculate cost based on hourly rate
       let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       
       // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
@@ -83,19 +90,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       }
       
       setCost(calculatedCost);
-      
-      console.log("Timer update:", {
-        sessionId: sessionDataRef.current.sessionId,
-        startTime: startTime.toISOString(),
-        elapsedMs,
-        secondsTotal,
-        minutesTotal,
-        hoursTotal,
-        hourlyRate: station.hourlyRate,
-        isMember,
-        discountApplied: isMember,
-        calculatedCost
-      });
     };
 
     // Try to get session data from Supabase
@@ -184,6 +178,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     return null;
   }
 
+  // Get customer to show potential membership hour usage
+  const customer = customers.find(c => c.id === station.currentSession?.customerId);
+  const showMembershipHours = customer && 
+    isMembershipActive(customer) && 
+    customer.membershipHoursLeft !== undefined &&
+    customer.membershipHoursLeft > 0;
+
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
       <div className="text-center">
@@ -195,6 +196,17 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         <span className="text-white">Current Cost:</span>
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
+      
+      {/* Show projected membership hours usage for members */}
+      {showMembershipHours && (
+        <div className="flex justify-between items-center text-xs border-t border-gray-600 pt-2">
+          <span className="text-white">Projected hours usage:</span>
+          <span className="text-amber-400 font-bold">
+            {projectedHoursUsed} hr
+            {projectedHoursUsed > 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

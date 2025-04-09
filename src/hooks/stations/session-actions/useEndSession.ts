@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
+import { formatHoursAsDuration, isMembershipActive, minutesToHours } from '@/utils/membership.utils';
 
 /**
  * Hook to provide session end functionality
@@ -44,6 +45,8 @@ export const useEndSession = ({
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
       const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+      
+      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -122,7 +125,7 @@ export const useEndSession = ({
       
       // Calculate session cost
       const stationRate = station.hourlyRate;
-      const hoursPlayed = durationMs / (1000 * 60 * 60);
+      const hoursPlayed = minutesToHours(durationMinutes); // Convert minutes to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Check if customer is a valid member with available hours
@@ -132,55 +135,54 @@ export const useEndSession = ({
       let membershipHoursUpdated = false;
       let updatedCustomer = customer;
       
-      if (isMember && customer && customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft > 0) {
-        // Check if membership is still valid
-        if (customer.membershipExpiryDate && new Date(customer.membershipExpiryDate) >= new Date()) {
-          // Calculate hours to deduct (round up to nearest hour)
-          hoursToDeduct = Math.ceil(hoursPlayed);
-          
-          // Only deduct what's available
-          if (hoursToDeduct > customer.membershipHoursLeft) {
-            hoursToDeduct = customer.membershipHoursLeft;
-          }
-          
-          // Apply 50% discount regardless of hours deducted
-          discountApplied = true;
-          const originalCost = sessionCost;
-          sessionCost = Math.ceil(sessionCost * 0.5); // 50% discount
-          
-          // Update customer's membership hours
-          const remainingHours = Math.max(0, customer.membershipHoursLeft - hoursToDeduct);
-          updatedCustomer = {
-            ...customer,
-            membershipHoursLeft: remainingHours,
-            totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
-          };
-          
-          membershipHoursUpdated = true;
-          
-          console.log(`Applied 50% member discount: ${originalCost} → ${sessionCost}`);
-          console.log(`Deducted ${hoursToDeduct} hours, ${remainingHours} hours left`);
-          
-          // Update the customer in state and database
-          if (membershipHoursUpdated && updatedCustomer) {
-            updateCustomer(updatedCustomer);
-          }
-          
-          if (remainingHours === 0) {
-            toast({
-              title: "Membership Hours Depleted",
-              description: `${updatedCustomer.name} has used all allocated hours in their membership plan`,
-              variant: "destructive"
-            });
-          } else if (remainingHours <= 2) {
-            toast({
-              title: "Low Membership Hours",
-              description: `${updatedCustomer.name} has only ${remainingHours} hours left in their membership plan`,
-              variant: "default"
-            });
-          }
-        } else {
-          // Membership expired
+      if (isMember && customer && isMembershipActive(customer) && customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft > 0) {
+        // Calculate hours to deduct (round up to nearest hour)
+        hoursToDeduct = Math.ceil(hoursPlayed);
+        
+        // Only deduct what's available
+        if (hoursToDeduct > customer.membershipHoursLeft) {
+          hoursToDeduct = customer.membershipHoursLeft;
+        }
+        
+        // Apply 50% discount
+        discountApplied = true;
+        const originalCost = sessionCost;
+        sessionCost = Math.ceil(sessionCost * 0.5); // 50% discount
+        
+        // Update customer's membership hours
+        const remainingHours = Math.max(0, customer.membershipHoursLeft - hoursToDeduct);
+        updatedCustomer = {
+          ...customer,
+          membershipHoursLeft: remainingHours,
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+        };
+        
+        membershipHoursUpdated = true;
+        
+        console.log(`Applied 50% member discount: ${originalCost} → ${sessionCost}`);
+        console.log(`Deducted ${hoursToDeduct} hours, ${remainingHours} hours left (${formatHoursAsDuration(remainingHours)})`);
+        
+        // Update the customer in state and database
+        if (membershipHoursUpdated && updatedCustomer) {
+          updateCustomer(updatedCustomer);
+        }
+        
+        if (remainingHours === 0) {
+          toast({
+            title: "Membership Hours Depleted",
+            description: `${updatedCustomer.name} has used all allocated hours in their membership plan`,
+            variant: "destructive"
+          });
+        } else if (remainingHours <= 2) {
+          toast({
+            title: "Low Membership Hours",
+            description: `${updatedCustomer.name} has only ${formatHoursAsDuration(remainingHours)} left in their membership plan`,
+            variant: "default"
+          });
+        }
+      } else if (isMember && customer && (!isMembershipActive(customer) || !customer.membershipHoursLeft || customer.membershipHoursLeft <= 0)) {
+        // Handle expired or depleted membership
+        if (customer.membershipExpiryDate && new Date(customer.membershipExpiryDate) < new Date()) {
           toast({
             title: "Membership Expired",
             description: `${customer.name}'s membership has expired`,
@@ -196,20 +198,20 @@ export const useEndSession = ({
           
           // Update the customer in state and database
           updateCustomer(updatedCustomer);
+        } else {
+          toast({
+            title: "No Membership Hours",
+            description: `${customer.name} has no remaining hours in their membership plan`,
+            variant: "default"
+          });
+          
+          // Update customer's play time
+          updatedCustomer = {
+            ...customer,
+            totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+          };
+          updateCustomer(updatedCustomer);
         }
-      } else if (isMember && customer && (!customer.membershipHoursLeft || customer.membershipHoursLeft <= 0)) {
-        toast({
-          title: "No Membership Hours",
-          description: `${customer.name} has no remaining hours in their membership plan`,
-          variant: "default"
-        });
-        
-        // Update customer's play time
-        updatedCustomer = {
-          ...customer,
-          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
-        };
-        updateCustomer(updatedCustomer);
       } else if (customer) {
         // Non-member, just update play time
         updatedCustomer = {
@@ -262,6 +264,49 @@ export const useEndSession = ({
     }
   };
   
-  return { endSession };
+  /**
+   * Restore hours if a session is deleted
+   */
+  const restoreSessionHours = async (session: Session, customer: Customer): Promise<Customer | undefined> => {
+    try {
+      if (!session.duration || !customer.isMember || customer.membershipHoursLeft === undefined) {
+        return undefined;
+      }
+      
+      // Calculate hours to restore (always round up to nearest hour)
+      const minutesPlayed = session.duration;
+      const hoursPlayed = minutesToHours(minutesPlayed);
+      const hoursToRestore = Math.ceil(hoursPlayed);
+      
+      console.log(`Restoring ${hoursToRestore} hours for customer ${customer.name} from deleted session`);
+      
+      // Update customer's membership hours
+      const updatedHours = customer.membershipHoursLeft + hoursToRestore;
+      const updatedCustomer = {
+        ...customer,
+        membershipHoursLeft: updatedHours,
+        totalPlayTime: Math.max(0, (customer.totalPlayTime || 0) - minutesPlayed)
+      };
+      
+      // Update customer in state and database
+      updateCustomer(updatedCustomer);
+      
+      toast({
+        title: "Hours Restored",
+        description: `${hoursToRestore} hours have been restored to ${customer.name}'s membership (${formatHoursAsDuration(updatedHours)} available)`,
+      });
+      
+      return updatedCustomer;
+    } catch (error) {
+      console.error('Error restoring session hours:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to restore membership hours',
+        variant: 'destructive'
+      });
+      return undefined;
+    }
+  };
+  
+  return { endSession, restoreSessionHours };
 };
-
