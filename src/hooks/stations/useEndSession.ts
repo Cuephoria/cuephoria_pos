@@ -43,9 +43,10 @@ export const useEndSession = ({
       // Calculate duration in minutes - ensure minimum 1 minute
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationMinutes = Math.max(1, Math.round(durationMs / (1000 * 60)));
+      const durationSeconds = Math.round(durationMs / 1000);
+      const durationMinutes = Math.max(1, Math.round(durationSeconds / 60));
       
-      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes`);
+      console.log(`Session duration calculation: ${durationMs}ms = ${durationSeconds}s = ${durationMinutes} minutes`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -67,19 +68,40 @@ export const useEndSession = ({
           : s
       ));
       
-      // Try to update session in Supabase
+      // Try to update session in Supabase with both end_time, duration, and duration_seconds
       try {
         const { error: sessionError } = await supabase
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes
+            duration: durationMinutes,
+            duration_seconds: durationSeconds // Store exact seconds for precise calculations
           })
           .eq('id', session.id);
           
         if (sessionError) {
           console.error('Error updating session in Supabase:', sessionError);
-          // Continue since local state is already updated
+          console.log('The error might be related to missing duration_seconds column. Make sure to run the migration.');
+          // Try again without the duration_seconds column as a fallback
+          try {
+            const { error: fallbackError } = await supabase
+              .from('sessions')
+              .update({
+                end_time: endTime.toISOString(),
+                duration: durationMinutes
+              })
+              .eq('id', session.id);
+              
+            if (fallbackError) {
+              console.error('Error in fallback session update:', fallbackError);
+            } else {
+              console.log('Fallback session update without duration_seconds succeeded');
+            }
+          } catch (e) {
+            console.error('Error in fallback session update:', e);
+          }
+        } else {
+          console.log('Successfully updated session in Supabase with duration:', durationMinutes, 'and seconds:', durationSeconds);
         }
       } catch (supabaseError) {
         console.error('Error updating session in Supabase:', supabaseError);

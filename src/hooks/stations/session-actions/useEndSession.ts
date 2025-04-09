@@ -370,14 +370,14 @@ export const useEndSession = ({
           .eq('id', session.id)
           .single();
           
-        if (error || !data) {
+        if (error) {
           console.log('Could not find exact duration seconds, using minutes:', session.duration);
           const minutesPlayed = session.duration;
           const secondsPlayed = minutesPlayed * 60;
           hoursToRestore = secondsToHours(secondsPlayed);
-        } else {
+        } else if (data) {
           // If we have duration_seconds, use that for precise restoration
-          if (data.duration_seconds) {
+          if (data.duration_seconds !== null && data.duration_seconds !== undefined) {
             hoursToRestore = secondsToHours(data.duration_seconds);
             console.log(`Using exact seconds (${data.duration_seconds}) for hour restoration: ${hoursToRestore}`);
           } else {
@@ -387,6 +387,12 @@ export const useEndSession = ({
             hoursToRestore = secondsToHours(secondsPlayed);
             console.log(`Using minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
           }
+        } else {
+          // No data returned, use session duration
+          const minutesPlayed = session.duration;
+          const secondsPlayed = minutesPlayed * 60;
+          hoursToRestore = secondsToHours(secondsPlayed);
+          console.log(`No data from Supabase, using session minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
         }
       } catch (error) {
         console.error('Error fetching session duration:', error);
@@ -394,6 +400,7 @@ export const useEndSession = ({
         const minutesPlayed = session.duration;
         const secondsPlayed = minutesPlayed * 60;
         hoursToRestore = secondsToHours(secondsPlayed);
+        console.log(`Error getting duration, using session minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
       }
       
       // Round to 6 decimal places for accurate tracking
