@@ -24,14 +24,6 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onSelect,
   isSelectable = false
 }) => {
-  // Find if this customer has any active sessions
-  const { stations } = usePOS();
-  const activeSession = stations.find(s => 
-    s.isOccupied && 
-    s.currentSession && 
-    s.currentSession.customerId === customer.id
-  );
-
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-IN');
@@ -43,24 +35,13 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return `${hours}h ${mins}m`;
   };
 
-  // Highlight card if customer has an active session
-  const hasActiveSession = !!activeSession;
-
-  // Display membership hours in HH:MM:SS format
-  const formattedMembershipHours = customer.membershipHoursLeft !== undefined 
-    ? formatHoursAsDuration(customer.membershipHoursLeft)
-    : 'N/A';
-
   return (
-    <Card className={hasActiveSession ? "border-2 border-cuephoria-orange" : ""}>
+    <Card>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center text-lg">
             <User className="h-5 w-5 mr-2" />
             {customer.name}
-            {hasActiveSession && (
-              <Badge className="ml-2 bg-cuephoria-orange">Active</Badge>
-            )}
           </CardTitle>
           <Badge className={isMembershipActive(customer) ? 'bg-cuephoria-purple' : 'bg-gray-500'}>
             {getMembershipBadgeText(customer)}
@@ -115,7 +96,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
                     <Clock className="h-4 w-4 mr-1" /> Hours Left:
                   </span>
                   <span className={getHoursLeftColor(customer.membershipHoursLeft)}>
-                    {formattedMembershipHours}
+                    {formatHoursAsDuration(customer.membershipHoursLeft)}
                     {customer.membershipHoursLeft <= 2 && customer.membershipHoursLeft > 0 && 
                       <span className="ml-1 text-amber-500">⚠️</span>}
                     {customer.membershipHoursLeft <= 0 && 

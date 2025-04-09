@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Station, Customer } from '@/types/pos.types';
+import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
-import { isMembershipActive, formatHoursAsDuration, secondsToHours } from '@/utils/membership.utils';
+import { isMembershipActive } from '@/utils/membership.utils';
 
 interface StationTimerProps {
   station: Station;
@@ -15,13 +16,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
-  const [totalElapsedSeconds, setTotalElapsedSeconds] = useState<number>(0);
   const [projectedHoursUsed, setProjectedHoursUsed] = useState<number>(0);
-  const [remainingMembershipHours, setRemainingMembershipHours] = useState<number | undefined>(undefined);
-  
   const { toast } = useToast();
-  const { customers, updateCustomer } = usePOS();
-  
+  const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
   const sessionDataRef = useRef<{
     sessionId: string;
@@ -30,11 +27,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     customerId: string;
     hourlyRate: number;
   } | null>(null);
-  
-  // Current customer data
-  const customer = customers.find(c => c.id === station.currentSession?.customerId);
-  const isMember = customer ? isMembershipActive(customer) : false;
-  const hasHours = customer?.membershipHoursLeft !== undefined && customer.membershipHoursLeft > 0;
 
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
@@ -42,9 +34,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(0);
       setSeconds(0);
       setCost(0);
-      setTotalElapsedSeconds(0);
       setProjectedHoursUsed(0);
-      setRemainingMembershipHours(undefined);
       
       // Clear any existing timer
       if (timerRef.current) {
@@ -67,6 +57,10 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       };
     }
 
+    // Find the customer to check if they are a member
+    const customer = customers.find(c => c.id === station.currentSession?.customerId);
+    const isMember = customer ? isMembershipActive(customer) : false;
+
     // Initial calculation based on local session data
     const updateTimerFromLocalData = () => {
       if (!sessionDataRef.current) return;
@@ -75,10 +69,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       const now = new Date();
       const elapsedMs = now.getTime() - startTime.getTime();
       
-      // Calculate total seconds, minutes, hours
       const secondsTotal = Math.floor(elapsedMs / 1000);
-      setTotalElapsedSeconds(secondsTotal);
-      
       const minutesTotal = Math.floor(secondsTotal / 60);
       const hoursTotal = Math.floor(minutesTotal / 60);
       
@@ -88,20 +79,12 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       
       // Calculate projected hours used (for membership deduction)
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-      const hoursDeducted = secondsToHours(secondsTotal); 
-      setProjectedHoursUsed(hoursDeducted);
-      
-      // Update the customer's displayed remaining hours in real-time
-      // This is just for display - actual deduction happens at session end
-      if (customer && isMember && hasHours && customer.membershipHoursLeft !== undefined) {
-        const tempRemainingHours = Math.max(0, customer.membershipHoursLeft - hoursDeducted);
-        setRemainingMembershipHours(tempRemainingHours);
-      }
+      setProjectedHoursUsed(Math.ceil(hoursElapsed)); // Round up to nearest hour
       
       // Calculate cost based on hourly rate
       let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       
-      // Apply 50% discount for members
+      // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
       if (isMember) {
         calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
       }
@@ -173,12 +156,14 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     return () => {
       // Don't clear the interval - let the timer continue running
       // This is intentional to keep the session running in the background
+      // even if component unmounts
     };
-  }, [station, customers, customer, isMember, hasHours]);
+  }, [station, customers]);
 
   // Add a cleanup function for component unmount
   useEffect(() => {
     return () => {
+      // This will only run when the component is truly unmounted (not page change)
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -193,9 +178,10 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     return null;
   }
 
-  // Show membership hours info if applicable
+  // Get customer to show potential membership hour usage
+  const customer = customers.find(c => c.id === station.currentSession?.customerId);
   const showMembershipHours = customer && 
-    isMember && 
+    isMembershipActive(customer) && 
     customer.membershipHoursLeft !== undefined &&
     customer.membershipHoursLeft > 0;
 
@@ -211,27 +197,15 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
       
-      {/* Show real-time membership hours usage for members */}
+      {/* Show projected membership hours usage for members */}
       {showMembershipHours && (
-        <>
-          <div className="flex justify-between items-center text-xs border-t border-gray-600 pt-2">
-            <span className="text-white">Used so far:</span>
-            <span className="text-amber-400 font-bold">
-              {formatHoursAsDuration(projectedHoursUsed)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-white">Hours remaining:</span>
-            <span className="text-green-400 font-bold">
-              {remainingMembershipHours !== undefined ? 
-                formatHoursAsDuration(remainingMembershipHours) : 
-                formatHoursAsDuration(customer?.membershipHoursLeft || 0)}
-            </span>
-          </div>
-          <div className="text-xs text-right text-green-500">
-            50% discount applied
-          </div>
-        </>
+        <div className="flex justify-between items-center text-xs border-t border-gray-600 pt-2">
+          <span className="text-white">Projected hours usage:</span>
+          <span className="text-amber-400 font-bold">
+            {projectedHoursUsed} hr
+            {projectedHoursUsed > 1 ? 's' : ''}
+          </span>
+        </div>
       )}
     </div>
   );

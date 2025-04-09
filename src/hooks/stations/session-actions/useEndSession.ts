@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
-import { formatHoursAsDuration, isMembershipActive, minutesToHours, secondsToHours } from '@/utils/membership.utils';
+import { formatHoursAsDuration, isMembershipActive, minutesToHours } from '@/utils/membership.utils';
 
 /**
  * Hook to provide session end functionality
@@ -41,13 +41,12 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration using precise timing
+      // Calculate duration in minutes
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationSeconds = Math.round(durationMs / 1000);
-      const durationMinutes = Math.ceil(durationSeconds / 60);
+      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
       
-      console.log(`Session duration calculation: ${durationMs}ms = ${durationSeconds}s = ${durationMinutes} minutes`);
+      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -69,22 +68,19 @@ export const useEndSession = ({
           : s
       ));
       
-      // Try to update session in Supabase with both end_time and duration
+      // Try to update session in Supabase
       try {
         const { error: sessionError } = await supabase
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes,
-            duration_seconds: durationSeconds // Store exact seconds for precise calculations
+            duration: durationMinutes
           })
           .eq('id', session.id);
           
         if (sessionError) {
           console.error('Error updating session in Supabase:', sessionError);
           // Continue since local state is already updated
-        } else {
-          console.log('Successfully updated session in Supabase with duration:', durationMinutes);
         }
       } catch (supabaseError) {
         console.error('Error updating session in Supabase:', supabaseError);
@@ -129,8 +125,7 @@ export const useEndSession = ({
       
       // Calculate session cost
       const stationRate = station.hourlyRate;
-      // Use precise seconds for cost calculation
-      const hoursPlayed = secondsToHours(durationSeconds);
+      const hoursPlayed = minutesToHours(durationMinutes); // Convert minutes to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Check if customer is a valid member with available hours
@@ -141,15 +136,12 @@ export const useEndSession = ({
       let updatedCustomer = customer;
       
       if (isMember && customer && isMembershipActive(customer) && customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft > 0) {
-        // Use exact hours based on seconds for deduction
-        hoursToDeduct = secondsToHours(durationSeconds);
-        
-        console.log(`Deducting ${hoursToDeduct.toFixed(6)} hours based on ${durationSeconds} seconds played`);
+        // Calculate hours to deduct (round up to nearest hour)
+        hoursToDeduct = Math.ceil(hoursPlayed);
         
         // Only deduct what's available
         if (hoursToDeduct > customer.membershipHoursLeft) {
           hoursToDeduct = customer.membershipHoursLeft;
-          console.log(`Limited deduction to available hours: ${hoursToDeduct}`);
         }
         
         // Apply 50% discount
@@ -157,7 +149,7 @@ export const useEndSession = ({
         const originalCost = sessionCost;
         sessionCost = Math.ceil(sessionCost * 0.5); // 50% discount
         
-        // Update customer's membership hours with precise deduction
+        // Update customer's membership hours
         const remainingHours = Math.max(0, customer.membershipHoursLeft - hoursToDeduct);
         updatedCustomer = {
           ...customer,
@@ -168,47 +160,11 @@ export const useEndSession = ({
         membershipHoursUpdated = true;
         
         console.log(`Applied 50% member discount: ${originalCost} → ${sessionCost}`);
-        console.log(`Deducted ${hoursToDeduct.toFixed(6)} hours, ${remainingHours.toFixed(6)} hours left (${formatHoursAsDuration(remainingHours)})`);
+        console.log(`Deducted ${hoursToDeduct} hours, ${remainingHours} hours left (${formatHoursAsDuration(remainingHours)})`);
         
         // Update the customer in state and database
         if (membershipHoursUpdated && updatedCustomer) {
-          try {
-            console.log("Updating customer with ID:", customer.id);
-            console.log("New membership hours:", remainingHours);
-            console.log("New total play time:", updatedCustomer.totalPlayTime);
-            
-            // Make sure we have valid numbers before sending to the database
-            const hoursToUpdate = isNaN(remainingHours) ? 0 : remainingHours;
-            const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
-            
-            // Update customer in Supabase with precise membership hours and play time
-            const { error: customerError } = await supabase
-              .from('customers')
-              .update({
-                membership_hours_left: hoursToUpdate,
-                total_play_time: playTimeToUpdate
-              })
-              .eq('id', customer.id);
-              
-            if (customerError) {
-              console.error('Error updating customer in Supabase:', customerError);
-              console.error('Error details:', JSON.stringify(customerError));
-              toast({
-                title: "Database Error",
-                description: "Failed to update customer membership hours in database: " + customerError.message,
-                variant: "destructive"
-              });
-            } else {
-              console.log('Successfully updated customer membership hours in Supabase:', remainingHours);
-            }
-            
-            // Update local state regardless of database success
-            updateCustomer(updatedCustomer);
-          } catch (error) {
-            console.error('Error updating customer membership hours:', error);
-            // Still update the local state
-            updateCustomer(updatedCustomer);
-          }
+          updateCustomer(updatedCustomer);
         }
         
         if (remainingHours === 0) {
@@ -230,39 +186,18 @@ export const useEndSession = ({
           toast({
             title: "Membership Expired",
             description: `${customer.name}'s membership has expired`,
-            variant: "default"
+            variant: "destructive"
           });
           
-          // Update customer to mark membership as inactive if needed
+          // Update customer to mark membership as inactive
           updatedCustomer = {
             ...customer,
+            isMember: false,
             totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
           };
           
           // Update the customer in state and database
-          try {
-            // Make sure we have valid numbers
-            const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
-            
-            const { error: customerError } = await supabase
-              .from('customers')
-              .update({
-                total_play_time: playTimeToUpdate
-              })
-              .eq('id', customer.id);
-              
-            if (customerError) {
-              console.error('Error updating customer play time in Supabase:', customerError);
-              console.error('Error details:', JSON.stringify(customerError));
-            } else {
-              console.log('Successfully updated customer play time in Supabase:', playTimeToUpdate);
-            }
-            
-            updateCustomer(updatedCustomer);
-          } catch (error) {
-            console.error('Error updating customer play time:', error);
-            updateCustomer(updatedCustomer);
-          }
+          updateCustomer(updatedCustomer);
         } else {
           toast({
             title: "No Membership Hours",
@@ -275,30 +210,7 @@ export const useEndSession = ({
             ...customer,
             totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
           };
-          
-          try {
-            // Make sure we have valid numbers
-            const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
-            
-            const { error: customerError } = await supabase
-              .from('customers')
-              .update({
-                total_play_time: playTimeToUpdate
-              })
-              .eq('id', customer.id);
-              
-            if (customerError) {
-              console.error('Error updating customer play time in Supabase:', customerError);
-              console.error('Error details:', JSON.stringify(customerError));
-            } else {
-              console.log('Successfully updated customer play time in Supabase:', playTimeToUpdate);
-            }
-            
-            updateCustomer(updatedCustomer);
-          } catch (error) {
-            console.error('Error updating customer play time:', error);
-            updateCustomer(updatedCustomer);
-          }
+          updateCustomer(updatedCustomer);
         }
       } else if (customer) {
         // Non-member, just update play time
@@ -306,35 +218,11 @@ export const useEndSession = ({
           ...customer,
           totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
         };
-        
-        try {
-          // Make sure we have valid numbers
-          const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
-          
-          const { error: customerError } = await supabase
-            .from('customers')
-            .update({
-              total_play_time: playTimeToUpdate
-            })
-            .eq('id', customer.id);
-            
-          if (customerError) {
-            console.error('Error updating customer play time in Supabase:', customerError);
-            console.error('Error details:', JSON.stringify(customerError));
-          } else {
-            console.log('Successfully updated customer play time in Supabase:', playTimeToUpdate);
-          }
-          
-          updateCustomer(updatedCustomer);
-        } catch (error) {
-          console.error('Error updating customer play time:', error);
-          updateCustomer(updatedCustomer);
-        }
+        updateCustomer(updatedCustomer);
       }
       
       console.log("Session cost calculation:", { 
         stationRate, 
-        durationSeconds,
         durationMinutes,
         hoursPlayed,
         isMember,
@@ -385,111 +273,27 @@ export const useEndSession = ({
         return undefined;
       }
       
-      // Calculate hours to restore using exact time
-      let hoursToRestore: number;
-      
-      // Try to get the exact duration in seconds from Supabase first
-      try {
-        const { data, error } = await supabase
-          .from('sessions')
-          .select('duration_seconds, duration')
-          .eq('id', session.id)
-          .single();
-          
-        if (error) {
-          console.log('Could not find exact duration seconds, using minutes:', session.duration);
-          const minutesPlayed = session.duration;
-          const secondsPlayed = minutesPlayed * 60;
-          hoursToRestore = secondsToHours(secondsPlayed);
-        } else if (data) {
-          // Extract data safely with type checking
-          const durationSeconds = typeof data === 'object' && data !== null ? 
-            (data as any).duration_seconds : undefined;
-            
-          if (durationSeconds !== null && durationSeconds !== undefined) {
-            hoursToRestore = secondsToHours(durationSeconds);
-            console.log(`Using exact seconds (${durationSeconds}) for hour restoration: ${hoursToRestore}`);
-          } else {
-            // Fallback to minutes
-            const minutesPlayed = typeof data === 'object' && data !== null ? 
-              (data as any).duration || session.duration : session.duration;
-              
-            const secondsPlayed = minutesPlayed * 60;
-            hoursToRestore = secondsToHours(secondsPlayed);
-            console.log(`Using minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
-          }
-        } else {
-          // No data returned, use session duration
-          const minutesPlayed = session.duration;
-          const secondsPlayed = minutesPlayed * 60;
-          hoursToRestore = secondsToHours(secondsPlayed);
-          console.log(`No data from Supabase, using session minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
-        }
-      } catch (error) {
-        console.error('Error fetching session duration:', error);
-        // Fallback to the session object's duration
-        const minutesPlayed = session.duration;
-        const secondsPlayed = minutesPlayed * 60;
-        hoursToRestore = secondsToHours(secondsPlayed);
-        console.log(`Error getting duration, using session minutes (${minutesPlayed}) for hour restoration: ${hoursToRestore}`);
-      }
-      
-      // Round to 6 decimal places for accurate tracking
-      hoursToRestore = parseFloat(hoursToRestore.toFixed(6));
+      // Calculate hours to restore (always round up to nearest hour)
+      const minutesPlayed = session.duration;
+      const hoursPlayed = minutesToHours(minutesPlayed);
+      const hoursToRestore = Math.ceil(hoursPlayed);
       
       console.log(`Restoring ${hoursToRestore} hours for customer ${customer.name} from deleted session`);
       
       // Update customer's membership hours
-      const updatedHours = Math.max(0, (customer.membershipHoursLeft + hoursToRestore));
-      const updatedPlayTime = Math.max(0, (customer.totalPlayTime || 0) - (session.duration || 0));
-      
+      const updatedHours = customer.membershipHoursLeft + hoursToRestore;
       const updatedCustomer = {
         ...customer,
         membershipHoursLeft: updatedHours,
-        totalPlayTime: updatedPlayTime
+        totalPlayTime: Math.max(0, (customer.totalPlayTime || 0) - minutesPlayed)
       };
-      
-      // Make sure we have valid numbers
-      const hoursToUpdate = isNaN(updatedHours) ? 0 : updatedHours;
-      const playTimeToUpdate = isNaN(updatedPlayTime) ? 0 : updatedPlayTime;
-      
-      console.log("Updating customer with restored hours:", {
-        customerId: customer.id,
-        hoursToUpdate,
-        playTimeToUpdate
-      });
-      
-      // Update customer in Supabase
-      try {
-        const { error } = await supabase
-          .from('customers')
-          .update({
-            membership_hours_left: hoursToUpdate,
-            total_play_time: playTimeToUpdate
-          })
-          .eq('id', customer.id);
-          
-        if (error) {
-          console.error('Error updating customer in Supabase:', error);
-          console.error('Error details:', JSON.stringify(error));
-          toast({
-            title: "Database Error",
-            description: "Failed to restore membership hours in database: " + error.message,
-            variant: "destructive"
-          });
-        } else {
-          console.log('Successfully restored customer membership hours in Supabase:', updatedHours);
-        }
-      } catch (error) {
-        console.error('Error updating customer membership hours:', error);
-      }
       
       // Update customer in state and database
       updateCustomer(updatedCustomer);
       
       toast({
         title: "Hours Restored",
-        description: `${hoursToRestore.toFixed(2)} hours have been restored to ${customer.name}'s membership (${formatHoursAsDuration(updatedHours)} available)`,
+        description: `${hoursToRestore} hours have been restored to ${customer.name}'s membership (${formatHoursAsDuration(updatedHours)} available)`,
       });
       
       return updatedCustomer;
