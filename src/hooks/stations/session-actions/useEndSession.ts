@@ -173,26 +173,36 @@ export const useEndSession = ({
         // Update the customer in state and database
         if (membershipHoursUpdated && updatedCustomer) {
           try {
+            console.log("Updating customer with ID:", customer.id);
+            console.log("New membership hours:", remainingHours);
+            console.log("New total play time:", updatedCustomer.totalPlayTime);
+            
+            // Make sure we have valid numbers before sending to the database
+            const hoursToUpdate = isNaN(remainingHours) ? 0 : remainingHours;
+            const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
+            
             // Update customer in Supabase with precise membership hours and play time
             const { error: customerError } = await supabase
               .from('customers')
               .update({
-                membership_hours_left: remainingHours,
-                total_play_time: updatedCustomer.totalPlayTime
+                membership_hours_left: hoursToUpdate,
+                total_play_time: playTimeToUpdate
               })
               .eq('id', customer.id);
               
             if (customerError) {
               console.error('Error updating customer in Supabase:', customerError);
+              console.error('Error details:', JSON.stringify(customerError));
               toast({
                 title: "Database Error",
-                description: "Failed to update customer membership hours in database",
+                description: "Failed to update customer membership hours in database: " + customerError.message,
                 variant: "destructive"
               });
             } else {
               console.log('Successfully updated customer membership hours in Supabase:', remainingHours);
             }
             
+            // Update local state regardless of database success
             updateCustomer(updatedCustomer);
           } catch (error) {
             console.error('Error updating customer membership hours:', error);
@@ -231,15 +241,21 @@ export const useEndSession = ({
           
           // Update the customer in state and database
           try {
+            // Make sure we have valid numbers
+            const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
+            
             const { error: customerError } = await supabase
               .from('customers')
               .update({
-                total_play_time: updatedCustomer.totalPlayTime
+                total_play_time: playTimeToUpdate
               })
               .eq('id', customer.id);
               
             if (customerError) {
               console.error('Error updating customer play time in Supabase:', customerError);
+              console.error('Error details:', JSON.stringify(customerError));
+            } else {
+              console.log('Successfully updated customer play time in Supabase:', playTimeToUpdate);
             }
             
             updateCustomer(updatedCustomer);
@@ -261,15 +277,21 @@ export const useEndSession = ({
           };
           
           try {
+            // Make sure we have valid numbers
+            const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
+            
             const { error: customerError } = await supabase
               .from('customers')
               .update({
-                total_play_time: updatedCustomer.totalPlayTime
+                total_play_time: playTimeToUpdate
               })
               .eq('id', customer.id);
               
             if (customerError) {
               console.error('Error updating customer play time in Supabase:', customerError);
+              console.error('Error details:', JSON.stringify(customerError));
+            } else {
+              console.log('Successfully updated customer play time in Supabase:', playTimeToUpdate);
             }
             
             updateCustomer(updatedCustomer);
@@ -286,17 +308,21 @@ export const useEndSession = ({
         };
         
         try {
+          // Make sure we have valid numbers
+          const playTimeToUpdate = isNaN(updatedCustomer.totalPlayTime) ? 0 : updatedCustomer.totalPlayTime;
+          
           const { error: customerError } = await supabase
             .from('customers')
             .update({
-              total_play_time: updatedCustomer.totalPlayTime
+              total_play_time: playTimeToUpdate
             })
             .eq('id', customer.id);
             
           if (customerError) {
             console.error('Error updating customer play time in Supabase:', customerError);
+            console.error('Error details:', JSON.stringify(customerError));
           } else {
-            console.log('Successfully updated customer play time in Supabase:', updatedCustomer.totalPlayTime);
+            console.log('Successfully updated customer play time in Supabase:', playTimeToUpdate);
           }
           
           updateCustomer(updatedCustomer);
@@ -414,28 +440,41 @@ export const useEndSession = ({
       console.log(`Restoring ${hoursToRestore} hours for customer ${customer.name} from deleted session`);
       
       // Update customer's membership hours
-      const updatedHours = customer.membershipHoursLeft + hoursToRestore;
+      const updatedHours = Math.max(0, (customer.membershipHoursLeft + hoursToRestore));
+      const updatedPlayTime = Math.max(0, (customer.totalPlayTime || 0) - (session.duration || 0));
+      
       const updatedCustomer = {
         ...customer,
         membershipHoursLeft: updatedHours,
-        totalPlayTime: Math.max(0, (customer.totalPlayTime || 0) - session.duration)
+        totalPlayTime: updatedPlayTime
       };
+      
+      // Make sure we have valid numbers
+      const hoursToUpdate = isNaN(updatedHours) ? 0 : updatedHours;
+      const playTimeToUpdate = isNaN(updatedPlayTime) ? 0 : updatedPlayTime;
+      
+      console.log("Updating customer with restored hours:", {
+        customerId: customer.id,
+        hoursToUpdate,
+        playTimeToUpdate
+      });
       
       // Update customer in Supabase
       try {
         const { error } = await supabase
           .from('customers')
           .update({
-            membership_hours_left: updatedHours,
-            total_play_time: updatedCustomer.totalPlayTime
+            membership_hours_left: hoursToUpdate,
+            total_play_time: playTimeToUpdate
           })
           .eq('id', customer.id);
           
         if (error) {
           console.error('Error updating customer in Supabase:', error);
+          console.error('Error details:', JSON.stringify(error));
           toast({
             title: "Database Error",
-            description: "Failed to restore membership hours in database",
+            description: "Failed to restore membership hours in database: " + error.message,
             variant: "destructive"
           });
         } else {
