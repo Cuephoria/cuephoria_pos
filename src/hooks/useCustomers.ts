@@ -352,11 +352,14 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membership_start_date: customer.membershipStartDate?.toISOString(),
           membership_plan: customer.membershipPlan,
           membership_seconds_left: customer.membershipSecondsLeft,
+          membership_hours_left: customer.membershipSecondsLeft 
+            ? Math.round(customer.membershipSecondsLeft / 3600) 
+            : undefined,
           membership_duration: customer.membershipDuration,
           loyalty_points: customer.loyaltyPoints,
           total_spent: customer.totalSpent,
           total_play_time: customer.totalPlayTime
-        } as any)
+        })
         .eq('id', customer.id);
         
       if (error) {
