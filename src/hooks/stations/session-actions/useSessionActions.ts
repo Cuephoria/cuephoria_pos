@@ -16,7 +16,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
   
   // Get the functionality from existing hooks
   const startSessionHook = useStartSession(props);
-  const endSessionHook = useEndSession({...props, updateCustomer});
+  const endSessionHook = useEndSession(props);
   
   // Start a new session
   const startSession = async (stationId: string, customerId: string): Promise<void> => {

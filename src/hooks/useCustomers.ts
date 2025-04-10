@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
+import { hoursToSeconds } from '@/utils/membership.utils';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -15,12 +17,21 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         if (storedCustomers) {
           const parsedCustomers = JSON.parse(storedCustomers);
           
-          const customersWithDates = parsedCustomers.map((customer: any) => ({
-            ...customer,
-            createdAt: new Date(customer.createdAt),
-            membershipStartDate: customer.membershipStartDate ? new Date(customer.membershipStartDate) : undefined,
-            membershipExpiryDate: customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate) : undefined
-          }));
+          const customersWithDates = parsedCustomers.map((customer: any) => {
+            // Convert membershipHoursLeft to membershipSecondsLeft if present
+            let membershipSecondsLeft = undefined;
+            if (customer.membershipHoursLeft !== undefined) {
+              membershipSecondsLeft = hoursToSeconds(customer.membershipHoursLeft);
+            }
+            
+            return {
+              ...customer,
+              membershipSecondsLeft, // Use converted seconds
+              createdAt: new Date(customer.createdAt),
+              membershipStartDate: customer.membershipStartDate ? new Date(customer.membershipStartDate) : undefined,
+              membershipExpiryDate: customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate) : undefined
+            };
+          });
           
           setCustomers(customersWithDates);
           
@@ -34,7 +45,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
                 membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
                 membership_start_date: customer.membershipStartDate?.toISOString(),
                 membership_plan: customer.membershipPlan,
-                membership_hours_left: customer.membershipHoursLeft,
+                membership_seconds_left: customer.membershipSecondsLeft,
                 membership_duration: customer.membershipDuration,
                 loyalty_points: customer.loyaltyPoints,
                 total_spent: customer.totalSpent,
@@ -73,7 +84,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
             membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
             membershipPlan: item.membership_plan || undefined,
-            membershipHoursLeft: item.membership_hours_left || undefined,
+            membershipSecondsLeft: item.membership_seconds_left || undefined,
             membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
             loyaltyPoints: item.loyalty_points,
             totalSpent: item.total_spent,
@@ -166,6 +177,14 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return existingCustomer;
       }
       
+      // Convert membershipHoursLeft to membershipSecondsLeft if present
+      let membershipSecondsLeft = undefined;
+      if (customer.membershipHoursLeft !== undefined) {
+        membershipSecondsLeft = hoursToSeconds(customer.membershipHoursLeft);
+      } else if (customer.membershipSecondsLeft !== undefined) {
+        membershipSecondsLeft = customer.membershipSecondsLeft;
+      }
+      
       const { data, error } = await supabase
         .from('customers')
         .insert({
@@ -176,7 +195,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
           membership_start_date: customer.membershipStartDate?.toISOString(),
           membership_plan: customer.membershipPlan,
-          membership_hours_left: customer.membershipHoursLeft,
+          membership_seconds_left: membershipSecondsLeft,
           membership_duration: customer.membershipDuration,
           loyalty_points: customer.loyaltyPoints || 0,
           total_spent: customer.totalSpent || 0,
@@ -205,7 +224,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
           membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
           membershipPlan: data.membership_plan || undefined,
-          membershipHoursLeft: data.membership_hours_left || undefined,
+          membershipSecondsLeft: data.membership_seconds_left || undefined,
           membershipDuration: data.membership_duration as 'weekly' | 'monthly' | undefined,
           loyaltyPoints: data.loyalty_points,
           totalSpent: data.total_spent,
@@ -237,7 +256,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   const updateCustomerMembership = async (customerId: string, membershipData: {
     membershipPlan?: string;
     membershipDuration?: 'weekly' | 'monthly';
-    membershipHoursLeft?: number;
+    membershipSecondsLeft?: number;
   }) => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return null;
@@ -252,14 +271,25 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       membershipExpiryDate.setMonth(membershipExpiryDate.getMonth() + 1);
     }
     
+    // Convert hours to seconds if not already in seconds
+    let membershipSecondsLeft = membershipData.membershipSecondsLeft;
+    if (membershipData.membershipPlan) {
+      // Default hours based on plan type
+      let defaultHours = 4; // Default for basic plans
+      if (membershipData.membershipPlan.includes('Combo') || membershipData.membershipPlan.includes('Ultimate')) {
+        defaultHours = 6; // More hours for premium plans
+      }
+      membershipSecondsLeft = hoursToSeconds(defaultHours);
+    }
+    
     const updatedCustomer = {
       ...customer,
       isMember: true,
       membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
       membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
-      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
-        ? membershipData.membershipHoursLeft 
-        : customer.membershipHoursLeft,
+      membershipSecondsLeft: membershipSecondsLeft !== undefined 
+        ? membershipSecondsLeft 
+        : customer.membershipSecondsLeft,
       membershipStartDate,
       membershipExpiryDate
     };
@@ -315,7 +345,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
           membership_start_date: customer.membershipStartDate?.toISOString(),
           membership_plan: customer.membershipPlan,
-          membership_hours_left: customer.membershipHoursLeft,
+          membership_seconds_left: customer.membershipSecondsLeft,
           membership_duration: customer.membershipDuration,
           loyalty_points: customer.loyaltyPoints,
           total_spent: customer.totalSpent,
@@ -417,7 +447,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           return;
         }
         
-        if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
+        if (customer.membershipSecondsLeft !== undefined && customer.membershipSecondsLeft <= 0) {
           toast({
             title: "Membership Hours Depleted",
             description: `${customer.name} has no remaining hours on their membership plan`,
@@ -456,7 +486,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       }
     }
     
-    if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
+    if (customer.membershipSecondsLeft !== undefined && customer.membershipSecondsLeft <= 0) {
       toast({
         title: "No Hours Remaining",
         description: `${customer.name} has used all allocated hours in their membership plan`,
@@ -471,14 +501,16 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   const deductMembershipHours = (customerId: string, hours: number): boolean => {
     const customer = customers.find(c => c.id === customerId);
     
-    if (!customer || !customer.isMember || customer.membershipHoursLeft === undefined) {
+    if (!customer || !customer.isMember || customer.membershipSecondsLeft === undefined) {
       return false;
     }
     
-    if (customer.membershipHoursLeft < hours) {
+    const secondsToDeduct = hoursToSeconds(hours);
+    
+    if (customer.membershipSecondsLeft < secondsToDeduct) {
       toast({
         title: "Insufficient Hours",
-        description: `Customer only has ${customer.membershipHoursLeft} hours remaining`,
+        description: `Customer only has ${formatDurationFromSeconds(customer.membershipSecondsLeft)} remaining`,
         variant: "destructive"
       });
       return false;
@@ -486,7 +518,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     
     const updatedCustomer = {
       ...customer,
-      membershipHoursLeft: customer.membershipHoursLeft - hours
+      membershipSecondsLeft: customer.membershipSecondsLeft - secondsToDeduct
     };
     
     updateCustomer(updatedCustomer);

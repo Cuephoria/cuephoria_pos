@@ -48,10 +48,61 @@ export const getMembershipBadgeText = (customer: Customer): string => {
 };
 
 /**
+ * Formats seconds into a duration string (hh:mm:ss)
+ */
+export const formatDurationFromSeconds = (seconds: number | undefined): string => {
+  if (seconds === undefined) return '00:00:00';
+  
+  // Ensure seconds is non-negative
+  seconds = Math.max(0, seconds);
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Converts a duration string (hh:mm:ss) to seconds
+ */
+export const durationToSeconds = (duration: string): number => {
+  if (!duration) return 0;
+  
+  const parts = duration.split(':');
+  if (parts.length !== 3) return 0;
+  
+  const hours = parseInt(parts[0], 10) || 0;
+  const minutes = parseInt(parts[1], 10) || 0;
+  const seconds = parseInt(parts[2], 10) || 0;
+  
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
+/**
+ * Converts hours (as a number) to seconds
+ */
+export const hoursToSeconds = (hours: number | undefined): number => {
+  if (hours === undefined) return 0;
+  return Math.round(hours * 3600);
+};
+
+/**
+ * Converts seconds to hours (decimal form)
+ */
+export const secondsToHours = (seconds: number | undefined): number => {
+  if (seconds === undefined) return 0;
+  return parseFloat((seconds / 3600).toFixed(2));
+};
+
+/**
  * Gets the appropriate color class for hours left indicator
  */
-export const getHoursLeftColor = (hoursLeft: number | undefined): string => {
-  if (hoursLeft === undefined) return '';
+export const getHoursLeftColor = (secondsLeft: number | undefined): string => {
+  if (secondsLeft === undefined) return '';
+  
+  // Convert to hours for threshold comparison
+  const hoursLeft = secondsToHours(secondsLeft);
   
   if (hoursLeft <= 0) return 'text-red-600';
   if (hoursLeft < 2) return 'text-orange-500';

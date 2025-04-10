@@ -23,7 +23,7 @@ export interface Customer {
   membershipExpiryDate?: Date;
   membershipStartDate?: Date;
   membershipPlan?: string;
-  membershipHoursLeft?: number;
+  membershipSecondsLeft?: number; // Changed from membershipHoursLeft to membershipSecondsLeft
   membershipDuration?: 'weekly' | 'monthly';
   loyaltyPoints: number;
   totalSpent: number;
@@ -123,7 +123,7 @@ export interface POSContextType {
   updateCustomerMembership: (customerId: string, membershipData: {
     membershipPlan?: string;
     membershipDuration?: 'weekly' | 'monthly';
-    membershipHoursLeft?: number;
+    membershipSecondsLeft?: number; // Changed from membershipHoursLeft to membershipSecondsLeft
   }) => Customer | null;
   deleteCustomer: (id: string) => void;
   selectCustomer: (id: string | null) => void;
