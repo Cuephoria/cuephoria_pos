@@ -5,7 +5,6 @@ import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
-import { formatHoursAsDuration, isMembershipActive, minutesToHours } from '@/utils/membership.utils';
 
 /**
  * Hook to provide session end functionality
@@ -45,9 +44,6 @@ export const useEndSession = ({
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
       const durationMinutes = Math.ceil(durationMs / (1000 * 60));
-      const durationSeconds = Math.floor(durationMs / 1000);
-      
-      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes (${durationSeconds} seconds)`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -75,8 +71,7 @@ export const useEndSession = ({
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes,
-            duration_seconds: durationSeconds
+            duration: durationMinutes
           })
           .eq('id', session.id);
           
@@ -127,12 +122,12 @@ export const useEndSession = ({
       
       // Calculate session cost
       const stationRate = station.hourlyRate;
-      const hoursPlayed = minutesToHours(durationMinutes); // Convert minutes to hours for billing
+      const hoursPlayed = durationMs / (1000 * 60 * 60);
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
       const isMember = customer?.isMember || false;
-      const discountApplied = isMember && isMembershipActive(customer!);
+      const discountApplied = isMember;
       
       if (discountApplied) {
         const originalCost = sessionCost;
@@ -161,16 +156,12 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time (even if membership hours were deducted in real-time)
+      // Update customer's total play time
       if (customer) {
         const updatedCustomer = {
           ...customer,
           totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
         };
-        
-        // The membership hours were already being deducted in real-time by StationTimer
-        // So we don't need to modify membershipHoursLeft here
-        
         updateCustomer(updatedCustomer);
       }
       
@@ -195,49 +186,5 @@ export const useEndSession = ({
     }
   };
   
-  /**
-   * Restore hours if a session is deleted
-   */
-  const restoreSessionHours = async (session: Session, customer: Customer): Promise<Customer | undefined> => {
-    try {
-      if (!session.duration || !customer.isMember || customer.membershipHoursLeft === undefined) {
-        return undefined;
-      }
-      
-      // Calculate hours to restore (always round up to nearest hour)
-      const minutesPlayed = session.duration;
-      const hoursPlayed = minutesToHours(minutesPlayed);
-      const hoursToRestore = Math.ceil(hoursPlayed);
-      
-      console.log(`Restoring ${hoursToRestore} hours for customer ${customer.name} from deleted session`);
-      
-      // Update customer's membership hours
-      const updatedHours = customer.membershipHoursLeft + hoursToRestore;
-      const updatedCustomer = {
-        ...customer,
-        membershipHoursLeft: updatedHours,
-        totalPlayTime: Math.max(0, (customer.totalPlayTime || 0) - minutesPlayed)
-      };
-      
-      // Update customer in state and database
-      updateCustomer(updatedCustomer);
-      
-      toast({
-        title: "Hours Restored",
-        description: `${hoursToRestore} hours have been restored to ${customer.name}'s membership (${formatHoursAsDuration(updatedHours)} available)`,
-      });
-      
-      return updatedCustomer;
-    } catch (error) {
-      console.error('Error restoring session hours:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to restore membership hours',
-        variant: 'destructive'
-      });
-      return undefined;
-    }
-  };
-  
-  return { endSession, restoreSessionHours };
+  return { endSession };
 };

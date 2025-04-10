@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Customer } from '@/context/POSContext';
 import { CalendarCheck, Award, Clock, Calendar, AlertTriangle } from 'lucide-react';

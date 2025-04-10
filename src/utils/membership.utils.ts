@@ -2,115 +2,58 @@
 import { Customer } from '@/types/pos.types';
 
 /**
- * Check if customer has an active membership
+ * Determines if a customer's membership is currently active
  */
 export const isMembershipActive = (customer: Customer): boolean => {
-  if (!customer.isMember) return false;
-  
-  // Check expiry date
-  if (customer.membershipExpiryDate) {
-    const expiryDate = new Date(customer.membershipExpiryDate);
-    if (expiryDate < new Date()) return false;
-  }
-  
-  // Check if hours are depleted
-  if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
-    return false;
-  }
-  
-  return true;
+  if (!customer.isMember || !customer.membershipExpiryDate) return false;
+  const expiryDate = new Date(customer.membershipExpiryDate);
+  return expiryDate > new Date();
 };
 
 /**
- * Get text for the membership badge
+ * Generates the text to display on a membership badge
  */
 export const getMembershipBadgeText = (customer: Customer): string => {
   if (!customer.isMember) return 'Non-Member';
   
-  if (!isMembershipActive(customer)) {
-    if (customer.membershipExpiryDate && new Date(customer.membershipExpiryDate) < new Date()) {
-      return 'Expired';
+  const duration = customer.membershipDuration || 
+                   (customer.membershipPlan?.toLowerCase().includes('weekly') ? 'Weekly' : 
+                    customer.membershipPlan?.toLowerCase().includes('monthly') ? 'Monthly' : '');
+  
+  let tier = '';
+  if (customer.membershipPlan) {
+    if (customer.membershipPlan.includes('Silver')) {
+      tier = 'Silver';
+    } else if (customer.membershipPlan.includes('Gold')) {
+      tier = 'Gold';
+    } else if (customer.membershipPlan.includes('Platinum')) {
+      tier = 'Platinum';
     }
-    if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft <= 0) {
-      return 'Hours Used';
+  }
+  
+  let type = '';
+  if (customer.membershipPlan) {
+    if (customer.membershipPlan.includes('PS5')) {
+      type = 'PS5';
+    } else if (customer.membershipPlan.includes('8-Ball')) {
+      type = '8-Ball';
+    } else if (customer.membershipPlan.includes('Combo')) {
+      type = 'Combo';
+    } else if (customer.membershipPlan.includes('Ultimate')) {
+      type = 'Ultimate';
     }
-    return 'Inactive';
   }
   
-  if (customer.membershipDuration === 'weekly') {
-    return 'Weekly';
-  } else if (customer.membershipDuration === 'monthly') {
-    return 'Monthly';
-  } else if (customer.membershipPlan) {
-    return customer.membershipPlan;
-  } else {
-    return 'Member';
-  }
+  return `${tier} ${type} ${duration}`;
 };
 
 /**
- * Format hours as a duration string (hh:mm:ss)
+ * Gets the appropriate color class for hours left indicator
  */
-export const formatHoursAsDuration = (hours: number): string => {
-  if (isNaN(hours) || hours < 0) {
-    return '00:00:00';
-  }
+export const getHoursLeftColor = (hoursLeft: number | undefined): string => {
+  if (hoursLeft === undefined) return '';
   
-  const totalSeconds = Math.floor(hours * 3600);
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-/**
- * Format seconds as a duration string (hh:mm:ss)
- */
-export const formatSecondsAsDuration = (seconds: number): string => {
-  if (isNaN(seconds) || seconds < 0) {
-    return '00:00:00';
-  }
-  
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-/**
- * Convert a duration in minutes to hours (decimal)
- */
-export const minutesToHours = (minutes: number): number => {
-  return minutes / 60;
-};
-
-/**
- * Convert seconds to hours (decimal)
- */
-export const secondsToHours = (seconds: number): number => {
-  return seconds / 3600;
-};
-
-/**
- * Convert hours to seconds
- */
-export const hoursToSeconds = (hours: number): number => {
-  return Math.floor(hours * 3600);
-};
-
-/**
- * Get color class for hours left display
- */
-export const getHoursLeftColor = (hoursLeft: number): string => {
-  if (hoursLeft <= 0) {
-    return 'text-red-500 font-bold';
-  } else if (hoursLeft <= 2) {
-    return 'text-amber-500 font-bold';
-  } else if (hoursLeft <= 5) {
-    return 'text-amber-400';
-  } else {
-    return 'text-green-500';
-  }
+  if (hoursLeft <= 0) return 'text-red-600';
+  if (hoursLeft < 2) return 'text-orange-500';
+  return 'text-green-600';
 };
