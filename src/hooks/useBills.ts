@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
+import { hoursToSeconds } from '@/utils/membership.utils';
 
 export const useBills = (
   updateCustomer: (customer: Customer) => void,
@@ -287,7 +289,7 @@ export const useBills = (
           updatedCustomer.membershipPlan = membershipProduct.name;
           
           if (membershipProduct.membershipHours) {
-            updatedCustomer.membershipHoursLeft = membershipProduct.membershipHours;
+            updatedCustomer.membershipSecondsLeft = hoursToSeconds(membershipProduct.membershipHours);
           }
           
           if (membershipProduct.duration) {
@@ -389,6 +391,9 @@ export const useBills = (
       setBills(prevBills => prevBills.filter(bill => bill.id !== billId));
       
       if (customer) {
+        const billToDelete = bills.find(bill => bill.id === billId);
+        if (!billToDelete) return false;
+        
         const customerData = customer;
         const updatedCustomer = {
           ...customerData,
@@ -414,7 +419,8 @@ export const useBills = (
           membershipExpiryDate: customerData.membership_expiry_date ? new Date(customerData.membership_expiry_date) : undefined,
           membershipStartDate: customerData.membership_start_date ? new Date(customerData.membership_start_date) : undefined,
           membershipPlan: customerData.membership_plan,
-          membershipHoursLeft: customerData.membership_hours_left,
+          membershipSecondsLeft: customerData.membership_seconds_left || 
+                                (customerData.membership_hours_left ? hoursToSeconds(customerData.membership_hours_left) : undefined),
           membershipDuration: (customerData.membership_duration as 'weekly' | 'monthly' | undefined),
           loyaltyPoints: updatedCustomer.loyalty_points,
           totalSpent: updatedCustomer.total_spent,

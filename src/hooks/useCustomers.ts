@@ -20,6 +20,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             let membershipSecondsLeft = undefined;
             if (customer.membershipHoursLeft !== undefined) {
               membershipSecondsLeft = hoursToSeconds(customer.membershipHoursLeft);
+            } else if (customer.membershipSecondsLeft !== undefined) {
+              membershipSecondsLeft = customer.membershipSecondsLeft;
             }
             
             return {
@@ -73,22 +75,31 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
         
         if (data && data.length > 0) {
-          const transformedCustomers = data.map(item => ({
-            id: item.id,
-            name: item.name,
-            phone: item.phone,
-            email: item.email || undefined,
-            isMember: item.is_member,
-            membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
-            membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
-            membershipPlan: item.membership_plan || undefined,
-            membershipSecondsLeft: item.membership_seconds_left || undefined,
-            membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
-            loyaltyPoints: item.loyalty_points,
-            totalSpent: item.total_spent,
-            totalPlayTime: item.total_play_time,
-            createdAt: new Date(item.created_at)
-          }));
+          const transformedCustomers = data.map(item => {
+            let secondsLeft = undefined;
+            if (item.membership_seconds_left !== null && item.membership_seconds_left !== undefined) {
+              secondsLeft = item.membership_seconds_left;
+            } else if (item.membership_hours_left !== null && item.membership_hours_left !== undefined) {
+              secondsLeft = hoursToSeconds(item.membership_hours_left);
+            }
+            
+            return {
+              id: item.id,
+              name: item.name,
+              phone: item.phone,
+              email: item.email || undefined,
+              isMember: item.is_member,
+              membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
+              membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
+              membershipPlan: item.membership_plan || undefined,
+              membershipSecondsLeft: secondsLeft,
+              membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
+              loyaltyPoints: item.loyalty_points,
+              totalSpent: item.total_spent,
+              totalPlayTime: item.total_play_time,
+              createdAt: new Date(item.created_at)
+            };
+          });
           
           setCustomers(transformedCustomers);
         } else {
