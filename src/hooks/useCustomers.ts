@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
-import { hoursToSeconds } from '@/utils/membership.utils';
+import { hoursToSeconds, formatDurationFromSeconds } from '@/utils/membership.utils';
 
 export const useCustomers = (initialCustomers: Customer[]) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -18,7 +17,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           const parsedCustomers = JSON.parse(storedCustomers);
           
           const customersWithDates = parsedCustomers.map((customer: any) => {
-            // Convert membershipHoursLeft to membershipSecondsLeft if present
             let membershipSecondsLeft = undefined;
             if (customer.membershipHoursLeft !== undefined) {
               membershipSecondsLeft = hoursToSeconds(customer.membershipHoursLeft);
@@ -26,7 +24,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             
             return {
               ...customer,
-              membershipSecondsLeft, // Use converted seconds
+              membershipSecondsLeft,
               createdAt: new Date(customer.createdAt),
               membershipStartDate: customer.membershipStartDate ? new Date(customer.membershipStartDate) : undefined,
               membershipExpiryDate: customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate) : undefined
@@ -177,11 +175,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return existingCustomer;
       }
       
-      // Convert membershipHoursLeft to membershipSecondsLeft if present
       let membershipSecondsLeft = undefined;
-      if (customer.membershipHoursLeft !== undefined) {
-        membershipSecondsLeft = hoursToSeconds(customer.membershipHoursLeft);
-      } else if (customer.membershipSecondsLeft !== undefined) {
+      if (customer.membershipSecondsLeft !== undefined) {
         membershipSecondsLeft = customer.membershipSecondsLeft;
       }
       
@@ -271,13 +266,11 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       membershipExpiryDate.setMonth(membershipExpiryDate.getMonth() + 1);
     }
     
-    // Convert hours to seconds if not already in seconds
     let membershipSecondsLeft = membershipData.membershipSecondsLeft;
     if (membershipData.membershipPlan) {
-      // Default hours based on plan type
-      let defaultHours = 4; // Default for basic plans
+      let defaultHours = 4;
       if (membershipData.membershipPlan.includes('Combo') || membershipData.membershipPlan.includes('Ultimate')) {
-        defaultHours = 6; // More hours for premium plans
+        defaultHours = 6;
       }
       membershipSecondsLeft = hoursToSeconds(defaultHours);
     }

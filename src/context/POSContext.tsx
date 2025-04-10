@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -39,7 +38,7 @@ const POSContext = createContext<POSContextType>({
   startSession: async () => {},
   endSession: async () => {},
   deleteStation: async () => false,
-  updateStation: async () => false,  // Add default implementation
+  updateStation: async () => false,
   addCustomer: () => ({}),
   updateCustomer: () => ({}),
   updateCustomerMembership: () => null,
@@ -102,7 +101,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startSession: startSessionBase, 
     endSession: endSessionBase,
     deleteStation,
-    updateStation  // Make sure to destructure updateStation from the hook
+    updateStation
   } = useStations([], updateCustomer);
   
   const { 
@@ -183,7 +182,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     membershipData: {
       membershipPlan?: string;
       membershipDuration?: 'weekly' | 'monthly';
-      membershipHoursLeft?: number;
+      membershipSecondsLeft?: number;
     }
   ): Customer | null => {
     // Create a placeholder customer with the minimum required fields
@@ -207,9 +206,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...customer,
       membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
       membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
-      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
-        ? membershipData.membershipHoursLeft 
-        : customer.membershipHoursLeft,
+      membershipSecondsLeft: membershipData.membershipSecondsLeft !== undefined 
+        ? membershipData.membershipSecondsLeft 
+        : customer.membershipSecondsLeft,
       isMember: true
     };
   };
@@ -275,7 +274,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               updateCustomerMembership(selectedCustomer.id, {
                 membershipPlan: product.name,
                 membershipDuration: membershipDuration,
-                membershipHoursLeft: membershipHours
+                membershipSecondsLeft: hoursToSeconds(membershipHours)  // Convert hours to seconds
               });
               
               break; // Only apply the first membership found
@@ -400,7 +399,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startSession,
         endSession,
         deleteStation,
-        updateStation,  // Include updateStation in the context value
+        updateStation,
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,
@@ -450,3 +449,7 @@ export type {
   ResetOptions,
   POSContextType
 } from '@/types/pos.types';
+
+const hoursToSeconds = (hours: number): number => {
+  return hours * 3600;
+};

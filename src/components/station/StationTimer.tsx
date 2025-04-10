@@ -125,7 +125,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
             toast({
               title: "Membership Hours Depleted",
               description: `${customer.name} has used all their membership hours`,
-              variant: "warning"
+              variant: "destructive"  // Changed from "warning" to "destructive" to match allowed types
             });
           }
         }
