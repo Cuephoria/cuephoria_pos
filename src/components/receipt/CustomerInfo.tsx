@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Customer } from '@/context/POSContext';
 import { CalendarCheck, Award, Clock, Calendar, AlertTriangle } from 'lucide-react';
-import { isMembershipActive, getHoursLeftColor, formatDurationFromSeconds } from '@/utils/membership.utils';
+import { isMembershipActive, getHoursLeftColor } from '@/utils/membership.utils';
 
 interface CustomerInfoProps {
   customer: Customer;
@@ -70,12 +69,12 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
           </p>
         )}
         
-        {customer.membershipSecondsLeft !== undefined && (
-          <p className={`text-xs flex items-center mt-1 ${getHoursLeftColor(customer.membershipSecondsLeft)}`}>
+        {customer.membershipHoursLeft !== undefined && (
+          <p className={`text-xs flex items-center mt-1 ${getHoursLeftColor(customer.membershipHoursLeft)}`}>
             <Clock className="h-3 w-3 mr-1" />
             <span className="font-medium">Hours Left:</span>
-            <span className="ml-1">{formatDurationFromSeconds(customer.membershipSecondsLeft)}</span>
-            {customer.membershipSecondsLeft === 0 && 
+            <span className="ml-1">{customer.membershipHoursLeft}</span>
+            {customer.membershipHoursLeft === 0 && 
               <AlertTriangle className="h-3 w-3 ml-1 text-red-500" />
             }
           </p>

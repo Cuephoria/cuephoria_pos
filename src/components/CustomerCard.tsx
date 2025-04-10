@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { usePOS, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { User, Edit, Trash, Clock, CreditCard, Star, Award, CalendarCheck, Calendar } from 'lucide-react';
-import { isMembershipActive, getMembershipBadgeText, formatDurationFromSeconds } from '@/utils/membership.utils';
+import { isMembershipActive, getMembershipBadgeText } from '@/utils/membership.utils';
 
 interface CustomerCardProps {
   customer: Customer;
@@ -90,12 +89,12 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
                 </div>
               )}
               
-              {customer.membershipSecondsLeft !== undefined && (
+              {customer.membershipHoursLeft !== undefined && (
                 <div className="flex justify-between text-sm">
                   <span className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" /> Hours Left:
                   </span>
-                  <span>{formatDurationFromSeconds(customer.membershipSecondsLeft)}</span>
+                  <span>{customer.membershipHoursLeft}</span>
                 </div>
               )}
             </>

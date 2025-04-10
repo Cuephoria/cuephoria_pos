@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { usePOS, Customer } from '@/context/POSContext';
 import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
-import { hoursToSeconds, secondsToHours } from '@/utils/membership.utils';
 
 const Customers = () => {
   console.log('Customers component rendering');
@@ -99,20 +99,13 @@ const Customers = () => {
 
     // Format date for input field
     const expiryDate = customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate).toISOString().split('T')[0] : '';
-    
-    // If customer has membershipSecondsLeft, convert to hours for the form
-    let hoursDisplay = '';
-    if (customer.membershipSecondsLeft !== undefined) {
-      hoursDisplay = secondsToHours(customer.membershipSecondsLeft).toString();
-    }
-    
     setFormState({
       name: customer.name,
       phone: customer.phone,
       email: customer.email || '',
       isMember: customer.isMember,
       membershipExpiryDate: expiryDate,
-      membershipHoursLeft: hoursDisplay
+      membershipHoursLeft: customer.membershipHoursLeft !== undefined ? customer.membershipHoursLeft.toString() : ''
     });
     setIsDialogOpen(true);
   };
@@ -215,8 +208,7 @@ const Customers = () => {
       }
       
       if (membershipHoursLeft) {
-        // Convert hours to seconds for storage
-        customerData.membershipSecondsLeft = hoursToSeconds(parseFloat(membershipHoursLeft));
+        customerData.membershipHoursLeft = parseInt(membershipHoursLeft, 10);
       }
     }
     console.log('Submitting customer data:', customerData);

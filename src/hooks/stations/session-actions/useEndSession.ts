@@ -15,7 +15,7 @@ export const useEndSession = ({
   sessions,
   setSessions,
   updateCustomer
-}: SessionActionsProps) => {
+}: SessionActionsProps & { updateCustomer: (customer: Customer) => void }) => {
   const { toast } = useToast();
   
   /**
@@ -44,9 +44,6 @@ export const useEndSession = ({
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
       const durationMinutes = Math.ceil(durationMs / (1000 * 60));
-      const durationSeconds = Math.round(durationMs / 1000);
-      
-      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes (${durationSeconds} seconds)`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -117,52 +114,18 @@ export const useEndSession = ({
         console.warn("Customer not found for session", session.customerId);
       } else {
         console.log("Found customer for session:", customer.name);
-        
-        // Update customer's total play time
-        const updatedCustomer = {
-          ...customer,
-          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
-        };
-        
-        // Finalize membership seconds deduction if this is a member
-        // Note: The real-time deduction already happened in StationTimer,
-        // but we want to make sure the final state is saved to database
-        if (updatedCustomer.isMember && updatedCustomer.membershipSecondsLeft !== undefined) {
-          // Save the current state of membership seconds
-          console.log(`Finalizing membership seconds deduction at session end. Current seconds left: ${updatedCustomer.membershipSecondsLeft}`);
-          
-          // Update customer in database with current membership hours
-          try {
-            const { error } = await supabase
-              .from('customers')
-              .update({
-                membership_hours_left: updatedCustomer.membershipSecondsLeft / 3600,
-                total_play_time: updatedCustomer.totalPlayTime
-              })
-              .eq('id', updatedCustomer.id);
-            
-            if (error) {
-              console.error('Error updating customer membership hours in Supabase:', error);
-            }
-          } catch (error) {
-            console.error('Error updating customer membership hours:', error);
-          }
-        }
-        
-        // Update customer state
-        updateCustomer(updatedCustomer);
       }
       
       // Generate cart item for the session
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost using hourly rate and accurate time calculation
+      // Calculate session cost
       const stationRate = station.hourlyRate;
-      const hoursPlayed = durationMinutes / 60; // Convert minutes to hours for billing
+      const hoursPlayed = durationMs / (1000 * 60 * 60);
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
-      // Apply 50% discount for members
+      // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
       const isMember = customer?.isMember || false;
       const discountApplied = isMember;
       
@@ -192,6 +155,15 @@ export const useEndSession = ({
       };
       
       console.log("Created cart item for ended session:", sessionCartItem);
+      
+      // Update customer's total play time
+      if (customer) {
+        const updatedCustomer = {
+          ...customer,
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+        };
+        updateCustomer(updatedCustomer);
+      }
       
       toast({
         title: 'Success',

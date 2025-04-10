@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
-import { formatDurationFromSeconds } from '@/utils/membership.utils';
 
 interface StationTimerProps {
   station: Station;
@@ -16,11 +14,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const { toast } = useToast();
-  const { customers, updateCustomer } = usePOS();
+  const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
-  const lastDeductionRef = useRef<number>(0);
   const sessionDataRef = useRef<{
     sessionId: string;
     startTime: Date;
@@ -35,7 +31,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(0);
       setSeconds(0);
       setCost(0);
-      setElapsedSeconds(0);
       
       // Clear any existing timer
       if (timerRef.current) {
@@ -44,7 +39,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       }
       
       sessionDataRef.current = null;
-      lastDeductionRef.current = 0;
       return;
     }
 
@@ -62,7 +56,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     // Find the customer to check if they are a member
     const customer = customers.find(c => c.id === station.currentSession?.customerId);
     const isMember = customer?.isMember || false;
-    const hasMembershipSeconds = isMember && customer?.membershipSecondsLeft !== undefined && customer.membershipSecondsLeft > 0;
 
     // Initial calculation based on local session data
     const updateTimerFromLocalData = () => {
@@ -71,11 +64,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       const startTime = sessionDataRef.current.startTime;
       const now = new Date();
       const elapsedMs = now.getTime() - startTime.getTime();
+      
       const secondsTotal = Math.floor(elapsedMs / 1000);
-      
-      // Update elapsed seconds for real-time membership deduction
-      setElapsedSeconds(secondsTotal);
-      
       const minutesTotal = Math.floor(secondsTotal / 60);
       const hoursTotal = Math.floor(minutesTotal / 60);
       
@@ -87,52 +77,25 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       
-      // Apply 50% discount for members with valid membership hours
+      // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
       if (isMember) {
         calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
       }
       
       setCost(calculatedCost);
-    };
-
-    // Handle real-time membership seconds deduction
-    const handleMembershipDeduction = () => {
-      if (!customer || !isMember || customer.membershipSecondsLeft === undefined) return;
       
-      // Only deduct if a second has passed since last deduction
-      if (elapsedSeconds > lastDeductionRef.current) {
-        // Calculate seconds to deduct (current elapsed - last deduction point)
-        const secondsToDeduct = elapsedSeconds - lastDeductionRef.current;
-        
-        // If customer has membership seconds left, deduct them
-        if (customer.membershipSecondsLeft > 0) {
-          // Don't let membership seconds go below zero
-          const remainingSeconds = Math.max(0, customer.membershipSecondsLeft - secondsToDeduct);
-          
-          // Update the customer with new seconds left
-          const updatedCustomer = {
-            ...customer,
-            membershipSecondsLeft: remainingSeconds
-          };
-          
-          // Update customer in state
-          updateCustomer(updatedCustomer);
-          
-          console.log(`Real-time deduction: ${secondsToDeduct}s, Remaining: ${formatDurationFromSeconds(remainingSeconds)}`);
-          
-          // If membership seconds just hit zero, show a toast
-          if (customer.membershipSecondsLeft > 0 && remainingSeconds === 0) {
-            toast({
-              title: "Membership Hours Depleted",
-              description: `${customer.name} has used all their membership hours`,
-              variant: "destructive"  // Changed from "warning" to "destructive" to match allowed types
-            });
-          }
-        }
-        
-        // Update the last deduction point
-        lastDeductionRef.current = elapsedSeconds;
-      }
+      console.log("Timer update:", {
+        sessionId: sessionDataRef.current.sessionId,
+        startTime: startTime.toISOString(),
+        elapsedMs,
+        secondsTotal,
+        minutesTotal,
+        hoursTotal,
+        hourlyRate: station.hourlyRate,
+        isMember,
+        discountApplied: isMember,
+        calculatedCost
+      });
     };
 
     // Try to get session data from Supabase
@@ -141,6 +104,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         if (!station.currentSession) return;
         
         const sessionId = station.currentSession.id;
+        console.log("Fetching session data for ID:", sessionId);
         
         const { data, error } = await supabase
           .from('sessions')
@@ -157,6 +121,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         
         if (data && data.start_time) {
           const startTime = new Date(data.start_time);
+          console.log("Session start time from Supabase:", startTime);
           
           // Update the sessionDataRef with data from Supabase
           if (sessionDataRef.current) {
@@ -190,7 +155,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     if (timerRef.current === null) {
       timerRef.current = window.setInterval(() => {
         updateTimerFromLocalData();
-        handleMembershipDeduction();
       }, 1000);
     }
     
@@ -200,7 +164,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       // This is intentional to keep the session running in the background
       // even if component unmounts
     };
-  }, [station, customers, elapsedSeconds, updateCustomer, toast]);
+  }, [station, customers]);
 
   // Add a cleanup function for component unmount
   useEffect(() => {
@@ -215,11 +179,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const formatTimeDisplay = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
-
-  // Get customer information for displaying membership hours left
-  const customer = station.currentSession 
-    ? customers.find(c => c.id === station.currentSession?.customerId)
-    : null;
 
   if (!station.isOccupied || !station.currentSession) {
     return null;
@@ -236,15 +195,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         <span className="text-white">Current Cost:</span>
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
-      
-      {customer && customer.isMember && customer.membershipSecondsLeft !== undefined && (
-        <div className="flex justify-between items-center">
-          <span className="text-white text-sm">Hours Left:</span>
-          <span className="text-green-400 font-mono">
-            {formatDurationFromSeconds(customer.membershipSecondsLeft)}
-          </span>
-        </div>
-      )}
     </div>
   );
 };
