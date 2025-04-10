@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -77,7 +76,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         
         if (data && data.length > 0) {
           const transformedCustomers = data.map(item => {
-            // Using any type to work around the read-only types file
             const dbItem = item as any;
             let secondsLeft = undefined;
             
