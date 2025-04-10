@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -341,6 +342,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
+      // Add type assertion to update object to handle the membership_seconds_left field
       const { error } = await supabase
         .from('customers')
         .update({
@@ -359,7 +361,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           loyalty_points: customer.loyaltyPoints,
           total_spent: customer.totalSpent,
           total_play_time: customer.totalPlayTime
-        })
+        } as any)
         .eq('id', customer.id);
         
       if (error) {
