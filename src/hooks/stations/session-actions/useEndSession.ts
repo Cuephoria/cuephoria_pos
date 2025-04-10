@@ -131,21 +131,21 @@ export const useEndSession = ({
           // Save the current state of membership seconds
           console.log(`Finalizing membership seconds deduction at session end. Current seconds left: ${updatedCustomer.membershipSecondsLeft}`);
           
-          // Update customer in database with current membership seconds
+          // Update customer in database with current membership hours
           try {
             const { error } = await supabase
               .from('customers')
               .update({
-                membership_seconds_left: updatedCustomer.membershipSecondsLeft,
+                membership_hours_left: updatedCustomer.membershipSecondsLeft / 3600,
                 total_play_time: updatedCustomer.totalPlayTime
               })
               .eq('id', updatedCustomer.id);
             
             if (error) {
-              console.error('Error updating customer membership seconds in Supabase:', error);
+              console.error('Error updating customer membership hours in Supabase:', error);
             }
           } catch (error) {
-            console.error('Error updating customer membership seconds:', error);
+            console.error('Error updating customer membership hours:', error);
           }
         }
         

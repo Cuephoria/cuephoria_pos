@@ -1,13 +1,8 @@
 
--- Add membership_seconds_left column to customers table
-ALTER TABLE customers ADD COLUMN IF NOT EXISTS membership_seconds_left BIGINT;
+-- Add comment to clarify the hours column
+COMMENT ON COLUMN customers.membership_hours_left IS 'Remaining membership time in hours';
 
--- Update existing customers with membershipHoursLeft to use seconds
--- This will convert hours to seconds (1 hour = 3600 seconds)
+-- Make sure all customers have their membership_hours_left filled correctly
 UPDATE customers
-SET membership_seconds_left = membership_hours_left * 3600
-WHERE membership_hours_left IS NOT NULL AND membership_seconds_left IS NULL;
-
--- Add comment to explain the column
-COMMENT ON COLUMN customers.membership_seconds_left IS 'Remaining membership time in seconds';
-
+SET membership_hours_left = membership_seconds_left / 3600
+WHERE membership_seconds_left IS NOT NULL AND membership_hours_left IS NULL;
