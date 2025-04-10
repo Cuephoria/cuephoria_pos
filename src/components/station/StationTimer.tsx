@@ -1,40 +1,42 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Station } from '@/context/POSContext';
+import { Station, Customer } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
-import { isMembershipActive } from '@/utils/membership.utils';
+import { isMembershipActive, formatSecondsAsDuration, secondsToHours } from '@/utils/membership.utils';
 
 interface StationTimerProps {
   station: Station;
 }
 
 const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
-  const [hours, setHours] = useState<number>(0);
-  const [minutes, setMinutes] = useState<number>(0);
-  const [seconds, setSeconds] = useState<number>(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
   const [projectedHoursUsed, setProjectedHoursUsed] = useState<number>(0);
   const { toast } = useToast();
-  const { customers } = usePOS();
+  const { customers, updateCustomer } = usePOS();
   const timerRef = useRef<number | null>(null);
-  const sessionDataRef = useRef<{
-    sessionId: string;
-    startTime: Date;
-    stationId: string;
-    customerId: string;
-    hourlyRate: number;
-  } | null>(null);
+  const startTimeRef = useRef<Date | null>(null);
+  const lastUpdateTimeRef = useRef<Date | null>(null);
+  const [customer, setCustomer] = useState<Customer | undefined>(undefined);
+  const [membershipUpdated, setMembershipUpdated] = useState(false);
+
+  useEffect(() => {
+    // Find current customer based on session
+    if (station.currentSession?.customerId) {
+      const foundCustomer = customers.find(c => c.id === station.currentSession?.customerId);
+      setCustomer(foundCustomer);
+    }
+  }, [station.currentSession, customers]);
 
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
-      setHours(0);
-      setMinutes(0);
-      setSeconds(0);
+      setElapsedSeconds(0);
       setCost(0);
       setProjectedHoursUsed(0);
+      setMembershipUpdated(false);
       
       // Clear any existing timer
       if (timerRef.current) {
@@ -42,57 +44,22 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         timerRef.current = null;
       }
       
-      sessionDataRef.current = null;
+      startTimeRef.current = null;
+      lastUpdateTimeRef.current = null;
       return;
     }
 
-    // Store the session data in ref to maintain persistence across renders
-    if (station.currentSession && !sessionDataRef.current) {
-      sessionDataRef.current = {
-        sessionId: station.currentSession.id,
-        startTime: new Date(station.currentSession.startTime),
-        stationId: station.id,
-        customerId: station.currentSession.customerId,
-        hourlyRate: station.hourlyRate
-      };
-    }
+    // Initialize timer with session start time
+    const sessionStartTime = new Date(station.currentSession.startTime);
+    startTimeRef.current = sessionStartTime;
+    lastUpdateTimeRef.current = new Date();
+    
+    // Calculate initial elapsed time
+    const now = new Date();
+    const initialElapsedSeconds = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+    setElapsedSeconds(initialElapsedSeconds);
 
-    // Find the customer to check if they are a member
-    const customer = customers.find(c => c.id === station.currentSession?.customerId);
-    const isMember = customer ? isMembershipActive(customer) : false;
-
-    // Initial calculation based on local session data
-    const updateTimerFromLocalData = () => {
-      if (!sessionDataRef.current) return;
-      
-      const startTime = sessionDataRef.current.startTime;
-      const now = new Date();
-      const elapsedMs = now.getTime() - startTime.getTime();
-      
-      const secondsTotal = Math.floor(elapsedMs / 1000);
-      const minutesTotal = Math.floor(secondsTotal / 60);
-      const hoursTotal = Math.floor(minutesTotal / 60);
-      
-      setSeconds(secondsTotal % 60);
-      setMinutes(minutesTotal % 60);
-      setHours(hoursTotal);
-      
-      // Calculate projected hours used (for membership deduction)
-      const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-      setProjectedHoursUsed(Math.ceil(hoursElapsed)); // Round up to nearest hour
-      
-      // Calculate cost based on hourly rate
-      let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
-      
-      // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
-      if (isMember) {
-        calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
-      }
-      
-      setCost(calculatedCost);
-    };
-
-    // Try to get session data from Supabase
+    // Try to get session data from Supabase for accurate timing
     const fetchSessionData = async () => {
       try {
         if (!station.currentSession) return;
@@ -108,78 +75,123 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           
         if (error) {
           console.error("Error fetching session data:", error);
-          // Fallback to local data
-          updateTimerFromLocalData();
           return;
         }
         
         if (data && data.start_time) {
-          const startTime = new Date(data.start_time);
-          console.log("Session start time from Supabase:", startTime);
+          const dbStartTime = new Date(data.start_time);
+          console.log("Session start time from Supabase:", dbStartTime);
+          startTimeRef.current = dbStartTime;
           
-          // Update the sessionDataRef with data from Supabase
-          if (sessionDataRef.current) {
-            sessionDataRef.current.startTime = startTime;
-          } else {
-            sessionDataRef.current = {
-              sessionId,
-              startTime,
-              stationId: station.id,
-              customerId: station.currentSession.customerId,
-              hourlyRate: station.hourlyRate
-            };
-          }
-          
-          updateTimerFromLocalData();
-        } else {
-          // Fallback to local data
-          updateTimerFromLocalData();
+          const now = new Date();
+          const updatedElapsedSeconds = Math.floor((now.getTime() - dbStartTime.getTime()) / 1000);
+          setElapsedSeconds(updatedElapsedSeconds);
         }
       } catch (error) {
         console.error("Error in fetchSessionData:", error);
-        // Fallback to local data
-        updateTimerFromLocalData();
       }
     };
     
-    // Fetch data initially
     fetchSessionData();
-    
-    // Set up interval for regular updates that persists
+
+    // Set up interval for timer and real-time membership deduction
     if (timerRef.current === null) {
       timerRef.current = window.setInterval(() => {
-        updateTimerFromLocalData();
+        if (!startTimeRef.current) return;
+        
+        const now = new Date();
+        const currentElapsedSeconds = Math.floor((now.getTime() - startTimeRef.current.getTime()) / 1000);
+        setElapsedSeconds(currentElapsedSeconds);
+        
+        // Calculate cost
+        const hoursElapsed = currentElapsedSeconds / 3600;
+        let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
+        
+        // Apply 50% discount for members
+        if (customer && isMembershipActive(customer)) {
+          calculatedCost = Math.ceil(calculatedCost * 0.5);
+        }
+        
+        setCost(calculatedCost);
+        
+        // Calculate projected hours used (for membership deduction)
+        const hoursUsed = Math.ceil(hoursElapsed);
+        setProjectedHoursUsed(hoursUsed);
+        
+        // Update membership hours in real-time (every minute)
+        if (customer && 
+            isMembershipActive(customer) && 
+            customer.membershipHoursLeft !== undefined && 
+            customer.membershipHoursLeft > 0 &&
+            lastUpdateTimeRef.current) {
+          
+          // Calculate seconds since last update
+          const secondsSinceLastUpdate = Math.floor((now.getTime() - lastUpdateTimeRef.current.getTime()) / 1000);
+          
+          // Update every 1 second (for demo purposes - in production might be less frequent)
+          if (secondsSinceLastUpdate >= 1) {
+            // Calculate hours to deduct (convert seconds to hours)
+            const hoursToDeduct = secondsToHours(secondsSinceLastUpdate);
+            
+            // Don't go below zero
+            const newHoursLeft = Math.max(0, customer.membershipHoursLeft - hoursToDeduct);
+            
+            // Update customer with new hours
+            const updatedCustomer = {
+              ...customer,
+              membershipHoursLeft: newHoursLeft
+            };
+            
+            // Update customer locally
+            updateCustomer(updatedCustomer);
+            setCustomer(updatedCustomer);
+            
+            // Also update in Supabase every 30 seconds to avoid too many requests
+            if (secondsSinceLastUpdate >= 30 || !membershipUpdated) {
+              // Set flag to indicate we've started updating
+              setMembershipUpdated(true);
+              
+              // Update in database
+              supabase
+                .from('customers')
+                .update({
+                  membership_hours_left: newHoursLeft
+                })
+                .eq('id', customer.id)
+                .then(({ error }) => {
+                  if (error) {
+                    console.error("Error updating customer membership hours:", error);
+                  } else {
+                    console.log(`Updated customer ${customer.name} hours to ${newHoursLeft}`);
+                  }
+                });
+            }
+            
+            // Update last update time
+            lastUpdateTimeRef.current = now;
+          }
+        }
       }, 1000);
     }
     
-    // Clean up on unmount
+    // Clean up interval on unmount
     return () => {
-      // Don't clear the interval - let the timer continue running
-      // This is intentional to keep the session running in the background
-      // even if component unmounts
-    };
-  }, [station, customers]);
-
-  // Add a cleanup function for component unmount
-  useEffect(() => {
-    return () => {
-      // This will only run when the component is truly unmounted (not page change)
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [station, customers, station.currentSession, customer, updateCustomer, station.hourlyRate, membershipUpdated]);
 
+  // Format elapsed time as hh:mm:ss
   const formatTimeDisplay = () => {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return formatSecondsAsDuration(elapsedSeconds);
   };
 
   if (!station.isOccupied || !station.currentSession) {
     return null;
   }
 
-  // Get customer to show potential membership hour usage
-  const customer = customers.find(c => c.id === station.currentSession?.customerId);
+  // Check if we should display membership hours usage
   const showMembershipHours = customer && 
     isMembershipActive(customer) && 
     customer.membershipHoursLeft !== undefined &&
@@ -197,13 +209,12 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
       
-      {/* Show projected membership hours usage for members */}
+      {/* Show current membership hours status for members */}
       {showMembershipHours && (
         <div className="flex justify-between items-center text-xs border-t border-gray-600 pt-2">
-          <span className="text-white">Projected hours usage:</span>
+          <span className="text-white">Hours Left:</span>
           <span className="text-amber-400 font-bold">
-            {projectedHoursUsed} hr
-            {projectedHoursUsed > 1 ? 's' : ''}
+            {formatSecondsAsDuration(Math.floor(customer.membershipHoursLeft * 3600))}
           </span>
         </div>
       )}
