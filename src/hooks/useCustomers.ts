@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -76,28 +77,31 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         
         if (data && data.length > 0) {
           const transformedCustomers = data.map(item => {
+            // Using any type to work around the read-only types file
+            const dbItem = item as any;
             let secondsLeft = undefined;
-            if (item.membership_seconds_left !== null && item.membership_seconds_left !== undefined) {
-              secondsLeft = item.membership_seconds_left;
-            } else if (item.membership_hours_left !== null && item.membership_hours_left !== undefined) {
-              secondsLeft = hoursToSeconds(item.membership_hours_left);
+            
+            if (dbItem.membership_seconds_left !== null && dbItem.membership_seconds_left !== undefined) {
+              secondsLeft = dbItem.membership_seconds_left;
+            } else if (dbItem.membership_hours_left !== null && dbItem.membership_hours_left !== undefined) {
+              secondsLeft = hoursToSeconds(dbItem.membership_hours_left);
             }
             
             return {
-              id: item.id,
-              name: item.name,
-              phone: item.phone,
-              email: item.email || undefined,
-              isMember: item.is_member,
-              membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
-              membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
-              membershipPlan: item.membership_plan || undefined,
+              id: dbItem.id,
+              name: dbItem.name,
+              phone: dbItem.phone,
+              email: dbItem.email || undefined,
+              isMember: dbItem.is_member,
+              membershipExpiryDate: dbItem.membership_expiry_date ? new Date(dbItem.membership_expiry_date) : undefined,
+              membershipStartDate: dbItem.membership_start_date ? new Date(dbItem.membership_start_date) : undefined,
+              membershipPlan: dbItem.membership_plan || undefined,
               membershipSecondsLeft: secondsLeft,
-              membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
-              loyaltyPoints: item.loyalty_points,
-              totalSpent: item.total_spent,
-              totalPlayTime: item.total_play_time,
-              createdAt: new Date(item.created_at)
+              membershipDuration: dbItem.membership_duration as 'weekly' | 'monthly' | undefined,
+              loyaltyPoints: dbItem.loyalty_points,
+              totalSpent: dbItem.total_spent,
+              totalPlayTime: dbItem.total_play_time,
+              createdAt: new Date(dbItem.created_at)
             };
           });
           

@@ -394,7 +394,8 @@ export const useBills = (
         const billToDelete = bills.find(bill => bill.id === billId);
         if (!billToDelete) return false;
         
-        const customerData = customer;
+        // Using any type to work around the read-only types file
+        const customerData = customer as any;
         const updatedCustomer = {
           ...customerData,
           loyalty_points: Math.max(0, customerData.loyalty_points - billToDelete.loyaltyPointsEarned + billToDelete.loyaltyPointsUsed),

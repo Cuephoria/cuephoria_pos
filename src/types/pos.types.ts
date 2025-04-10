@@ -23,7 +23,7 @@ export interface Customer {
   membershipExpiryDate?: Date;
   membershipStartDate?: Date;
   membershipPlan?: string;
-  membershipSecondsLeft?: number; // Changed from membershipHoursLeft to membershipSecondsLeft
+  membershipSecondsLeft?: number; // Using seconds instead of hours for more precise tracking
   membershipDuration?: 'weekly' | 'monthly';
   loyaltyPoints: number;
   totalSpent: number;
