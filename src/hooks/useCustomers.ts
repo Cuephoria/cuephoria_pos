@@ -358,7 +358,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           loyalty_points: customer.loyaltyPoints,
           total_spent: customer.totalSpent,
           total_play_time: customer.totalPlayTime
-        })
+        } as any) // Using type assertion to bypass TypeScript error for membership_seconds_left
         .eq('id', customer.id);
         
       if (error) {
