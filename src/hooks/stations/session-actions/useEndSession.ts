@@ -1,7 +1,8 @@
+
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
-import { SessionActionsProps } from './types';
+import { SessionActionsProps } from './session-actions/types';
 import { generateId } from '@/utils/pos.utils';
 import { shouldDeductFromMembership, convertMinutesToMembershipHours } from '@/utils/membership.utils';
 import React from 'react';
@@ -67,6 +68,7 @@ export const useEndSession = ({
       
       // Try to update session in Supabase
       try {
+        console.log(`Updating session ${session.id} in Supabase with end_time:`, endTime.toISOString());
         const { error: sessionError } = await supabase
           .from('sessions')
           .update({
@@ -78,6 +80,8 @@ export const useEndSession = ({
         if (sessionError) {
           console.error('Error updating session in Supabase:', sessionError);
           // Continue since local state is already updated
+        } else {
+          console.log("Session updated in Supabase successfully");
         }
       } catch (supabaseError) {
         console.error('Error updating session in Supabase:', supabaseError);
@@ -98,6 +102,8 @@ export const useEndSession = ({
           if (stationError) {
             console.error('Error updating station in Supabase:', stationError);
             // Continue since local state is already updated
+          } else {
+            console.log("Station updated in Supabase successfully");
           }
         } else {
           console.log("Skipping station update in Supabase due to non-UUID station ID");

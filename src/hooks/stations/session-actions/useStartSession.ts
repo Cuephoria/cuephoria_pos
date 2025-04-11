@@ -56,32 +56,29 @@ export const useStartSession = ({
       
       // Then try to create session in Supabase
       try {
-        // Convert non-UUID station IDs to proper UUIDs for Supabase
-        // Check if stationId is already a UUID format (contains hyphens)
-        const dbStationId = stationId.includes('-') ? stationId : sessionId; // Use session ID as fallback
+        // For Supabase, we need to ensure we have a proper UUID format for station_id
+        const dbStationId = stationId.includes('-') ? stationId : null;
         
-        console.log("Using DB station ID:", dbStationId);
+        console.log("Using DB station ID:", dbStationId || "default UUID");
         
         const { data, error } = await supabase
           .from('sessions')
           .insert({
             id: sessionId,
-            station_id: dbStationId, // Use the proper format for DB
+            station_id: dbStationId || sessionId, // Use session ID as fallback if stationId is not UUID
             customer_id: customerId,
             start_time: startTime.toISOString()
-          })
-          .select()
-          .single();
+          });
           
         if (error) {
           console.error('Error creating session in Supabase:', error);
-          // We'll continue since local state is already updated
+          // Continue since local state is already updated
         } else {
-          console.log("Session created in Supabase:", data);
+          console.log("Session created in Supabase successfully");
         }
       } catch (supabaseError) {
         console.error('Error in Supabase operation:', supabaseError);
-        // We'll continue since local state is already updated
+        // Continue since local state is already updated
       }
       
       // Try to update station in Supabase
@@ -98,6 +95,8 @@ export const useStartSession = ({
           if (stationError) {
             console.error('Error updating station in Supabase:', stationError);
             // Continue since local state is already updated
+          } else {
+            console.log("Station updated in Supabase successfully");
           }
         } else {
           console.log("Skipping station update in Supabase due to non-UUID station ID");
