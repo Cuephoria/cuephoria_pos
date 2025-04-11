@@ -5,7 +5,9 @@ import { useEndSession } from './useEndSession';
 import { SessionActionsProps } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { generateId } from '@/utils/pos.utils';
 import { Session, SessionResult, Customer } from '@/types/pos.types';
+import { isMembershipActive } from '@/utils/membership.utils';
 
 export const useSessionActions = (props: SessionActionsProps) => {
   const { stations, setStations, sessions, setSessions, updateCustomer } = props;
@@ -13,8 +15,8 @@ export const useSessionActions = (props: SessionActionsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Get the functionality from existing hooks
-  const { startSession: startSessionBase } = useStartSession(props);
-  const { endSession: endSessionBase } = useEndSession({...props, updateCustomer});
+  const startSessionHook = useStartSession(props);
+  const endSessionHook = useEndSession({...props, updateCustomer});
   
   // Start a new session
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
@@ -22,12 +24,98 @@ export const useSessionActions = (props: SessionActionsProps) => {
       setIsLoading(true);
       console.log('Starting session for station:', stationId, 'customer:', customerId);
       
-      const result = await startSessionBase(stationId, customerId);
-      if (!result) {
-        throw new Error("Failed to start session");
+      // Find the station
+      const station = stations.find(s => s.id === stationId);
+      if (!station) {
+        console.error('Station not found:', stationId);
+        throw new Error('Station not found');
       }
       
-      console.log('Session started successfully with ID:', result.id);
+      if (station.isOccupied) {
+        console.error('Station is already occupied:', stationId);
+        throw new Error('Station is already occupied');
+      }
+      
+      // Create a new session
+      const now = new Date();
+      const sessionId = generateId();
+      const newSession: Session = {
+        id: sessionId,
+        stationId: stationId,
+        customerId: customerId,
+        startTime: now,
+        // No endTime or duration, will be set when explicitly ended
+      };
+      
+      // Check if stationId is in UUID format for Supabase
+      const isUUID = stationId.includes('-') && 
+                    stationId.split('-').length === 5 && 
+                    stationId.length >= 36;
+                    
+      console.log(`Station ID ${stationId} is ${isUUID ? '' : 'not '}a valid UUID`);
+      
+      // For database operations, use a valid UUID
+      const dbStationId = isUUID ? stationId : sessionId;
+      
+      // Insert into Supabase
+      try {
+        const { data, error } = await supabase
+          .from('sessions')
+          .insert({
+            id: newSession.id,
+            station_id: dbStationId, // Use a valid UUID for database
+            customer_id: newSession.customerId,
+            start_time: newSession.startTime.toISOString(),
+            // No end_time or duration, making it persist until explicitly ended
+          })
+          .select();
+          
+        if (error) {
+          console.error('Error inserting session into Supabase:', error);
+          console.log('Continuing with local state updates only');
+        } else {
+          console.log('Session inserted into Supabase:', data);
+        }
+      } catch (error) {
+        console.error('Supabase insert error:', error);
+        console.log('Continuing with local state updates only');
+      }
+      
+      // Update station
+      const updatedStation = {
+        ...station,
+        isOccupied: true,
+        currentSession: newSession
+      };
+      
+      // Update Supabase station only if ID is in valid UUID format
+      if (isUUID) {
+        try {
+          const { error: stationError } = await supabase
+            .from('stations')
+            .update({
+              is_occupied: true
+            })
+            .eq('id', stationId);
+            
+          if (stationError) {
+            console.error('Error updating station in Supabase:', stationError);
+          }
+        } catch (error) {
+          console.error('Supabase station update error:', error);
+        }
+      }
+      
+      // Update local state
+      setStations(stations.map(s => s.id === stationId ? updatedStation : s));
+      setSessions([...sessions, newSession]);
+      
+      toast({
+        title: 'Session Started',
+        description: `Session started for station ${station.name}`,
+      });
+      
+      console.log('Session started successfully');
       
     } catch (error) {
       console.error('Error in startSession:', error);
@@ -61,7 +149,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
       }
       
       // Call the original hook implementation to handle session ending
-      const result = await endSessionBase(stationId, customersList);
+      const result = await endSessionHook.endSession(stationId, customersList);
       console.log("Session ended successfully, result:", result);
       
       return result;

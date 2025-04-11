@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Customer } from '@/context/POSContext';
 import { CalendarCheck, Award, Clock, Calendar, AlertTriangle } from 'lucide-react';
@@ -31,12 +30,6 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
   const getMembershipDuration = () => {
     if (!customer.membershipDuration) return '';
     return customer.membershipDuration === 'weekly' ? 'Weekly' : 'Monthly';
-  };
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
   };
 
   return (
@@ -84,14 +77,6 @@ const CustomerInfo: React.FC<CustomerInfoProps> = ({ customer }) => {
             {customer.membershipHoursLeft === 0 && 
               <AlertTriangle className="h-3 w-3 ml-1 text-red-500" />
             }
-          </p>
-        )}
-        
-        {customer.membershipPlayTime !== undefined && customer.membershipPlayTime > 0 && (
-          <p className="text-xs flex items-center mt-1">
-            <Clock className="h-3 w-3 mr-1" />
-            <span className="font-medium">Membership Play Time:</span>
-            <span className="ml-1">{formatTime(customer.membershipPlayTime)}</span>
           </p>
         )}
         

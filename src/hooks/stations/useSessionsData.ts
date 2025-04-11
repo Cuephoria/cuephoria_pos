@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
@@ -17,7 +18,6 @@ export const useSessionsData = () => {
     setSessionsError(null);
     
     try {
-      console.log("Fetching sessions from Supabase...");
       // Fetch sessions from Supabase, including active sessions (no end_time)
       const { data, error } = await supabase
         .from('sessions')
@@ -34,8 +34,6 @@ export const useSessionsData = () => {
         return;
       }
       
-      console.log("Sessions data received from Supabase:", data);
-      
       // Transform data to match our Session type
       if (data && data.length > 0) {
         const transformedSessions = data.map(item => ({
@@ -46,8 +44,6 @@ export const useSessionsData = () => {
           endTime: item.end_time ? new Date(item.end_time) : undefined,
           duration: item.duration
         }));
-        
-        console.log("Transformed sessions:", transformedSessions);
         
         // Keep all sessions, including those with end time, to maintain history
         setSessions(transformedSessions);
@@ -110,7 +106,6 @@ export const useSessionsData = () => {
   };
   
   useEffect(() => {
-    console.log("Initial session data load");
     refreshSessions();
     
     // Add listener for page visibility changes to refresh sessions when page becomes visible again
@@ -127,7 +122,7 @@ export const useSessionsData = () => {
     const intervalId = setInterval(() => {
       console.log('Periodic session refresh');
       refreshSessions();
-    }, 30000); // Refresh every 30 seconds for better real-time updates
+    }, 60000); // Refresh every minute
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
