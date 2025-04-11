@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { usePOS, Customer } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { User, Edit, Trash, Clock, CreditCard, Star, Award, CalendarCheck, Calendar } from 'lucide-react';
-import { isMembershipActive, getMembershipBadgeText } from '@/utils/membership.utils';
+import { isMembershipActive, getMembershipBadgeText, getHoursLeftColor } from '@/utils/membership.utils';
 
 interface CustomerCardProps {
   customer: Customer;

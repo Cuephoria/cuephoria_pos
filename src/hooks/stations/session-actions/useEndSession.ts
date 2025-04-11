@@ -1,4 +1,3 @@
-
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -174,7 +173,7 @@ export const useEndSession = ({
           toast({
             title: "Membership Hours Depleted",
             description: `${customer.name} has used all their membership hours. Regular rates now apply.`,
-            variant: "warning"
+            variant: "destructive"
           });
         } else {
           // No hours left but just update total play time
