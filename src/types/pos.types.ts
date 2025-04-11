@@ -24,6 +24,7 @@ export interface Customer {
   membershipStartDate?: Date;
   membershipPlan?: string;
   membershipHoursLeft?: number;
+  membershipPlayTime?: number; // New field to track play time during membership
   membershipDuration?: 'weekly' | 'monthly';
   loyaltyPoints: number;
   totalSpent: number;

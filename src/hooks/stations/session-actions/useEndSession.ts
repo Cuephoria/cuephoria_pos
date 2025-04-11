@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from './types';
 import { generateId } from '@/utils/pos.utils';
+import { shouldDeductFromMembership, convertMinutesToMembershipHours } from '@/utils/membership.utils';
 import React from 'react';
 
 /**
@@ -125,14 +126,81 @@ export const useEndSession = ({
       const hoursPlayed = durationMs / (1000 * 60 * 60);
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
-      // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
+      // Check if we should deduct from membership or charge regular rate
       const isMember = customer?.isMember || false;
-      const discountApplied = isMember;
+      let deductedFromMembership = false;
+      let membershipHoursLeft = customer?.membershipHoursLeft;
       
-      if (discountApplied) {
-        const originalCost = sessionCost;
-        sessionCost = Math.ceil(sessionCost * 0.5); // 50% discount
-        console.log(`Applied 50% member discount: ${originalCost} → ${sessionCost}`);
+      if (customer && shouldDeductFromMembership(customer)) {
+        // Convert minutes to hours for membership tracking
+        const hoursToDeduct = convertMinutesToMembershipHours(durationMinutes);
+        
+        if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft >= hoursToDeduct) {
+          // Full session can be covered by membership hours
+          membershipHoursLeft = parseFloat((customer.membershipHoursLeft - hoursToDeduct).toFixed(2));
+          sessionCost = Math.ceil(sessionCost * 0.5); // 50% discount for members
+          deductedFromMembership = true;
+          
+          // Update customer membership hours and membership play time
+          const updatedCustomer = {
+            ...customer,
+            membershipHoursLeft: membershipHoursLeft,
+            membershipPlayTime: (customer.membershipPlayTime || 0) + durationMinutes,
+            totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+          };
+          
+          console.log("Updating customer with deducted hours:", updatedCustomer);
+          updateCustomer(updatedCustomer);
+        } else if (customer.membershipHoursLeft !== undefined && customer.membershipHoursLeft > 0) {
+          // Partial coverage - some hours available but not enough
+          const partialCoverageRatio = customer.membershipHoursLeft / hoursToDeduct;
+          const discountedAmount = sessionCost * 0.5 * partialCoverageRatio;
+          const regularAmount = sessionCost * (1 - partialCoverageRatio);
+          sessionCost = Math.ceil(discountedAmount + regularAmount);
+          
+          // Update customer to use all remaining hours
+          const updatedCustomer = {
+            ...customer,
+            membershipHoursLeft: 0,
+            membershipPlayTime: (customer.membershipPlayTime || 0) + Math.floor(customer.membershipHoursLeft * 60),
+            totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+          };
+          
+          console.log("Updating customer with partially deducted hours:", updatedCustomer);
+          updateCustomer(updatedCustomer);
+          
+          deductedFromMembership = true;
+          
+          toast({
+            title: "Membership Hours Depleted",
+            description: `${customer.name} has used all their membership hours. Regular rates now apply.`,
+            variant: "warning"
+          });
+        } else {
+          // No hours left but just update total play time
+          const updatedCustomer = {
+            ...customer,
+            totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+          };
+          updateCustomer(updatedCustomer);
+        }
+      } else if (customer && isMember) {
+        // Member but not deducting from hours (maybe hours are empty)
+        sessionCost = Math.ceil(sessionCost * 0.5); // Still apply discount
+        
+        // Update only total play time, not membership play time
+        const updatedCustomer = {
+          ...customer,
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+        };
+        updateCustomer(updatedCustomer);
+      } else if (customer) {
+        // Non-member, just update total play time
+        const updatedCustomer = {
+          ...customer,
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+        };
+        updateCustomer(updatedCustomer);
       }
       
       console.log("Session cost calculation:", { 
@@ -140,14 +208,15 @@ export const useEndSession = ({
         durationMinutes,
         hoursPlayed,
         isMember,
-        discountApplied,
+        deductedFromMembership,
+        membershipHoursLeft,
         sessionCost 
       });
       
-      // Create cart item for the session with discount info in the name if applicable
+      // Create cart item for the session with membership info in the name
       const sessionCartItem: CartItem = {
         id: cartItemId,
-        name: `${station.name} (${customer?.name || 'Unknown Customer'})${discountApplied ? ' - Member 50% OFF' : ''}`,
+        name: `${station.name} (${customer?.name || 'Unknown Customer'})${deductedFromMembership ? ' - Membership Hours Used' : isMember ? ' - Member 50% OFF' : ''}`,
         price: sessionCost,
         quantity: 1,
         total: sessionCost,
@@ -155,15 +224,6 @@ export const useEndSession = ({
       };
       
       console.log("Created cart item for ended session:", sessionCartItem);
-      
-      // Update customer's total play time
-      if (customer) {
-        const updatedCustomer = {
-          ...customer,
-          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
-        };
-        updateCustomer(updatedCustomer);
-      }
       
       toast({
         title: 'Success',

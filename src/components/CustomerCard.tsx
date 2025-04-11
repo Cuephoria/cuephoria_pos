@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,7 +95,18 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
                   <span className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" /> Hours Left:
                   </span>
-                  <span>{customer.membershipHoursLeft}</span>
+                  <span className={getHoursLeftColor(customer.membershipHoursLeft)}>
+                    {customer.membershipHoursLeft}
+                  </span>
+                </div>
+              )}
+              
+              {customer.membershipPlayTime !== undefined && customer.membershipPlayTime > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" /> Membership Play:
+                  </span>
+                  <span>{formatTime(customer.membershipPlayTime)}</span>
                 </div>
               )}
             </>
