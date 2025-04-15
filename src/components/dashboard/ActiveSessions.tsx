@@ -3,9 +3,11 @@ import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
+import { useSessionsData } from '@/hooks/stations/useSessionsData';
 
 const ActiveSessions = () => {
   const { stations, customers } = usePOS();
+  const { sessions } = useSessionsData();
   
   // Get occupied stations with sessions
   const activeStations = stations.filter(station => station.isOccupied && station.currentSession);

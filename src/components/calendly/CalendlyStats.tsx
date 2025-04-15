@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { CalendarClock, Calendar, Clock, XCircle } from 'lucide-react';
-import { CalendlyStats } from '@/services/calendlyService';
+import { CalendlyStats as CalendlyStatsType } from '@/services/calendlyService';
 import StatCard from '@/components/StatCard';
 
 interface CalendlyStatsProps {
-  stats: CalendlyStats;
+  stats: CalendlyStatsType;
   loading: boolean;
 }
 

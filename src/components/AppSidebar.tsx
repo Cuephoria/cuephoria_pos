@@ -18,11 +18,11 @@ import {
   X,
   Calendar,
 } from "lucide-react";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AppSidebar = () => {
   const location = useLocation();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   const [isExpanded, setIsExpanded] = useState(!isMobile);
 
   const toggleSidebar = () => {

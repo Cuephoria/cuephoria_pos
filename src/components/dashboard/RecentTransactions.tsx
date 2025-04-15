@@ -1,172 +1,90 @@
 
-import React, { useState } from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { User, Trash2, Search } from 'lucide-react';
-import { usePOS } from '@/context/POSContext';
+import React from 'react';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Receipt, User, ShoppingBag } from 'lucide-react';
+import { usePOS } from '@/context/POSContext'; 
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Bill } from '@/types/pos.types';
+import { format } from 'date-fns';
 
-const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill } = usePOS();
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+const RecentTransactions = () => {
+  const { bills, customers } = usePOS();
   
-  // Filter bills based on search query (bill ID, customer name, or phone)
-  const filteredBills = bills.filter(bill => {
-    if (!searchQuery.trim()) return true;
-    
-    const query = searchQuery.toLowerCase().trim();
-    
-    // Match by bill ID
-    if (bill.id.toLowerCase().includes(query)) return true;
-    
-    // Match by customer name or phone
-    const customer = customers.find(c => c.id === bill.customerId);
-    if (customer) {
-      const customerName = customer.name.toLowerCase();
-      const customerPhone = customer.phone.toLowerCase();
-      
-      return customerName.includes(query) || customerPhone.includes(query);
-    }
-    
-    return false;
-  });
+  // Sort bills by date (most recent first) and take the 5 most recent
+  const recentBills = React.useMemo(() => {
+    return [...bills]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [bills]);
   
-  // Sort bills by date (newest first)
-  const sortedBills = [...filteredBills].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  
-  // Get the 5 most recent transactions
-  const recentBills = sortedBills.slice(0, 5);
-  
-  const handleDeleteClick = (bill: Bill) => {
-    setBillToDelete(bill);
-    setIsConfirmOpen(true);
+  // Function to get customer name by ID
+  const getCustomerName = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    return customer ? customer.name : 'Walk-in Customer';
   };
   
-  const handleConfirmDelete = async () => {
-    if (!billToDelete) return;
-    
-    setIsDeleting(true);
+  // Function to format date
+  const formatDate = (dateString: string) => {
     try {
-      const success = await deleteBill(billToDelete.id, billToDelete.customerId);
-      
-      if (success) {
-        // Reset state after successful deletion
-        setBillToDelete(null);
-      }
-    } catch (error) {
-      console.error("Error deleting bill:", error);
-    } finally {
-      setIsDeleting(false);
-      setIsConfirmOpen(false);
+      return format(new Date(dateString), 'MMM d, h:mm a');
+    } catch (e) {
+      return dateString;
     }
+  };
+  
+  // Function to get transaction icon based on type
+  const getTransactionIcon = (bill: any) => {
+    // This can be expanded to have different icons for different transaction types
+    if (bill.items.length > 3) {
+      return <ShoppingBag className="h-8 w-8 p-1.5 rounded-full bg-purple-500/20 text-purple-500" />;
+    }
+    return <Receipt className="h-8 w-8 p-1.5 rounded-full bg-blue-500/20 text-blue-500" />;
   };
   
   return (
-    <>
-      <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
-        <CardHeader className="space-y-4">
-          <div>
-            <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
-            <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
-          </div>
-          <div className="relative flex w-full items-center">
-            <Input
-              placeholder="Search by ID, name or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-8 bg-gray-800 border-gray-700 text-white"
-            />
-            <Search className="absolute right-2 h-4 w-4 text-gray-400" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
           {recentBills.length > 0 ? (
-            recentBills.map(bill => {
-              const customer = customers.find(c => c.id === bill.customerId);
-              const date = new Date(bill.createdAt);
-              
-              return (
-                <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
-                      <User className="h-5 w-5 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{customer?.name || 'Unknown Customer'}</p>
-                      <div className="flex space-x-2">
-                        <p className="text-xs text-gray-400">
-                          {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
-                        <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-white font-semibold">
-                      <CurrencyDisplay amount={bill.total} />
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                      onClick={() => handleDeleteClick(bill)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+            recentBills.map(bill => (
+              <div key={bill.id} className="flex items-center gap-4 p-3 rounded-lg bg-gray-800/50">
+                {getTransactionIcon(bill)}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">
+                    {bill.items.length} item{bill.items.length !== 1 ? 's' : ''}
+                  </p>
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <User className="h-3 w-3" />
+                    <span className="truncate">{getCustomerName(bill.customerId)}</span>
                   </div>
                 </div>
-              );
-            })
+                <div className="text-right">
+                  <p className="font-medium">
+                    <CurrencyDisplay amount={bill.total} />
+                  </p>
+                  <p className="text-xs text-gray-400">{formatDate(bill.date)}</p>
+                </div>
+              </div>
+            ))
           ) : (
             <div className="flex items-center justify-center p-6 text-gray-400">
-              <p>No transactions found</p>
+              <p>No transactions yet</p>
             </div>
           )}
-        </CardContent>
-      </Card>
-      
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent className="bg-gray-800 border-gray-700 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Are you sure you want to delete this transaction? This will revert the sale, 
-              update inventory, and adjust customer loyalty points. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </div>
+        
+        {recentBills.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-800">
+            <button className="w-full text-center text-sm text-cuephoria-purple hover:text-purple-400">
+              View all transactions
+            </button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
 export default RecentTransactions;
-
