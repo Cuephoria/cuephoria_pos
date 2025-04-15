@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { Badge } from '@/components/ui/badge';
 
 interface StatCardProps {
   title: string;
@@ -13,10 +12,6 @@ interface StatCardProps {
   isCurrency?: boolean;
   change?: number;
   color?: string;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'outline' | 'secondary' | 'destructive';
-  };
 }
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -26,20 +21,12 @@ const StatCard: React.FC<StatCardProps> = ({
   description,
   isCurrency = false,
   change,
-  color = 'text-cuephoria-purple',
-  badge
+  color = 'text-cuephoria-purple'
 }) => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          {title}
-          {badge && (
-            <Badge variant={badge.variant || 'default'} className="text-[0.65rem] h-4 px-1">
-              {badge.text}
-            </Badge>
-          )}
-        </CardTitle>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className={`h-4 w-4 ${color}`} />
       </CardHeader>
       <CardContent>

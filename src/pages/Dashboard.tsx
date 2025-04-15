@@ -1,135 +1,351 @@
-
-import React, { useEffect, useState } from "react";
-import { usePOS } from "@/context/POSContext";
-import { useSessionsData } from "@/hooks/stations/useSessionsData";
-import { useCalendlyEvents } from "@/services/calendlyService";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-
-import StatCardSection from "@/components/dashboard/StatCardSection";
-import BusinessSummarySection from "@/components/dashboard/BusinessSummarySection";
-import ActionButtonSection from "@/components/dashboard/ActionButtonSection";
-import SalesChart from "@/components/dashboard/SalesChart";
-import ActiveSessions from "@/components/dashboard/ActiveSessions";
-import ProductPerformance from "@/components/dashboard/ProductPerformance";
-import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import CalendlyBookingSummary from "@/components/dashboard/CalendlyBookingSummary";
-import CalendlyStats from "@/components/calendly/CalendlyStats";
+import React, { useState, useEffect } from 'react';
+import { usePOS } from '@/context/POSContext';
+import { useExpenses } from '@/context/ExpenseContext';
+import StatCardSection from '@/components/dashboard/StatCardSection';
+import ActionButtonSection from '@/components/dashboard/ActionButtonSection';
+import SalesChart from '@/components/dashboard/SalesChart';
+import BusinessSummarySection from '@/components/dashboard/BusinessSummarySection';
+import ActiveSessions from '@/components/dashboard/ActiveSessions';
+import RecentTransactions from '@/components/dashboard/RecentTransactions';
+import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart';
+import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
+import CustomerSpendingCorrelation from '@/components/dashboard/CustomerSpendingCorrelation';
+import HourlyRevenueDistribution from '@/components/dashboard/HourlyRevenueDistribution';
+import ProductPerformance from '@/components/dashboard/ProductPerformance';
+import ExpenseList from '@/components/expenses/ExpenseList';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
-  const { bills, products, customers } = usePOS();
-  const { sessions } = useSessionsData();
+  const { customers, bills, stations, sessions, products } = usePOS();
+  const { expenses, businessSummary } = useExpenses();
   
-  // Define state variables for sales data
-  const [salesData, setSalesData] = useState<{ name: string; amount: number }[]>([]);
-  const [activeTab, setActiveTab] = useState("daily");
+  const [activeTab, setActiveTab] = useState('daily');
+  const [chartData, setChartData] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalSales: 0,
+    salesChange: '',
+    activeSessionsCount: 0,
+    newMembersCount: 0,
+    lowStockCount: 0,
+    lowStockItems: []
+  });
   
-  const [token] = useLocalStorage<string>('calendly-token', '');
-  const [organizationUri] = useLocalStorage<string>('calendly-org-uri', '');
-  const { events, stats, loading } = useCalendlyEvents(token, organizationUri);
-
-  const [showCalendly, setShowCalendly] = useState(false);
-
-  // Calculate stats for StatCardSection
-  const totalSales = bills.reduce((sum, bill) => sum + bill.total, 0);
-  const salesChange = "+12.5%";  // This would normally be calculated
-  const activeSessionsCount = sessions.filter(session => !session.endTime).length;
-  const totalStations = 8;  // This would normally come from your stations data
-  const customersCount = customers.length;
-  const newMembersCount = 3;  // This would normally be calculated
-  const lowStockItems = products.filter(product => product.stock < 10);
-  const lowStockCount = lowStockItems.length;
-
-  // Generate sample sales data for the chart
   useEffect(() => {
-    const generateSalesData = () => {
-      const data = [];
-      if (activeTab === "daily") {
-        for (let i = 1; i <= 7; i++) {
-          data.push({
-            name: `Day ${i}`,
-            amount: Math.floor(Math.random() * 5000) + 1000
-          });
-        }
-      } else if (activeTab === "weekly") {
-        for (let i = 1; i <= 4; i++) {
-          data.push({
-            name: `Week ${i}`,
-            amount: Math.floor(Math.random() * 20000) + 5000
-          });
-        }
-      } else if (activeTab === "monthly") {
-        for (let i = 1; i <= 12; i++) {
-          data.push({
-            name: `Month ${i}`,
-            amount: Math.floor(Math.random() * 50000) + 10000
-          });
-        }
-      } else {
-        // Hourly
-        for (let i = 9; i <= 20; i++) {
-          data.push({
-            name: `${i}:00`,
-            amount: Math.floor(Math.random() * 1000) + 200
-          });
-        }
-      }
-      setSalesData(data);
-    };
-
-    generateSalesData();
-  }, [activeTab]);
-
-  useEffect(() => {
-    // Only show Calendly section if credentials are configured
-    setShowCalendly(!!token && !!organizationUri);
-  }, [token, organizationUri]);
+    setChartData(generateChartData());
+    
+    const lowStockItems = products.filter(p => p.stock < 5)
+      .sort((a, b) => a.stock - b.stock);
+    
+    setDashboardStats({
+      totalSales: calculateTotalSales(),
+      salesChange: calculatePercentChange(),
+      activeSessionsCount: getActiveSessionsCount(),
+      newMembersCount: getNewMembersCount(),
+      lowStockCount: lowStockItems.length,
+      lowStockItems: lowStockItems
+    });
+  }, [bills, customers, stations, sessions, products, activeTab]);
   
+  const generateChartData = () => {
+    if (activeTab === 'hourly') {
+      return generateHourlyChartData();
+    } else if (activeTab === 'daily') {
+      return generateDailyChartData();
+    } else if (activeTab === 'weekly') {
+      return generateWeeklyChartData();
+    } else {
+      return generateMonthlyChartData();
+    }
+  };
+  
+  const generateHourlyChartData = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    
+    if (bills.length > 0) {
+      const hourlyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const billDate = new Date(bill.createdAt);
+        
+        if (billDate >= today) {
+          const hour = billDate.getHours();
+          const current = hourlyTotals.get(hour) || 0;
+          hourlyTotals.set(hour, current + bill.total);
+        }
+      });
+      
+      return hours.map(hour => {
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const formattedHour = `${hour12}${ampm}`;
+        
+        return {
+          name: formattedHour,
+          amount: hourlyTotals.get(hour) || 0
+        };
+      });
+    }
+    
+    return hours.map(hour => {
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      const formattedHour = `${hour12}${ampm}`;
+      
+      return {
+        name: formattedHour,
+        amount: 0
+      };
+    });
+  };
+  
+  const generateDailyChartData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    if (bills.length > 0) {
+      const dailyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const date = new Date(bill.createdAt);
+        const day = days[date.getDay()];
+        const current = dailyTotals.get(day) || 0;
+        dailyTotals.set(day, current + bill.total);
+      });
+      
+      return days.map(day => ({
+        name: day,
+        amount: dailyTotals.get(day) || 0
+      }));
+    }
+    
+    return [
+      { name: 'Sun', amount: 0 },
+      { name: 'Mon', amount: 0 },
+      { name: 'Tue', amount: 0 },
+      { name: 'Wed', amount: 0 },
+      { name: 'Thu', amount: 0 },
+      { name: 'Fri', amount: 0 },
+      { name: 'Sat', amount: 0 }
+    ];
+  };
+  
+  const generateWeeklyChartData = () => {
+    const weeks = [];
+    const now = new Date();
+    
+    for (let i = 3; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - (i * 7) - now.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      const weekLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`;
+      
+      weeks.push({
+        start: weekStart,
+        end: weekEnd,
+        label: weekLabel
+      });
+    }
+    
+    if (bills.length > 0) {
+      return weeks.map(week => {
+        const weeklyTotal = bills.reduce((sum, bill) => {
+          const billDate = new Date(bill.createdAt);
+          if (billDate >= week.start && billDate <= week.end) {
+            return sum + bill.total;
+          }
+          return sum;
+        }, 0);
+        
+        return {
+          name: week.label,
+          amount: weeklyTotal
+        };
+      });
+    }
+    
+    return weeks.map(week => ({
+      name: week.label,
+      amount: 0
+    }));
+  };
+  
+  const generateMonthlyChartData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    if (bills.length > 0) {
+      const monthlyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const date = new Date(bill.createdAt);
+        const month = months[date.getMonth()];
+        const current = monthlyTotals.get(month) || 0;
+        monthlyTotals.set(month, current + bill.total);
+      });
+      
+      return months.map(month => ({
+        name: month,
+        amount: monthlyTotals.get(month) || 0
+      }));
+    }
+    
+    return months.map(month => ({
+      name: month,
+      amount: 0
+    }));
+  };
+  
+  const calculateTotalSales = () => {
+    let startDate = new Date();
+    const now = new Date();
+    
+    if (activeTab === 'hourly') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'daily') {
+      const dayOfWeek = startDate.getDay();
+      startDate.setDate(startDate.getDate() - dayOfWeek);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'weekly') {
+      startDate.setDate(startDate.getDate() - 28);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'monthly') {
+      startDate = new Date(startDate.getFullYear(), 0, 1);
+    }
+    
+    const filteredBills = bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return billDate >= startDate && billDate <= now;
+    });
+    
+    const total = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
+    
+    return total;
+  };
+  
+  const calculatePercentChange = () => {
+    const currentPeriodSales = calculateTotalSales();
+    
+    let previousPeriodStart = new Date();
+    let previousPeriodEnd = new Date();
+    let currentPeriodStart = new Date();
+    
+    if (activeTab === 'hourly') {
+      currentPeriodStart.setHours(0, 0, 0, 0);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 1);
+    } else if (activeTab === 'daily') {
+      const dayOfWeek = currentPeriodStart.getDay();
+      currentPeriodStart.setDate(currentPeriodStart.getDate() - dayOfWeek);
+      currentPeriodStart.setHours(0, 0, 0, 0);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 7);
+    } else if (activeTab === 'weekly') {
+      currentPeriodStart.setDate(currentPeriodStart.getDate() - 28);
+      currentPeriodStart.setHours(0, 0, 0, 0);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 28);
+    } else if (activeTab === 'monthly') {
+      currentPeriodStart = new Date(currentPeriodStart.getFullYear(), 0, 1);
+      previousPeriodEnd = new Date(currentPeriodStart);
+      previousPeriodStart = new Date(previousPeriodEnd);
+      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 1);
+    }
+    
+    const previousPeriodBills = bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return billDate >= previousPeriodStart && billDate < previousPeriodEnd;
+    });
+    
+    const previousPeriodSales = previousPeriodBills.reduce((sum, bill) => sum + bill.total, 0);
+    
+    if (previousPeriodSales === 0) {
+      return currentPeriodSales > 0 ? "+100% from last period" : "No previous data";
+    }
+    
+    const percentChange = ((currentPeriodSales - previousPeriodSales) / previousPeriodSales) * 100;
+    
+    const formattedChange = percentChange.toFixed(1);
+    return (percentChange >= 0 ? "+" : "") + formattedChange + "% from last period";
+  };
+  
+  const getLowStockCount = () => {
+    return products.filter(p => p.stock < 5).length;
+  };
+  
+  const getActiveSessionsCount = () => {
+    return stations.filter(s => s.isOccupied).length;
+  };
+  
+  const getNewMembersCount = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return customers.filter(c => new Date(c.createdAt) >= today).length;
+  };
+
   return (
-    <div className="p-6 space-y-6 bg-[#1A1F2C] min-h-screen text-white">
-      <div className="flex flex-col gap-2 pb-2">
-        <h1 className="text-4xl font-bold">Dashboard</h1>
-        <p className="text-gray-400">Welcome back to Cuephoria</p>
-      </div>
-
-      <StatCardSection 
-        totalSales={totalSales}
-        salesChange={salesChange}
-        activeSessionsCount={activeSessionsCount}
-        totalStations={totalStations}
-        customersCount={customersCount}
-        newMembersCount={newMembersCount}
-        lowStockCount={lowStockCount}
-        lowStockItems={lowStockItems}
-      />
+    <div className="flex-1 space-y-6 p-6 bg-[#1A1F2C] text-white">
+      <h2 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h2>
       
-      <BusinessSummarySection />
-      
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SalesChart data={salesData} activeTab={activeTab} setActiveTab={setActiveTab} />
-        <ActiveSessions />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ProductPerformance />
-        </div>
-        <RecentTransactions />
-      </div>
-      
-      {showCalendly && (
-        <>
-          <h2 className="text-xl font-bold pt-4">Calendly Integration</h2>
-          <CalendlyStats stats={stats} loading={loading} />
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <CalendlyBookingSummary events={events} loading={loading} />
-            <div>
-              {/* Additional Calendly related component could go here */}
-            </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-4 w-full max-w-md">
+          <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-1">Analytics</TabsTrigger>
+          <TabsTrigger value="finances" className="flex-1">Finances</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6">
+          <StatCardSection 
+            totalSales={dashboardStats.totalSales}
+            salesChange={dashboardStats.salesChange}
+            activeSessionsCount={dashboardStats.activeSessionsCount}
+            totalStations={stations.length}
+            customersCount={customers.length}
+            newMembersCount={dashboardStats.newMembersCount}
+            lowStockCount={dashboardStats.lowStockCount}
+            lowStockItems={dashboardStats.lowStockItems}
+          />
+          
+          <ActionButtonSection />
+          
+          <SalesChart 
+            data={chartData}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <ActiveSessions />
+            <RecentTransactions />
           </div>
-        </>
-      )}
-
-      <ActionButtonSection />
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <CustomerSpendingCorrelation />
+            <HourlyRevenueDistribution />
+          </div>
+          
+          <ProductPerformance />
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <CustomerActivityChart />
+            <ProductInventoryChart />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="finances" className="space-y-6">
+          <BusinessSummarySection />
+          
+          <ExpenseList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
