@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface CalendlyEmbedProps {
   url: string;
@@ -7,15 +7,31 @@ interface CalendlyEmbedProps {
 }
 
 const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     // Load the Calendly script if it's not already loaded
     const existingScript = document.getElementById('calendly-script');
     if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = 'calendly-script';
-      script.src = 'https://assets.calendly.com/assets/external/widget.js';
-      script.async = true;
-      document.body.appendChild(script);
+      try {
+        const script = document.createElement('script');
+        script.id = 'calendly-script';
+        script.src = 'https://assets.calendly.com/assets/external/widget.js';
+        script.async = true;
+        script.onload = () => {
+          setIsLoading(false);
+        };
+        script.onerror = (error) => {
+          console.error('Failed to load Calendly widget:', error);
+          setIsLoading(false);
+        };
+        document.body.appendChild(script);
+      } catch (error) {
+        console.error('Error initializing Calendly widget:', error);
+        setIsLoading(false);
+      }
+    } else {
+      setIsLoading(false);
     }
 
     // Clean up on unmount
@@ -25,15 +41,23 @@ const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
   }, []);
 
   return (
-    <div 
-      className="calendly-inline-widget" 
-      data-url={url}
-      style={{ 
-        minWidth: '320px', 
-        height: '700px', 
-        ...styles 
-      }} 
-    />
+    <>
+      {isLoading && (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin h-8 w-8 border-4 border-cuephoria-lightpurple border-t-transparent rounded-full"></div>
+        </div>
+      )}
+      <div 
+        className="calendly-inline-widget" 
+        data-url={url}
+        style={{ 
+          minWidth: '320px', 
+          height: '700px',
+          ...(isLoading ? { display: 'none' } : {}),
+          ...styles 
+        }} 
+      />
+    </>
   );
 };
 

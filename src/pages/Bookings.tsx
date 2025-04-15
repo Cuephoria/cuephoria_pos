@@ -9,17 +9,20 @@ import {
   ListFilter, 
   CalendarPlus, 
   Loader2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import StatCard from '@/components/StatCard';
+import { toast } from "@/components/ui/use-toast";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState<CalendlyEvent[]>([]);
   const [todayBookings, setTodayBookings] = useState<CalendlyEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
   // You would replace this with your Calendly URL
@@ -27,6 +30,7 @@ const Bookings = () => {
   
   const fetchBookings = async () => {
     setLoading(true);
+    setError(null);
     try {
       const events = await fetchScheduledEvents();
       setBookings(events);
@@ -36,6 +40,12 @@ const Bookings = () => {
       setTodayBookings(todayEvents);
     } catch (error) {
       console.error("Failed to fetch bookings:", error);
+      setError("Could not load bookings data");
+      toast({
+        title: "Error",
+        description: "Failed to fetch bookings data",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -108,11 +118,23 @@ const Bookings = () => {
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-cuephoria-lightpurple" />
             </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <AlertTriangle className="h-16 w-16 mb-4 text-red-400" />
+              <p className="text-xl font-medium">{error}</p>
+              <Button 
+                variant="outline"
+                className="mt-4 border-gray-700 hover:bg-gray-800"
+                onClick={handleRefresh}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+              </Button>
+            </div>
           ) : bookings.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-              {bookings.map((booking) => (
+              {bookings.map((booking, index) => (
                 <BookingCard 
-                  key={booking.uri} 
+                  key={booking.uri || `booking-${index}`} 
                   booking={booking}
                   onCancel={handleBookingCancelled}
                 />
