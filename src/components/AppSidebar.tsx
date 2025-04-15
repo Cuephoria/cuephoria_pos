@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Menu, Shield } from 'lucide-react';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Menu, Shield, Calendar } from 'lucide-react';
 import { 
   Sidebar, 
   SidebarContent, 
@@ -41,6 +41,7 @@ const AppSidebar: React.FC = () => {
     { icon: Clock, label: 'Gaming Stations', path: '/stations' },
     { icon: Package, label: 'Products', path: '/products' },
     { icon: Users, label: 'Customers', path: '/customers' },
+    { icon: Calendar, label: 'Bookings', path: '/bookings' },
   ];
   
   // Admin-only menu items

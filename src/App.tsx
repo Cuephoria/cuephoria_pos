@@ -21,6 +21,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
+import Bookings from "./pages/Bookings"; // Added new page import
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -113,6 +114,12 @@ const App = () => (
                 <Route path="/customers" element={
                   <ProtectedRoute>
                     <Customers />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/bookings" element={
+                  <ProtectedRoute>
+                    <Bookings />
                   </ProtectedRoute>
                 } />
                 

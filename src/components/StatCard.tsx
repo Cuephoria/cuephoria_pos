@@ -12,6 +12,7 @@ interface StatCardProps {
   isCurrency?: boolean;
   change?: number;
   color?: string;
+  className?: string;
 }
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -21,10 +22,11 @@ const StatCard: React.FC<StatCardProps> = ({
   description,
   isCurrency = false,
   change,
-  color = 'text-cuephoria-purple'
+  color = 'text-cuephoria-purple',
+  className = ''
 }) => {
   return (
-    <Card>
+    <Card className={`${className}`}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className={`h-4 w-4 ${color}`} />
