@@ -25,19 +25,20 @@ const Bookings = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Default fallback username if user object is not ready yet
-  const username = user?.username || 'cuephoria';
-  const calendlyURL = `https://calendly.com/${username}`;
+  // Use specific Calendly URL provided by user
+  const calendlyURL = "https://calendly.com/cuephoriaclub/60min?hide_gdpr_banner=1";
   
   const fetchBookings = async () => {
     setLoading(true);
     setError(null);
     try {
       const events = await fetchScheduledEvents();
+      console.log("Fetched bookings:", events);
       setBookings(events);
       
       // Get today's events separately
       const todayEvents = await getTodaysEvents();
+      console.log("Today's events:", todayEvents);
       setTodayBookings(todayEvents);
     } catch (error) {
       console.error("Failed to fetch bookings:", error);
@@ -59,15 +60,8 @@ const Bookings = () => {
   };
   
   useEffect(() => {
-    // Only try to fetch if we have a user
-    if (user) {
-      fetchBookings();
-    } else {
-      // Set a fallback if no user
-      setBookings([]); 
-      setTodayBookings([]);
-    }
-  }, [user]);
+    fetchBookings();
+  }, []);
   
   const handleBookingCancelled = () => {
     // Refresh the bookings list after cancellation

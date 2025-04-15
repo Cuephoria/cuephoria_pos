@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 interface CalendlyEmbedProps {
   url: string;
   styles?: React.CSSProperties;
+  hideGdpr?: boolean;
 }
 
-const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
+const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
@@ -21,6 +22,7 @@ const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
         script.src = 'https://assets.calendly.com/assets/external/widget.js';
         script.async = true;
         script.onload = () => {
+          console.log("Calendly script loaded successfully");
           setIsLoading(false);
         };
         script.onerror = () => {
@@ -50,10 +52,12 @@ const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
     if (!existingScript) {
       return loadScript();
     } else {
+      // If script already exists, just set loading to false
+      console.log("Calendly script already loaded");
       setIsLoading(false);
       return () => {};
     }
-  }, [isLoading]);
+  }, []);
 
   if (hasError) {
     return (
@@ -71,6 +75,11 @@ const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
     );
   }
 
+  // Format the URL with hide_gdpr_banner parameter if needed
+  const formattedUrl = hideGdpr && !url.includes('hide_gdpr_banner') 
+    ? `${url}${url.includes('?') ? '&' : '?'}hide_gdpr_banner=1` 
+    : url;
+
   return (
     <>
       {isLoading && (
@@ -80,7 +89,7 @@ const CalendlyEmbed = ({ url, styles }: CalendlyEmbedProps) => {
       )}
       <div 
         className="calendly-inline-widget" 
-        data-url={url}
+        data-url={formattedUrl}
         style={{ 
           minWidth: '320px', 
           height: '700px',

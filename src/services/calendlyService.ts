@@ -23,41 +23,7 @@ export interface CalendlyEvent {
   };
 }
 
-// Mock data for development in case the API fails
-const MOCK_EVENTS: CalendlyEvent[] = [
-  {
-    uri: "calendly:event:123456",
-    name: "Gaming Session Consultation",
-    status: "active",
-    startTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-    endTime: new Date(Date.now() + 7200000).toISOString(), // 2 hours from now
-    location: {
-      type: "physical",
-      location: "Cuephoria Gaming Center"
-    },
-    invitee: {
-      name: "John Smith",
-      email: "john@example.com",
-      timezone: "Asia/Kolkata"
-    }
-  },
-  {
-    uri: "calendly:event:789012",
-    name: "Tournament Registration",
-    status: "active",
-    startTime: new Date(Date.now() + 86400000).toISOString(), // 1 day from now
-    endTime: new Date(Date.now() + 90000000).toISOString(), // 1 day + 1 hour from now
-    location: {
-      type: "zoom",
-    },
-    invitee: {
-      name: "Alex Johnson",
-      email: "alex@example.com",
-      timezone: "Asia/Kolkata"
-    }
-  }
-];
-
+// Using the API to fetch real data
 export const fetchScheduledEvents = async (
   startDate?: Date,
   endDate?: Date
@@ -70,19 +36,11 @@ export const fetchScheduledEvents = async (
     const startISO = start.toISOString();
     const endISO = end.toISOString();
 
-    // For safety, always have mock data as a fallback
-    // This ensures the app doesn't break if the API is down
-    console.log("Attempting to fetch Calendly events");
-
-    // Skip API call and use mock data in development or if API key isn't configured properly
-    if (!CALENDLY_API_KEY || CALENDLY_API_KEY.includes("test") || process.env.NODE_ENV === 'development') {
-      console.log("Using mock Calendly data for development/testing");
-      return Promise.resolve(MOCK_EVENTS);
-    }
+    console.log("Fetching Calendly events from API");
 
     // Make API call to Calendly with a timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
       const response = await fetch(
@@ -99,20 +57,23 @@ export const fetchScheduledEvents = async (
       clearTimeout(timeoutId);
   
       if (!response.ok) {
+        console.error(`Error fetching Calendly events: ${response.status} - ${response.statusText}`);
+        console.log("Response:", await response.text());
         throw new Error(`Error fetching Calendly events: ${response.statusText}`);
       }
   
       const data = await response.json();
+      console.log("Calendly API Response:", data);
       
       // Check if data structure is as expected
       if (!data.collection || !Array.isArray(data.collection)) {
         console.warn("Unexpected Calendly API response format:", data);
-        return MOCK_EVENTS;
+        return [];
       }
       
       // Transform the response to our CalendlyEvent interface
       return data.collection.map((event: any) => ({
-        uri: event.uri || `mock-event-${Math.random()}`,
+        uri: event.uri || "",
         name: event.name || "Unnamed Event",
         status: event.status || "active",
         startTime: event.start_time || new Date().toISOString(),
@@ -135,8 +96,8 @@ export const fetchScheduledEvents = async (
     }
   } catch (error) {
     console.error("Failed to fetch Calendly events:", error);
-    // Return mock data as a fallback for development
-    return MOCK_EVENTS;
+    // Return empty array instead of mock data
+    return [];
   }
 };
 
@@ -151,7 +112,7 @@ export const getUpcomingEvents = async (count: number = 5): Promise<CalendlyEven
       .slice(0, count);
   } catch (error) {
     console.error("Error getting upcoming events:", error);
-    return MOCK_EVENTS.slice(0, count);
+    return [];
   }
 };
 
@@ -168,26 +129,12 @@ export const getTodaysEvents = async (): Promise<CalendlyEvent[]> => {
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   } catch (error) {
     console.error("Error getting today's events:", error);
-    return MOCK_EVENTS.filter(event => {
-      const eventDate = new Date(event.startTime);
-      const today = new Date();
-      return (
-        eventDate.getDate() === today.getDate() &&
-        eventDate.getMonth() === today.getMonth() &&
-        eventDate.getFullYear() === today.getFullYear()
-      );
-    });
+    return [];
   }
 };
 
 export const cancelEvent = async (eventUri: string): Promise<boolean> => {
   try {
-    // In development mode, just mock a successful cancellation
-    if (!CALENDLY_API_KEY || CALENDLY_API_KEY.includes("test") || process.env.NODE_ENV === 'development') {
-      console.log("Mock canceling event:", eventUri);
-      return true;
-    }
-
     const response = await fetch(`${BASE_URL}/scheduled_events/${eventUri}/cancellation`, {
       method: 'POST',
       headers: {
@@ -200,6 +147,7 @@ export const cancelEvent = async (eventUri: string): Promise<boolean> => {
     });
 
     if (!response.ok) {
+      console.error(`Error canceling event: ${response.status} - ${response.statusText}`);
       throw new Error(`Error canceling event: ${response.statusText}`);
     }
 

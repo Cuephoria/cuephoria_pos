@@ -19,6 +19,7 @@ const UpcomingBookingsCard = () => {
         setLoading(true);
         setError(null);
         const events = await getUpcomingEvents(3);
+        console.log("Dashboard card - Upcoming events:", events);
         setBookings(events);
       } catch (error) {
         console.error("Failed to fetch upcoming bookings:", error);
