@@ -57,3 +57,13 @@ export const getHoursLeftColor = (hoursLeft: number | undefined): string => {
   if (hoursLeft < 2) return 'text-orange-500';
   return 'text-green-600';
 };
+
+/**
+ * Gets the color for a Calendly event status
+ */
+export const getCalendlyStatusColor = (status: string, isPast: boolean, isCanceled: boolean): string => {
+  if (isCanceled) return 'text-red-500';
+  if (isPast) return 'text-gray-500';
+  return 'text-green-500';
+};
+
