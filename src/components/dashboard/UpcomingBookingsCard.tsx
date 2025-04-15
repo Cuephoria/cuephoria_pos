@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, ArrowRight, Clock } from "lucide-react";
+import { Calendar, ArrowRight, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { CalendlyEvent, getUpcomingEvents } from '@/services/calendlyService';
@@ -57,7 +57,7 @@ const UpcomingBookingsCard = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-            <Calendar className="h-12 w-12 mb-2 opacity-50" />
+            <AlertTriangle className="h-12 w-12 mb-2 text-red-400" />
             <p>{error}</p>
             <Button 
               variant="outline"

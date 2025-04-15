@@ -25,8 +25,9 @@ const Bookings = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // You would replace this with your Calendly URL
-  const calendlyURL = `https://calendly.com/${user?.username || 'cuephoria'}`;
+  // Default fallback username if user object is not ready yet
+  const username = user?.username || 'cuephoria';
+  const calendlyURL = `https://calendly.com/${username}`;
   
   const fetchBookings = async () => {
     setLoading(true);
@@ -58,8 +59,15 @@ const Bookings = () => {
   };
   
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    // Only try to fetch if we have a user
+    if (user) {
+      fetchBookings();
+    } else {
+      // Set a fallback if no user
+      setBookings([]); 
+      setTodayBookings([]);
+    }
+  }, [user]);
   
   const handleBookingCancelled = () => {
     // Refresh the bookings list after cancellation
