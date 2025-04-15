@@ -13,7 +13,6 @@ import CustomerSpendingCorrelation from '@/components/dashboard/CustomerSpending
 import HourlyRevenueDistribution from '@/components/dashboard/HourlyRevenueDistribution';
 import ProductPerformance from '@/components/dashboard/ProductPerformance';
 import ExpenseList from '@/components/expenses/ExpenseList';
-import UpcomingBookingsCard from '@/components/dashboard/UpcomingBookingsCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
@@ -321,14 +320,10 @@ const Dashboard = () => {
             setActiveTab={setActiveTab}
           />
           
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <ActiveSessions />
-            </div>
-            <UpcomingBookingsCard />
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <ActiveSessions />
+            <RecentTransactions />
           </div>
-          
-          <RecentTransactions />
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-6">
