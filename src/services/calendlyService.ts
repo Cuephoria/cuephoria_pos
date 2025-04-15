@@ -1,7 +1,12 @@
 
 import { toast } from "@/components/ui/use-toast";
 
-const CALENDLY_API_KEY = "eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzQ0NzEwMzcxLCJqdGkiOiIyNGQ1Y2FjYy1lZDBhLTQzYjUtODUxMS0yMmNkMzhkNjdjZWQiLCJ1c2VyX3V1aWQiOiI5MTRmMzIwMC04NTMzLTRkZDQtODdjZS0yNjliZjJiYjRlOGUifQ.DFtGh6bSb4IoQatKwHUEtD-cAMWFBAXdh6LN5-PVX8dPjKLzrX0rYROBiz3wR_HSNma_dq70YGsgh8cO-uE2CQ";
+// Update with the new API key
+const CALENDLY_API_KEY = "eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzQ0NzE3ODU3LCJqdGkiOiIyZjBhYzcwZi02ZjM1LTQwODAtYTY0Yi0xZDE1OTg4NmU3MzIiLCJ1c2VyX3V1aWQiOiI5MTRmMzIwMC04NTMzLTRkZDQtODdjZS0yNjliZjJiYjRlOGUifQ.bIkX-SRkIBIfYxO1CDWJfk0DtG2z6T8hnE_gpbpkSrZCjwZMhc7FA_F1BxznvP79HRBeMmx60QtDycgAY1ToBw";
+
+// Required Calendly user UUID from the API key
+const USER_UUID = "914f3200-8533-4dd4-87ce-269bf2bb4e8e";
+
 const BASE_URL = "https://api.calendly.com";
 
 export interface CalendlyEvent {
@@ -23,7 +28,7 @@ export interface CalendlyEvent {
   };
 }
 
-// Using the API to fetch real data
+// Using the API to fetch real data with required user parameter
 export const fetchScheduledEvents = async (
   startDate?: Date,
   endDate?: Date
@@ -36,15 +41,16 @@ export const fetchScheduledEvents = async (
     const startISO = start.toISOString();
     const endISO = end.toISOString();
 
-    console.log("Fetching Calendly events from API");
+    console.log("Fetching Calendly events from API with user UUID");
 
     // Make API call to Calendly with a timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Add the user parameter which is required as per the API error
       const response = await fetch(
-        `${BASE_URL}/scheduled_events?min_start_time=${startISO}&max_start_time=${endISO}&status=active&status=canceled`,
+        `${BASE_URL}/scheduled_events?min_start_time=${startISO}&max_start_time=${endISO}&status=active&status=canceled&user=${USER_UUID}`,
         {
           headers: {
             Authorization: `Bearer ${CALENDLY_API_KEY}`,
@@ -72,31 +78,63 @@ export const fetchScheduledEvents = async (
       }
       
       // Transform the response to our CalendlyEvent interface
-      return data.collection.map((event: any) => ({
-        uri: event.uri || "",
-        name: event.name || "Unnamed Event",
-        status: event.status || "active",
-        startTime: event.start_time || new Date().toISOString(),
-        endTime: event.end_time || new Date(Date.now() + 3600000).toISOString(),
-        location: {
-          type: event.location?.type || "physical",
-          location: event.location?.location,
-        },
-        cancelUrl: event.cancellation_url,
-        rescheduleUrl: event.reschedule_url,
-        invitee: {
-          name: event.invitees?.[0]?.name || "Guest",
-          email: event.invitees?.[0]?.email || "No email provided",
-          timezone: event.invitees?.[0]?.timezone || "UTC",
-        },
+      const events = await Promise.all(data.collection.map(async (event: any) => {
+        // For each event, we need to fetch invitee details
+        let inviteeDetails = {
+          name: "Guest",
+          email: "No email provided",
+          timezone: "UTC"
+        };
+        
+        if (event.uri) {
+          try {
+            // Get invitee details from the event's invitees URI
+            const inviteeResponse = await fetch(`${event.uri}/invitees`, {
+              headers: {
+                Authorization: `Bearer ${CALENDLY_API_KEY}`,
+                "Content-Type": "application/json"
+              }
+            });
+            
+            if (inviteeResponse.ok) {
+              const inviteeData = await inviteeResponse.json();
+              if (inviteeData.collection && inviteeData.collection.length > 0) {
+                const invitee = inviteeData.collection[0];
+                inviteeDetails = {
+                  name: invitee.name || "Guest",
+                  email: invitee.email || "No email provided",
+                  timezone: invitee.timezone || "UTC"
+                };
+              }
+            }
+          } catch (error) {
+            console.error("Failed to fetch invitee details:", error);
+          }
+        }
+        
+        return {
+          uri: event.uri || "",
+          name: event.name || "Unnamed Event",
+          status: event.status || "active",
+          startTime: event.start_time || new Date().toISOString(),
+          endTime: event.end_time || new Date(Date.now() + 3600000).toISOString(),
+          location: {
+            type: event.location?.type || "physical",
+            location: event.location?.location,
+          },
+          cancelUrl: event.cancellation_url,
+          rescheduleUrl: event.reschedule_url,
+          invitee: inviteeDetails
+        };
       }));
+      
+      return events;
     } catch (error) {
       clearTimeout(timeoutId);
       throw error;
     }
   } catch (error) {
     console.error("Failed to fetch Calendly events:", error);
-    // Return empty array instead of mock data
     return [];
   }
 };

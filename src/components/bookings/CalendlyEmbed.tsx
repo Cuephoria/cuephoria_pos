@@ -24,6 +24,16 @@ const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => 
         script.onload = () => {
           console.log("Calendly script loaded successfully");
           setIsLoading(false);
+          
+          // Explicitly initialize Calendly if it exists - helps with refresh
+          if (window.Calendly) {
+            window.Calendly.initInlineWidget({
+              url: formattedUrl,
+              parentElement: document.querySelector('.calendly-inline-widget'),
+              prefill: {},
+              utm: {}
+            });
+          }
         };
         script.onerror = () => {
           console.error('Failed to load Calendly widget');
@@ -49,15 +59,33 @@ const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => 
       }
     };
     
+    // Format the URL with hide_gdpr_banner parameter if needed
+    const formattedUrl = hideGdpr && !url.includes('hide_gdpr_banner') 
+      ? `${url}${url.includes('?') ? '&' : '?'}hide_gdpr_banner=1` 
+      : url;
+    
     if (!existingScript) {
       return loadScript();
     } else {
       // If script already exists, just set loading to false
       console.log("Calendly script already loaded");
       setIsLoading(false);
+      
+      // Still try to reinitialize in case we're on a new page
+      if (window.Calendly) {
+        setTimeout(() => {
+          window.Calendly.initInlineWidget({
+            url: formattedUrl,
+            parentElement: document.querySelector('.calendly-inline-widget'),
+            prefill: {},
+            utm: {}
+          });
+        }, 100);
+      }
+      
       return () => {};
     }
-  }, []);
+  }, [url, hideGdpr]);
 
   if (hasError) {
     return (
@@ -100,5 +128,19 @@ const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => 
     </>
   );
 };
+
+// Add TypeScript definition for the Calendly global object
+declare global {
+  interface Window {
+    Calendly?: {
+      initInlineWidget: (options: {
+        url: string;
+        parentElement: Element | null;
+        prefill?: Record<string, any>;
+        utm?: Record<string, any>;
+      }) => void;
+    };
+  }
+}
 
 export default CalendlyEmbed;

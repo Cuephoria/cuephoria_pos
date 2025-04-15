@@ -40,6 +40,10 @@ const Bookings = () => {
       const todayEvents = await getTodaysEvents();
       console.log("Today's events:", todayEvents);
       setTodayBookings(todayEvents);
+      
+      if (events.length === 0) {
+        console.log("No bookings found, but API request was successful");
+      }
     } catch (error) {
       console.error("Failed to fetch bookings:", error);
       setError("Could not load bookings data");
@@ -57,6 +61,12 @@ const Bookings = () => {
     setRefreshing(true);
     await fetchBookings();
     setRefreshing(false);
+    
+    // Show success toast to provide feedback to the user
+    toast({
+      title: "Refreshed",
+      description: "Booking data has been refreshed",
+    });
   };
   
   useEffect(() => {

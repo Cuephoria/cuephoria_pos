@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, ArrowRight, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, ArrowRight, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { CalendlyEvent, getUpcomingEvents } from '@/services/calendlyService';
@@ -11,26 +11,33 @@ const UpcomingBookingsCard = () => {
   const [bookings, setBookings] = useState<CalendlyEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
   
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const events = await getUpcomingEvents(3);
+      console.log("Dashboard card - Upcoming events:", events);
+      setBookings(events);
+    } catch (error) {
+      console.error("Failed to fetch upcoming bookings:", error);
+      setError("Could not load upcoming bookings");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const events = await getUpcomingEvents(3);
-        console.log("Dashboard card - Upcoming events:", events);
-        setBookings(events);
-      } catch (error) {
-        console.error("Failed to fetch upcoming bookings:", error);
-        setError("Could not load upcoming bookings");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchBookings();
   }, []);
+  
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchBookings();
+    setRefreshing(false);
+  };
   
   const formatBookingTime = (startTime: string, endTime: string) => {
     try {
@@ -60,13 +67,33 @@ const UpcomingBookingsCard = () => {
           <div className="flex flex-col items-center justify-center py-6 text-gray-400">
             <AlertTriangle className="h-12 w-12 mb-2 text-red-400" />
             <p>{error}</p>
-            <Button 
-              variant="outline"
-              className="mt-3 border-gray-700 hover:bg-gray-800 hover:text-white"
-              onClick={() => navigate('/bookings')}
-            >
-              Manage Bookings
-            </Button>
+            <div className="flex space-x-2 mt-3">
+              <Button 
+                variant="outline"
+                className="border-gray-700 hover:bg-gray-800 hover:text-white"
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <span className="flex items-center">
+                    <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                    Refreshing...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Retry
+                  </span>
+                )}
+              </Button>
+              <Button 
+                variant="outline"
+                className="border-gray-700 hover:bg-gray-800 hover:text-white"
+                onClick={() => navigate('/bookings')}
+              >
+                Manage Bookings
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
