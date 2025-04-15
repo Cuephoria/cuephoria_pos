@@ -9,10 +9,10 @@ import { format } from 'date-fns';
 const RecentTransactions = () => {
   const { bills, customers } = usePOS();
   
-  // Sort bills by date (most recent first) and take the 5 most recent
+  // Sort bills by createdAt (most recent first) and take the 5 most recent
   const recentBills = React.useMemo(() => {
     return [...bills]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5);
   }, [bills]);
   
@@ -23,11 +23,11 @@ const RecentTransactions = () => {
   };
   
   // Function to format date
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: Date) => {
     try {
       return format(new Date(dateString), 'MMM d, h:mm a');
     } catch (e) {
-      return dateString;
+      return 'Unknown date';
     }
   };
   
@@ -64,7 +64,7 @@ const RecentTransactions = () => {
                   <p className="font-medium">
                     <CurrencyDisplay amount={bill.total} />
                   </p>
-                  <p className="text-xs text-gray-400">{formatDate(bill.date)}</p>
+                  <p className="text-xs text-gray-400">{formatDate(bill.createdAt)}</p>
                 </div>
               </div>
             ))

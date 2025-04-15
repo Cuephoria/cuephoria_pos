@@ -18,7 +18,8 @@ const ProductPerformance = () => {
     // Process all items in all bills
     bills.forEach(bill => {
       bill.items.forEach(item => {
-        const productId = item.productId;
+        // Use item.id instead of item.productId
+        const productId = item.id;
         if (!performanceMap.has(productId)) {
           performanceMap.set(productId, {
             id: productId,
