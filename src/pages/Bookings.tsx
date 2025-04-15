@@ -1,16 +1,15 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendlyEvent, fetchScheduledEvents, getTodaysEvents } from '@/services/calendlyService';
 import BookingCard from '@/components/bookings/BookingCard';
 import CalendlyEmbed from '@/components/bookings/CalendlyEmbed';
 import { 
   Calendar, 
-  ListFilter, 
-  CalendarPlus, 
-  Loader2,
   RefreshCw,
-  AlertTriangle
+  Loader2,
+  AlertTriangle,
+  CalendarPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -28,7 +27,7 @@ const Bookings = () => {
   // Use specific Calendly URL provided by user
   const calendlyURL = "https://calendly.com/cuephoriaclub/60min?hide_gdpr_banner=1";
   
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -49,13 +48,13 @@ const Bookings = () => {
       setError("Could not load bookings data");
       toast({
         title: "Error",
-        description: "Failed to fetch bookings data",
+        description: "Failed to fetch bookings data. Please check the API connection.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
   
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -71,7 +70,7 @@ const Bookings = () => {
   
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
   
   const handleBookingCancelled = () => {
     // Refresh the bookings list after cancellation

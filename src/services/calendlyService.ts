@@ -7,6 +7,9 @@ const CALENDLY_API_KEY = "eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYT
 // Required Calendly user UUID from the API key
 const USER_UUID = "914f3200-8533-4dd4-87ce-269bf2bb4e8e";
 
+// Full URI format for the user parameter as required by Calendly API
+const USER_URI = `https://api.calendly.com/users/${USER_UUID}`;
+
 const BASE_URL = "https://api.calendly.com";
 
 export interface CalendlyEvent {
@@ -28,7 +31,7 @@ export interface CalendlyEvent {
   };
 }
 
-// Using the API to fetch real data with required user parameter
+// Using the API to fetch real data with required user parameter in the correct format
 export const fetchScheduledEvents = async (
   startDate?: Date,
   endDate?: Date
@@ -41,16 +44,16 @@ export const fetchScheduledEvents = async (
     const startISO = start.toISOString();
     const endISO = end.toISOString();
 
-    console.log("Fetching Calendly events from API with user UUID");
+    console.log("Fetching Calendly events from API with user URI", USER_URI);
 
     // Make API call to Calendly with a timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      // Add the user parameter which is required as per the API error
+      // Use the full URI format for the user parameter
       const response = await fetch(
-        `${BASE_URL}/scheduled_events?min_start_time=${startISO}&max_start_time=${endISO}&status=active&status=canceled&user=${USER_UUID}`,
+        `${BASE_URL}/scheduled_events?min_start_time=${startISO}&max_start_time=${endISO}&status=active&status=canceled&user=${USER_URI}`,
         {
           headers: {
             Authorization: `Bearer ${CALENDLY_API_KEY}`,
@@ -63,8 +66,9 @@ export const fetchScheduledEvents = async (
       clearTimeout(timeoutId);
   
       if (!response.ok) {
+        const responseText = await response.text();
         console.error(`Error fetching Calendly events: ${response.status} - ${response.statusText}`);
-        console.log("Response:", await response.text());
+        console.log("Response:", responseText);
         throw new Error(`Error fetching Calendly events: ${response.statusText}`);
       }
   

@@ -25,15 +25,18 @@ const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => 
           console.log("Calendly script loaded successfully");
           setIsLoading(false);
           
-          // Explicitly initialize Calendly if it exists - helps with refresh
-          if (window.Calendly) {
-            window.Calendly.initInlineWidget({
-              url: formattedUrl,
-              parentElement: document.querySelector('.calendly-inline-widget'),
-              prefill: {},
-              utm: {}
-            });
-          }
+          // Give a small delay to ensure DOM is ready
+          setTimeout(() => {
+            // Explicitly initialize Calendly if it exists - helps with refresh
+            if (window.Calendly) {
+              window.Calendly.initInlineWidget({
+                url: formattedUrl,
+                parentElement: document.querySelector('.calendly-inline-widget'),
+                prefill: {},
+                utm: {}
+              });
+            }
+          }, 200);
         };
         script.onerror = () => {
           console.error('Failed to load Calendly widget');
@@ -74,18 +77,27 @@ const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => 
       // Still try to reinitialize in case we're on a new page
       if (window.Calendly) {
         setTimeout(() => {
-          window.Calendly.initInlineWidget({
-            url: formattedUrl,
-            parentElement: document.querySelector('.calendly-inline-widget'),
-            prefill: {},
-            utm: {}
-          });
-        }, 100);
+          try {
+            window.Calendly.initInlineWidget({
+              url: formattedUrl,
+              parentElement: document.querySelector('.calendly-inline-widget'),
+              prefill: {},
+              utm: {}
+            });
+          } catch (err) {
+            console.error("Error reinitializing Calendly widget:", err);
+          }
+        }, 300);
       }
       
       return () => {};
     }
-  }, [url, hideGdpr]);
+  }, [url, hideGdpr, isLoading]);
+
+  // Format the URL with hide_gdpr_banner parameter if needed
+  const formattedUrl = hideGdpr && !url.includes('hide_gdpr_banner') 
+    ? `${url}${url.includes('?') ? '&' : '?'}hide_gdpr_banner=1` 
+    : url;
 
   if (hasError) {
     return (
@@ -102,11 +114,6 @@ const CalendlyEmbed = ({ url, styles, hideGdpr = true }: CalendlyEmbedProps) => 
       </div>
     );
   }
-
-  // Format the URL with hide_gdpr_banner parameter if needed
-  const formattedUrl = hideGdpr && !url.includes('hide_gdpr_banner') 
-    ? `${url}${url.includes('?') ? '&' : '?'}hide_gdpr_banner=1` 
-    : url;
 
   return (
     <>

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, ArrowRight, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ const UpcomingBookingsCard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
   
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -27,11 +27,11 @@ const UpcomingBookingsCard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
   
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
   
   const handleRefresh = async () => {
     setRefreshing(true);
