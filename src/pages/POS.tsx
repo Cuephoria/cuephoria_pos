@@ -394,25 +394,25 @@ const POS = () => {
               onValueChange={setActiveTab}
               className="flex flex-col flex-grow animate-scale-in"
             >
-              <div className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
-                <TabsList>
-                  <TabsTrigger value="all" className="font-heading">
+              <div className="px-6 flex items-center gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+                <TabsList className="flex flex-row flex-wrap-0 gap-2">
+                  <TabsTrigger value="all" className="font-heading whitespace-nowrap">
                     All ({categoryCounts.all || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="food" className="font-heading">
+                  <TabsTrigger value="food" className="font-heading whitespace-nowrap">
                     Food ({categoryCounts.food || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="drinks" className="font-heading">
+                  <TabsTrigger value="drinks" className="font-heading whitespace-nowrap">
                     Drinks ({categoryCounts.drinks || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="tobacco" className="font-heading">
+                  <TabsTrigger value="tobacco" className="font-heading whitespace-nowrap">
                     Tobacco ({categoryCounts.tobacco || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="challenges" className="font-heading">
+                  <TabsTrigger value="challenges" className="font-heading whitespace-nowrap">
                     Challenges ({categoryCounts.challenges || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="membership" className="font-heading">
-                    <Award className="h-4 w-4 mr-1" /> 
+                  <TabsTrigger value="membership" className="font-heading whitespace-nowrap flex items-center gap-1">
+                    <Award className="h-4 w-4" /> 
                     Membership ({categoryCounts.membership || 0})
                   </TabsTrigger>
                 </TabsList>
