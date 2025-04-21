@@ -394,83 +394,80 @@ const POS = () => {
               onValueChange={setActiveTab}
               className="flex flex-col flex-grow animate-scale-in"
             >
-              <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20" />
-              <TabsTrigger value="all" className="font-heading flex-grow basis-0">
-                All ({categoryCounts.all || 0})
-              </TabsTrigger>
-              <TabsTrigger value="food" className="font-heading flex-grow basis-0">
-                Food ({categoryCounts.food || 0})
-              </TabsTrigger>
-              <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">
-                Drinks ({categoryCounts.drinks || 0})
-              </TabsTrigger>
-              <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">
-                Tobacco ({categoryCounts.tobacco || 0})
-              </TabsTrigger>
-              <TabsTrigger value="challenges" className="font-heading flex-grow basis-0">
-                Challenges ({categoryCounts.challenges || 0})
-              </TabsTrigger>
-              <TabsTrigger value="membership" className="font-heading flex-grow basis-0">
-                <Award className="h-4 w-4 mr-1" /> 
-                Membership ({categoryCounts.membership || 0})
-              </TabsTrigger>
-            </Tabs>
-
-            <TabsContent
-              value={activeTab}
-              className="flex-grow"
-              style={{
-                minHeight: 0,
-                padding: 0,
-                marginTop: 0,
-              }}
-            >
-              <div
-                style={
-                  activeTab === 'all'
-                    ? {
-                        maxHeight: 'calc(100vh - 14rem)',
-                        overflowY: 'auto',
-                        padding: '1rem 1.5rem 1.5rem 1.5rem',
-                        borderRadius: 'inherit',
-                        background: 'inherit',
-                        boxShadow: 'inherit',
-                        scrollbarGutter: 'stable',
-                      }
-                    : {
-                        padding: '1rem 1.5rem 1.5rem 1.5rem',
-                      }
-                }
-                className="w-full"
-              >
-                {searchedProducts.length > 0 ? (
-                  <div
-                    className="grid gap-3"
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                    }}
-                  >
-                    {searchedProducts.map((product, index) => (
-                      <div
-                        key={product.id}
-                        className="animate-scale-in h-full"
-                        style={{ animationDelay: `${(index % 5) * 100}ms` }}
-                      >
-                        <ProductCard product={product} className="h-full" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full animate-fade-in">
-                    <h3 className="text-xl font-medium font-heading">No Products Found</h3>
-                    <p className="text-muted-foreground mt-2">
-                      Try a different search or category
-                    </p>
-                  </div>
-                )}
+              <div className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+                <TabsList>
+                  <TabsTrigger value="all" className="font-heading">
+                    All ({categoryCounts.all || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="food" className="font-heading">
+                    Food ({categoryCounts.food || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="drinks" className="font-heading">
+                    Drinks ({categoryCounts.drinks || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="tobacco" className="font-heading">
+                    Tobacco ({categoryCounts.tobacco || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="challenges" className="font-heading">
+                    Challenges ({categoryCounts.challenges || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="membership" className="font-heading">
+                    <Award className="h-4 w-4 mr-1" /> 
+                    Membership ({categoryCounts.membership || 0})
+                  </TabsTrigger>
+                </TabsList>
               </div>
-            </TabsContent>
+
+              <TabsContent
+                value={activeTab}
+                className="flex-grow"
+                style={{
+                  minHeight: 0,
+                  padding: 0,
+                  marginTop: 0,
+                }}
+              >
+                <div
+                  style={{
+                    maxHeight: 'calc(100vh - 14rem)',
+                    overflowY: 'auto',
+                    padding: '1rem 1.5rem 1.5rem 1.5rem',
+                    borderRadius: 'inherit',
+                    background: 'inherit',
+                    boxShadow: 'inherit',
+                    scrollbarGutter: 'stable',
+                  }}
+                  className="w-full"
+                >
+                  {searchedProducts.length > 0 ? (
+                    <div
+                      className="grid gap-3"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                      }}
+                    >
+                      {searchedProducts.map((product, index) => (
+                        <div
+                          key={product.id}
+                          className="animate-scale-in h-full"
+                          style={{ animationDelay: `${(index % 5) * 100}ms` }}
+                        >
+                          <ProductCard product={product} className="h-full" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full animate-fade-in">
+                      <h3 className="text-xl font-medium font-heading">No Products Found</h3>
+                      <p className="text-muted-foreground mt-2">
+                        Try a different search or category
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </Card>
       </div>
