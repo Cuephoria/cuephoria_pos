@@ -361,7 +361,12 @@ const POS = () => {
           </CardFooter>
         </Card>
 
-        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200 overflow-hidden">
+        <Card
+          className="lg:col-span-2 h-full flex flex-col animate-slide-up delay-200 overflow-visible"
+          style={{
+            minHeight: 0,
+          }}
+        >
           <CardHeader className="pb-3 bg-gradient-to-r from-transparent to-cuephoria-blue/10">
             <CardTitle className="text-xl font-heading">Products</CardTitle>
             <div className="flex space-x-2">
@@ -376,9 +381,20 @@ const POS = () => {
               </div>
             </div>
           </CardHeader>
-          
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow animate-scale-in">
-            <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+
+          <div
+            className="flex flex-col flex-grow px-0"
+            style={{
+              minHeight: 0,
+            }}
+          >
+            <Tabs
+              defaultValue="all"
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex flex-col flex-grow animate-scale-in"
+            >
+              <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20" />
               <TabsTrigger value="all" className="font-heading flex-grow basis-0">
                 All ({categoryCounts.all || 0})
               </TabsTrigger>
@@ -398,36 +414,64 @@ const POS = () => {
                 <Award className="h-4 w-4 mr-1" /> 
                 Membership ({categoryCounts.membership || 0})
               </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value={activeTab} className="flex-grow overflow-auto px-4 mt-4">
-              {searchedProducts.length > 0 ? (
-                <div className="grid gap-3 pb-4"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                  }}
-                >
-                  {searchedProducts.map((product, index) => (
-                    <div 
-                      key={product.id} 
-                      className="animate-scale-in h-full"
-                      style={{animationDelay: `${(index % 5) * 100}ms`}}
-                    >
-                      <ProductCard product={product} className="h-full" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full animate-fade-in">
-                  <h3 className="text-xl font-medium font-heading">No Products Found</h3>
-                  <p className="text-muted-foreground mt-2">
-                    Try a different search or category
-                  </p>
-                </div>
-              )}
+            </Tabs>
+
+            <TabsContent
+              value={activeTab}
+              className="flex-grow"
+              style={{
+                minHeight: 0,
+                padding: 0,
+                marginTop: 0,
+              }}
+            >
+              <div
+                style={
+                  activeTab === 'all'
+                    ? {
+                        maxHeight: 'calc(100vh - 14rem)',
+                        overflowY: 'auto',
+                        padding: '1rem 1.5rem 1.5rem 1.5rem',
+                        borderRadius: 'inherit',
+                        background: 'inherit',
+                        boxShadow: 'inherit',
+                        scrollbarGutter: 'stable',
+                      }
+                    : {
+                        padding: '1rem 1.5rem 1.5rem 1.5rem',
+                      }
+                }
+                className="w-full"
+              >
+                {searchedProducts.length > 0 ? (
+                  <div
+                    className="grid gap-3"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                    }}
+                  >
+                    {searchedProducts.map((product, index) => (
+                      <div
+                        key={product.id}
+                        className="animate-scale-in h-full"
+                        style={{ animationDelay: `${(index % 5) * 100}ms` }}
+                      >
+                        <ProductCard product={product} className="h-full" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full animate-fade-in">
+                    <h3 className="text-xl font-medium font-heading">No Products Found</h3>
+                    <p className="text-muted-foreground mt-2">
+                      Try a different search or category
+                    </p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
-          </Tabs>
+          </div>
         </Card>
       </div>
 
