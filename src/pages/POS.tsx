@@ -402,7 +402,12 @@ const POS = () => {
             
             <TabsContent value={activeTab} className="flex-grow overflow-auto px-4 mt-4">
               {searchedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
+                <div className="grid gap-3 pb-4"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                  }}
+                >
                   {searchedProducts.map((product, index) => (
                     <div 
                       key={product.id} 
