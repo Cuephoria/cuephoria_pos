@@ -394,25 +394,61 @@ const POS = () => {
               onValueChange={setActiveTab}
               className="flex flex-col flex-grow animate-scale-in"
             >
-              <div className="px-6 flex items-center gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
-                <TabsList className="flex flex-row flex-wrap-0 gap-2">
-                  <TabsTrigger value="all" className="font-heading whitespace-nowrap">
+              <div className="px-1 sm:px-6 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+                <TabsList
+                  className={`
+                    flex items-center
+                    gap-x-2
+                    py-2
+                    sm:justify-center
+                    justify-start
+                    overflow-x-auto
+                    scrollbar-thin scrollbar-thumb-cuephoria-lightpurple/30 scrollbar-track-transparent
+                    no-scrollbar
+                    w-full
+                    whitespace-nowrap
+                    rounded-xl
+                  `}
+                  style={{
+                    WebkitOverflowScrolling: "touch",
+                    paddingBottom: 0,
+                  }}
+                >
+                  <TabsTrigger
+                    value="all"
+                    className="font-heading whitespace-nowrap transition-all px-5 py-2 rounded-lg text-base font-medium focus:z-10 focus-visible:ring-2 focus-visible:ring-cuephoria-purple/50 data-[state=active]:bg-cuephoria-purple data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
                     All ({categoryCounts.all || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="food" className="font-heading whitespace-nowrap">
+                  <TabsTrigger
+                    value="food"
+                    className="font-heading whitespace-nowrap transition-all px-5 py-2 rounded-lg text-base font-medium focus:z-10 focus-visible:ring-2 focus-visible:ring-cuephoria-purple/50 data-[state=active]:bg-cuephoria-purple data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
                     Food ({categoryCounts.food || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="drinks" className="font-heading whitespace-nowrap">
+                  <TabsTrigger
+                    value="drinks"
+                    className="font-heading whitespace-nowrap transition-all px-5 py-2 rounded-lg text-base font-medium focus:z-10 focus-visible:ring-2 focus-visible:ring-cuephoria-purple/50 data-[state=active]:bg-cuephoria-purple data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
                     Drinks ({categoryCounts.drinks || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="tobacco" className="font-heading whitespace-nowrap">
+                  <TabsTrigger
+                    value="tobacco"
+                    className="font-heading whitespace-nowrap transition-all px-5 py-2 rounded-lg text-base font-medium focus:z-10 focus-visible:ring-2 focus-visible:ring-cuephoria-purple/50 data-[state=active]:bg-cuephoria-purple data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
                     Tobacco ({categoryCounts.tobacco || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="challenges" className="font-heading whitespace-nowrap">
+                  <TabsTrigger
+                    value="challenges"
+                    className="font-heading whitespace-nowrap transition-all px-5 py-2 rounded-lg text-base font-medium focus:z-10 focus-visible:ring-2 focus-visible:ring-cuephoria-purple/50 data-[state=active]:bg-cuephoria-purple data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
                     Challenges ({categoryCounts.challenges || 0})
                   </TabsTrigger>
-                  <TabsTrigger value="membership" className="font-heading whitespace-nowrap flex items-center gap-1">
-                    <Award className="h-4 w-4" /> 
+                  <TabsTrigger
+                    value="membership"
+                    className="font-heading whitespace-nowrap flex items-center gap-1 transition-all px-5 py-2 rounded-lg text-base font-medium focus:z-10 focus-visible:ring-2 focus-visible:ring-cuephoria-purple/50 data-[state=active]:bg-cuephoria-purple data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
+                    <Award className="h-4 w-4" />
                     Membership ({categoryCounts.membership || 0})
                   </TabsTrigger>
                 </TabsList>
