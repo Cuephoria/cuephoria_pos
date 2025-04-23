@@ -89,12 +89,14 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        // Access session data without nesting too deep to avoid type instantiation issues
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-
-        if (user) {
-          const userData = await fetchUserData(user.id);
+        // Fix for TS2589: Type instantiation is excessively deep
+        // Use destructuring at the top level and avoid creating complex nested objects
+        const sessionResponse = await supabase.auth.getSession();
+        const session = sessionResponse.data.session;
+        const currentUserId = session?.user?.id;
+        
+        if (currentUserId) {
+          const userData = await fetchUserData(currentUserId);
           setUser(userData);
         }
       } catch (error) {
@@ -130,16 +132,18 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (signInError) throw signInError;
 
-      // Get user ID directly from session to avoid deep nesting
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
+      // Fix for TS2589: Type instantiation is excessively deep
+      // Use destructuring at the top level and avoid complex object access chains
+      const sessionResponse = await supabase.auth.getSession();
+      const session = sessionResponse.data.session;
+      const currentUserId = session?.user?.id;
       
-      if (!user) {
+      if (!currentUserId) {
         throw new Error('Login failed - no session created');
       }
 
       // Fetch customer data associated with this auth user
-      const userData = await fetchUserData(user.id);
+      const userData = await fetchUserData(currentUserId);
       
       if (!userData) {
         // Log out if no customer record found
