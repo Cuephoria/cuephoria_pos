@@ -81,7 +81,7 @@ const CustomerDashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <img 
-              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png"
+              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
               alt="Cuephoria Logo"
               className="h-10 w-10"
             />

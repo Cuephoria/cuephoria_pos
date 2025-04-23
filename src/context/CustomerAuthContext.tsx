@@ -50,57 +50,54 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Function to fetch customer profile data
   const fetchProfile = async (userId: string) => {
     try {
-      // First try to find in customers table (POS customers)
-      let { data: posCustomer, error: posError } = await supabase
+      // Try to find in customers table (POS customers) by auth ID
+      let { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('*')
-        .eq('email', session?.user.email)
+        .eq('id', userId)
         .single();
 
-      if (posError || !posCustomer) {
-        // If not found in POS customers, try to find by auth ID
-        // Since `customer_profiles` is not in the type definition yet, we need to use a workaround
-        // We'll use a type assertion here
-        const { data, error } = await supabase
-          .from('customer_profiles')
+      // If not found by ID, try to find by email
+      if (customerError || !customer) {
+        const { data: emailCustomer, error: emailError } = await supabase
+          .from('customers')
           .select('*')
-          .eq('id', userId)
+          .eq('email', session?.user.email)
           .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setUser({
-            id: data.id,
-            email: session?.user.email || '',
-            name: data.name,
-            phone: data.phone,
-            loyaltyPoints: data.loyalty_points || 0,
-            totalSpent: data.total_spent || 0,
-            totalPlayTime: data.total_play_time || 0,
-            isMember: data.is_member || false,
-            membershipPlan: data.membership_plan,
-            membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
-            membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
-            membershipHoursLeft: data.membership_hours_left
-          });
+          
+        if (!emailError && emailCustomer) {
+          // If found by email but ID doesn't match, update the customer ID to link with auth
+          if (emailCustomer.id !== userId) {
+            await supabase
+              .from('customers')
+              .update({ id: userId })
+              .eq('email', session?.user.email);
+              
+            emailCustomer.id = userId;
+          }
+          
+          customer = emailCustomer;
         }
-      } else {
-        // Handle POS customer data
+      }
+
+      if (customer) {
         setUser({
-          id: userId,
+          id: customer.id,
           email: session?.user.email || '',
-          name: posCustomer.name,
-          phone: posCustomer.phone,
-          loyaltyPoints: posCustomer.loyalty_points || 0,
-          totalSpent: posCustomer.total_spent || 0,
-          totalPlayTime: posCustomer.total_play_time || 0,
-          isMember: posCustomer.is_member || false,
-          membershipPlan: posCustomer.membership_plan,
-          membershipExpiryDate: posCustomer.membership_expiry_date ? new Date(posCustomer.membership_expiry_date) : undefined,
-          membershipStartDate: posCustomer.membership_start_date ? new Date(posCustomer.membership_start_date) : undefined,
-          membershipHoursLeft: posCustomer.membership_hours_left
+          name: customer.name,
+          phone: customer.phone,
+          loyaltyPoints: customer.loyalty_points || 0,
+          totalSpent: customer.total_spent || 0,
+          totalPlayTime: customer.total_play_time || 0,
+          isMember: customer.is_member || false,
+          membershipPlan: customer.membership_plan,
+          membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
+          membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
+          membershipHoursLeft: customer.membership_hours_left
         });
+      } else {
+        // No customer record found - this is a new user
+        console.log("No customer profile found for this user");
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -234,8 +231,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             
           await fetchProfile(data.user.id);
         } else {
-          // Create new customer profile using a type assertion
-          await supabase.from('customer_profiles').insert({
+          // Create new customer record
+          const newCustomer = {
             id: data.user.id,
             name,
             email,
@@ -245,7 +242,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             total_spent: 0,
             total_play_time: 0,
             is_member: false
-          });
+          };
+          
+          await supabase.from('customers').insert([newCustomer]);
           
           // Set user data
           setUser({
