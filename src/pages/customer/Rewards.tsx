@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import CustomerLayout from '@/components/customer/CustomerLayout';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -25,6 +24,9 @@ import {
   Ticket,
   Award,
   Info,
+  Users,
+  MessageSquare,
+  Mail
 } from 'lucide-react';
 
 interface RewardItem {
@@ -41,7 +43,6 @@ const CustomerRewards: React.FC = () => {
   const { toast } = useToast();
   const [redeemingReward, setRedeemingReward] = useState<string | null>(null);
 
-  // Mock rewards data - would come from backend in production
   const availableRewards: RewardItem[] = [
     {
       id: '1',
@@ -82,13 +83,11 @@ const CustomerRewards: React.FC = () => {
 
   const totalPoints = user?.loyaltyPoints || 0;
   
-  // Progress to next tier
   const pointsForNextTier = 500;
   const currentTierPoints = totalPoints % pointsForNextTier;
   const tierProgress = (currentTierPoints / pointsForNextTier) * 100;
   const pointsToNextTier = pointsForNextTier - currentTierPoints;
   
-  // User's current tier
   const getTierName = (points: number) => {
     if (points >= 2000) return "Diamond";
     if (points >= 1000) return "Platinum";
@@ -99,7 +98,6 @@ const CustomerRewards: React.FC = () => {
   
   const userTier = getTierName(totalPoints);
   
-  // Handle reward redemption
   const handleRedeemReward = async (reward: RewardItem) => {
     if (!user) return;
     
@@ -115,10 +113,6 @@ const CustomerRewards: React.FC = () => {
     setRedeemingReward(reward.id);
     
     try {
-      // In production, this would create a redemption record
-      // and update the user's points in the database
-      
-      // Update points in user record
       const { error } = await supabase
         .from('customers')
         .update({
@@ -128,15 +122,12 @@ const CustomerRewards: React.FC = () => {
         
       if (error) throw error;
       
-      // Refresh user data to update points
       await refreshUser();
       
       toast({
         title: "Reward redeemed!",
         description: `You've successfully redeemed: ${reward.name}`,
       });
-      
-      // In production, this would generate a code or ticket for the user
       
     } catch (error: any) {
       console.error('Redemption error:', error);
@@ -160,7 +151,6 @@ const CustomerRewards: React.FC = () => {
           </p>
         </div>
         
-        {/* Loyalty status */}
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -195,7 +185,6 @@ const CustomerRewards: React.FC = () => {
           </CardFooter>
         </Card>
         
-        {/* Rewards tabs */}
         <Tabs defaultValue="all">
           <TabsList className="grid grid-cols-5 mb-6">
             <TabsTrigger value="all">All</TabsTrigger>
@@ -326,7 +315,6 @@ const CustomerRewards: React.FC = () => {
           ))}
         </Tabs>
         
-        {/* How to earn points */}
         <Card>
           <CardHeader>
             <CardTitle>How to Earn Points</CardTitle>
