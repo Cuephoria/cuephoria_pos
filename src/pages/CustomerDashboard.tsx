@@ -196,21 +196,21 @@ const CustomerDashboard = () => {
                           <span className="text-sm">Average Score</span>
                           <span className="text-sm font-medium">76/100</span>
                         </div>
-                        <Progress value={76} className="h-2 bg-cuephoria-darker" indicatorClassName="bg-cuephoria-lightpurple" />
+                        <Progress value={76} className="h-2 bg-cuephoria-darker" />
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm">Win Rate</span>
                           <span className="text-sm font-medium">65%</span>
                         </div>
-                        <Progress value={65} className="h-2 bg-cuephoria-darker" indicatorClassName="bg-cuephoria-blue" />
+                        <Progress value={65} className="h-2 bg-cuephoria-darker" />
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm">Accuracy</span>
                           <span className="text-sm font-medium">82%</span>
                         </div>
-                        <Progress value={82} className="h-2 bg-cuephoria-darker" indicatorClassName="bg-cuephoria-orange" />
+                        <Progress value={82} className="h-2 bg-cuephoria-darker" />
                       </div>
                     </div>
                   ) : (
@@ -303,7 +303,7 @@ const CustomerDashboard = () => {
                             <span>Membership Progress</span>
                             <span>{calculateMembershipProgress()}% remaining</span>
                           </div>
-                          <Progress value={calculateMembershipProgress()} className="h-2 bg-cuephoria-darker" indicatorClassName="bg-cuephoria-lightpurple" />
+                          <Progress value={calculateMembershipProgress()} className="h-2 bg-cuephoria-darker" />
                         </div>
                       </div>
                       <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
@@ -389,8 +389,7 @@ const CustomerDashboard = () => {
                         </div>
                         <Progress 
                           value={user?.loyaltyPoints ? (user.loyaltyPoints % 100) : 0} 
-                          className="h-2 bg-cuephoria-darker" 
-                          indicatorClassName="bg-amber-500" 
+                          className="h-2 bg-cuephoria-darker"
                         />
                       </div>
                     </div>

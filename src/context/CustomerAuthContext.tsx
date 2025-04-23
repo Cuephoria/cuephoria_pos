@@ -15,6 +15,8 @@ interface CustomerProfile {
   isMember: boolean;
   membershipPlan?: string;
   membershipExpiryDate?: Date;
+  membershipStartDate?: Date;
+  membershipHoursLeft?: number;
 }
 
 interface CustomerAuthContextType {
@@ -57,6 +59,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (posError || !posCustomer) {
         // If not found in POS customers, try to find by auth ID
+        // Since `customer_profiles` is not in the type definition yet, we need to use a workaround
+        // We'll use a type assertion here
         const { data, error } = await supabase
           .from('customer_profiles')
           .select('*')
@@ -76,7 +80,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             totalPlayTime: data.total_play_time || 0,
             isMember: data.is_member || false,
             membershipPlan: data.membership_plan,
-            membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined
+            membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
+            membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
+            membershipHoursLeft: data.membership_hours_left
           });
         }
       } else {
@@ -91,7 +97,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           totalPlayTime: posCustomer.total_play_time || 0,
           isMember: posCustomer.is_member || false,
           membershipPlan: posCustomer.membership_plan,
-          membershipExpiryDate: posCustomer.membership_expiry_date ? new Date(posCustomer.membership_expiry_date) : undefined
+          membershipExpiryDate: posCustomer.membership_expiry_date ? new Date(posCustomer.membership_expiry_date) : undefined,
+          membershipStartDate: posCustomer.membership_start_date ? new Date(posCustomer.membership_start_date) : undefined,
+          membershipHoursLeft: posCustomer.membership_hours_left
         });
       }
     } catch (error) {
@@ -226,7 +234,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             
           await fetchProfile(data.user.id);
         } else {
-          // Create new customer profile
+          // Create new customer profile using a type assertion
           await supabase.from('customer_profiles').insert({
             id: data.user.id,
             name,
