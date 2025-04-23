@@ -89,10 +89,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        // Using destructuring with explicit typing to avoid deep nesting
-        const { data } = await supabase.auth.getSession();
-        // Extract userId without excessive nesting
-        const userId = data.session?.user?.id;
+        // Get session directly without nesting
+        const result = await supabase.auth.getSession();
+        const userId = result?.data?.session?.user?.id;
         
         if (userId) {
           const userData = await fetchUserData(userId);
@@ -131,10 +130,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (signInError) throw signInError;
 
-      // Use direct destructuring with specific type assignment
-      const { data } = await supabase.auth.getSession();
-      // Extract userId directly to avoid deep nesting
-      const userId = data.session?.user?.id;
+      // Get session directly without excessive nesting
+      const result = await supabase.auth.getSession();
+      const userId = result?.data?.session?.user?.id;
       
       if (!userId) {
         throw new Error('Login failed - no session created');
