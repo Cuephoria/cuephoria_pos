@@ -9,6 +9,7 @@ import { POSProvider } from "@/context/POSContext";
 import { ExpenseProvider } from "@/context/ExpenseContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
+import { useEffect, useState } from "react";
 
 // Pages
 import Login from "./pages/Login";
@@ -37,12 +38,43 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
+// Check if running in Capacitor (mobile app)
+const isCapacitorApp = () => {
+  return window.location.href.includes('capacitor://') || 
+         window.location.href.includes('https://1a46da40-620c-4f55-9f80-b0b990917809.lovableproject.com');
+};
+
 // Enhanced Protected route component that checks for authentication
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+  const [isAppReady, setIsAppReady] = useState<boolean>(false);
   
-  if (isLoading) {
+  useEffect(() => {
+    // Check for platform
+    if (typeof window !== 'undefined') {
+      document.body.classList.toggle('capacitor-app', isCapacitorApp());
+      
+      const getPlatform = () => {
+        const userAgent = navigator.userAgent.toLowerCase();
+        if (userAgent.indexOf('android') > -1) return 'android';
+        if (userAgent.indexOf('iphone') > -1 || userAgent.indexOf('ipad') > -1) return 'ios';
+        return 'web';
+      };
+      
+      const platform = getPlatform();
+      
+      if (platform === 'ios') {
+        document.body.classList.add('ios-status-bar-padding');
+      } else if (platform === 'android') {
+        document.body.classList.add('android-status-bar-padding');
+      }
+      
+      setIsAppReady(true);
+    }
+  }, []);
+  
+  if (isLoading || !isAppReady) {
     return <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
       <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
     </div>;
