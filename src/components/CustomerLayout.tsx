@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import CustomerSidebar from '@/components/CustomerSidebar';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -13,6 +13,7 @@ interface CustomerLayoutProps {
 const CustomerLayout = ({ children, requireAuth = true }: CustomerLayoutProps) => {
   const { isAuthenticated, isLoading } = useCustomerAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   useEffect(() => {
     if (!isLoading && requireAuth && !isAuthenticated) {
