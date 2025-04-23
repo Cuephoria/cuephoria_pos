@@ -9,8 +9,6 @@ import { POSProvider } from "@/context/POSContext";
 import { ExpenseProvider } from "@/context/ExpenseContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
-import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
-import CustomerProtectedRoute from "@/components/customer/CustomerProtectedRoute";
 
 // Pages
 import Login from "./pages/Login";
@@ -23,16 +21,6 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
-
-// Customer Pages
-import CustomerAuth from "./pages/CustomerAuth";
-import CustomerDashboard from "./pages/customer/Dashboard";
-import CustomerProfile from "./pages/customer/Profile";
-import CustomerBooking from "./pages/customer/Booking";
-import CustomerRewards from "./pages/customer/Rewards";
-import CustomerNotifications from "./pages/customer/Notifications";
-import CustomerReferrals from "./pages/customer/Referrals";
-import CustomerSettings from "./pages/customer/Settings";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -88,111 +76,64 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <CustomerAuthProvider>
-        <POSProvider>
-          <ExpenseProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/pos" element={
-                    <ProtectedRoute>
-                      <POS />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/stations" element={
-                    <ProtectedRoute>
-                      <Stations />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/products" element={
-                    <ProtectedRoute>
-                      <Products />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/customers" element={
-                    <ProtectedRoute>
-                      <Customers />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/reports" element={
-                    <ProtectedRoute>
-                      <Reports />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/settings" element={
-                    <ProtectedRoute requireAdmin={true}>
-                      <Settings />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Customer Portal Routes */}
-                  <Route path="/customer/login" element={<CustomerAuth />} />
-                  
-                  <Route path="/customer/dashboard" element={
-                    <CustomerProtectedRoute>
-                      <CustomerDashboard />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer/profile" element={
-                    <CustomerProtectedRoute>
-                      <CustomerProfile />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer/booking" element={
-                    <CustomerProtectedRoute>
-                      <CustomerBooking />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer/rewards" element={
-                    <CustomerProtectedRoute>
-                      <CustomerRewards />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer/notifications" element={
-                    <CustomerProtectedRoute>
-                      <CustomerNotifications />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer/referrals" element={
-                    <CustomerProtectedRoute>
-                      <CustomerReferrals />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="/customer/settings" element={
-                    <CustomerProtectedRoute>
-                      <CustomerSettings />
-                    </CustomerProtectedRoute>
-                  } />
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </ExpenseProvider>
-        </POSProvider>
-      </CustomerAuthProvider>
+      <POSProvider>
+        <ExpenseProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/pos" element={
+                  <ProtectedRoute>
+                    <POS />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/stations" element={
+                  <ProtectedRoute>
+                    <Stations />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/products" element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/customers" element={
+                  <ProtectedRoute>
+                    <Customers />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <Reports />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/settings" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ExpenseProvider>
+      </POSProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
