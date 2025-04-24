@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +34,18 @@ interface RedemptionHistory {
   redeemed: boolean;
   createdAt: Date;
 }
+
+// Define the parameter types for RPC functions
+type GetLoyaltyRedemptionsParams = {
+  customer_uuid: string;
+};
+
+type CreateLoyaltyRedemptionParams = {
+  customer_uuid: string;
+  points_redeemed_val: number;
+  redemption_code_val: string;
+  reward_name_val: string;
+};
 
 const Rewards = () => {
   const { user, refreshProfile } = useCustomerAuth();
@@ -104,9 +117,10 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      const response = await supabase.rpc('get_loyalty_redemptions', { 
-        customer_uuid: user.id 
-      }) as unknown as { data: LoyaltyRedemption[] | null; error: any };
+      const response = await (supabase.rpc<GetLoyaltyRedemptionsParams, LoyaltyRedemption[]>(
+        'get_loyalty_redemptions', 
+        { customer_uuid: user.id }
+      ) as unknown as { data: LoyaltyRedemption[] | null; error: any });
         
       if (response.error) {
         console.error('Error loading redemption history:', response.error);
@@ -171,12 +185,15 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      const response = await supabase.rpc('create_loyalty_redemption', {
-        customer_uuid: user.id,
-        points_redeemed_val: selectedReward.pointsCost,
-        redemption_code_val: newCode,
-        reward_name_val: selectedReward.name
-      }) as unknown as { data: any; error: any };
+      const response = await (supabase.rpc<CreateLoyaltyRedemptionParams, string>(
+        'create_loyalty_redemption', 
+        {
+          customer_uuid: user.id,
+          points_redeemed_val: selectedReward.pointsCost,
+          redemption_code_val: newCode,
+          reward_name_val: selectedReward.name
+        }
+      ) as unknown as { data: any; error: any });
         
       if (response.error) throw response.error;
       
