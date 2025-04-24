@@ -1,232 +1,40 @@
 
 import React, { useState, useEffect } from 'react';
-import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
-import { Gift, Star, Sparkles, Ticket, Coffee, Gamepad, Pizza, BadgeDollarSign, Award } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Trophy, Gift, Award, Star, Clock, CalendarDays } from 'lucide-react';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { LoyaltyRedemption } from '@/types/loyalty-redemptions';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
+import confetti from 'canvas-confetti';
 
-interface Reward {
+interface RedemptionRecord {
   id: string;
-  name: string;
-  description: string;
-  pointsCost: number;
-  icon: React.ReactNode;
-}
-
-interface RedemptionHistory {
-  id: string;
-  rewardName: string;
-  pointsSpent: number;
-  redemptionCode: string;
-  redeemed: boolean;
-  createdAt: Date;
+  user_id: string;
+  reward_name: string;
+  points_used: number;
+  code: string;
+  redeemed_at: string;
 }
 
 const Rewards = () => {
   const { user, refreshProfile } = useCustomerAuth();
+  const [activeTab, setActiveTab] = useState('loyalty');
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<string | null>(null);
+  const [redemptionHistory, setRedemptionHistory] = useState<RedemptionRecord[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const { toast } = useToast();
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [redemptionHistory, setRedemptionHistory] = useState<RedemptionHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [redemptionDialogOpen, setRedemptionDialogOpen] = useState(false);
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
-  const [redeemingReward, setRedeemingReward] = useState(false);
-  const [redemptionCode, setRedemptionCode] = useState('');
 
-  useEffect(() => {
-    loadRewards();
-    if (user?.id) {
-      loadRedemptionHistory();
-    }
-  }, [user?.id]);
-
-  const loadRewards = () => {
-    setRewards([
-      {
-        id: '1',
-        name: 'Free Drink',
-        description: 'Redeem a free beverage of your choice',
-        pointsCost: 50,
-        icon: <Coffee className="h-5 w-5 text-blue-400" />
-      },
-      {
-        id: '2',
-        name: '1 Hour Free Play',
-        description: '1 hour of gameplay at any station',
-        pointsCost: 100,
-        icon: <Gamepad className="h-5 w-5 text-cuephoria-lightpurple" />
-      },
-      {
-        id: '3',
-        name: 'Food Combo',
-        description: 'Any food combo of your choice',
-        pointsCost: 75,
-        icon: <Pizza className="h-5 w-5 text-orange-400" />
-      },
-      {
-        id: '4',
-        name: 'Discount Coupon',
-        description: '15% off your next bill',
-        pointsCost: 150,
-        icon: <Ticket className="h-5 w-5 text-pink-400" />
-      },
-      {
-        id: '5',
-        name: 'Challenge Entry',
-        description: 'Free entry to any challenge event',
-        pointsCost: 200,
-        icon: <Award className="h-5 w-5 text-amber-400" />
-      },
-      {
-        id: '6',
-        name: 'Membership Discount',
-        description: '10% discount on membership renewal',
-        pointsCost: 300,
-        icon: <BadgeDollarSign className="h-5 w-5 text-green-400" />
-      }
-    ]);
-    setIsLoading(false);
-  };
-
-  const loadRedemptionHistory = async () => {
-    if (!user?.id) return;
-    
-    try {
-      // Explicitly cast supabase.rpc to any type to bypass TypeScript errors
-      const rpc = supabase.rpc as any;
-      const { data, error } = await rpc(
-        'get_loyalty_redemptions', 
-        { customer_uuid: user.id }
-      );
-        
-      if (error) {
-        console.error('Error loading redemption history:', error);
-        return;
-      }
-      
-      if (data) {
-        const history = (data as any[]).map((item: LoyaltyRedemption) => ({
-          id: item.id,
-          rewardName: item.reward_name || 'Reward',
-          pointsSpent: item.points_redeemed,
-          redemptionCode: item.redemption_code,
-          redeemed: item.is_used,
-          createdAt: new Date(item.created_at)
-        }));
-        
-        setRedemptionHistory(history);
-      }
-    } catch (error) {
-      console.error('Error loading redemption history:', error);
-    }
-  };
-
-  const handleOpenRedemption = (reward: Reward) => {
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'Please log in to redeem rewards',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    if ((user.loyaltyPoints || 0) < reward.pointsCost) {
-      toast({
-        title: 'Insufficient Points',
-        description: `You need ${reward.pointsCost} points to redeem this reward`,
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    setSelectedReward(reward);
-    setRedemptionDialogOpen(true);
-  };
-
-  const generateRedemptionCode = () => {
-    const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  };
-
-  const handleRedeemPoints = async () => {
-    if (!user || !selectedReward) return;
-    
-    setRedeemingReward(true);
-    
-    try {
-      const newCode = generateRedemptionCode();
-      setRedemptionCode(newCode);
-      
-      // Explicitly cast supabase.rpc to any type to bypass TypeScript errors
-      const rpc = supabase.rpc as any;
-      const { data, error } = await rpc(
-        'create_loyalty_redemption', 
-        {
-          customer_uuid: user.id,
-          points_redeemed_val: selectedReward.pointsCost,
-          redemption_code_val: newCode,
-          reward_name_val: selectedReward.name
-        }
-      );
-        
-      if (error) throw error;
-      
-      // Update customer points in the database
-      const { error: updateError } = await supabase
-        .from('customers')
-        .update({ 
-          loyalty_points: (user.loyaltyPoints || 0) - selectedReward.pointsCost 
-        })
-        .eq('id', user.id);
-      
-      if (updateError) throw updateError;
-      
-      // Refresh user profile to get updated loyalty points
-      await refreshProfile();
-      
-      // Reload redemption history to show the new redemption
-      await loadRedemptionHistory();
-      
-      toast({
-        title: 'Reward Redeemed!',
-        description: `You've successfully redeemed ${selectedReward.name}`,
-      });
-    } catch (error) {
-      console.error('Error redeeming points:', error);
-      toast({
-        title: 'Redemption Failed',
-        description: 'There was a problem redeeming your points. Please try again.',
-        variant: 'destructive'
-      });
-      setRedemptionDialogOpen(false);
-    } finally {
-      setRedeemingReward(false);
-    }
-  };
-
-  const closeRedemptionDialog = () => {
-    setRedemptionDialogOpen(false);
-    setSelectedReward(null);
-    setRedemptionCode('');
-  };
+  const rewards = [
+    { id: '1', name: '30-minute Free Play', points: 100, description: 'Get a free 30-minute play session' },
+    { id: '2', name: 'Free Soft Drink', points: 50, description: 'Enjoy a complimentary soft drink on us' },
+    { id: '3', name: '10% Off Next Visit', points: 200, description: 'Save 10% on your next bill' },
+    { id: '4', name: 'Friend Plays Free', points: 300, description: 'Bring a friend to play for free (30 min)' }
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -243,225 +51,322 @@ const Rewards = () => {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { duration: 0.5 }
+      transition: { duration: 0.3 }
     }
   };
 
+  useEffect(() => {
+    if (user) {
+      fetchRedemptionHistory();
+    }
+  }, [user]);
+
+  const fetchRedemptionHistory = async () => {
+    if (!user) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('reward_redemptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('redeemed_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setRedemptionHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching redemption history:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load redemption history',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const handleRewardSelect = (rewardId: string) => {
+    setSelectedReward(rewardId);
+  };
+
+  const generateRedemptionCode = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+  };
+
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  };
+
+  const handleRedeemReward = async () => {
+    if (!user || !selectedReward) return;
+    
+    const reward = rewards.find(r => r.id === selectedReward);
+    if (!reward) return;
+    
+    if ((user.loyaltyPoints || 0) < reward.points) {
+      toast({
+        title: 'Not enough points',
+        description: `You need ${reward.points} points to redeem this reward`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setIsRedeeming(true);
+    try {
+      const code = generateRedemptionCode();
+      
+      // First, insert the redemption record
+      const { error: insertError } = await supabase
+        .from('reward_redemptions')
+        .insert([{
+          user_id: user.id,
+          reward_name: reward.name,
+          points_used: reward.points,
+          code: code
+        }]) as any; // Temporary type assertion to fix TypeScript error
+      
+      if (insertError) throw insertError;
+      
+      // Then, update user's loyalty points
+      const { error: pointsError } = await supabase.rpc(
+        'deduct_loyalty_points', 
+        { 
+          user_id: user.id,
+          points_to_deduct: reward.points
+        }
+      ) as any; // Temporary type assertion to fix TypeScript error
+      
+      if (pointsError) throw pointsError;
+
+      // Refresh user profile to get updated points
+      await refreshProfile();
+      
+      // Update redemption history
+      await fetchRedemptionHistory();
+      
+      // Show success message and visual feedback
+      triggerConfetti();
+      
+      toast({
+        title: 'Reward Redeemed!',
+        description: `Your redemption code is: ${code}`,
+      });
+      
+      setSelectedReward(null);
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+      toast({
+        title: 'Redemption Failed',
+        description: 'There was an error processing your redemption. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
   return (
-    <motion.div 
-      className="container p-4 sm:p-6 space-y-6 max-w-5xl mx-auto"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      <motion.div variants={itemVariants}>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white">Loyalty Rewards</h1>
-        <p className="text-muted-foreground text-sm sm:text-base">Redeem your loyalty points for exclusive rewards</p>
-      </motion.div>
-
-      <motion.div variants={itemVariants}>
-        <Card className="bg-gradient-to-r from-purple-900/30 to-cuephoria-lightpurple/20 border-cuephoria-lightpurple/30">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-cuephoria-lightpurple/20 p-3 rounded-full">
-                  <Star className="h-7 w-7 text-cuephoria-lightpurple" />
-                </div>
-                <div>
-                  <p className="text-lg font-medium text-white">Your Loyalty Points</p>
-                  <p className="text-3xl font-bold text-white">{user?.loyaltyPoints || 0}</p>
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground max-w-xs">
-                Earn 1 point for every ₹10 spent at Cuephoria. Use your points to redeem exclusive rewards and experiences.
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div variants={itemVariants}>
-        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Gift className="h-5 w-5 text-cuephoria-lightpurple" />
-          Available Rewards
-        </h2>
+    <div className="p-6 max-w-7xl mx-auto">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.h1
+          className="text-3xl font-bold mb-6 bg-gradient-to-r from-cuephoria-lightpurple to-accent bg-clip-text text-transparent"
+          variants={itemVariants}
+        >
+          Rewards & Loyalty
+        </motion.h1>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rewards.map((reward) => (
-            <Card key={reward.id} className="bg-cuephoria-darker/60 border-cuephoria-lightpurple/20 hover:bg-cuephoria-darker/80 transition-colors">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    {reward.icon}
-                    {reward.name}
-                  </CardTitle>
-                  <div className="bg-cuephoria-lightpurple/20 px-2 py-1 rounded-full text-xs font-medium text-cuephoria-lightpurple">
-                    {reward.pointsCost} Points
+        <motion.div variants={itemVariants}>
+          <Card className="mb-8 bg-cuephoria-darker border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/5">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Trophy className="mr-2 text-cuephoria-lightpurple" size={24} />
+                Your Loyalty Status
+              </CardTitle>
+              <CardDescription>
+                Earn points with every game and redeem them for exclusive rewards
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Current Points</p>
+                  <div className="flex items-center">
+                    <Star className="text-amber-400 mr-2" size={20} />
+                    <span className="text-2xl font-bold text-amber-400">{user?.loyaltyPoints || 0}</span>
                   </div>
                 </div>
-                <CardDescription>{reward.description}</CardDescription>
-              </CardHeader>
-              <CardFooter className="pt-2">
-                <Button 
-                  variant="secondary" 
-                  className="w-full"
-                  onClick={() => handleOpenRedemption(reward)}
-                  disabled={!user || (user.loyaltyPoints || 0) < reward.pointsCost}
-                >
-                  {!user ? 'Log in to redeem' : 
-                   (user.loyaltyPoints || 0) < reward.pointsCost ? 'Not enough points' : 'Redeem Now'}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </motion.div>
-
-      {redemptionHistory.length > 0 && (
-        <motion.div variants={itemVariants}>
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-cuephoria-lightpurple" />
-            Your Redemption History
-          </h2>
-          
-          <Card className="bg-cuephoria-darker/60 border-cuephoria-lightpurple/20">
-            <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-cuephoria-darker/50">
-                  <tr>
-                    <th className="text-left p-4 text-sm">Reward</th>
-                    <th className="text-left p-4 text-sm">Points</th>
-                    <th className="text-left p-4 text-sm">Date</th>
-                    <th className="text-left p-4 text-sm">Code</th>
-                    <th className="text-left p-4 text-sm">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-cuephoria-lightpurple/10">
-                  {redemptionHistory.map((redemption) => (
-                    <tr key={redemption.id} className="hover:bg-cuephoria-lightpurple/5 transition-colors">
-                      <td className="p-4">
-                        <div className="font-medium text-white">{redemption.rewardName}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm text-white">{redemption.pointsSpent}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm text-white">
-                          {format(redemption.createdAt, 'dd MMM yyyy')}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm font-mono bg-black/20 px-2 py-1 rounded text-cuephoria-lightpurple">
-                          {redemption.redemptionCode}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          redemption.redeemed 
-                            ? 'bg-green-500/20 text-green-500' 
-                            : 'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {redemption.redeemed ? 'Used' : 'Active'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Next Reward At</p>
+                  <div className="flex items-center">
+                    <Gift className="text-cuephoria-lightpurple mr-2" size={20} />
+                    <span className="text-2xl font-bold text-cuephoria-lightpurple">50</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progress to next reward</span>
+                  <span className="text-cuephoria-lightpurple">{user?.loyaltyPoints ? user.loyaltyPoints % 50 : 0}/50</span>
+                </div>
+                <Progress value={(user?.loyaltyPoints ? user.loyaltyPoints % 50 : 0) * 2} className="h-2 bg-cuephoria-darker" />
+              </div>
             </CardContent>
           </Card>
         </motion.div>
-      )}
-      
-      <motion.div variants={itemVariants} className="text-center pt-4 border-t border-cuephoria-lightpurple/10 mt-8">
-        <p className="text-xs text-muted-foreground/60">Designed and developed by RK</p>
-      </motion.div>
-
-      <Dialog open={redemptionDialogOpen} onOpenChange={closeRedemptionDialog}>
-        <DialogContent className="sm:max-w-md bg-background border-cuephoria-lightpurple/30">
-          {!redemptionCode ? (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-amber-400" />
-                  Confirm Redemption
-                </DialogTitle>
-                <DialogDescription>
-                  You're about to redeem points for this reward
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <Card className="bg-cuephoria-darker/60 border-0">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="bg-cuephoria-darker p-3 rounded-full">
-                      {selectedReward?.icon}
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="font-medium text-white">{selectedReward?.name}</h4>
-                      <p className="text-sm text-muted-foreground">{selectedReward?.description}</p>
-                      <div className="bg-cuephoria-lightpurple/20 px-2 py-1 rounded-full text-xs font-medium text-cuephoria-lightpurple inline-block mt-1">
-                        {selectedReward?.pointsCost} Points
+        
+        <motion.div variants={itemVariants}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="loyalty">
+                <Gift className="mr-2 h-4 w-4" /> Redeem Rewards
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <Clock className="mr-2 h-4 w-4" /> Redemption History
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="loyalty" className="space-y-6">
+              <h2 className="text-xl font-semibold mb-4">Available Rewards</h2>
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
+                {rewards.map((reward) => (
+                  <Card 
+                    key={reward.id}
+                    className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                      selectedReward === reward.id ? 'border-cuephoria-lightpurple bg-cuephoria-lightpurple/5' : 'border-cuephoria-lightpurple/30 bg-cuephoria-darker'
+                    }`}
+                    onClick={() => handleRewardSelect(reward.id)}
+                  >
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-lg">
+                        <Award className={`mr-2 ${selectedReward === reward.id ? 'text-cuephoria-lightpurple' : 'text-muted-foreground'}`} size={18} />
+                        {reward.name}
+                      </CardTitle>
+                      <CardDescription>{reward.description}</CardDescription>
+                    </CardHeader>
+                    <CardFooter className="flex justify-between pt-2">
+                      <div className="flex items-center">
+                        <Star className="text-amber-400 mr-1" size={16} />
+                        <span className="font-semibold">{reward.points} points</span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <div className="mt-4 bg-yellow-900/20 border border-yellow-600/20 rounded-lg p-4">
-                  <p className="text-sm font-medium text-white mb-1">Are you sure?</p>
-                  <p className="text-xs text-muted-foreground">
-                    This will deduct {selectedReward?.pointsCost} points from your balance. This action cannot be undone.
-                  </p>
-                </div>
+                      <Button
+                        size="sm"
+                        className={`${
+                          (user?.loyaltyPoints || 0) >= reward.points
+                            ? 'bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90'
+                            : 'bg-gray-600 hover:bg-gray-700 cursor-not-allowed'
+                        }`}
+                        disabled={(user?.loyaltyPoints || 0) < reward.points}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedReward(reward.id);
+                          handleRedeemReward();
+                        }}
+                      >
+                        {(user?.loyaltyPoints || 0) >= reward.points ? 'Redeem' : 'Not Enough Points'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={closeRedemptionDialog}>Cancel</Button>
-                <Button 
-                  onClick={handleRedeemPoints} 
-                  disabled={redeemingReward}
-                  className="bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90"
-                >
-                  {redeemingReward ? "Processing..." : "Confirm Redemption"}
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-amber-400" />
-                  Reward Redeemed!
-                </DialogTitle>
-                <DialogDescription>
-                  Your points have been successfully redeemed
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4 text-center">
-                <div className="mb-4">
-                  <Sparkles className="h-12 w-12 text-cuephoria-lightpurple mx-auto mb-2" />
-                  <h3 className="text-lg font-bold text-white">{selectedReward?.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedReward?.description}</p>
+              
+              {selectedReward && (
+                <div className="flex justify-center mt-6">
+                  <Button 
+                    className="bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90 w-full max-w-md"
+                    onClick={handleRedeemReward}
+                    disabled={isRedeeming}
+                  >
+                    {isRedeeming ? 'Processing...' : 'Confirm Redemption'}
+                  </Button>
                 </div>
-                
-                <div className="bg-cuephoria-darker/80 p-6 rounded-lg max-w-xs mx-auto mb-4">
-                  <p className="text-xs text-muted-foreground mb-2">Your Redemption Code</p>
-                  <p className="text-2xl font-mono font-bold tracking-wider text-cuephoria-lightpurple">{redemptionCode}</p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="history">
+              <h2 className="text-xl font-semibold mb-4">Your Redemption History</h2>
+              {isLoadingHistory ? (
+                <div className="text-center py-10">
+                  <div className="animate-spin h-8 w-8 border-4 border-cuephoria-lightpurple border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading your history...</p>
                 </div>
-                
-                <p className="text-sm text-white">Show this code to a staff member to claim your reward</p>
-              </div>
-              <DialogFooter>
-                <Button 
-                  onClick={closeRedemptionDialog} 
-                  className="w-full bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90"
-                >
-                  Close
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </motion.div>
+              ) : redemptionHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {redemptionHistory.map((record) => (
+                    <Card key={record.id} className="bg-cuephoria-darker border-cuephoria-lightpurple/30">
+                      <CardHeader className="py-4">
+                        <CardTitle className="text-base flex justify-between items-start">
+                          <div className="flex items-center">
+                            <Gift className="text-cuephoria-lightpurple mr-2" size={16} />
+                            {record.reward_name}
+                          </div>
+                          <span className="text-sm font-normal text-muted-foreground flex items-center">
+                            <CalendarDays size={14} className="mr-1" />
+                            {formatDate(record.redeemed_at)}
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="py-2">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm mb-1">Redemption Code</p>
+                            <p className="font-mono font-bold">{record.code}</p>
+                          </div>
+                          <div className="flex items-center">
+                            <Star className="text-amber-400 mr-1" size={14} />
+                            <span className="font-semibold">{record.points_used} points</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-cuephoria-darker rounded-lg border border-cuephoria-lightpurple/20 p-6">
+                  <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-1">No Redemptions Yet</h3>
+                  <p className="text-muted-foreground mb-4">You haven't redeemed any rewards yet. Start earning points and claim exciting rewards!</p>
+                  <Button 
+                    variant="outline" 
+                    className="border-cuephoria-lightpurple text-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/10"
+                    onClick={() => setActiveTab('loyalty')}
+                  >
+                    View Available Rewards
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </motion.div>
+    </div>
   );
 };
 

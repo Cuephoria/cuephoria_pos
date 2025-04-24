@@ -27,6 +27,7 @@ import CustomerAuth from "./pages/CustomerAuth";
 import CustomerDashboard from "./pages/CustomerDashboard";
 
 // Customer Portal Pages
+import Homepage from "./pages/customer/Homepage";
 import Membership from "./pages/customer/Membership";
 import Rewards from "./pages/customer/Rewards";
 
@@ -142,7 +143,7 @@ const App = () => (
                   <Route path="/customer" element={<CustomerAuth />} />
                   <Route path="/customer/dashboard" element={
                     <CustomerLayout>
-                      <CustomerDashboard />
+                      <Homepage />
                     </CustomerLayout>
                   } />
                   <Route path="/customer/membership" element={

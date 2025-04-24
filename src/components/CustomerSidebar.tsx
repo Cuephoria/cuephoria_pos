@@ -14,7 +14,8 @@ import {
   Home,
   Settings,
   Gift,
-  Clock
+  Clock,
+  Heart
 } from 'lucide-react';
 
 import { 
@@ -102,7 +103,7 @@ const CustomerSidebar = () => {
       <SidebarContent>
         <SidebarGroup>
           <div className="px-4 py-2">
-            <div className="bg-cuephoria-darker/60 rounded-md p-3 border border-cuephoria-lightpurple/20">
+            <div className="bg-cuephoria-darker/60 rounded-md p-3 border border-cuephoria-lightpurple/20 shadow-md shadow-cuephoria-lightpurple/5">
               <div className="flex items-center gap-3">
                 <div className="bg-cuephoria-lightpurple/20 w-10 h-10 rounded-full flex items-center justify-center">
                   <User size={18} className="text-cuephoria-lightpurple" />
@@ -159,12 +160,17 @@ const CustomerSidebar = () => {
         
         <SidebarGroup>
           <div className="px-4 py-2">
-            <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-md p-3 border border-pink-500/20">
-              <p className="text-sm font-medium text-white">Special Offer</p>
-              <p className="text-xs text-white/70 mt-1">10% OFF on online bookings!</p>
+            <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-md p-4 border border-pink-500/20 shadow-lg shadow-pink-500/5">
+              <div className="flex items-start gap-2">
+                <Heart className="text-pink-400 h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-white">Special Offer</p>
+                  <p className="text-xs text-white/80 mt-0.5">10% OFF on online bookings! Limited time offer for all customers.</p>
+                </div>
+              </div>
               <Button 
                 size="sm" 
-                className="w-full mt-2 bg-white text-pink-600 hover:bg-white/90"
+                className="w-full mt-3 bg-white text-pink-600 hover:bg-white/90"
                 onClick={handleWebsiteRedirect}
               >
                 Book Now
