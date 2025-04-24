@@ -34,18 +34,6 @@ interface RedemptionHistory {
   createdAt: Date;
 }
 
-// Define the parameter types for RPC functions
-type GetLoyaltyRedemptionsParams = {
-  customer_uuid: string;
-};
-
-type CreateLoyaltyRedemptionParams = {
-  customer_uuid: string;
-  points_redeemed_val: number;
-  redemption_code_val: string;
-  reward_name_val: string;
-};
-
 const Rewards = () => {
   const { user, refreshProfile } = useCustomerAuth();
   const { toast } = useToast();
@@ -116,9 +104,9 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      const { data, error } = await supabase.rpc(
+      const { data, error } = await (supabase.rpc as any)(
         'get_loyalty_redemptions', 
-        { customer_uuid: user.id } as any
+        { customer_uuid: user.id }
       );
         
       if (error) {
@@ -184,14 +172,14 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      const { data, error } = await supabase.rpc(
+      const { data, error } = await (supabase.rpc as any)(
         'create_loyalty_redemption', 
         {
           customer_uuid: user.id,
           points_redeemed_val: selectedReward.pointsCost,
           redemption_code_val: newCode,
           reward_name_val: selectedReward.name
-        } as any
+        }
       );
         
       if (error) throw error;
