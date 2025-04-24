@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -117,10 +116,9 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      // Use type assertion for the RPC call result
       const { data, error } = await supabase.rpc(
         'get_loyalty_redemptions', 
-        { customer_uuid: user.id } as GetLoyaltyRedemptionsParams
+        { customer_uuid: user.id } as any
       );
         
       if (error) {
@@ -129,9 +127,7 @@ const Rewards = () => {
       }
       
       if (data) {
-        // Use type assertion for the data
-        const typedData = data as any[];
-        const history = typedData.map((item: LoyaltyRedemption) => ({
+        const history = (data as any[]).map((item: LoyaltyRedemption) => ({
           id: item.id,
           rewardName: item.reward_name || 'Reward',
           pointsSpent: item.points_redeemed,
@@ -188,7 +184,6 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      // Use type assertion for the RPC call parameters
       const { data, error } = await supabase.rpc(
         'create_loyalty_redemption', 
         {
@@ -196,7 +191,7 @@ const Rewards = () => {
           points_redeemed_val: selectedReward.pointsCost,
           redemption_code_val: newCode,
           reward_name_val: selectedReward.name
-        } as CreateLoyaltyRedemptionParams
+        } as any
       );
         
       if (error) throw error;
