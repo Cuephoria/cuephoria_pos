@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,11 +5,11 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trophy, Gift, Award, Star, Clock, CalendarDays } from 'lucide-react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { LoyaltyRedemption } from '@/types/loyalty-redemptions';
+import { fetchRedemptionHistory, createRedemption, deductLoyaltyPoints, checkIfEnoughPoints } from '@/services/rewardsService';
 
 interface RedemptionRecord {
   id: string;
@@ -58,24 +57,28 @@ const Rewards = () => {
 
   useEffect(() => {
     if (user) {
-      fetchRedemptionHistory();
+      fetchUserRedemptionHistory();
     }
   }, [user]);
 
-  const fetchRedemptionHistory = async () => {
+  const fetchUserRedemptionHistory = async () => {
     if (!user) return;
     
     setIsLoadingHistory(true);
     try {
-      // Use RPC function to get redemption history
-      const { data, error } = await supabase.rpc(
-        'get_loyalty_redemptions',
-        { customer_uuid: user.id }
-      );
+      const history = await fetchRedemptionHistory(user.id);
       
-      if (error) throw error;
+      // Transform the data to match our RedemptionRecord interface
+      const formattedHistory = history.map(item => ({
+        id: item.id,
+        user_id: item.customer_id,
+        reward_name: item.reward_name || '',
+        points_used: item.points_redeemed,
+        code: item.redemption_code,
+        redeemed_at: item.created_at
+      }));
       
-      setRedemptionHistory(data as RedemptionRecord[] || []);
+      setRedemptionHistory(formattedHistory);
     } catch (error) {
       console.error('Error fetching redemption history:', error);
       toast({
@@ -92,15 +95,6 @@ const Rewards = () => {
     setSelectedReward(rewardId);
   };
 
-  const generateRedemptionCode = () => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  };
-
   const triggerConfetti = () => {
     confetti({
       particleCount: 100,
@@ -115,7 +109,7 @@ const Rewards = () => {
     const reward = rewards.find(r => r.id === selectedReward);
     if (!reward) return;
     
-    if ((user.loyaltyPoints || 0) < reward.points) {
+    if (!checkIfEnoughPoints(user.loyaltyPoints || 0, reward.points)) {
       toast({
         title: 'Not enough points',
         description: `You need ${reward.points} points to redeem this reward`,
@@ -126,37 +120,17 @@ const Rewards = () => {
     
     setIsRedeeming(true);
     try {
-      const code = generateRedemptionCode();
+      // Create redemption record and get code
+      const code = await createRedemption(user.id, reward.name, reward.points);
       
-      // Use RPC function to create a redemption
-      const { data: redemptionId, error: createError } = await supabase.rpc(
-        'create_loyalty_redemption',
-        {
-          customer_uuid: user.id,
-          points_redeemed_val: reward.points,
-          redemption_code_val: code,
-          reward_name_val: reward.name
-        }
-      );
-      
-      if (createError) throw createError;
-      
-      // Then, update user's loyalty points
-      const { error: pointsError } = await supabase.rpc(
-        'deduct_loyalty_points', 
-        { 
-          user_id: user.id,
-          points_to_deduct: reward.points
-        }
-      );
-      
-      if (pointsError) throw pointsError;
+      // Deduct loyalty points
+      await deductLoyaltyPoints(user.id, reward.points);
 
       // Refresh user profile to get updated points
       await refreshProfile();
       
       // Update redemption history
-      await fetchRedemptionHistory();
+      await fetchUserRedemptionHistory();
       
       // Show success message and visual feedback
       triggerConfetti();
