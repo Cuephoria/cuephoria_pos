@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,11 +15,11 @@ const Membership = () => {
     if (user?.isMember) {
       // Calculate details based on the membership plan
       const expiryDate = user.membershipExpiryDate ? new Date(user.membershipExpiryDate) : 
-        user.membershipDuration === 'weekly' ? addWeeks(new Date(), 1) : addMonths(new Date(), 1);
+        (user.membershipDuration === 'weekly' || !user.membershipDuration) ? addWeeks(new Date(), 1) : addMonths(new Date(), 1);
       
       const startDate = user.membershipStartDate ? new Date(user.membershipStartDate) : new Date();
       
-      const totalHours = user.membershipDuration === 'weekly' ? 10 : 20;
+      const totalHours = (user.membershipDuration === 'weekly' || !user.membershipDuration) ? 10 : 20;
       const hoursRemaining = user.membershipHoursLeft || 0;
       const hoursUsed = totalHours - hoursRemaining;
       

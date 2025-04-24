@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Gift, Star, Sparkles, Ticket, Coffee, Gamepad, Pizza, BadgeDollarSign, Award } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { LoyaltyRedemption } from '@/types/loyalty-redemptions';
 import {
   Dialog,
   DialogContent,
@@ -53,7 +53,6 @@ const Rewards = () => {
   }, [user?.id]);
 
   const loadRewards = () => {
-    // In a real app, these would come from an API
     setRewards([
       {
         id: '1',
@@ -102,20 +101,20 @@ const Rewards = () => {
   };
 
   const loadRedemptionHistory = async () => {
+    if (!user?.id) return;
+    
     try {
       const { data, error } = await supabase
-        .from('loyalty_redemptions')
-        .select('*')
-        .eq('customer_id', user.id)
+        .rpc('get_loyalty_redemptions', { customer_uuid: user.id })
         .order('created_at', { ascending: false });
         
       if (error) throw error;
       
       if (data) {
-        const history = data.map(item => ({
+        const history = data.map((item: LoyaltyRedemption) => ({
           id: item.id,
           rewardName: item.reward_name || 'Reward',
-          pointsSpent: item.points_redeemed || 0,
+          pointsSpent: item.points_redeemed,
           redemptionCode: item.redemption_code,
           redeemed: item.is_used,
           createdAt: new Date(item.created_at)
@@ -169,21 +168,16 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      // Create redemption record
       const { error: redemptionError } = await supabase
-        .from('loyalty_redemptions')
-        .insert([{
-          customer_id: user.id,
-          points_redeemed: selectedReward.pointsCost,
-          redemption_code: newCode,
-          reward_name: selectedReward.name,
-          is_used: false,
-          created_at: new Date().toISOString()
-        }]);
+        .rpc('create_loyalty_redemption', {
+          customer_uuid: user.id,
+          points_redeemed_val: selectedReward.pointsCost,
+          redemption_code_val: newCode,
+          reward_name_val: selectedReward.name
+        });
         
       if (redemptionError) throw redemptionError;
       
-      // Update customer's loyalty points
       const { error: updateError } = await supabase
         .from('customers')
         .update({ 
@@ -193,10 +187,8 @@ const Rewards = () => {
       
       if (updateError) throw updateError;
       
-      // Refresh user profile to update points
       await refreshProfile();
       
-      // Refresh redemption history
       await loadRedemptionHistory();
       
       toast({
@@ -367,12 +359,10 @@ const Rewards = () => {
         </motion.div>
       )}
       
-      {/* Footer with credit */}
       <motion.div variants={itemVariants} className="text-center pt-4 border-t border-cuephoria-lightpurple/10 mt-8">
         <p className="text-xs text-muted-foreground/60">Designed and developed by RK</p>
       </motion.div>
 
-      {/* Redemption Dialog */}
       <Dialog open={redemptionDialogOpen} onOpenChange={closeRedemptionDialog}>
         <DialogContent className="sm:max-w-md bg-background border-cuephoria-lightpurple/30">
           {!redemptionCode ? (

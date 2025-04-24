@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +16,9 @@ interface CustomerProfile {
   membershipExpiryDate?: Date;
   membershipStartDate?: Date;
   membershipHoursLeft?: number;
+  membershipDuration?: 'weekly' | 'monthly';
+  resetPin?: string;
+  referredBy?: string;
 }
 
 interface CustomerAuthContextType {
@@ -47,17 +49,14 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
-  // Function to fetch customer profile data
   const fetchProfile = async (userId: string) => {
     try {
-      // Try to find in customers table (POS customers) by auth ID
       let { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('*')
         .eq('id', userId)
         .single();
 
-      // If not found by ID, try to find by email
       if (customerError || !customer) {
         const { data: emailCustomer, error: emailError } = await supabase
           .from('customers')
@@ -66,7 +65,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .single();
           
         if (!emailError && emailCustomer) {
-          // If found by email but ID doesn't match, update the customer ID to link with auth
           if (emailCustomer.id !== userId) {
             await supabase
               .from('customers')
@@ -93,10 +91,12 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipPlan: customer.membership_plan,
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
-          membershipHoursLeft: customer.membership_hours_left
+          membershipHoursLeft: customer.membership_hours_left,
+          membershipDuration: customer.membership_duration,
+          resetPin: customer.reset_pin,
+          referredBy: customer.referred_by
         });
       } else {
-        // No customer record found - this is a new user
         console.log("No customer profile found for this user");
       }
     } catch (error) {
@@ -104,7 +104,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  // Check for session on mount
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -118,7 +117,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           await fetchProfile(currentSession.user.id);
         }
         
-        // Set up listener for auth changes
         const { data: { subscription } } = await supabase.auth.onAuthStateChange(
           async (_event, newSession) => {
             setSession(newSession);
@@ -195,7 +193,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       setIsLoading(true);
       
-      // Check if phone or email already exists in POS customers
       const { data: existingCustomers, error: checkError } = await supabase
         .from('customers')
         .select('*')
@@ -205,7 +202,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.error('Error checking existing customers:', checkError);
       }
       
-      // Sign up the user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -221,9 +217,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       if (data.user) {
-        // If we found a matching customer in POS
         if (existingCustomers && existingCustomers.length > 0) {
-          // Update the existing customer with auth ID
           await supabase
             .from('customers')
             .update({ id: data.user.id })
@@ -231,7 +225,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             
           await fetchProfile(data.user.id);
         } else {
-          // Create new customer record
           const newCustomer = {
             id: data.user.id,
             name,
@@ -246,7 +239,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           
           await supabase.from('customers').insert([newCustomer]);
           
-          // Set user data
           setUser({
             id: data.user.id,
             email,
