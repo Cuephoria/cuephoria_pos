@@ -92,7 +92,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
           membershipHoursLeft: customer.membership_hours_left,
-          membershipDuration: customer.membership_duration,
+          membershipDuration: customer.membership_duration as 'weekly' | 'monthly' | undefined,
           resetPin: customer.reset_pin,
           referredBy: customer.referred_by
         });

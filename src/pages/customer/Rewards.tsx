@@ -105,10 +105,12 @@ const Rewards = () => {
     
     try {
       const { data, error } = await supabase
-        .rpc('get_loyalty_redemptions', { customer_uuid: user.id })
-        .order('created_at', { ascending: false });
+        .rpc('get_loyalty_redemptions', { customer_uuid: user.id });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading redemption history:', error);
+        return;
+      }
       
       if (data) {
         const history = data.map((item: LoyaltyRedemption) => ({
@@ -168,7 +170,7 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      const { error: redemptionError } = await supabase
+      const { data, error: redemptionError } = await supabase
         .rpc('create_loyalty_redemption', {
           customer_uuid: user.id,
           points_redeemed_val: selectedReward.pointsCost,

@@ -128,10 +128,14 @@ const CustomerAuth = () => {
       const success = await signUp(email, password, name, phone);
       
       if (success) {
-        await supabase.from('customers').update({
+        const { error: updateError } = await supabase.from('customers').update({
           reset_pin: resetPin,
           referred_by: referralCode || null
         }).eq('email', email);
+        
+        if (updateError) {
+          console.error("Error updating customer with PIN:", updateError);
+        }
         
         toast({
           title: 'Account created',
@@ -584,7 +588,7 @@ const CustomerAuth = () => {
       >
         <div className="mb-6 text-center">
           <div className="relative mx-auto w-full max-w-[180px] h-auto sm:w-56 sm:h-auto">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/20 blur-lg"></div>
             <img 
               src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
               alt="Cuephoria 8-Ball Club" 
