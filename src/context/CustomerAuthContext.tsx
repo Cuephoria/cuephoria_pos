@@ -96,7 +96,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
           membershipHoursLeft: customer.membership_hours_left,
-          resetPin: customer.reset_pin
+          resetPin: customer.reset_pin // Using the new reset_pin column
         });
       } else {
         // No customer record found - this is a new user

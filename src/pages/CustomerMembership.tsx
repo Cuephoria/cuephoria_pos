@@ -70,6 +70,7 @@ const MEMBERSHIP_PLANS = [
 const CustomerMembership = () => {
   const { user, isLoading } = useCustomerAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(user?.isMember ? "current" : "plans");
   
   // Calculate membership status percentage
   const calculateMembershipProgress = () => {
@@ -137,7 +138,11 @@ const CustomerMembership = () => {
           </div>
         </div>
 
-        <Tabs defaultValue={user?.isMember ? "current" : "plans"} className="space-y-6">
+        <Tabs 
+          defaultValue={user?.isMember ? "current" : "plans"} 
+          className="space-y-6"
+          onValueChange={(value) => setActiveTab(value)}
+        >
           <TabsList className="bg-cuephoria-darker border border-cuephoria-lightpurple/20 p-1">
             {user?.isMember && (
               <TabsTrigger 
