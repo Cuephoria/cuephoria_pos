@@ -117,18 +117,20 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      const response = await (supabase.rpc<GetLoyaltyRedemptionsParams, LoyaltyRedemption[]>(
+      // Fix: Remove the generic type parameters from supabase.rpc call
+      // and cast the entire result to the expected type
+      const { data, error } = await supabase.rpc(
         'get_loyalty_redemptions', 
         { customer_uuid: user.id }
-      ) as unknown as { data: LoyaltyRedemption[] | null; error: any });
+      );
         
-      if (response.error) {
-        console.error('Error loading redemption history:', response.error);
+      if (error) {
+        console.error('Error loading redemption history:', error);
         return;
       }
       
-      if (response.data) {
-        const history = response.data.map((item: LoyaltyRedemption) => ({
+      if (data) {
+        const history = data.map((item: LoyaltyRedemption) => ({
           id: item.id,
           rewardName: item.reward_name || 'Reward',
           pointsSpent: item.points_redeemed,
@@ -185,7 +187,9 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      const response = await (supabase.rpc<CreateLoyaltyRedemptionParams, string>(
+      // Fix: Remove the generic type parameters from supabase.rpc call
+      // and cast the entire result to the expected type
+      const { data, error } = await supabase.rpc(
         'create_loyalty_redemption', 
         {
           customer_uuid: user.id,
@@ -193,9 +197,9 @@ const Rewards = () => {
           redemption_code_val: newCode,
           reward_name_val: selectedReward.name
         }
-      ) as unknown as { data: any; error: any });
+      );
         
-      if (response.error) throw response.error;
+      if (error) throw error;
       
       const { error: updateError } = await supabase
         .from('customers')
