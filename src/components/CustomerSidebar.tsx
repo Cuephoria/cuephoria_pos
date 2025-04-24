@@ -12,7 +12,9 @@ import {
   ExternalLink,
   User,
   Home,
-  Settings
+  Settings,
+  Gift,
+  Clock
 } from 'lucide-react';
 
 import { 
@@ -21,6 +23,7 @@ import {
   SidebarFooter, 
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -60,7 +63,7 @@ const CustomerSidebar = () => {
     {
       name: 'Rewards',
       path: '/customer/rewards',
-      icon: <Award size={18} />,
+      icon: <Gift size={18} />,
     },
     {
       name: 'Promotions',
@@ -81,14 +84,17 @@ const CustomerSidebar = () => {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4 flex items-center gap-2">
-        <img 
-          src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png"
-          alt="Cuephoria Logo"
-          className="h-8 w-8"
-        />
+      <SidebarHeader className="p-4 flex items-center gap-3">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-sm"></div>
+          <img 
+            src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png"
+            alt="Cuephoria Logo"
+            className="h-9 w-9 relative"
+          />
+        </div>
         <div className="flex flex-col">
-          <span className="font-bold text-sm text-white">Cuephoria</span>
+          <span className="font-bold text-sm text-white bg-gradient-to-r from-white to-cuephoria-lightpurple bg-clip-text text-transparent">Cuephoria</span>
           <span className="text-xs text-muted-foreground">Customer Portal</span>
         </div>
       </SidebarHeader>
@@ -108,10 +114,26 @@ const CustomerSidebar = () => {
               </div>
               {user?.isMember && (
                 <div className="mt-2 pt-2 border-t border-cuephoria-lightpurple/10">
-                  <p className="text-xs flex items-center">
-                    <Star size={12} className="mr-1 text-amber-400" />
-                    <span className="text-amber-400 font-medium">{user.membershipPlan}</span>
-                  </p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs flex items-center">
+                      <Star size={12} className="mr-1 text-amber-400" />
+                      <span className="text-amber-400 font-medium">{user.membershipPlan}</span>
+                    </p>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Clock size={10} className="mr-1" />
+                      <span>{user.membershipHoursLeft}h left</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!user?.isMember && user && (
+                <div className="mt-2 pt-2 border-t border-cuephoria-lightpurple/10">
+                  <button 
+                    onClick={() => navigate('/customer/membership')} 
+                    className="text-xs text-center w-full text-cuephoria-lightpurple hover:underline"
+                  >
+                    Join our membership program →
+                  </button>
                 </div>
               )}
             </div>
@@ -171,6 +193,9 @@ const CustomerSidebar = () => {
           <LogOut size={16} className="mr-2" />
           Logout
         </Button>
+        <div className="text-center pt-2 mt-2 border-t border-cuephoria-lightpurple/10">
+          <p className="text-xs text-muted-foreground/60">Designed and developed by RK</p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

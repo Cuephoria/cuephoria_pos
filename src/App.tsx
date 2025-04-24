@@ -26,6 +26,10 @@ import Index from "./pages/Index";
 import CustomerAuth from "./pages/CustomerAuth";
 import CustomerDashboard from "./pages/CustomerDashboard";
 
+// Customer Portal Pages
+import Membership from "./pages/customer/Membership";
+import Rewards from "./pages/customer/Rewards";
+
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -139,6 +143,52 @@ const App = () => (
                   <Route path="/customer/dashboard" element={
                     <CustomerLayout>
                       <CustomerDashboard />
+                    </CustomerLayout>
+                  } />
+                  <Route path="/customer/membership" element={
+                    <CustomerLayout>
+                      <Membership />
+                    </CustomerLayout>
+                  } />
+                  <Route path="/customer/rewards" element={
+                    <CustomerLayout>
+                      <Rewards />
+                    </CustomerLayout>
+                  } />
+                  <Route path="/customer/profile" element={
+                    <CustomerLayout>
+                      <div className="p-4">
+                        <h1 className="text-2xl font-bold">Profile</h1>
+                        <p className="text-muted-foreground mt-2">Coming soon. Manage your personal details and preferences.</p>
+                        <div className="text-center mt-8 text-xs text-muted-foreground">Designed and developed by RK</div>
+                      </div>
+                    </CustomerLayout>
+                  } />
+                  <Route path="/customer/settings" element={
+                    <CustomerLayout>
+                      <div className="p-4">
+                        <h1 className="text-2xl font-bold">Settings</h1>
+                        <p className="text-muted-foreground mt-2">Coming soon. Configure your account settings and preferences.</p>
+                        <div className="text-center mt-8 text-xs text-muted-foreground">Designed and developed by RK</div>
+                      </div>
+                    </CustomerLayout>
+                  } />
+                  <Route path="/customer/stats" element={
+                    <CustomerLayout>
+                      <div className="p-4">
+                        <h1 className="text-2xl font-bold">Game Stats</h1>
+                        <p className="text-muted-foreground mt-2">Coming soon. View detailed statistics about your gameplay.</p>
+                        <div className="text-center mt-8 text-xs text-muted-foreground">Designed and developed by RK</div>
+                      </div>
+                    </CustomerLayout>
+                  } />
+                  <Route path="/customer/promotions" element={
+                    <CustomerLayout>
+                      <div className="p-4">
+                        <h1 className="text-2xl font-bold">Promotions</h1>
+                        <p className="text-muted-foreground mt-2">Coming soon. Check out our latest promotions and special offers.</p>
+                        <div className="text-center mt-8 text-xs text-muted-foreground">Designed and developed by RK</div>
+                      </div>
                     </CustomerLayout>
                   } />
                   
