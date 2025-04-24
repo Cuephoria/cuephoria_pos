@@ -1,9 +1,11 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Session } from '@supabase/supabase-js';
 import { showErrorToast, showSuccessToast } from '@/utils/toast-utils';
 
+// Extended interface for customer profile with reset_pin
 interface CustomerProfile {
   id: string;
   email: string;
@@ -78,6 +80,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       if (customer) {
+        // Use type assertion to handle the reset_pin property that exists at runtime but not in TypeScript definition
+        const customerWithResetPin = customer as typeof customer & { reset_pin?: string };
+        
         setUser({
           id: customer.id,
           email: session?.user.email || '',
@@ -91,7 +96,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
           membershipHoursLeft: customer.membership_hours_left,
-          resetPin: customer.reset_pin
+          resetPin: customerWithResetPin.reset_pin
         });
       } else {
         console.log("No customer profile found for this user");
