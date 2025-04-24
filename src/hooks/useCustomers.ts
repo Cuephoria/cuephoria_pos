@@ -137,30 +137,30 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     checkExpirations();
   }, [customers]);
   
-  const isDuplicateCustomer = (phone: string, email?: string, excludeId?: string): { isDuplicate: boolean, existingCustomer?: Customer, duplicateField: 'phone' | 'email' | null } => {
-    const existingByPhone = customers.find(c => c.phone === phone && c.id !== excludeId);
+  const isDuplicateCustomer = (phone: string, email?: string): { isDuplicate: boolean, existingCustomer?: Customer } => {
+    const existingByPhone = customers.find(c => c.phone === phone);
     if (existingByPhone) {
-      return { isDuplicate: true, existingCustomer: existingByPhone, duplicateField: 'phone' };
+      return { isDuplicate: true, existingCustomer: existingByPhone };
     }
     
     if (email) {
-      const existingByEmail = customers.find(c => c.email === email && c.id !== excludeId);
+      const existingByEmail = customers.find(c => c.email === email);
       if (existingByEmail) {
-        return { isDuplicate: true, existingCustomer: existingByEmail, duplicateField: 'email' };
+        return { isDuplicate: true, existingCustomer: existingByEmail };
       }
     }
     
-    return { isDuplicate: false, duplicateField: null };
+    return { isDuplicate: false };
   };
   
   const addCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'>) => {
     try {
-      const { isDuplicate, existingCustomer, duplicateField } = isDuplicateCustomer(customer.phone, customer.email);
+      const { isDuplicate, existingCustomer } = isDuplicateCustomer(customer.phone, customer.email);
       
       if (isDuplicate && existingCustomer) {
         toast({
           title: 'Duplicate Customer',
-          description: `A customer with this ${duplicateField === 'phone' ? 'phone number' : 'email'} already exists.`,
+          description: `A customer with this ${existingCustomer.phone === customer.phone ? 'phone number' : 'email'} already exists.`,
           variant: 'destructive'
         });
         return existingCustomer;
@@ -277,19 +277,32 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const updateCustomer = async (customer: Customer) => {
     try {
-      const { isDuplicate, duplicateField } = isDuplicateCustomer(
-        customer.phone, 
-        customer.email, 
-        customer.id
-      );
+      const existingCustomer = customers.find(c => c.id === customer.id);
       
-      if (isDuplicate) {
-        toast({
-          title: `Duplicate ${duplicateField === 'phone' ? 'Phone Number' : 'Email'}`,
-          description: `This ${duplicateField} is already used by another customer`,
-          variant: 'destructive'
-        });
-        return null;
+      if (existingCustomer) {
+        if (existingCustomer.phone !== customer.phone) {
+          const duplicatePhone = customers.find(c => c.id !== customer.id && c.phone === customer.phone);
+          if (duplicatePhone) {
+            toast({
+              title: 'Duplicate Phone Number',
+              description: 'This phone number is already used by another customer',
+              variant: 'destructive'
+            });
+            return null;
+          }
+        }
+        
+        if (existingCustomer.email !== customer.email && customer.email) {
+          const duplicateEmail = customers.find(c => c.id !== customer.id && c.email === customer.email);
+          if (duplicateEmail) {
+            toast({
+              title: 'Duplicate Email',
+              description: 'This email is already used by another customer',
+              variant: 'destructive'
+            });
+            return null;
+          }
+        }
       }
       
       const { error } = await supabase

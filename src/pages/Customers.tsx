@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -117,56 +118,26 @@ const Customers = () => {
     });
   };
 
-  // Enhanced check for duplicate phone and email
-  const validateForm = (): boolean => {
+  // Check for duplicate phone and email
+  const checkForDuplicates = (): boolean => {
     setPhoneError('');
     setEmailError('');
+    let hasDuplicates = false;
     
-    // Validate presence of required fields
-    if (!formState.name.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Name is required',
-        variant: 'destructive'
-      });
-      return false;
-    }
-
-    if (!formState.phone.trim()) {
-      setPhoneError('Phone number is required');
-      return false;
-    }
-    
-    // Validate Indian phone number
-    const phoneRegex = /^[6-9]\d{9}$/;
-    if (!phoneRegex.test(formState.phone)) {
-      setPhoneError('Please enter a valid 10-digit Indian phone number');
-      return false;
-    }
-    
-    // Validate email format if provided
-    if (formState.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formState.email)) {
-        setEmailError('Please enter a valid email address');
-        return false;
-      }
-    }
-    
-    // Check for duplicates excluding the current customer in edit mode
+    // Skip checking current customer in edit mode
     const currentId = isEditMode && selectedCustomer ? selectedCustomer.id : null;
     
-    // Check phone duplicate
+    // Check for duplicate phone (required field)
     const duplicatePhone = customersData.find(
       c => c.phone === formState.phone && c.id !== currentId
     );
     
     if (duplicatePhone) {
       setPhoneError('This phone number is already registered');
-      return false;
+      hasDuplicates = true;
     }
     
-    // Check email duplicate if provided
+    // Check for duplicate email (if provided)
     if (formState.email) {
       const duplicateEmail = customersData.find(
         c => c.email === formState.email && c.id !== currentId
@@ -174,59 +145,90 @@ const Customers = () => {
       
       if (duplicateEmail) {
         setEmailError('This email is already registered');
-        return false;
+        hasDuplicates = true;
       }
     }
     
-    return true;
+    return hasDuplicates;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const {
+      name,
+      phone,
+      email,
+      isMember,
+      membershipExpiryDate,
+      membershipHoursLeft
+    } = formState;
     
-    // Use the enhanced validation
-    if (!validateForm()) {
+    if (!name || !phone) {
+      toast({
+        title: 'Error',
+        description: 'Name and phone are required',
+        variant: 'destructive'
+      });
       return;
+    }
+
+    // Validate Indian phone number
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(phone)) {
+      setPhoneError('Please enter a valid 10-digit Indian phone number');
+      return;
+    }
+    
+    // Check for duplicates
+    if (checkForDuplicates()) {
+      return; // Don't proceed if duplicates found
     }
 
     // Create the customer data object
     const customerData: Partial<Customer> = {
-      name: formState.name,
-      phone: formState.phone,
-      email: formState.email || undefined,
-      isMember: formState.isMember,
+      name,
+      phone,
+      email: email || undefined,
+      isMember,
       loyaltyPoints: isEditMode && selectedCustomer ? selectedCustomer.loyaltyPoints : 0,
       totalSpent: isEditMode && selectedCustomer ? selectedCustomer.totalSpent : 0,
       totalPlayTime: isEditMode && selectedCustomer ? selectedCustomer.totalPlayTime : 0
     };
 
     // Add membership details if customer is a member
-    if (formState.isMember) {
+    if (isMember) {
       // Keep existing membership plan if editing
       if (isEditMode && selectedCustomer && selectedCustomer.membershipPlan) {
         customerData.membershipPlan = selectedCustomer.membershipPlan;
         customerData.membershipDuration = selectedCustomer.membershipDuration;
       }
       
-      if (formState.membershipExpiryDate) {
-        customerData.membershipExpiryDate = new Date(formState.membershipExpiryDate);
+      if (membershipExpiryDate) {
+        customerData.membershipExpiryDate = new Date(membershipExpiryDate);
       }
       
-      if (formState.membershipHoursLeft) {
-        customerData.membershipHoursLeft = parseInt(formState.membershipHoursLeft, 10);
+      if (membershipHoursLeft) {
+        customerData.membershipHoursLeft = parseInt(membershipHoursLeft, 10);
       }
     }
-    
+    console.log('Submitting customer data:', customerData);
     if (isEditMode && selectedCustomer) {
       updateCustomer({
         ...customerData,
         id: selectedCustomer.id,
         createdAt: selectedCustomer.createdAt
       } as Customer);
+      toast({
+        title: 'Customer Updated',
+        description: 'The customer has been updated successfully.'
+      });
     } else {
       addCustomer(customerData as Omit<Customer, 'id' | 'createdAt'>);
+      toast({
+        title: 'Customer Added',
+        description: 'The customer has been added successfully.'
+      });
     }
-    
     setIsDialogOpen(false);
     resetForm();
   };
