@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -16,6 +15,7 @@ import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
+import { showToast } from '@/utils/toast-utils';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -39,7 +39,7 @@ const POSContext = createContext<POSContextType>({
   startSession: async () => {},
   endSession: async () => {},
   deleteStation: async () => false,
-  updateStation: async () => false,  // Add default implementation
+  updateStation: async () => false,
   addCustomer: () => ({}),
   updateCustomer: () => ({}),
   updateCustomerMembership: () => null,
@@ -102,7 +102,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startSession: startSessionBase, 
     endSession: endSessionBase,
     deleteStation,
-    updateStation  // Make sure to destructure updateStation from the hook
+    updateStation
   } = useStations([], updateCustomer);
   
   const { 
@@ -361,13 +361,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // Remove sample data functionality
+  // Remove sample data functionality - Use the utility function instead of the hook
   const handleAddSampleIndianData = () => {
-    const { toast } = useToast();
-    toast({
-      title: "Info",
-      description: "Sample data functionality has been removed. Please add products manually or through database import.",
-    });
+    showToast(
+      "Info",
+      "Sample data functionality has been removed. Please add products manually or through database import."
+    );
   };
   
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
@@ -400,7 +399,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startSession,
         endSession,
         deleteStation,
-        updateStation,  // Include updateStation in the context value
+        updateStation,
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,
