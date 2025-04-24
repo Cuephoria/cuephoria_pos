@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Session } from '@supabase/supabase-js';
+import { showErrorToast, showSuccessToast } from '@/utils/toast-utils';
 
 interface CustomerProfile {
   id: string;
@@ -17,6 +18,7 @@ interface CustomerProfile {
   membershipExpiryDate?: Date;
   membershipStartDate?: Date;
   membershipHoursLeft?: number;
+  resetPin?: string;
 }
 
 interface CustomerAuthContextType {
@@ -24,7 +26,7 @@ interface CustomerAuthContextType {
   user: CustomerProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, name: string, phone: string) => Promise<boolean>;
+  signUp: (email: string, password: string, name: string, phone: string, resetPin: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   refreshProfile: () => Promise<void>;
@@ -93,7 +95,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipPlan: customer.membership_plan,
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
-          membershipHoursLeft: customer.membership_hours_left
+          membershipHoursLeft: customer.membership_hours_left,
+          resetPin: customer.reset_pin
         });
       } else {
         // No customer record found - this is a new user
@@ -160,38 +163,27 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
       
       if (error) {
-        toast({
-          title: 'Login failed',
-          description: error.message,
-          variant: 'destructive',
-        });
+        showErrorToast('Login failed', error.message);
         return false;
       }
       
       if (data.session?.user) {
         await fetchProfile(data.session.user.id);
         
-        toast({
-          title: 'Login successful',
-          description: 'Welcome back!',
-        });
+        showSuccessToast('Login successful', 'Welcome back!');
         return true;
       }
       
       return false;
     } catch (error: any) {
-      toast({
-        title: 'Login failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      showErrorToast('Login failed', error.message);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string) => {
+  const signUp = async (email: string, password: string, name: string, phone: string, resetPin: string) => {
     try {
       setIsLoading(true);
       
@@ -212,11 +204,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
       
       if (error) {
-        toast({
-          title: 'Sign up failed',
-          description: error.message,
-          variant: 'destructive',
-        });
+        showErrorToast('Sign up failed', error.message);
         return false;
       }
       
@@ -226,7 +214,10 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Update the existing customer with auth ID
           await supabase
             .from('customers')
-            .update({ id: data.user.id })
+            .update({ 
+              id: data.user.id,
+              reset_pin: resetPin
+            })
             .eq(email ? 'email' : 'phone', email || phone);
             
           await fetchProfile(data.user.id);
@@ -241,7 +232,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             loyalty_points: 0,
             total_spent: 0,
             total_play_time: 0,
-            is_member: false
+            is_member: false,
+            reset_pin: resetPin
           };
           
           await supabase.from('customers').insert([newCustomer]);
@@ -255,24 +247,18 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             loyaltyPoints: 0,
             totalSpent: 0,
             totalPlayTime: 0,
-            isMember: false
+            isMember: false,
+            resetPin
           });
         }
         
-        toast({
-          title: 'Account created',
-          description: 'Welcome to Cuephoria!',
-        });
+        showSuccessToast('Account created', 'Welcome to Cuephoria!');
         return true;
       }
       
       return false;
     } catch (error: any) {
-      toast({
-        title: 'Sign up failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      showErrorToast('Sign up failed', error.message);
       return false;
     } finally {
       setIsLoading(false);
@@ -283,16 +269,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       await supabase.auth.signOut();
       setUser(null);
-      toast({
-        title: 'Logged out',
-        description: 'You have been logged out successfully.',
-      });
+      showSuccessToast('Logged out', 'You have been logged out successfully.');
     } catch (error: any) {
-      toast({
-        title: 'Logout failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      showErrorToast('Logout failed', error.message);
     }
   };
 

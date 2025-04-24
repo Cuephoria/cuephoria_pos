@@ -7,20 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, Award, Star, Calendar, LogOut, ExternalLink, Clock, DollarSign, Gamepad } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { TrendingUp, Award, Star, Calendar, LogOut, ExternalLink, Clock, Gamepad, Gift } from 'lucide-react';
+import { showSuccessToast } from '@/utils/toast-utils';
+import CustomerLayout from '@/components/CustomerLayout';
 
 const CustomerDashboard = () => {
-  const { user, isLoading, logout, isAuthenticated } = useCustomerAuth();
+  const { user, isLoading, logout } = useCustomerAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/customer');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
 
   const handleLogout = async () => {
     await logout();
@@ -32,18 +25,17 @@ const CustomerDashboard = () => {
   };
   
   const handleBookOnline = () => {
-    toast({
-      title: '10% Discount Applied!',
-      description: 'Your online booking discount has been activated.',
-    });
+    showSuccessToast('10% Discount Applied!', 'Your online booking discount has been activated.');
     window.open('https://cuephoria.in/booking', '_blank');
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
-        <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
-      </div>
+      <CustomerLayout>
+        <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
+          <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
+        </div>
+      </CustomerLayout>
     );
   }
   
@@ -74,43 +66,27 @@ const CustomerDashboard = () => {
     return remainingPercentage;
   };
 
+  // Recent activity data
+  const recentActivities = [
+    {
+      type: "Pool Match",
+      date: "2 days ago",
+      details: "Won against opponent - 45 minutes"
+    },
+    {
+      type: "Practice Session",
+      date: "5 days ago",
+      details: "Solo practice - 60 minutes"
+    },
+    {
+      type: "Tournament",
+      date: "2 weeks ago",
+      details: "Quarter-finalist - 120 minutes"
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-cuephoria-dark text-white">
-      {/* Header */}
-      <div className="bg-cuephoria-darker border-b border-cuephoria-lightpurple/20">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <img 
-              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
-              alt="Cuephoria Logo"
-              className="h-10 w-10"
-            />
-            <h1 className="text-lg md:text-xl font-bold">Cuephoria Customer Portal</h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleWebsiteRedirect}
-              className="hidden sm:inline-flex text-cuephoria-lightpurple"
-            >
-              <ExternalLink size={16} className="mr-2" />
-              Website
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleLogout}
-              className="text-cuephoria-lightpurple border-cuephoria-lightpurple/30 hover:bg-cuephoria-lightpurple/10"
-            >
-              <LogOut size={16} className="mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Main Content */}
+    <CustomerLayout>
       <div className="container mx-auto px-4 py-6">
         {/* Welcome Card */}
         <Card className="bg-gradient-to-r from-cuephoria-darkpurple to-cuephoria-darker border border-cuephoria-lightpurple/30 mb-6">
@@ -129,8 +105,8 @@ const CustomerDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-4 bg-cuephoria-darker/50 rounded-lg p-3 border border-cuephoria-lightpurple/10">
-                <div className="bg-cuephoria-lightpurple/20 p-2 rounded-full">
+              <div className="flex items-center space-x-4 bg-cuephoria-darker/50 rounded-lg p-3 border border-cuephoria-lightpurple/10 hover:border-cuephoria-lightpurple/30 transition-all">
+                <div className="bg-cuephoria-lightpurple/20 p-3 rounded-full">
                   <Award size={24} className="text-cuephoria-lightpurple" />
                 </div>
                 <div>
@@ -138,8 +114,9 @@ const CustomerDashboard = () => {
                   <p className="text-xl font-bold">{user?.loyaltyPoints || 0}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4 bg-cuephoria-darker/50 rounded-lg p-3 border border-cuephoria-lightpurple/10">
-                <div className="bg-cuephoria-lightpurple/20 p-2 rounded-full">
+              
+              <div className="flex items-center space-x-4 bg-cuephoria-darker/50 rounded-lg p-3 border border-cuephoria-lightpurple/10 hover:border-cuephoria-lightpurple/30 transition-all">
+                <div className="bg-cuephoria-lightpurple/20 p-3 rounded-full">
                   <Clock size={24} className="text-cuephoria-lightpurple" />
                 </div>
                 <div>
@@ -147,13 +124,14 @@ const CustomerDashboard = () => {
                   <p className="text-xl font-bold">{user?.totalPlayTime || 0} hours</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4 bg-cuephoria-darker/50 rounded-lg p-3 border border-cuephoria-lightpurple/10">
-                <div className="bg-cuephoria-lightpurple/20 p-2 rounded-full">
-                  <DollarSign size={24} className="text-cuephoria-lightpurple" />
+              
+              <div className="flex items-center space-x-4 bg-cuephoria-darker/50 rounded-lg p-3 border border-cuephoria-lightpurple/10 hover:border-cuephoria-lightpurple/30 transition-all">
+                <div className="bg-cuephoria-lightpurple/20 p-3 rounded-full">
+                  <Gift size={24} className="text-cuephoria-lightpurple" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Spent</p>
-                  <p className="text-xl font-bold">₹{user?.totalSpent || 0}</p>
+                  <p className="text-sm text-muted-foreground">Upcoming Rewards</p>
+                  <p className="text-xl font-bold">{50 - (user?.loyaltyPoints || 0) % 50} pts away</p>
                 </div>
               </div>
             </div>
@@ -180,7 +158,7 @@ const CustomerDashboard = () => {
           {/* Game Stats Tab */}
           <TabsContent value="stats">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20">
+              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/40 transition-colors">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center">
                     <TrendingUp size={18} className="mr-2 text-cuephoria-lightpurple" />
@@ -193,10 +171,10 @@ const CustomerDashboard = () => {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm">Average Score</span>
-                          <span className="text-sm font-medium">76/100</span>
+                          <span className="text-sm">Games Played</span>
+                          <span className="text-sm font-medium">12 games</span>
                         </div>
-                        <Progress value={76} className="h-2 bg-cuephoria-darker" />
+                        <Progress value={60} className="h-2 bg-cuephoria-darker" />
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
@@ -207,22 +185,36 @@ const CustomerDashboard = () => {
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm">Accuracy</span>
-                          <span className="text-sm font-medium">82%</span>
+                          <span className="text-sm">Hours This Month</span>
+                          <span className="text-sm font-medium">8.5 hrs</span>
                         </div>
-                        <Progress value={82} className="h-2 bg-cuephoria-darker" />
+                        <Progress value={42} className="h-2 bg-cuephoria-darker" />
                       </div>
+                      <Button
+                        variant="link"
+                        className="text-cuephoria-lightpurple p-0 h-auto text-sm"
+                        onClick={() => navigate('/customer/stats')}
+                      >
+                        View detailed stats
+                      </Button>
                     </div>
                   ) : (
                     <div className="text-center py-6">
                       <Gamepad size={32} className="mx-auto mb-2 text-muted-foreground" />
                       <p className="text-muted-foreground">No game data available yet. Visit us to start playing!</p>
+                      <Button
+                        variant="link"
+                        className="text-cuephoria-lightpurple mt-2"
+                        onClick={handleWebsiteRedirect}
+                      >
+                        Book a session
+                      </Button>
                     </div>
                   )}
                 </CardContent>
               </Card>
               
-              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20">
+              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/40 transition-colors">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center">
                     <Calendar size={18} className="mr-2 text-cuephoria-lightpurple" />
@@ -233,32 +225,34 @@ const CustomerDashboard = () => {
                 <CardContent>
                   {user?.totalPlayTime ? (
                     <div className="space-y-3">
-                      <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Pool Match</span>
-                          <Badge variant="outline">2 days ago</Badge>
+                      {recentActivities.map((activity, index) => (
+                        <div key={index} className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10 hover:border-cuephoria-lightpurple/30 transition-all">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{activity.type}</span>
+                            <Badge variant="outline">{activity.date}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{activity.details}</p>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">Won against opponent - 45 minutes</p>
-                      </div>
-                      <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Practice Session</span>
-                          <Badge variant="outline">5 days ago</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">Solo practice - 60 minutes</p>
-                      </div>
-                      <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Tournament</span>
-                          <Badge variant="outline">2 weeks ago</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">Quarter-finalist - 120 minutes</p>
-                      </div>
+                      ))}
+                      <Button
+                        variant="link"
+                        className="text-cuephoria-lightpurple p-0 h-auto text-sm"
+                        onClick={() => navigate('/customer/stats')}
+                      >
+                        View all activity
+                      </Button>
                     </div>
                   ) : (
                     <div className="text-center py-6">
                       <Calendar size={32} className="mx-auto mb-2 text-muted-foreground" />
                       <p className="text-muted-foreground">No activity recorded yet. Visit us to start playing!</p>
+                      <Button
+                        variant="link"
+                        className="text-cuephoria-lightpurple mt-2"
+                        onClick={handleWebsiteRedirect}
+                      >
+                        Book your first visit
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -269,7 +263,7 @@ const CustomerDashboard = () => {
           {/* Membership Tab */}
           <TabsContent value="membership">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20">
+              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/40 transition-colors">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center">
                     <Star size={18} className="mr-2 text-cuephoria-lightpurple" />
@@ -305,27 +299,13 @@ const CustomerDashboard = () => {
                           </div>
                           <Progress value={calculateMembershipProgress()} className="h-2 bg-cuephoria-darker" />
                         </div>
-                      </div>
-                      <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
-                        <h4 className="font-medium">Membership Benefits</h4>
-                        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            Priority table reservations
-                          </li>
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            Discounted hourly rates
-                          </li>
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            Free entry to monthly tournaments
-                          </li>
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            2x loyalty points on purchases
-                          </li>
-                        </ul>
+                        <Button
+                          variant="link"
+                          className="text-cuephoria-lightpurple p-0 h-auto text-sm mt-3"
+                          onClick={() => navigate('/customer/membership')}
+                        >
+                          View membership details
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -335,39 +315,18 @@ const CustomerDashboard = () => {
                         <h3 className="font-medium mb-1">No Active Membership</h3>
                         <p className="text-sm text-muted-foreground mb-4">Become a member to enjoy exclusive benefits and discounts.</p>
                         <Button 
-                          onClick={handleWebsiteRedirect} 
+                          onClick={() => navigate('/customer/membership')} 
                           className="bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:opacity-90"
                         >
                           View Membership Plans
                         </Button>
-                      </div>
-                      <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
-                        <h4 className="font-medium">Membership Benefits</h4>
-                        <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            Priority table reservations
-                          </li>
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            Discounted hourly rates
-                          </li>
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            Free entry to monthly tournaments
-                          </li>
-                          <li className="flex items-center">
-                            <span className="text-green-400 mr-2">✓</span> 
-                            2x loyalty points on purchases
-                          </li>
-                        </ul>
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
               
-              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20">
+              <Card className="bg-cuephoria-darker border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/40 transition-colors">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center">
                     <Award size={18} className="mr-2 text-cuephoria-lightpurple" />
@@ -385,17 +344,24 @@ const CustomerDashboard = () => {
                       <div className="mt-3 space-y-1">
                         <div className="flex justify-between text-xs">
                           <span>Next Reward</span>
-                          <span>{user?.loyaltyPoints ? 100 - (user.loyaltyPoints % 100) : 100} points needed</span>
+                          <span>{user?.loyaltyPoints ? 50 - (user.loyaltyPoints % 50) : 50} points needed</span>
                         </div>
                         <Progress 
-                          value={user?.loyaltyPoints ? (user.loyaltyPoints % 100) : 0} 
+                          value={user?.loyaltyPoints ? (user.loyaltyPoints % 50) * 2 : 0} 
                           className="h-2 bg-cuephoria-darker"
                         />
                       </div>
+                      <Button
+                        variant="link"
+                        className="text-amber-400 p-0 h-auto text-sm mt-2"
+                        onClick={() => navigate('/customer/rewards')}
+                      >
+                        View available rewards
+                      </Button>
                     </div>
                     
                     <div className="bg-cuephoria-darkpurple/50 p-3 rounded-md border border-cuephoria-lightpurple/10">
-                      <h4 className="font-medium">Available Rewards</h4>
+                      <h4 className="font-medium">Popular Rewards</h4>
                       <ul className="mt-2 space-y-2">
                         <li className="flex justify-between items-center text-sm">
                           <span>30-minute free game</span>
@@ -409,15 +375,7 @@ const CustomerDashboard = () => {
                           <span>₹200 discount voucher</span>
                           <Badge className="bg-amber-600">200 points</Badge>
                         </li>
-                        <li className="flex justify-between items-center text-sm">
-                          <span>Free coaching session</span>
-                          <Badge className="bg-amber-600">300 points</Badge>
-                        </li>
                       </ul>
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground">
-                      <p>Earn 1 point for every ₹10 spent at Cuephoria.</p>
                     </div>
                   </div>
                 </CardContent>
@@ -507,7 +465,7 @@ const CustomerDashboard = () => {
                     </div>
                   </div>
                   <Button 
-                    onClick={handleWebsiteRedirect}
+                    onClick={() => navigate('/customer/rewards')}
                     className="w-full bg-white text-orange-600 hover:bg-white/90"
                   >
                     Get Referral Code
@@ -517,8 +475,13 @@ const CustomerDashboard = () => {
             </div>
           </TabsContent>
         </Tabs>
+        
+        <div className="text-center mt-8 text-sm text-gray-400">
+          <p>© {new Date().getFullYear()} Cuephoria 8-Ball Club. All rights reserved.</p>
+          <p className="mt-1 font-light text-xs">Designed and developed by RK</p>
+        </div>
       </div>
-    </div>
+    </CustomerLayout>
   );
 };
 
