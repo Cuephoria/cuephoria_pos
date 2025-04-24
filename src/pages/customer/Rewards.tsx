@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -105,21 +104,17 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      // Fix the type error with proper function type declaration
-      const { data, error } = await (supabase.rpc('get_loyalty_redemptions', { 
+      const response = await supabase.rpc('get_loyalty_redemptions', { 
         customer_uuid: user.id 
-      }) as Promise<{
-        data: LoyaltyRedemption[] | null;
-        error: any;
-      }>);
+      }) as unknown as { data: LoyaltyRedemption[] | null; error: any };
         
-      if (error) {
-        console.error('Error loading redemption history:', error);
+      if (response.error) {
+        console.error('Error loading redemption history:', response.error);
         return;
       }
       
-      if (data) {
-        const history = data.map((item: LoyaltyRedemption) => ({
+      if (response.data) {
+        const history = response.data.map((item: LoyaltyRedemption) => ({
           id: item.id,
           rewardName: item.reward_name || 'Reward',
           pointsSpent: item.points_redeemed,
@@ -176,18 +171,14 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      // Fix the type error with proper function type declaration
-      const { data, error: redemptionError } = await (supabase.rpc('create_loyalty_redemption', {
+      const response = await supabase.rpc('create_loyalty_redemption', {
         customer_uuid: user.id,
         points_redeemed_val: selectedReward.pointsCost,
         redemption_code_val: newCode,
         reward_name_val: selectedReward.name
-      }) as Promise<{
-        data: any;
-        error: any;
-      }>);
+      }) as unknown as { data: any; error: any };
         
-      if (redemptionError) throw redemptionError;
+      if (response.error) throw response.error;
       
       const { error: updateError } = await supabase
         .from('customers')
