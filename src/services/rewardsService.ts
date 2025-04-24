@@ -12,7 +12,9 @@ export const generateRedemptionCode = (): string => {
 };
 
 export const fetchRedemptionHistory = async (userId: string): Promise<LoyaltyRedemption[]> => {
-  const { data, error } = await supabase.rpc(
+  // Use type assertion to bypass TypeScript's strict checking for RPC functions
+  // that aren't automatically typed in the Supabase client
+  const { data, error } = await (supabase.rpc as any)(
     'get_loyalty_redemptions',
     { customer_uuid: userId }
   );
@@ -31,7 +33,8 @@ export const createRedemption = async (
 ): Promise<string> => {
   const code = generateRedemptionCode();
   
-  const { data, error } = await supabase.rpc(
+  // Use type assertion to bypass TypeScript's strict checking
+  const { data, error } = await (supabase.rpc as any)(
     'create_loyalty_redemption',
     {
       customer_uuid: customerId,
@@ -52,7 +55,8 @@ export const deductLoyaltyPoints = async (
   customerId: string,
   pointsToDeduct: number
 ): Promise<void> => {
-  const { error } = await supabase.rpc(
+  // Use type assertion to bypass TypeScript's strict checking
+  const { error } = await (supabase.rpc as any)(
     'deduct_loyalty_points',
     {
       user_id: customerId,
