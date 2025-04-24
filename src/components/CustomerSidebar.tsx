@@ -113,20 +113,22 @@ const CustomerSidebar = () => {
                   <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
                 </div>
               </div>
-              {user?.isMember && (
-                <div className="mt-2 pt-2 border-t border-cuephoria-lightpurple/10">
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs flex items-center">
-                      <Star size={12} className="mr-1 text-amber-400" />
-                      <span className="text-amber-400 font-medium">{user.membershipPlan}</span>
-                    </p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Clock size={10} className="mr-1" />
-                      <span>{user.membershipHoursLeft}h left</span>
-                    </div>
+              
+              <div className="mt-2 pt-2 border-t border-cuephoria-lightpurple/10 flex justify-between">
+                <p className="text-xs flex items-center">
+                  <Star size={12} className="mr-1 text-amber-400" />
+                  <span className="text-amber-400 font-medium">
+                    {user?.loyaltyPoints || 0} Points
+                  </span>
+                </p>
+                {user?.isMember && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock size={10} className="mr-1" />
+                    <span>{user.membershipHoursLeft}h left</span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+              
               {!user?.isMember && user && (
                 <div className="mt-2 pt-2 border-t border-cuephoria-lightpurple/10">
                   <button 

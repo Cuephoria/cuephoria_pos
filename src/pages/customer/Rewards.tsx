@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { LoyaltyRedemption } from '@/types/loyalty-redemptions';
 
 interface RedemptionRecord {
   id: string;
@@ -66,15 +67,15 @@ const Rewards = () => {
     
     setIsLoadingHistory(true);
     try {
-      const { data, error } = await supabase
-        .from('reward_redemptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('redeemed_at', { ascending: false });
+      // Use RPC function to get redemption history
+      const { data, error } = await supabase.rpc(
+        'get_loyalty_redemptions',
+        { customer_uuid: user.id }
+      );
       
       if (error) throw error;
       
-      setRedemptionHistory(data || []);
+      setRedemptionHistory(data as RedemptionRecord[] || []);
     } catch (error) {
       console.error('Error fetching redemption history:', error);
       toast({
@@ -127,17 +128,18 @@ const Rewards = () => {
     try {
       const code = generateRedemptionCode();
       
-      // First, insert the redemption record
-      const { error: insertError } = await supabase
-        .from('reward_redemptions')
-        .insert([{
-          user_id: user.id,
-          reward_name: reward.name,
-          points_used: reward.points,
-          code: code
-        }]) as any; // Temporary type assertion to fix TypeScript error
+      // Use RPC function to create a redemption
+      const { data: redemptionId, error: createError } = await supabase.rpc(
+        'create_loyalty_redemption',
+        {
+          customer_uuid: user.id,
+          points_redeemed_val: reward.points,
+          redemption_code_val: code,
+          reward_name_val: reward.name
+        }
+      );
       
-      if (insertError) throw insertError;
+      if (createError) throw createError;
       
       // Then, update user's loyalty points
       const { error: pointsError } = await supabase.rpc(
@@ -146,7 +148,7 @@ const Rewards = () => {
           user_id: user.id,
           points_to_deduct: reward.points
         }
-      ) as any; // Temporary type assertion to fix TypeScript error
+      );
       
       if (pointsError) throw pointsError;
 
