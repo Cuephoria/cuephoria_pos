@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -475,7 +475,7 @@ const Login = () => {
               </div>
             </CardContent>
             
-            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-2">
               <Button 
                 type="submit" 
                 className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 hover:scale-[1.02] transition-all duration-300 btn-hover-effect font-medium text-sm sm:text-base" 
@@ -497,6 +497,16 @@ const Login = () => {
                     </>
                   )}
                 </span>
+              </Button>
+              
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full flex items-center justify-center gap-2 border-cuephoria-lightpurple/30 text-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/10"
+                onClick={() => navigate('/customer')}
+              >
+                <User size={16} />
+                Customer Portal
               </Button>
             </CardFooter>
           </form>

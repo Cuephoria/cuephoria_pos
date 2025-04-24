@@ -5,10 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { POSProvider } from "@/context/POSContext";
 import { ExpenseProvider } from "@/context/ExpenseContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
+import CustomerLayout from "@/components/CustomerLayout";
 
 // Pages
 import Login from "./pages/Login";
@@ -21,6 +23,8 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
+import CustomerAuth from "./pages/CustomerAuth";
+import CustomerDashboard from "./pages/CustomerDashboard";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -76,64 +80,75 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <POSProvider>
-        <ExpenseProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/pos" element={
-                  <ProtectedRoute>
-                    <POS />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/stations" element={
-                  <ProtectedRoute>
-                    <Stations />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/products" element={
-                  <ProtectedRoute>
-                    <Products />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/customers" element={
-                  <ProtectedRoute>
-                    <Customers />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ExpenseProvider>
-      </POSProvider>
+      <CustomerAuthProvider>
+        <POSProvider>
+          <ExpenseProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  
+                  {/* Admin & Staff Routes */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/pos" element={
+                    <ProtectedRoute>
+                      <POS />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/stations" element={
+                    <ProtectedRoute>
+                      <Stations />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/products" element={
+                    <ProtectedRoute>
+                      <Products />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/customers" element={
+                    <ProtectedRoute>
+                      <Customers />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/reports" element={
+                    <ProtectedRoute>
+                      <Reports />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/settings" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Customer Routes */}
+                  <Route path="/customer" element={<CustomerAuth />} />
+                  <Route path="/customer/dashboard" element={
+                    <CustomerLayout>
+                      <CustomerDashboard />
+                    </CustomerLayout>
+                  } />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </ExpenseProvider>
+        </POSProvider>
+      </CustomerAuthProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
