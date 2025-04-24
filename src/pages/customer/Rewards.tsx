@@ -117,11 +117,10 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      // Fix: Remove the generic type parameters from supabase.rpc call
-      // and cast the entire result to the expected type
+      // Use type assertion for the RPC call result
       const { data, error } = await supabase.rpc(
         'get_loyalty_redemptions', 
-        { customer_uuid: user.id }
+        { customer_uuid: user.id } as GetLoyaltyRedemptionsParams
       );
         
       if (error) {
@@ -130,7 +129,9 @@ const Rewards = () => {
       }
       
       if (data) {
-        const history = data.map((item: LoyaltyRedemption) => ({
+        // Use type assertion for the data
+        const typedData = data as any[];
+        const history = typedData.map((item: LoyaltyRedemption) => ({
           id: item.id,
           rewardName: item.reward_name || 'Reward',
           pointsSpent: item.points_redeemed,
@@ -187,8 +188,7 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      // Fix: Remove the generic type parameters from supabase.rpc call
-      // and cast the entire result to the expected type
+      // Use type assertion for the RPC call parameters
       const { data, error } = await supabase.rpc(
         'create_loyalty_redemption', 
         {
@@ -196,7 +196,7 @@ const Rewards = () => {
           points_redeemed_val: selectedReward.pointsCost,
           redemption_code_val: newCode,
           reward_name_val: selectedReward.name
-        }
+        } as CreateLoyaltyRedemptionParams
       );
         
       if (error) throw error;
