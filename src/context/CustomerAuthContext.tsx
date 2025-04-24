@@ -79,6 +79,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       if (customer) {
+        const typedCustomer = customer as any;
         setUser({
           id: customer.id,
           email: session?.user.email || '',
@@ -93,8 +94,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
           membershipHoursLeft: customer.membership_hours_left,
           membershipDuration: customer.membership_duration as 'weekly' | 'monthly' | undefined,
-          resetPin: customer.reset_pin,
-          referredBy: customer.referred_by
+          resetPin: typedCustomer.reset_pin,
+          referredBy: typedCustomer.referred_by
         });
       } else {
         console.log("No customer profile found for this user");

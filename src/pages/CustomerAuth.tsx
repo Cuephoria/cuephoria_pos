@@ -120,11 +120,6 @@ const CustomerAuth = () => {
     
     setIsLoading(true);
     try {
-      const metadata = {
-        resetPin: resetPin,
-        referralCode: referralCode || null
-      };
-      
       const success = await signUp(email, password, name, phone);
       
       if (success) {
@@ -207,7 +202,8 @@ const CustomerAuth = () => {
           return;
         }
         
-        if (!customer.reset_pin || customer.reset_pin !== forgotPin) {
+        const typedCustomer = customer as any;
+        if (!typedCustomer.reset_pin || typedCustomer.reset_pin !== forgotPin) {
           toast({
             title: 'Error',
             description: 'Incorrect reset PIN',
