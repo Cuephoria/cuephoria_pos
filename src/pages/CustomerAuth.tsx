@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,10 +124,13 @@ const CustomerAuth = () => {
       const success = await signUp(email, password, name, phone);
       
       if (success) {
-        const { error: updateError } = await supabase.from('customers').update({
+        // Use type assertion to add the custom fields that aren't in the type definition
+        const updateData = {
           reset_pin: resetPin,
           referred_by: referralCode || null
-        }).eq('email', email);
+        } as any;
+        
+        const { error: updateError } = await supabase.from('customers').update(updateData).eq('email', email);
         
         if (updateError) {
           console.error("Error updating customer with PIN:", updateError);

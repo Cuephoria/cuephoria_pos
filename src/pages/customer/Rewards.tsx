@@ -105,12 +105,13 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      // Using type assertion to handle RPC call
-      const { data, error } = await supabase
-        .rpc('get_loyalty_redemptions', { customer_uuid: user.id }) as {
-          data: LoyaltyRedemption[] | null;
-          error: any;
-        };
+      // Fix the type error with proper function type declaration
+      const { data, error } = await (supabase.rpc('get_loyalty_redemptions', { 
+        customer_uuid: user.id 
+      }) as Promise<{
+        data: LoyaltyRedemption[] | null;
+        error: any;
+      }>);
         
       if (error) {
         console.error('Error loading redemption history:', error);
@@ -175,17 +176,16 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      // Using type assertion to handle RPC call
-      const { data, error: redemptionError } = await supabase
-        .rpc('create_loyalty_redemption', {
-          customer_uuid: user.id,
-          points_redeemed_val: selectedReward.pointsCost,
-          redemption_code_val: newCode,
-          reward_name_val: selectedReward.name
-        }) as {
-          data: any;
-          error: any;
-        };
+      // Fix the type error with proper function type declaration
+      const { data, error: redemptionError } = await (supabase.rpc('create_loyalty_redemption', {
+        customer_uuid: user.id,
+        points_redeemed_val: selectedReward.pointsCost,
+        redemption_code_val: newCode,
+        reward_name_val: selectedReward.name
+      }) as Promise<{
+        data: any;
+        error: any;
+      }>);
         
       if (redemptionError) throw redemptionError;
       
