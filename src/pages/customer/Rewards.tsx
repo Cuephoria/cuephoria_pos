@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -104,7 +105,9 @@ const Rewards = () => {
     if (!user?.id) return;
     
     try {
-      const { data, error } = await (supabase.rpc as any)(
+      // Explicitly cast supabase.rpc to any type to bypass TypeScript errors
+      const rpc = supabase.rpc as any;
+      const { data, error } = await rpc(
         'get_loyalty_redemptions', 
         { customer_uuid: user.id }
       );
@@ -172,7 +175,9 @@ const Rewards = () => {
       const newCode = generateRedemptionCode();
       setRedemptionCode(newCode);
       
-      const { data, error } = await (supabase.rpc as any)(
+      // Explicitly cast supabase.rpc to any type to bypass TypeScript errors
+      const rpc = supabase.rpc as any;
+      const { data, error } = await rpc(
         'create_loyalty_redemption', 
         {
           customer_uuid: user.id,
@@ -184,6 +189,7 @@ const Rewards = () => {
         
       if (error) throw error;
       
+      // Update customer points in the database
       const { error: updateError } = await supabase
         .from('customers')
         .update({ 
@@ -193,8 +199,10 @@ const Rewards = () => {
       
       if (updateError) throw updateError;
       
+      // Refresh user profile to get updated loyalty points
       await refreshProfile();
       
+      // Reload redemption history to show the new redemption
       await loadRedemptionHistory();
       
       toast({
