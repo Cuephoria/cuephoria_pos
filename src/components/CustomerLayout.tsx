@@ -19,12 +19,15 @@ const CustomerLayout = ({ children, requireAuth = true }: CustomerLayoutProps) =
     if (!isLoading && requireAuth && !isAuthenticated) {
       navigate('/customer');
     }
-  }, [isAuthenticated, isLoading, navigate, requireAuth]);
+    
+    // Reset scroll position when navigating to a new page
+    window.scrollTo(0, 0);
+  }, [isAuthenticated, isLoading, navigate, requireAuth, location.pathname]);
   
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
-        <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
+        <div className="animate-spin h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
       </div>
     );
   }
@@ -37,11 +40,12 @@ const CustomerLayout = ({ children, requireAuth = true }: CustomerLayoutProps) =
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-cuephoria-dark text-white">
         <CustomerSidebar />
-        <div className="flex-1 flex flex-col">
-          <div className="hidden md:block p-4">
-            <SidebarTrigger />
+        <div className="flex-1 flex flex-col overflow-x-hidden">
+          <div className="sticky top-0 z-40 bg-cuephoria-dark/80 backdrop-blur-sm px-4 py-2 md:py-3 flex items-center justify-between border-b border-cuephoria-lightpurple/10">
+            <SidebarTrigger className="md:hidden" />
+            <div className="ml-auto"></div>
           </div>
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 overflow-auto p-4">{children}</main>
         </div>
       </div>
     </SidebarProvider>

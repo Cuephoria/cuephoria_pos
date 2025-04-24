@@ -1,36 +1,21 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
 import { Session } from '@supabase/supabase-js';
 import { showErrorToast, showSuccessToast } from '@/utils/toast-utils';
-
-// Extended interface for customer profile with reset_pin
-interface CustomerProfile {
-  id: string;
-  email: string;
-  name: string | null;
-  phone: string | null;
-  loyaltyPoints: number;
-  totalSpent: number;
-  totalPlayTime: number;
-  isMember: boolean;
-  membershipPlan?: string;
-  membershipExpiryDate?: Date;
-  membershipStartDate?: Date;
-  membershipHoursLeft?: number;
-  resetPin?: string;
-}
+import { CustomerProfile, RedeemedReward } from '@/types/customer.types';
 
 interface CustomerAuthContextType {
   session: Session | null;
   user: CustomerProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, name: string, phone: string, resetPin: string) => Promise<boolean>;
+  signUp: (email: string, password: string, name: string, phone: string, resetPin: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   refreshProfile: () => Promise<void>;
+  redeemPoints: (rewardId: string, pointsCost: number) => Promise<string | null>;
+  getReferralCode: () => Promise<string>;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType>({
@@ -42,6 +27,8 @@ const CustomerAuthContext = createContext<CustomerAuthContextType>({
   logout: async () => {},
   isAuthenticated: false,
   refreshProfile: async () => {},
+  redeemPoints: async () => null,
+  getReferralCode: async () => '',
 });
 
 export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,6 +36,15 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [user, setUser] = useState<CustomerProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
+
+  const generateRandomCode = (length = 8) => {
+    const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -81,7 +77,22 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (customer) {
         // Use type assertion to handle the reset_pin property that exists at runtime but not in TypeScript definition
-        const customerWithResetPin = customer as typeof customer & { reset_pin?: string };
+        const customerWithResetPin = customer as typeof customer & { 
+          reset_pin?: string,
+          referral_code?: string,
+          referred_by_code?: string,
+          redeemed_rewards?: any[]
+        };
+        
+        const redeemedRewards = customerWithResetPin.redeemed_rewards 
+          ? customerWithResetPin.redeemed_rewards.map((reward: any) => ({
+              id: reward.id,
+              name: reward.name,
+              points: reward.points,
+              redemptionCode: reward.redemption_code,
+              redeemedAt: new Date(reward.redeemed_at)
+            }))
+          : [];
         
         setUser({
           id: customer.id,
@@ -96,7 +107,10 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
           membershipHoursLeft: customer.membership_hours_left,
-          resetPin: customerWithResetPin.reset_pin
+          resetPin: customerWithResetPin.reset_pin,
+          referralCode: customerWithResetPin.referral_code,
+          referredByCode: customerWithResetPin.referred_by_code,
+          redeemedRewards: redeemedRewards
         });
       } else {
         console.log("No customer profile found for this user");
@@ -172,7 +186,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       return false;
-    } catch (error: any) {
+    } catch (error) {
       showErrorToast('Login failed', error.message);
       return false;
     } finally {
@@ -180,7 +194,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string, resetPin: string) => {
+  const signUp = async (email: string, password: string, name: string, phone: string, resetPin: string, referralCode?: string) => {
     try {
       setIsLoading(true);
       
@@ -204,12 +218,31 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       if (data.user) {
+        // Generate a unique referral code for this new user
+        const newReferralCode = generateRandomCode();
+        
+        // Check if referral code exists and is valid
+        let referrerData = null;
+        if (referralCode) {
+          const { data: referrerCheck } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('referral_code', referralCode)
+            .single();
+            
+          if (referrerCheck) {
+            referrerData = referrerCheck;
+          }
+        }
+        
         if (existingCustomers && existingCustomers.length > 0) {
           await supabase
             .from('customers')
             .update({ 
               id: data.user.id,
-              reset_pin: resetPin
+              reset_pin: resetPin,
+              referral_code: newReferralCode,
+              referred_by_code: referrerData ? referralCode : null
             })
             .eq(email ? 'email' : 'phone', email || phone);
             
@@ -225,7 +258,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             total_spent: 0,
             total_play_time: 0,
             is_member: false,
-            reset_pin: resetPin
+            reset_pin: resetPin,
+            referral_code: newReferralCode,
+            referred_by_code: referrerData ? referralCode : null
           };
           
           await supabase.from('customers').insert([newCustomer]);
@@ -239,7 +274,19 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             totalSpent: 0,
             totalPlayTime: 0,
             isMember: false,
-            resetPin
+            resetPin,
+            referralCode: newReferralCode,
+            referredByCode: referrerData ? referralCode : null
+          });
+        }
+        
+        // If referral code was provided and valid, create a referral record
+        if (referrerData) {
+          await supabase.from('referrals').insert({
+            referrer_id: referrerData.id,
+            referee_id: data.user.id,
+            code: referralCode,
+            points_awarded: false
           });
         }
         
@@ -253,6 +300,110 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return false;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getReferralCode = async () => {
+    if (!user?.id) return '';
+    
+    // If user already has a referral code, return it
+    if (user.referralCode) return user.referralCode;
+    
+    // Otherwise generate a new one
+    const referralCode = generateRandomCode();
+    
+    try {
+      await supabase
+        .from('customers')
+        .update({ referral_code: referralCode })
+        .eq('id', user.id);
+        
+      setUser(prev => prev ? { ...prev, referralCode } : null);
+      return referralCode;
+    } catch (error) {
+      console.error('Error generating referral code:', error);
+      return '';
+    }
+  };
+
+  const redeemPoints = async (rewardId: string, pointsCost: number): Promise<string | null> => {
+    if (!user || !user.id) return null;
+    
+    if (user.loyaltyPoints < pointsCost) {
+      showErrorToast('Insufficient points', 'You do not have enough loyalty points for this reward.');
+      return null;
+    }
+    
+    try {
+      // Get reward details
+      const { data: rewardData, error: rewardError } = await supabase
+        .from('rewards')
+        .select('name, description, points_required')
+        .eq('id', rewardId)
+        .single();
+        
+      if (rewardError || !rewardData) {
+        showErrorToast('Error', 'Could not find reward details');
+        return null;
+      }
+      
+      // Generate a random redemption code
+      const redemptionCode = generateRandomCode(6);
+      
+      // Create redemption record
+      const redemption = {
+        id: rewardId,
+        name: rewardData.name,
+        points: pointsCost,
+        redemption_code: redemptionCode,
+        redeemed_at: new Date().toISOString()
+      };
+      
+      // Update customer's points and add redemption record
+      const updatedPoints = user.loyaltyPoints - pointsCost;
+      const updatedRedemptions = [...(user.redeemedRewards || []), {
+        id: rewardId,
+        name: rewardData.name,
+        points: pointsCost,
+        redemptionCode,
+        redeemedAt: new Date()
+      }];
+      
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update({ 
+          loyalty_points: updatedPoints,
+          redeemed_rewards: updatedRedemptions.map(r => ({
+            id: r.id,
+            name: r.name,
+            points: r.points,
+            redemption_code: r.redemptionCode,
+            redeemed_at: r.redeemedAt.toISOString()
+          }))
+        })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        showErrorToast('Error', 'Failed to redeem points');
+        return null;
+      }
+      
+      // Update local user state
+      setUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          loyaltyPoints: updatedPoints,
+          redeemedRewards: updatedRedemptions
+        };
+      });
+      
+      showSuccessToast('Points Redeemed!', `You've successfully redeemed ${pointsCost} points`);
+      return redemptionCode;
+    } catch (error) {
+      console.error('Error redeeming points:', error);
+      showErrorToast('Error', 'Something went wrong while redeeming points');
+      return null;
     }
   };
 
@@ -277,6 +428,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         logout,
         isAuthenticated: !!user,
         refreshProfile,
+        redeemPoints,
+        getReferralCode,
       }}
     >
       {children}

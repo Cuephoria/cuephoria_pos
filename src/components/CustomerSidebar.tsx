@@ -12,7 +12,8 @@ import {
   ExternalLink,
   User,
   Home,
-  Settings
+  Settings,
+  Gift
 } from 'lucide-react';
 
 import { 
@@ -26,6 +27,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { useEffect } from 'react';
 
 const CustomerSidebar = () => {
   const { user, logout } = useCustomerAuth();
@@ -40,6 +42,11 @@ const CustomerSidebar = () => {
   const handleWebsiteRedirect = () => {
     window.location.href = 'https://cuephoria.in';
   };
+
+  useEffect(() => {
+    // Reset to top of the page whenever location changes
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const menuItems = [
     {
@@ -82,11 +89,13 @@ const CustomerSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 flex items-center gap-2">
-        <img 
-          src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png"
-          alt="Cuephoria Logo"
-          className="h-8 w-8"
-        />
+        <div className="h-8 w-8 overflow-hidden rounded-md">
+          <img 
+            src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png"
+            alt="Cuephoria Logo"
+            className="h-full w-full object-cover"
+          />
+        </div>
         <div className="flex flex-col">
           <span className="font-bold text-sm text-white">Cuephoria</span>
           <span className="text-xs text-muted-foreground">Customer Portal</span>
@@ -96,9 +105,9 @@ const CustomerSidebar = () => {
       <SidebarContent>
         <SidebarGroup>
           <div className="px-4 py-2">
-            <div className="bg-cuephoria-darker/60 rounded-md p-3 border border-cuephoria-lightpurple/20">
+            <div className="bg-cuephoria-darker/60 rounded-md p-3 border border-cuephoria-lightpurple/20 group hover:border-cuephoria-lightpurple/40 transition-all">
               <div className="flex items-center gap-3">
-                <div className="bg-cuephoria-lightpurple/20 w-10 h-10 rounded-full flex items-center justify-center">
+                <div className="bg-cuephoria-lightpurple/20 w-10 h-10 rounded-full flex items-center justify-center group-hover:bg-cuephoria-lightpurple/30 transition-all">
                   <User size={18} className="text-cuephoria-lightpurple" />
                 </div>
                 <div className="overflow-hidden">
@@ -112,6 +121,11 @@ const CustomerSidebar = () => {
                     <Star size={12} className="mr-1 text-amber-400" />
                     <span className="text-amber-400 font-medium">{user.membershipPlan}</span>
                   </p>
+                  {user.membershipHoursLeft !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {user.membershipHoursLeft} hours remaining
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -137,12 +151,15 @@ const CustomerSidebar = () => {
         
         <SidebarGroup>
           <div className="px-4 py-2">
-            <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-md p-3 border border-pink-500/20">
-              <p className="text-sm font-medium text-white">Special Offer</p>
-              <p className="text-xs text-white/70 mt-1">10% OFF on online bookings!</p>
+            <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-md p-3 border border-pink-500/20 hover:shadow-lg hover:shadow-pink-500/10 transition-all">
+              <div className="flex items-center gap-2 mb-2">
+                <Gift size={16} className="text-pink-400" />
+                <p className="text-sm font-medium text-white">Special Offer</p>
+              </div>
+              <p className="text-xs text-white/70 mb-3">10% OFF on online bookings!</p>
               <Button 
                 size="sm" 
-                className="w-full mt-2 bg-white text-pink-600 hover:bg-white/90"
+                className="w-full text-xs py-1 h-8 bg-white text-pink-600 hover:bg-white/90"
                 onClick={handleWebsiteRedirect}
               >
                 Book Now
