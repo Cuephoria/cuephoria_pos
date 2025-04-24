@@ -50,20 +50,9 @@
     @apply border-border;
   }
 
-  html, body {
-    height: 100%;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    position: relative;
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-  }
-
   body {
     @apply bg-background text-foreground font-quicksand;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -131,47 +120,21 @@
   
   /* Improved touch targets */
   button, a, [role="button"] {
-    @apply min-h-12 min-w-12;
+    @apply min-h-10 min-w-10;
   }
   
   /* Forms on mobile */
   input, select, textarea {
-    @apply text-base py-3;
+    @apply text-base;
   }
   
   /* Grid adjustments */
   .grid {
     @apply grid-cols-1;
   }
-
-  /* Add safe area padding for iOS */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
 }
 
-/* Mobile-specific styles */
-.capacitor-app {
-  /* Prevent overscroll effects and bouncing */
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Status bar styling for iOS */
-.ios-status-bar-padding {
-  padding-top: env(safe-area-inset-top);
-}
-
-/* Status bar styling for Android */
-.android-status-bar-padding {
-  padding-top: 24px;
-}
-
-/* Animation keyframes and other styles */
+/* Animations */
 @keyframes slideUp {
   from {
     transform: translateY(20px);
