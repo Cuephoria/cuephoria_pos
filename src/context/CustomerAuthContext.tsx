@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -251,7 +250,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           await fetchProfile(data.user.id);
         } else {
           // Type the newCustomer explicitly
-          const newCustomer: Record<string, any> = {
+          const newCustomer = {
             id: data.user.id,
             name,
             email,
@@ -263,15 +262,12 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             is_member: false,
             reset_pin: resetPin,
             referral_code: newReferralCode,
+            referred_by_code: referrerData ? referralCode : undefined
           };
-          
-          if (referrerData) {
-            newCustomer.referred_by_code = referralCode;
-          }
           
           await supabase
             .from('customers')
-            .insert([newCustomer]);
+            .insert(newCustomer);
           
           setUser({
             id: data.user.id,

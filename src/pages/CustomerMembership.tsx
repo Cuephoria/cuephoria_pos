@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,7 +11,6 @@ import { Star, Calendar, Clock, Shield, ChevronRight, AlertCircle, Info, Check }
 import CustomerLayout from '@/components/CustomerLayout';
 import CustomerMembershipCard, { MembershipPlan } from '@/components/customer/CustomerMembershipCard';
 import { showSuccessToast } from '@/utils/toast-utils';
-import { motion } from 'framer-motion';
 
 const CustomerMembership = () => {
   const { user, isLoading } = useCustomerAuth();
@@ -22,7 +20,6 @@ const CustomerMembership = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Sample membership plans data - in a real app, this would come from your database
   const membershipPlans: MembershipPlan[] = [
     {
       id: 'silver-ps5-weekly',
@@ -256,7 +253,6 @@ const CustomerMembership = () => {
     navigate('/customer/dashboard');
   };
   
-  // Helper function to format date to readable string
   const formatDate = (date?: Date) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
