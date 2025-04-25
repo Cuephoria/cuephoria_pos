@@ -1,9 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -12,11 +15,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useAuth } from '@/context/AuthContext';
-import { showSuccessToast, showErrorToast } from '@/utils/toast-utils';
 
 interface LocationState {
   from?: string;
@@ -28,6 +28,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginType, setLoginType] = useState('admin');
   const { login, resetPassword } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as LocationState;
@@ -42,7 +43,6 @@ const Login = () => {
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1);
   const [forgotPasswordType, setForgotPasswordType] = useState('admin');
   const [resetLoading, setResetLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,7 +55,11 @@ const Login = () => {
     e.preventDefault();
     
     if (!username || !password) {
-      showErrorToast('Error', 'Please enter both username and password');
+      toast({
+        title: 'Error',
+        description: 'Please enter both username and password',
+        variant: 'destructive',
+      });
       return;
     }
     
@@ -64,15 +68,26 @@ const Login = () => {
       const isAdminLogin = loginType === 'admin';
       const success = await login(username, password, isAdminLogin);
       if (success) {
-        showSuccessToast('Success', `${isAdminLogin ? 'Admin' : 'Staff'} logged in successfully!`);
+        toast({
+          title: 'Success',
+          description: `${isAdminLogin ? 'Admin' : 'Staff'} logged in successfully!`,
+        });
         
         const redirectTo = locationState?.from || '/dashboard';
         navigate(redirectTo);
       } else {
-        showErrorToast('Error', `Invalid ${isAdminLogin ? 'admin' : 'staff'} credentials`);
+        toast({
+          title: 'Error',
+          description: `Invalid ${isAdminLogin ? 'admin' : 'staff'} credentials`,
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      showErrorToast('Error', 'Something went wrong. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -90,14 +105,21 @@ const Login = () => {
 
   const handleNextStep = () => {
     if (forgotPasswordType === 'staff') {
-      showSuccessToast('Staff Password Reset', 'Please contact your administrator to reset your password.');
+      toast({
+        title: 'Staff Password Reset',
+        description: 'Please contact your administrator to reset your password.',
+      });
       setForgotDialogOpen(false);
       return;
     }
 
     if (forgotPasswordStep === 1) {
       if (!forgotUsername) {
-        showErrorToast('Error', 'Please enter your username');
+        toast({
+          title: 'Error',
+          description: 'Please enter your username',
+          variant: 'destructive',
+        });
         return;
       }
       setForgotPasswordStep(2);
@@ -105,7 +127,11 @@ const Login = () => {
       if (masterKey === '2580') {
         setForgotPasswordStep(3);
       } else {
-        showErrorToast('Error', 'Incorrect master key');
+        toast({
+          title: 'Error',
+          description: 'Incorrect master key',
+          variant: 'destructive',
+        });
       }
     } else if (forgotPasswordStep === 3) {
       handleResetPassword();
@@ -114,12 +140,20 @@ const Login = () => {
 
   const handleResetPassword = async () => {
     if (!newPassword || !confirmPassword) {
-      showErrorToast('Error', 'Please enter and confirm your new password');
+      toast({
+        title: 'Error',
+        description: 'Please enter and confirm your new password',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showErrorToast('Error', 'Passwords do not match');
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -128,13 +162,24 @@ const Login = () => {
       const success = await resetPassword(forgotUsername, newPassword);
       
       if (success) {
-        showSuccessToast('Success', 'Password has been reset successfully');
+        toast({
+          title: 'Success',
+          description: 'Password has been reset successfully',
+        });
         setForgotDialogOpen(false);
       } else {
-        showErrorToast('Error', 'Failed to reset password. Username may not exist.');
+        toast({
+          title: 'Error',
+          description: 'Failed to reset password. Username may not exist.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      showErrorToast('Error', 'Something went wrong. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setResetLoading(false);
     }
@@ -193,7 +238,7 @@ const Login = () => {
                   placeholder="Enter your username"
                   value={forgotUsername}
                   onChange={(e) => setForgotUsername(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus:border-cuephoria-lightpurple"
+                  className="bg-background/50 border-cuephoria-lightpurple/30"
                 />
               </div>
             </div>
@@ -234,7 +279,7 @@ const Login = () => {
                   placeholder="Enter master key"
                   value={masterKey}
                   onChange={(e) => setMasterKey(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus:border-cuephoria-lightpurple"
+                  className="bg-background/50 border-cuephoria-lightpurple/30"
                 />
               </div>
             </div>
@@ -268,36 +313,25 @@ const Login = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="newPassword" className="text-sm font-medium">New Password</label>
-              <div className="relative">
-                <Input
-                  id="newPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus:border-cuephoria-lightpurple pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="bg-background/50 border-cuephoria-lightpurple/30"
+              />
             </div>
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus:border-cuephoria-lightpurple pr-10"
-                />
-              </div>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="bg-background/50 border-cuephoria-lightpurple/30"
+              />
             </div>
           </div>
         </div>
@@ -316,7 +350,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-6 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4">
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
         <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
@@ -375,22 +409,22 @@ const Login = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-cuephoria-lightpurple/5 to-accent/5 opacity-50 rounded-xl"></div>
           <div className="absolute w-full h-full bg-grid-pattern opacity-5"></div>
           
-          <CardHeader className="text-center relative z-10 p-6 sm:p-8">
-            <CardTitle className="text-2xl sm:text-3xl gradient-text font-bold">Game Master Login</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium text-sm sm:text-base">Enter your credentials to access the control panel</CardDescription>
+          <CardHeader className="text-center relative z-10 p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Game Master Login</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the control panel</CardDescription>
           </CardHeader>
           
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-5 relative z-10 p-6 sm:p-8 pt-0 sm:pt-0">
-              <div className="flex justify-center mb-6">
+            <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="flex justify-center mb-4">
                 <Tabs defaultValue="admin" value={loginType} onValueChange={setLoginType} className="w-full max-w-xs">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="admin" className="flex items-center justify-center gap-2 py-3">
-                      <Shield size={16} />
+                    <TabsTrigger value="admin" className="flex items-center gap-2">
+                      <Shield size={14} />
                       Admin
                     </TabsTrigger>
-                    <TabsTrigger value="staff" className="flex items-center justify-center gap-2 py-3">
-                      <Users size={16} />
+                    <TabsTrigger value="staff" className="flex items-center gap-2">
+                      <Users size={14} />
                       Staff
                     </TabsTrigger>
                   </TabsList>
@@ -398,8 +432,8 @@ const Login = () => {
               </div>
 
               <div className="space-y-2 group">
-                <label htmlFor="username" className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
-                  <User size={16} className="inline-block" />
+                <label htmlFor="username" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
+                  <User size={14} className="inline-block" />
                   Username
                   <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
                 </label>
@@ -409,33 +443,24 @@ const Login = () => {
                   placeholder="Enter your username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus:border-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
+                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
                 />
               </div>
               
               <div className="space-y-2 group">
-                <label htmlFor="password" className="text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
-                  <ZapIcon size={16} className="inline-block" />
+                <label htmlFor="password" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
+                  <ZapIcon size={14} className="inline-block" />
                   Password
                   <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
                 </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-background/50 border-cuephoria-lightpurple/30 focus:border-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
+                />
               </div>
 
               <div className="text-right">
@@ -450,10 +475,10 @@ const Login = () => {
               </div>
             </CardContent>
             
-            <CardFooter className="relative z-10 p-6 sm:p-8 pt-0 sm:pt-0 flex flex-col gap-4">
+            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
               <Button 
                 type="submit" 
-                className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 hover:scale-[1.02] transition-all duration-300 btn-hover-effect font-medium text-sm sm:text-base h-12" 
+                className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 hover:scale-[1.02] transition-all duration-300 btn-hover-effect font-medium text-sm sm:text-base" 
                 disabled={isLoading}
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
@@ -473,24 +498,9 @@ const Login = () => {
                   )}
                 </span>
               </Button>
-              
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full flex items-center justify-center gap-2 border-cuephoria-lightpurple/30 text-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/10"
-                onClick={() => navigate('/customer')}
-              >
-                <User size={16} />
-                Customer Portal
-              </Button>
             </CardFooter>
           </form>
         </Card>
-        
-        <div className="mt-8 text-center text-sm text-gray-400">
-          <p>© {new Date().getFullYear()} Cuephoria 8-Ball Club. All rights reserved.</p>
-          <p className="mt-1 text-xs">Designed and developed by RK</p>
-        </div>
       </div>
 
       <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>

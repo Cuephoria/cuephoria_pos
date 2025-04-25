@@ -48,25 +48,11 @@
 
   * {
     @apply border-border;
-    scroll-behavior: smooth;
-  }
-
-  html {
-    overflow: auto;
-    height: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-quicksand;
     -webkit-tap-highlight-color: transparent;
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  /* Reset scroll position when navigating */
-  #root {
-    height: 100%;
   }
 }
 
@@ -79,22 +65,22 @@
 
 /* Custom scrollbar for dark theme */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(155, 135, 245, 0.4);
+  background: rgba(156, 163, 175, 0.5);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(155, 135, 245, 0.6);
+  background: rgba(156, 163, 175, 0.7);
 }
 
 /* Better outlines for focus */
@@ -429,50 +415,5 @@
     padding: 0.5rem 0.7rem;
     font-size: 0.98rem;
     min-width: 68px;
-  }
-}
-
-/* Specific Admin Portal Styles */
-.admin-menu-active {
-  @apply bg-accent/20 border-l-4 border-l-accent text-white;
-}
-
-/* Mobile Nav Overlay */
-.mobile-nav-overlay {
-  @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden;
-}
-
-/* Mobile styles */
-@media (max-width: 768px) {
-  .admin-sidebar {
-    @apply fixed inset-y-0 left-0 z-50 w-64 transform -translate-x-full transition-transform;
-  }
-  
-  .admin-sidebar.open {
-    @apply translate-x-0;
-  }
-}
-
-/* Additional Customer Portal Specific Styles */
-.customer-profile-banner {
-  background: linear-gradient(to right, rgba(155, 135, 245, 0.2), rgba(14, 165, 233, 0.2));
-  border: 1px solid rgba(155, 135, 245, 0.1);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-}
-
-.animation-pulse-slow {
-  animation: pulse-soft 3s infinite ease-in-out;
-}
-
-.navbar-blur {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* Fix for Safari and other browsers */
-@supports not ((-webkit-backdrop-filter: none) or (backdrop-filter: none)) {
-  .navbar-blur {
-    background-color: rgba(17, 19, 31, 0.95);
   }
 }
