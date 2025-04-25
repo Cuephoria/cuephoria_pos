@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,14 +27,17 @@ import Index from "./pages/Index";
 // Customer Portal Pages
 import CustomerLogin from "./pages/customer/CustomerLogin";
 import CustomerRegister from "./pages/customer/CustomerRegister";
-import CustomerDashboard from "./pages/customer/CustomerDashboard";
-import CustomerSessions from "./pages/customer/CustomerSessions";
-import CustomerLoyalty from "./pages/customer/CustomerLoyalty";
-import CustomerRewards from "./pages/customer/CustomerRewards";
-import CustomerPromotions from "./pages/customer/CustomerPromotions";
-import CustomerProfile from "./pages/customer/CustomerProfile";
 import CustomerResetPassword from "./pages/customer/CustomerResetPassword";
-import CustomerReferrals from "./pages/customer/CustomerReferrals";
+
+// Placeholder components for other customer pages
+// These will be created properly in future updates
+const CustomerDashboard = () => <div className="p-6">Customer Dashboard</div>;
+const CustomerSessions = () => <div className="p-6">Customer Sessions</div>;
+const CustomerLoyalty = () => <div className="p-6">Customer Loyalty</div>;
+const CustomerRewards = () => <div className="p-6">Customer Rewards</div>;
+const CustomerPromotions = () => <div className="p-6">Customer Promotions</div>;
+const CustomerProfile = () => <div className="p-6">Customer Profile</div>;
+const CustomerReferrals = () => <div className="p-6">Customer Referrals</div>;
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({

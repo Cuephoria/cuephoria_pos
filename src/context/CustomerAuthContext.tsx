@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -54,13 +53,11 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         }
         
         if (session) {
-          // Attempt to fetch the customer user record - we'll need to use a raw query approach
-          // since the table is not in the Supabase TypeScript definition
+          // Attempt to fetch the customer user record using RPC call
           const { data, error: customerError } = await supabase
-            .from('customer_users')
-            .select()
-            .eq('auth_id', session.user.id)
-            .single();
+            .rpc('get_customer_user_by_auth_id', {
+              auth_id: session.user.id
+            });
           
           if (customerError || !data) {
             console.error('Error fetching customer user data:', customerError);
@@ -92,12 +89,11 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
     // Set up auth state change subscription
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Fetch customer user data using raw query
+        // Fetch customer user data using RPC call
         const { data, error } = await supabase
-          .from('customer_users')
-          .select()
-          .eq('auth_id', session.user.id)
-          .single();
+          .rpc('get_customer_user_by_auth_id', {
+            auth_id: session.user.id
+          });
           
         if (error || !data) {
           console.error('Error fetching customer user data:', error);
@@ -143,12 +139,11 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         return { success: false, message: error.message };
       }
       
-      // Check if this user has a customer_users record
+      // Check if this user has a customer_users record using RPC
       const { data: customerData, error: customerError } = await supabase
-        .from('customer_users')
-        .select()
-        .eq('auth_id', data.user.id)
-        .single();
+        .rpc('get_customer_user_by_auth_id', {
+          auth_id: data.user.id
+        });
         
       if (customerError || !customerData) {
         // This is an admin/staff user, not a customer

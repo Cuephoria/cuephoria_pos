@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from 'react-router-dom';
-import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
 import { 
   Sidebar, 
   SidebarContent, 
