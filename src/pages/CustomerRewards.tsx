@@ -153,7 +153,7 @@ const CustomerRewards = () => {
             <TabsTrigger value="referral" className="data-[state=active]:bg-cuephoria-lightpurple data-[state=active]:text-black">
               Referral Program
             </TabsTrigger>
-          </Tabs>
+          </TabsList>
 
           <TabsContent value="available" className="mt-6">
             {isLoadingRewards ? (
