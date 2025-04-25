@@ -269,7 +269,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             newCustomer.referred_by_code = referralCode;
           }
           
-          await supabase.from('customers').insert([newCustomer]);
+          await supabase
+            .from('customers')
+            .insert([newCustomer]);
           
           setUser({
             id: data.user.id,
@@ -355,7 +357,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         p_reward_id: rewardId
       });
       
-      if (rewardError || !rewardData) {
+      if (rewardError || !rewardData || rewardData.length === 0) {
         showErrorToast('Error', 'Could not find reward details');
         return null;
       }
@@ -366,7 +368,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Create redemption record
       const redemption = {
         id: rewardId,
-        name: rewardData.name,
+        name: rewardData[0].name,
         points: pointsCost,
         redemption_code: redemptionCode,
         redeemed_at: new Date().toISOString()
@@ -376,7 +378,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const updatedPoints = user.loyaltyPoints - pointsCost;
       const updatedRedemptions = [...(user.redeemedRewards || []), {
         id: rewardId,
-        name: rewardData.name,
+        name: rewardData[0].name,
         points: pointsCost,
         redemptionCode,
         redeemedAt: new Date()

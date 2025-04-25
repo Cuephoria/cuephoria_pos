@@ -9,6 +9,9 @@ export const fetchAvailableRewards = async (): Promise<Reward[]> => {
     
     if (error) throw error;
     
+    // Safely handle potentially null data
+    if (!data) return [];
+    
     // Map the data to our Reward interface
     return data.map((reward: any) => ({
       id: reward.id,
@@ -33,6 +36,9 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
     });
     
     if (error) throw error;
+    
+    // Safely handle potentially null data
+    if (!data) return [];
     
     // Map the data to our Promotion interface
     return data.map((promo: any) => ({

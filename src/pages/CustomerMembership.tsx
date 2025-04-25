@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Star, Calendar, Clock, Shield, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { Star, Calendar, Clock, Shield, ChevronRight, AlertCircle, Info, Check } from 'lucide-react';
 import CustomerLayout from '@/components/CustomerLayout';
 import CustomerMembershipCard, { MembershipPlan } from '@/components/customer/CustomerMembershipCard';
 import { showSuccessToast } from '@/utils/toast-utils';
