@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, { createContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,7 +24,7 @@ type CustomerAuthContextType = {
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
 };
 
-const CustomerAuthContext = createContext<CustomerAuthContextType>({
+export const CustomerAuthContext = createContext<CustomerAuthContextType>({
   customerUser: null,
   isLoading: true,
   login: async () => ({ success: false, message: 'Context not initialized' }),
@@ -179,24 +180,30 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
       
-      // Check if email already exists - using raw query
-      const { data: existingEmail } = await supabase
-        .from('customer_users')
-        .select()
-        .eq('email', email)
-        .single();
+      // Check if email already exists - using RPC
+      const { data: existingEmail, error: emailCheckError } = await supabase
+        .rpc('check_customer_email_exists', {
+          email_address: email
+        });
         
+      if (emailCheckError) {
+        return { success: false, message: 'Error checking email: ' + emailCheckError.message };
+      }
+      
       if (existingEmail) {
         return { success: false, message: 'This email is already registered' };
       }
       
-      // Check if phone already exists - using raw query
-      const { data: existingPhone } = await supabase
-        .from('customer_users')
-        .select()
-        .eq('phone', phone)
-        .single();
+      // Check if phone already exists - using RPC
+      const { data: existingPhone, error: phoneCheckError } = await supabase
+        .rpc('check_customer_phone_exists', {
+          phone_number: phone
+        });
         
+      if (phoneCheckError) {
+        return { success: false, message: 'Error checking phone: ' + phoneCheckError.message };
+      }
+      
       if (existingPhone) {
         return { success: false, message: 'This phone number is already registered' };
       }
@@ -222,42 +229,38 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         return { success: false, message: authError?.message || 'Failed to create account' };
       }
       
-      // Create a customer record in the customers table if it doesn't exist
+      // Check if customer with this phone exists using RPC
+      const { data: existingCustomer, error: customerCheckError } = await supabase
+        .rpc('get_customer_by_phone', {
+          phone_number: phone
+        });
+        
+      if (customerCheckError) {
+        // Rollback auth creation on error
+        await supabase.auth.signOut();
+        return { success: false, message: 'Error checking customer: ' + customerCheckError.message };
+      }
+      
       let customerId = '';
       
-      // Check if customer with this phone number exists in customers table
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('phone', phone)
-        .single();
-        
       if (existingCustomer) {
         customerId = existingCustomer.id;
         
-        // Update customer name and email if needed
+        // Update customer name and email using RPC
         await supabase
-          .from('customers')
-          .update({
-            name,
-            email
-          })
-          .eq('id', customerId);
+          .rpc('update_customer_info', {
+            customer_id: customerId,
+            customer_name: name,
+            customer_email: email
+          });
       } else {
-        // Create new customer
+        // Create new customer using RPC
         const { data: newCustomer, error: customerError } = await supabase
-          .from('customers')
-          .insert({
-            name,
-            phone,
-            email,
-            is_member: false,
-            loyalty_points: 0,
-            total_spent: 0,
-            total_play_time: 0
-          })
-          .select('id')
-          .single();
+          .rpc('create_customer', {
+            customer_name: name,
+            customer_phone: phone,
+            customer_email: email
+          });
           
         if (customerError || !newCustomer) {
           // Rollback auth creation
@@ -277,7 +280,7 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       // Generate unique referral code
       const referralCodeBase = name.substring(0, 3).toUpperCase() + Math.floor(1000 + Math.random() * 9000).toString();
       
-      // Create customer_users record using raw query approach
+      // Create customer_users record using RPC approach
       const { error: userError } = await supabase.rpc('create_customer_user', {
         auth_id: authData.user.id,
         customer_id: customerId,
@@ -302,12 +305,16 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       
       // Process referral if a referral code was provided
       if (referralCode && referralCode.length > 0) {
-        // Find the referrer using raw query
-        const { data: referrer } = await supabase.rpc('find_referrer_by_code', {
+        // Find the referrer using RPC
+        const { data: referrer, error: referrerError } = await supabase.rpc('find_referrer_by_code', {
           code: referralCode
         });
           
-        if (referrer && referrer.customer_id) {
+        if (referrerError) {
+          console.error('Error finding referrer:', referrerError);
+          // Continue with registration even if referral processing fails
+        }
+        else if (referrer && referrer.customer_id) {
           // Record the referral using rpc
           await supabase.rpc('create_referral', {
             referrer_id: referrer.customer_id,
@@ -361,12 +368,16 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
   // Reset password (send email with reset instructions)
   const resetPassword = async (email: string) => {
     try {
-      // Check if email exists in customer_users
+      // Check if email exists in customer_users using RPC
       const { data: user, error: userError } = await supabase.rpc('find_customer_by_email', {
         email_address: email
       });
         
-      if (userError || !user || !user.pin) {
+      if (userError) {
+        return { success: false, message: 'Error checking email: ' + userError.message };
+      }
+      
+      if (!user || !user.pin) {
         return { success: false, message: 'No account found with this email' };
       }
       
@@ -398,7 +409,11 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         reset_pin: pin
       });
         
-      if (userError || !user || !user.auth_id) {
+      if (userError) {
+        return { success: false, message: 'Error verifying pin: ' + userError.message };
+      }
+      
+      if (!user || !user.auth_id) {
         return { success: false, message: 'Invalid email or PIN' };
       }
       
@@ -415,10 +430,14 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       const newPin = Math.floor(1000 + Math.random() * 9000).toString();
       
       // Use RPC to update customer PIN
-      await supabase.rpc('update_customer_pin', {
+      const { error: pinError } = await supabase.rpc('update_customer_pin', {
         auth_id: user.auth_id,
         new_pin: newPin
       });
+      
+      if (pinError) {
+        return { success: false, message: 'Password reset but failed to update PIN: ' + pinError.message };
+      }
         
       toast({
         title: 'Password Reset Successful',
@@ -446,22 +465,20 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       // Update in customer_users table using RPC
       const { error: userError } = await supabase.rpc('update_customer_user_profile', {
         auth_id: customerUser.id,
-        user_name: data.name,
-        user_phone: data.phone
+        user_name: data.name || customerUser.name,
+        user_phone: data.phone || customerUser.phone
       });
         
       if (userError) {
         return { success: false, message: userError.message };
       }
       
-      // Update in customers table
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({
-          name: data.name,
-          phone: data.phone,
-        })
-        .eq('id', customerUser.customerId);
+      // Update in customers table using RPC
+      const { error: customerError } = await supabase.rpc('update_customer_profile', {
+        customer_id: customerUser.customerId,
+        customer_name: data.name || customerUser.name,
+        customer_phone: data.phone || customerUser.phone
+      });
         
       if (customerError) {
         return { success: false, message: customerError.message };

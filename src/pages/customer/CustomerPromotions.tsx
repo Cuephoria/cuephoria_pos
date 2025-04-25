@@ -1,169 +1,99 @@
 
-import { useState, useEffect } from 'react';
-import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
-import { Copy } from 'lucide-react';
-import { promotionsService } from '@/services/promotionsService';
+import { useCustomerAuth } from '@/hooks/useCustomerAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Promotion } from '@/types/customer.types';
-import { format } from 'date-fns';
 
 const CustomerPromotions = () => {
   const { customerUser } = useCustomerAuth();
-  const { toast } = useToast();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
-        const allPromotions = await promotionsService.getPromotions();
-        setPromotions(allPromotions);
+        const { data, error } = await supabase.rpc(
+          'get_active_promotions',
+          { membership_required_filter: false }
+        );
+        
+        if (!error && data) {
+          setPromotions(data as Promotion[]);
+        }
       } catch (error) {
         console.error('Error fetching promotions:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load promotions',
-          variant: 'destructive'
-        });
       } finally {
         setLoading(false);
       }
     };
     
     fetchPromotions();
-  }, [toast]);
-  
-  const copyToClipboard = (code: string) => {
-    navigator.clipboard.writeText(code).then(
-      () => {
-        toast({
-          title: 'Copied!',
-          description: 'Promotion code copied to clipboard'
-        });
-      },
-      (err) => {
-        console.error('Could not copy text: ', err);
-        toast({
-          title: 'Error',
-          description: 'Failed to copy code to clipboard',
-          variant: 'destructive'
-        });
-      }
-    );
-  };
-  
+  }, []);
+
   if (loading) {
     return (
-      <div className="container py-8 flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
-        <p className="mt-4">Loading promotions...</p>
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold mb-6">Promotions</h1>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
       </div>
     );
   }
-  
+
   return (
     <div className="container py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Current Promotions</h1>
-        <p className="text-muted-foreground">
-          Check out our latest offers and special promotions
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold mb-6">Promotions</h1>
       
-      {promotions.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {promotions.map((promotion) => (
-            <Card key={promotion.id} className="overflow-hidden card-hover">
-              {promotion.image_url && (
-                <div className="aspect-video w-full overflow-hidden">
-                  <img 
-                    src={promotion.image_url} 
-                    alt={promotion.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              
-              <CardHeader>
-                <CardTitle>{promotion.title}</CardTitle>
-                <CardDescription>
-                  Valid until {format(new Date(promotion.end_date), 'PPP')}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <p className="mb-4">{promotion.description}</p>
-                
-                <div className="bg-muted p-3 rounded-md">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold mb-1">Discount:</p>
-                      <p className="text-xl font-bold">
-                        {promotion.discount_type === 'percentage' 
-                          ? `${promotion.discount_value}% OFF` 
-                          : `₹${promotion.discount_value} OFF`}
-                      </p>
-                    </div>
-                    
-                    {promotion.minimum_purchase_amount && (
-                      <div className="text-right">
-                        <p className="text-sm font-semibold mb-1">Min. Purchase:</p>
-                        <p className="font-medium">₹{promotion.minimum_purchase_amount}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {promotion.terms_conditions && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium mb-1">Terms & Conditions:</p>
-                    <p className="text-xs text-muted-foreground">{promotion.terms_conditions}</p>
-                  </div>
-                )}
-              </CardContent>
-              
-              {promotion.promotion_code && (
-                <CardFooter className="flex flex-col border-t pt-4">
-                  <div className="flex items-center justify-between w-full">
-                    <p className="font-semibold">Promo Code:</p>
-                    <div className="flex items-center gap-2">
-                      <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                        {promotion.promotion_code}
-                      </code>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => copyToClipboard(promotion.promotion_code!)}
-                              className="h-7 w-7"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Copy code</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-                </CardFooter>
-              )}
-            </Card>
-          ))}
+      {promotions.length === 0 ? (
+        <div className="text-center py-12 bg-card rounded-lg">
+          <p className="text-muted-foreground">No active promotions at this time</p>
+          <p className="text-sm mt-2">Check back soon for special offers!</p>
         </div>
       ) : (
-        <div className="py-12 text-center">
-          <h3 className="text-xl font-medium mb-2">No Active Promotions</h3>
-          <p className="text-muted-foreground">
-            There are no active promotions at the moment. Check back soon!
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {promotions.map((promo) => (
+            <Card key={promo.id} className="flex flex-col">
+              <CardHeader>
+                <CardTitle>{promo.title}</CardTitle>
+                <CardDescription>
+                  Valid until {new Date(promo.end_date).toLocaleDateString()}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <p>{promo.description}</p>
+                
+                <div className="mt-4 p-3 bg-muted rounded-md">
+                  <div className="text-sm text-muted-foreground mb-1">Discount:</div>
+                  <div className="font-semibold">
+                    {promo.discount_type === 'percentage' 
+                      ? `${promo.discount_value}% off` 
+                      : `$${promo.discount_value.toFixed(2)} off`}
+                  </div>
+                </div>
+                
+                {promo.promotion_code && (
+                  <div className="mt-4">
+                    <div className="text-sm text-muted-foreground mb-1">Promo Code:</div>
+                    <div className="p-2 bg-primary/10 text-primary rounded text-center font-mono">
+                      {promo.promotion_code}
+                    </div>
+                  </div>
+                )}
+                
+                {promo.minimum_purchase_amount > 0 && (
+                  <p className="text-sm text-muted-foreground mt-4">
+                    *Minimum purchase: ${promo.minimum_purchase_amount.toFixed(2)}
+                  </p>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full">Use Promotion</Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       )}
     </div>

@@ -1,142 +1,58 @@
 
-import { useEffect, useState } from 'react';
+import React from 'react';
 import { useCustomerAuth } from '@/hooks/useCustomerAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { CustomerSession } from '@/types/customer.types';
 
 const CustomerDashboard = () => {
   const { customerUser } = useCustomerAuth();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
-  const [recentSessions, setRecentSessions] = useState<CustomerSession[]>([]);
   
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!customerUser) return;
-      
-      try {
-        setIsLoading(true);
-        
-        // Fetch customer data
-        const { data: customerData, error: customerError } = await supabase
-          .from('customers')
-          .select('loyalty_points, is_member, membership_expiry_date')
-          .eq('id', customerUser.customerId)
-          .single();
-          
-        if (customerError) throw customerError;
-        
-        setLoyaltyPoints(customerData.loyalty_points || 0);
-        
-        // Fetch recent sessions
-        const { data: sessionsData, error: sessionsError } = await supabase
-          .from('sessions')
-          .select('id, station_id, start_time, end_time, duration')
-          .eq('customer_id', customerUser.customerId)
-          .order('start_time', { ascending: false })
-          .limit(5);
-          
-        if (sessionsError) throw sessionsError;
-        
-        // Get station details for each session
-        const sessionsWithDetails: CustomerSession[] = [];
-        
-        for (const session of sessionsData) {
-          const { data: stationData, error: stationError } = await supabase
-            .from('stations')
-            .select('name, type')
-            .eq('id', session.station_id)
-            .single();
-            
-          if (!stationError && stationData) {
-            sessionsWithDetails.push({
-              id: session.id,
-              station_name: stationData.name,
-              station_type: stationData.type,
-              start_time: session.start_time,
-              end_time: session.end_time || undefined,
-              duration: session.duration || 0,
-              cost: 0 // Could calculate this if hourly_rate is available
-            });
-          }
-        }
-        
-        setRecentSessions(sessionsWithDetails);
-      } catch (error: any) {
-        console.error('Error fetching dashboard data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load dashboard data',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchDashboardData();
-  }, [customerUser, toast]);
-
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-8">Welcome, {customerUser?.name}</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Loyalty Points</CardTitle>
-            <CardDescription>Your current points balance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-12 w-24" />
-            ) : (
-              <p className="text-3xl font-bold">{loyaltyPoints}</p>
-            )}
-          </CardContent>
-        </Card>
+      <h1 className="text-3xl font-bold mb-6">Welcome, {customerUser?.name || 'Customer'}</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-card p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-2">Your Profile</h2>
+          <p className="text-muted-foreground mb-4">Manage your personal information</p>
+          <dl className="space-y-2">
+            <div>
+              <dt className="text-sm text-muted-foreground">Email</dt>
+              <dd>{customerUser?.email}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Phone</dt>
+              <dd>{customerUser?.phone}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Referral Code</dt>
+              <dd className="font-medium">{customerUser?.referralCode}</dd>
+            </div>
+          </dl>
+        </div>
         
-        {/* Add more stat cards here */}
-      </div>
-      
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Sessions</CardTitle>
-            <CardDescription>Your latest play sessions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : recentSessions.length > 0 ? (
-              <div className="space-y-4">
-                {recentSessions.map(session => (
-                  <div key={session.id} className="flex justify-between items-center p-3 border rounded-md">
-                    <div>
-                      <p className="font-medium">{session.station_name} ({session.station_type})</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(session.start_time).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{session.duration} mins</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No recent sessions found</p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-2">Quick Actions</h2>
+          <p className="text-muted-foreground mb-4">Common tasks you might want to perform</p>
+          <div className="space-y-2">
+            <button className="w-full text-left px-4 py-2 text-primary bg-primary/10 rounded-md hover:bg-primary/20">
+              Book a new session
+            </button>
+            <button className="w-full text-left px-4 py-2 text-primary bg-primary/10 rounded-md hover:bg-primary/20">
+              View your rewards
+            </button>
+            <button className="w-full text-left px-4 py-2 text-primary bg-primary/10 rounded-md hover:bg-primary/20">
+              Check loyalty points
+            </button>
+          </div>
+        </div>
+        
+        <div className="bg-card p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-2">Recent Activity</h2>
+          <p className="text-muted-foreground mb-4">Your recent sessions and purchases</p>
+          <div className="text-sm">
+            <p className="text-center py-6 text-muted-foreground">
+              No recent activity to display
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
