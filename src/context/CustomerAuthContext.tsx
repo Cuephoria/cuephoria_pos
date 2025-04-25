@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -18,9 +19,8 @@ interface CustomerAuthContextType {
   getReferralCode: () => Promise<string>;
 }
 
-interface RpcParams {
-  [key: string]: any;
-}
+// Define the RPC parameters interface
+type RpcParams = Record<string, any>;
 
 const CustomerAuthContext = createContext<CustomerAuthContextType>({
   session: null,
@@ -82,16 +82,18 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (customer) {
         const customerData = customer as any;
         
-        let redeemedRewards: RedeemedReward[] = [];
+        const redeemedRewards: RedeemedReward[] = [];
         
         if (customerData.redeemed_rewards && Array.isArray(customerData.redeemed_rewards)) {
-          redeemedRewards = customerData.redeemed_rewards.map((reward: any) => ({
-            id: reward.id,
-            name: reward.name,
-            points: reward.points,
-            redemptionCode: reward.redemption_code,
-            redeemedAt: new Date(reward.redeemed_at)
-          }));
+          customerData.redeemed_rewards.forEach((reward: any) => {
+            redeemedRewards.push({
+              id: reward.id,
+              name: reward.name,
+              points: reward.points,
+              redemptionCode: reward.redemption_code,
+              redeemedAt: new Date(reward.redeemed_at)
+            });
+          });
         }
         
         setUser({
@@ -286,12 +288,12 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
         
         if (referrerData) {
-          const params: RpcParams = {
+          const params = {
             p_referrer_id: referrerData.id,
             p_referee_id: data.user.id,
             p_code: referralCode
           };
-          await supabase.rpc('create_referral', params);
+          await supabase.rpc('create_referral', params as any);
         }
         
         showSuccessToast('Account created', 'Welcome to Cuephoria!');
@@ -341,11 +343,11 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     
     try {
-      const params: RpcParams = {
+      const params = {
         p_reward_id: rewardId
       };
       
-      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', params);
+      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', params as any);
       
       if (rewardError) {
         showErrorToast('Error', 'Could not find reward details');
@@ -368,15 +370,23 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       };
       
       const updatedPoints = user.loyaltyPoints - pointsCost;
-      const updatedRedemptions = [...(user.redeemedRewards || []), {
+      
+      // Create a copy of the existing rewards or initialize an empty array
+      const currentRewards = user.redeemedRewards || [];
+      
+      // Create a new reward item
+      const newReward = {
         id: rewardId,
         name: rewardData[0].name,
         points: pointsCost,
         redemptionCode,
         redeemedAt: new Date()
-      }];
+      };
       
-      const updateData: Record<string, any> = {
+      // Create a new array with all existing rewards plus the new one
+      const updatedRedemptions = [...currentRewards, newReward];
+      
+      const updateData = {
         loyalty_points: updatedPoints,
         redeemed_rewards: updatedRedemptions.map(r => ({
           id: r.id,
