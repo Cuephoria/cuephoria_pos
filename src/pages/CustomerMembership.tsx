@@ -11,6 +11,7 @@ import { Star, Calendar, Clock, Shield, ChevronRight, AlertCircle, Info, Check }
 import CustomerLayout from '@/components/CustomerLayout';
 import CustomerMembershipCard, { MembershipPlan } from '@/components/customer/CustomerMembershipCard';
 import { showSuccessToast } from '@/utils/toast-utils';
+import { motion } from 'framer-motion';
 
 const CustomerMembership = () => {
   const { user, isLoading } = useCustomerAuth();
@@ -163,7 +164,6 @@ const CustomerMembership = () => {
       originalPrice: 3499,
       duration: 'monthly',
       type: '8ball',
-      tier: 'gold',
       hours: 50,
       benefits: [
         '50 hours of pool gameplay',

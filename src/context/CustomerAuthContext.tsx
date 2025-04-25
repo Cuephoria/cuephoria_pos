@@ -181,7 +181,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       return false;
-    } catch (error) {
+    } catch (error: any) {
       showErrorToast('Login failed', error.message);
       return false;
     } finally {
@@ -249,7 +249,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             
           await fetchProfile(data.user.id);
         } else {
-          // Type the newCustomer explicitly
           const newCustomer = {
             id: data.user.id,
             name,
@@ -353,7 +352,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         p_reward_id: rewardId
       });
       
-      if (rewardError || !rewardData || rewardData.length === 0) {
+      if (rewardError || !rewardData || !Array.isArray(rewardData) || rewardData.length === 0) {
         showErrorToast('Error', 'Could not find reward details');
         return null;
       }
