@@ -51,3 +51,13 @@ export interface Promotion {
   endsAt?: Date;
   isActive: boolean;
 }
+
+// Interface for referral records
+export interface Referral {
+  id: string;
+  referrerId: string;
+  refereeId: string;
+  code: string;
+  pointsAwarded: boolean;
+  createdAt: Date;
+}

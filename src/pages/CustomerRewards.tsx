@@ -265,7 +265,12 @@ const CustomerRewards = () => {
                 </p>
                 <Button 
                   variant="outline" 
-                  onClick={() => document.querySelector('[data-value="available"]')?.click()}
+                  onClick={() => {
+                    const availableTab = document.querySelector('[data-value="available"]');
+                    if (availableTab instanceof HTMLElement) {
+                      availableTab.click();
+                    }
+                  }}
                   className="border-cuephoria-lightpurple/30 text-cuephoria-lightpurple"
                 >
                   View Available Rewards

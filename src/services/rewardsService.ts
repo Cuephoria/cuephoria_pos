@@ -4,15 +4,13 @@ import { Promotion, Reward } from "@/types/customer.types";
 
 export const fetchAvailableRewards = async (): Promise<Reward[]> => {
   try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('*')
-      .eq('is_active', true)
-      .order('points_required', { ascending: true });
+    // Using rpc to handle the table not being in the TypeScript definition
+    const { data, error } = await supabase.rpc('get_available_rewards');
     
     if (error) throw error;
     
-    return data.map((reward) => ({
+    // Map the data to our Reward interface
+    return data.map((reward: any) => ({
       id: reward.id,
       name: reward.name,
       description: reward.description,
@@ -29,16 +27,15 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
   try {
     const now = new Date().toISOString();
     
-    const { data, error } = await supabase
-      .from('promotions')
-      .select('*')
-      .eq('is_active', true)
-      .or(`ends_at.gt.${now},ends_at.is.null`)
-      .order('created_at', { ascending: false });
+    // Using rpc to handle the table not being in the TypeScript definition
+    const { data, error } = await supabase.rpc('get_active_promotions', {
+      current_time: now
+    });
     
     if (error) throw error;
     
-    return data.map((promo) => ({
+    // Map the data to our Promotion interface
+    return data.map((promo: any) => ({
       id: promo.id,
       title: promo.title,
       description: promo.description,
@@ -57,70 +54,15 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
 
 export const addReferralPoints = async (billId: string, customerId: string): Promise<boolean> => {
   try {
-    // First check if this is the customer's first bill
-    const { count, error: countError } = await supabase
-      .from('bills')
-      .select('id', { count: 'exact', head: true })
-      .eq('customer_id', customerId);
-      
-    if (countError) throw countError;
+    // Using RPC to handle referrals
+    const { data, error } = await supabase.rpc('process_referral_points', {
+      p_bill_id: billId,
+      p_customer_id: customerId
+    });
     
-    // If not the first bill, don't proceed
-    if ((count || 0) > 1) return false;
+    if (error) throw error;
     
-    // Check if customer was referred
-    const { data: customerData, error: customerError } = await supabase
-      .from('customers')
-      .select('referred_by_code')
-      .eq('id', customerId)
-      .single();
-      
-    if (customerError || !customerData?.referred_by_code) return false;
-    
-    // Find the referrer using the code
-    const { data: referrer, error: referrerError } = await supabase
-      .from('customers')
-      .select('id, loyalty_points')
-      .eq('referral_code', customerData.referred_by_code)
-      .single();
-      
-    if (referrerError || !referrer) return false;
-    
-    // Update the referral record
-    const { error: updateReferralError } = await supabase
-      .from('referrals')
-      .update({ points_awarded: true })
-      .match({ referee_id: customerId, referrer_id: referrer.id });
-      
-    if (updateReferralError) throw updateReferralError;
-    
-    // Award 100 points to the referrer
-    const newPoints = (referrer.loyalty_points || 0) + 100;
-    const { error: updatePointsError } = await supabase
-      .from('customers')
-      .update({ loyalty_points: newPoints })
-      .eq('id', referrer.id);
-      
-    if (updatePointsError) throw updatePointsError;
-    
-    // Also give 50 points to the new customer
-    const { data: newCustomer, error: newCustomerError } = await supabase
-      .from('customers')
-      .select('loyalty_points')
-      .eq('id', customerId)
-      .single();
-      
-    if (newCustomerError) throw newCustomerError;
-    
-    const newCustomerPoints = (newCustomer.loyalty_points || 0) + 50;
-    const { error: updateNewCustomerError } = await supabase
-      .from('customers')
-      .update({ loyalty_points: newCustomerPoints })
-      .eq('id', customerId);
-      
-    if (updateNewCustomerError) throw updateNewCustomerError;
-    
-    return true;
+    return data || false;
   } catch (error) {
     console.error('Error processing referral points:', error);
     return false;
@@ -129,19 +71,16 @@ export const addReferralPoints = async (billId: string, customerId: string): Pro
 
 export const createReward = async (reward: Omit<Reward, 'id'>): Promise<string | null> => {
   try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .insert({
-        name: reward.name,
-        description: reward.description,
-        points_required: reward.pointsRequired,
-        is_active: reward.isActive
-      })
-      .select('id')
-      .single();
-      
+    // Using RPC to handle the rewards table
+    const { data, error } = await supabase.rpc('create_reward', {
+      p_name: reward.name,
+      p_description: reward.description,
+      p_points_required: reward.pointsRequired,
+      p_is_active: reward.isActive
+    });
+    
     if (error) throw error;
-    return data.id;
+    return data;
   } catch (error) {
     console.error('Error creating reward:', error);
     return null;
@@ -150,17 +89,17 @@ export const createReward = async (reward: Omit<Reward, 'id'>): Promise<string |
 
 export const updateReward = async (id: string, reward: Partial<Reward>): Promise<boolean> => {
   try {
-    const updateObj: any = {};
-    if (reward.name !== undefined) updateObj.name = reward.name;
-    if (reward.description !== undefined) updateObj.description = reward.description;
-    if (reward.pointsRequired !== undefined) updateObj.points_required = reward.pointsRequired;
-    if (reward.isActive !== undefined) updateObj.is_active = reward.isActive;
+    const updateObj: Record<string, any> = {};
+    if (reward.name !== undefined) updateObj.p_name = reward.name;
+    if (reward.description !== undefined) updateObj.p_description = reward.description;
+    if (reward.pointsRequired !== undefined) updateObj.p_points_required = reward.pointsRequired;
+    if (reward.isActive !== undefined) updateObj.p_is_active = reward.isActive;
     
-    const { error } = await supabase
-      .from('rewards')
-      .update(updateObj)
-      .eq('id', id);
-      
+    updateObj.p_id = id;
+    
+    // Using RPC to handle the rewards table
+    const { error } = await supabase.rpc('update_reward', updateObj);
+    
     if (error) throw error;
     return true;
   } catch (error) {
@@ -171,23 +110,20 @@ export const updateReward = async (id: string, reward: Partial<Reward>): Promise
 
 export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise<string | null> => {
   try {
-    const { data, error } = await supabase
-      .from('promotions')
-      .insert({
-        title: promotion.title,
-        description: promotion.description,
-        discount_percentage: promotion.discountPercentage,
-        discount_amount: promotion.discountAmount,
-        code: promotion.code,
-        starts_at: promotion.startsAt.toISOString(),
-        ends_at: promotion.endsAt?.toISOString(),
-        is_active: promotion.isActive
-      })
-      .select('id')
-      .single();
+    // Using RPC to handle the promotions table
+    const { data, error } = await supabase.rpc('create_promotion', {
+      p_title: promotion.title,
+      p_description: promotion.description,
+      p_discount_percentage: promotion.discountPercentage,
+      p_discount_amount: promotion.discountAmount,
+      p_code: promotion.code,
+      p_starts_at: promotion.startsAt.toISOString(),
+      p_ends_at: promotion.endsAt?.toISOString(),
+      p_is_active: promotion.isActive
+    });
       
     if (error) throw error;
-    return data.id;
+    return data;
   } catch (error) {
     console.error('Error creating promotion:', error);
     return null;
@@ -196,21 +132,19 @@ export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise
 
 export const updatePromotion = async (id: string, promotion: Partial<Promotion>): Promise<boolean> => {
   try {
-    const updateObj: any = {};
-    if (promotion.title !== undefined) updateObj.title = promotion.title;
-    if (promotion.description !== undefined) updateObj.description = promotion.description;
-    if (promotion.discountPercentage !== undefined) updateObj.discount_percentage = promotion.discountPercentage;
-    if (promotion.discountAmount !== undefined) updateObj.discount_amount = promotion.discountAmount;
-    if (promotion.code !== undefined) updateObj.code = promotion.code;
-    if (promotion.startsAt !== undefined) updateObj.starts_at = promotion.startsAt.toISOString();
-    if (promotion.endsAt !== undefined) updateObj.ends_at = promotion.endsAt.toISOString();
-    if (promotion.isActive !== undefined) updateObj.is_active = promotion.isActive;
+    const updateObj: Record<string, any> = { p_id: id };
+    if (promotion.title !== undefined) updateObj.p_title = promotion.title;
+    if (promotion.description !== undefined) updateObj.p_description = promotion.description;
+    if (promotion.discountPercentage !== undefined) updateObj.p_discount_percentage = promotion.discountPercentage;
+    if (promotion.discountAmount !== undefined) updateObj.p_discount_amount = promotion.discountAmount;
+    if (promotion.code !== undefined) updateObj.p_code = promotion.code;
+    if (promotion.startsAt !== undefined) updateObj.p_starts_at = promotion.startsAt.toISOString();
+    if (promotion.endsAt !== undefined) updateObj.p_ends_at = promotion.endsAt.toISOString();
+    if (promotion.isActive !== undefined) updateObj.p_is_active = promotion.isActive;
     
-    const { error } = await supabase
-      .from('promotions')
-      .update(updateObj)
-      .eq('id', id);
-      
+    // Using RPC to handle the promotions table
+    const { error } = await supabase.rpc('update_promotion', updateObj);
+    
     if (error) throw error;
     return true;
   } catch (error) {

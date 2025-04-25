@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -76,16 +77,11 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       if (customer) {
-        // Use type assertion to handle the reset_pin property that exists at runtime but not in TypeScript definition
-        const customerWithResetPin = customer as typeof customer & { 
-          reset_pin?: string,
-          referral_code?: string,
-          referred_by_code?: string,
-          redeemed_rewards?: any[]
-        };
+        // Use type assertion for customer properties that aren't in the type definition
+        const customerData = customer as any;
         
-        const redeemedRewards = customerWithResetPin.redeemed_rewards 
-          ? customerWithResetPin.redeemed_rewards.map((reward: any) => ({
+        const redeemedRewards = customerData.redeemed_rewards 
+          ? customerData.redeemed_rewards.map((reward: any) => ({
               id: reward.id,
               name: reward.name,
               points: reward.points,
@@ -107,9 +103,9 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           membershipExpiryDate: customer.membership_expiry_date ? new Date(customer.membership_expiry_date) : undefined,
           membershipStartDate: customer.membership_start_date ? new Date(customer.membership_start_date) : undefined,
           membershipHoursLeft: customer.membership_hours_left,
-          resetPin: customerWithResetPin.reset_pin,
-          referralCode: customerWithResetPin.referral_code,
-          referredByCode: customerWithResetPin.referred_by_code,
+          resetPin: customerData.reset_pin,
+          referralCode: customerData.referral_code,
+          referredByCode: customerData.referred_by_code,
           redeemedRewards: redeemedRewards
         });
       } else {
@@ -236,19 +232,26 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
         
         if (existingCustomers && existingCustomers.length > 0) {
+          // Type the updateData explicitly
+          const updateData: Record<string, any> = { 
+            id: data.user.id,
+            reset_pin: resetPin,
+            referral_code: newReferralCode
+          };
+          
+          if (referrerData) {
+            updateData.referred_by_code = referralCode;
+          }
+          
           await supabase
             .from('customers')
-            .update({ 
-              id: data.user.id,
-              reset_pin: resetPin,
-              referral_code: newReferralCode,
-              referred_by_code: referrerData ? referralCode : null
-            })
+            .update(updateData)
             .eq(email ? 'email' : 'phone', email || phone);
             
           await fetchProfile(data.user.id);
         } else {
-          const newCustomer = {
+          // Type the newCustomer explicitly
+          const newCustomer: Record<string, any> = {
             id: data.user.id,
             name,
             email,
@@ -260,8 +263,11 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             is_member: false,
             reset_pin: resetPin,
             referral_code: newReferralCode,
-            referred_by_code: referrerData ? referralCode : null
           };
+          
+          if (referrerData) {
+            newCustomer.referred_by_code = referralCode;
+          }
           
           await supabase.from('customers').insert([newCustomer]);
           
@@ -276,18 +282,22 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             isMember: false,
             resetPin,
             referralCode: newReferralCode,
-            referredByCode: referrerData ? referralCode : null
+            referredByCode: referrerData ? referralCode : undefined
           });
         }
         
-        // If referral code was provided and valid, create a referral record
+        // If referral code was provided and valid, store the referral record using RPC
         if (referrerData) {
-          await supabase.from('referrals').insert({
-            referrer_id: referrerData.id,
-            referee_id: data.user.id,
-            code: referralCode,
-            points_awarded: false
-          });
+          try {
+            // Using RPC to handle custom tables not in the TypeScript definitions
+            await supabase.rpc('create_referral', {
+              p_referrer_id: referrerData.id,
+              p_referee_id: data.user.id,
+              p_code: referralCode
+            });
+          } catch (referralError) {
+            console.error('Error creating referral record:', referralError);
+          }
         }
         
         showSuccessToast('Account created', 'Welcome to Cuephoria!');
@@ -313,9 +323,14 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const referralCode = generateRandomCode();
     
     try {
+      // Create an object with the referral code
+      const updateData: Record<string, any> = {
+        referral_code: referralCode
+      };
+      
       await supabase
         .from('customers')
-        .update({ referral_code: referralCode })
+        .update(updateData)
         .eq('id', user.id);
         
       setUser(prev => prev ? { ...prev, referralCode } : null);
@@ -335,13 +350,11 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     
     try {
-      // Get reward details
-      const { data: rewardData, error: rewardError } = await supabase
-        .from('rewards')
-        .select('name, description, points_required')
-        .eq('id', rewardId)
-        .single();
-        
+      // Get reward details using RPC
+      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', {
+        p_reward_id: rewardId
+      });
+      
       if (rewardError || !rewardData) {
         showErrorToast('Error', 'Could not find reward details');
         return null;
@@ -369,18 +382,21 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         redeemedAt: new Date()
       }];
       
+      // Create the update object
+      const updateData: Record<string, any> = {
+        loyalty_points: updatedPoints,
+        redeemed_rewards: updatedRedemptions.map(r => ({
+          id: r.id,
+          name: r.name,
+          points: r.points,
+          redemption_code: r.redemptionCode,
+          redeemed_at: r.redeemedAt.toISOString()
+        }))
+      };
+      
       const { error: updateError } = await supabase
         .from('customers')
-        .update({ 
-          loyalty_points: updatedPoints,
-          redeemed_rewards: updatedRedemptions.map(r => ({
-            id: r.id,
-            name: r.name,
-            points: r.points,
-            redemption_code: r.redemptionCode,
-            redeemed_at: r.redeemedAt.toISOString()
-          }))
-        })
+        .update(updateData)
         .eq('id', user.id);
       
       if (updateError) {
