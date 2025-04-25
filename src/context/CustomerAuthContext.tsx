@@ -19,8 +19,10 @@ interface CustomerAuthContextType {
   getReferralCode: () => Promise<string>;
 }
 
-// Define the RPC parameters interface
-type RpcParams = Record<string, any>;
+// Define a simpler RPC parameters interface to avoid deep type issues
+interface RpcParams {
+  [key: string]: any;
+}
 
 const CustomerAuthContext = createContext<CustomerAuthContextType>({
   session: null,
@@ -283,17 +285,19 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
             isMember: false,
             resetPin,
             referralCode: newReferralCode,
-            referredByCode: referrerData ? referralCode : undefined
+            referredByCode: referrerData ? referralCode : undefined,
+            redeemedRewards: []
           });
         }
         
         if (referrerData) {
-          const params = {
+          // Fix type issue by properly defining RPC params
+          const params: RpcParams = {
             p_referrer_id: referrerData.id,
             p_referee_id: data.user.id,
             p_code: referralCode
           };
-          await supabase.rpc('create_referral', params as any);
+          await supabase.rpc('create_referral', params);
         }
         
         showSuccessToast('Account created', 'Welcome to Cuephoria!');
@@ -343,17 +347,19 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     
     try {
-      const params = {
+      // Fix type issue by properly defining RPC params
+      const params: RpcParams = {
         p_reward_id: rewardId
       };
       
-      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', params as any);
+      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', params);
       
       if (rewardError) {
         showErrorToast('Error', 'Could not find reward details');
         return null;
       }
       
+      // Explicitly check and type array data to avoid 'never' type errors
       if (!rewardData || !Array.isArray(rewardData) || rewardData.length === 0) {
         showErrorToast('Error', 'Could not find reward details');
         return null;
@@ -361,9 +367,12 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       const redemptionCode = generateRandomCode(6);
       
+      // Safely access rewardData which we know is an array with at least one item
+      const reward = rewardData[0] as any;
+      
       const redemption = {
         id: rewardId,
-        name: rewardData[0].name,
+        name: reward.name, // Properly typed via 'any'
         points: pointsCost,
         redemption_code: redemptionCode,
         redeemed_at: new Date().toISOString()
@@ -377,7 +386,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Create a new reward item
       const newReward = {
         id: rewardId,
-        name: rewardData[0].name,
+        name: reward.name, // Properly typed via 'any'
         points: pointsCost,
         redemptionCode,
         redeemedAt: new Date()

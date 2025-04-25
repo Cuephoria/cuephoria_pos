@@ -2,15 +2,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Promotion, Reward } from "@/types/customer.types";
 
-// Define a proper interface for RPC parameters
+// Define a proper interface for RPC parameters that accepts any string key with any value
 interface RpcParams {
   [key: string]: any;
 }
 
 export const fetchAvailableRewards = async (): Promise<Reward[]> => {
   try {
-    // Using rpc with proper type casting for parameters
-    const { data, error } = await supabase.rpc('get_available_rewards');
+    // Using rpc with a properly typed empty params object
+    const { data, error } = await supabase.rpc('get_available_rewards', {} as RpcParams);
     
     if (error) throw error;
     
@@ -35,10 +35,9 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
   try {
     const now = new Date().toISOString();
     
-    // Using rpc with proper type casting for parameters
-    const { data, error } = await supabase.rpc('get_active_promotions', {
-      current_time: now
-    } as any);
+    // Using rpc with properly typed params
+    const params: RpcParams = { current_time: now };
+    const { data, error } = await supabase.rpc('get_active_promotions', params);
     
     if (error) throw error;
     
@@ -65,11 +64,13 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
 
 export const addReferralPoints = async (billId: string, customerId: string): Promise<boolean> => {
   try {
-    // Using RPC with proper type casting
-    const { data, error } = await supabase.rpc('process_referral_points', {
+    // Using RPC with properly typed params
+    const params: RpcParams = {
       p_bill_id: billId,
       p_customer_id: customerId
-    } as any);
+    };
+    
+    const { data, error } = await supabase.rpc('process_referral_points', params);
     
     if (error) throw error;
     
@@ -82,13 +83,15 @@ export const addReferralPoints = async (billId: string, customerId: string): Pro
 
 export const createReward = async (reward: Omit<Reward, 'id'>): Promise<string | null> => {
   try {
-    // Using RPC with proper type casting
-    const { data, error } = await supabase.rpc('create_reward', {
+    // Using RPC with properly typed params
+    const params: RpcParams = {
       p_name: reward.name,
       p_description: reward.description,
       p_points_required: reward.pointsRequired,
       p_is_active: reward.isActive
-    } as any);
+    };
+    
+    const { data, error } = await supabase.rpc('create_reward', params);
     
     if (error) throw error;
     return data as string;
@@ -100,14 +103,14 @@ export const createReward = async (reward: Omit<Reward, 'id'>): Promise<string |
 
 export const updateReward = async (id: string, reward: Partial<Reward>): Promise<boolean> => {
   try {
-    const updateObj: Record<string, any> = { p_id: id };
-    if (reward.name !== undefined) updateObj.p_name = reward.name;
-    if (reward.description !== undefined) updateObj.p_description = reward.description;
-    if (reward.pointsRequired !== undefined) updateObj.p_points_required = reward.pointsRequired;
-    if (reward.isActive !== undefined) updateObj.p_is_active = reward.isActive;
+    const params: RpcParams = { p_id: id };
+    if (reward.name !== undefined) params.p_name = reward.name;
+    if (reward.description !== undefined) params.p_description = reward.description;
+    if (reward.pointsRequired !== undefined) params.p_points_required = reward.pointsRequired;
+    if (reward.isActive !== undefined) params.p_is_active = reward.isActive;
     
-    // Using RPC with proper type casting
-    const { error } = await supabase.rpc('update_reward', updateObj as any);
+    // Using RPC with properly typed params
+    const { error } = await supabase.rpc('update_reward', params);
     
     if (error) throw error;
     return true;
@@ -119,8 +122,8 @@ export const updateReward = async (id: string, reward: Partial<Reward>): Promise
 
 export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise<string | null> => {
   try {
-    // Using RPC with proper type casting
-    const { data, error } = await supabase.rpc('create_promotion', {
+    // Using RPC with properly typed params
+    const params: RpcParams = {
       p_title: promotion.title,
       p_description: promotion.description,
       p_discount_percentage: promotion.discountPercentage,
@@ -129,7 +132,9 @@ export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise
       p_starts_at: promotion.startsAt.toISOString(),
       p_ends_at: promotion.endsAt?.toISOString(),
       p_is_active: promotion.isActive
-    } as any);
+    };
+      
+    const { data, error } = await supabase.rpc('create_promotion', params);
       
     if (error) throw error;
     return data as string;
@@ -141,18 +146,18 @@ export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise
 
 export const updatePromotion = async (id: string, promotion: Partial<Promotion>): Promise<boolean> => {
   try {
-    const updateObj: Record<string, any> = { p_id: id };
-    if (promotion.title !== undefined) updateObj.p_title = promotion.title;
-    if (promotion.description !== undefined) updateObj.p_description = promotion.description;
-    if (promotion.discountPercentage !== undefined) updateObj.p_discount_percentage = promotion.discountPercentage;
-    if (promotion.discountAmount !== undefined) updateObj.p_discount_amount = promotion.discountAmount;
-    if (promotion.code !== undefined) updateObj.p_code = promotion.code;
-    if (promotion.startsAt !== undefined) updateObj.p_starts_at = promotion.startsAt.toISOString();
-    if (promotion.endsAt !== undefined) updateObj.p_ends_at = promotion.endsAt.toISOString();
-    if (promotion.isActive !== undefined) updateObj.p_is_active = promotion.isActive;
+    const params: RpcParams = { p_id: id };
+    if (promotion.title !== undefined) params.p_title = promotion.title;
+    if (promotion.description !== undefined) params.p_description = promotion.description;
+    if (promotion.discountPercentage !== undefined) params.p_discount_percentage = promotion.discountPercentage;
+    if (promotion.discountAmount !== undefined) params.p_discount_amount = promotion.discountAmount;
+    if (promotion.code !== undefined) params.p_code = promotion.code;
+    if (promotion.startsAt !== undefined) params.p_starts_at = promotion.startsAt.toISOString();
+    if (promotion.endsAt !== undefined) params.p_ends_at = promotion.endsAt.toISOString();
+    if (promotion.isActive !== undefined) params.p_is_active = promotion.isActive;
     
-    // Using RPC with proper type casting
-    const { error } = await supabase.rpc('update_promotion', updateObj as any);
+    // Using RPC with properly typed params
+    const { error } = await supabase.rpc('update_promotion', params);
     
     if (error) throw error;
     return true;
