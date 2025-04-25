@@ -118,13 +118,6 @@ const CustomerProtectedRoute = ({ children }: { children: React.ReactNode }) => 
   );
 };
 
-// Import the hook from our context
-const useCustomerAuth = () => {
-  // Use the CustomerAuthContext to get current customer user and loading state
-  const { customerUser, isLoading } = useAuth();
-  return { customerUser, isLoading };
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>

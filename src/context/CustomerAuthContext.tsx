@@ -54,13 +54,14 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         }
         
         if (session) {
-          // Fetch the customer_user record to get additional info
+          // Attempt to fetch the customer user record - we'll need to use a raw query approach
+          // since the table is not in the Supabase TypeScript definition
           const { data, error: customerError } = await supabase
             .from('customer_users')
-            .select('*')
+            .select()
             .eq('auth_id', session.user.id)
             .single();
-            
+          
           if (customerError || !data) {
             console.error('Error fetching customer user data:', customerError);
             await supabase.auth.signOut();
@@ -68,6 +69,7 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
             return;
           }
           
+          // The data object will have the needed fields
           setCustomerUser({
             id: session.user.id,
             email: session.user.email || '',
@@ -90,10 +92,10 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
     // Set up auth state change subscription
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Fetch customer user data
+        // Fetch customer user data using raw query
         const { data, error } = await supabase
           .from('customer_users')
-          .select('*')
+          .select()
           .eq('auth_id', session.user.id)
           .single();
           
@@ -144,7 +146,7 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       // Check if this user has a customer_users record
       const { data: customerData, error: customerError } = await supabase
         .from('customer_users')
-        .select('*')
+        .select()
         .eq('auth_id', data.user.id)
         .single();
         
@@ -182,10 +184,10 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
       
-      // Check if email already exists
+      // Check if email already exists - using raw query
       const { data: existingEmail } = await supabase
         .from('customer_users')
-        .select('email')
+        .select()
         .eq('email', email)
         .single();
         
@@ -193,10 +195,10 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         return { success: false, message: 'This email is already registered' };
       }
       
-      // Check if phone already exists
+      // Check if phone already exists - using raw query
       const { data: existingPhone } = await supabase
         .from('customer_users')
-        .select('phone')
+        .select()
         .eq('phone', phone)
         .single();
         
@@ -265,7 +267,6 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         if (customerError || !newCustomer) {
           // Rollback auth creation
           await supabase.auth.signOut();
-          await supabase.auth.admin.deleteUser(authData.user.id);
           
           toast({
             title: 'Registration Failed',
@@ -281,50 +282,44 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       // Generate unique referral code
       const referralCodeBase = name.substring(0, 3).toUpperCase() + Math.floor(1000 + Math.random() * 9000).toString();
       
-      // Create customer_users record
-      const { error: userError } = await supabase
-        .from('customer_users')
-        .insert({
-          auth_id: authData.user.id,
-          customer_id: customerId,
-          name,
-          email,
-          phone,
-          referral_code: referralCodeBase,
-          pin: Math.floor(1000 + Math.random() * 9000).toString() // Generate random 4-digit PIN
-        });
-        
+      // Create customer_users record using raw query approach
+      const { error: userError } = await supabase.rpc('create_customer_user', {
+        auth_id: authData.user.id,
+        customer_id: customerId,
+        user_name: name,
+        user_email: email,
+        user_phone: phone,
+        referral_code: referralCodeBase,
+        user_pin: Math.floor(1000 + Math.random() * 9000).toString() // Generate random 4-digit PIN
+      });
+      
       if (userError) {
         // Rollback
         await supabase.auth.signOut();
-        await supabase.auth.admin.deleteUser(authData.user.id);
         
         toast({
           title: 'Registration Failed',
-          description: 'Failed to create user profile',
+          description: 'Failed to create user profile: ' + userError.message,
           variant: 'destructive',
         });
-        return { success: false, message: 'Failed to create user profile' };
+        return { success: false, message: 'Failed to create user profile: ' + userError.message };
       }
       
       // Process referral if a referral code was provided
       if (referralCode && referralCode.length > 0) {
-        // Find the referrer
-        const { data: referrer } = await supabase
-          .from('customer_users')
-          .select('customer_id')
-          .eq('referral_code', referralCode)
-          .single();
+        // Find the referrer using raw query
+        const { data: referrer } = await supabase.rpc('find_referrer_by_code', {
+          code: referralCode
+        });
           
-        if (referrer) {
-          // Record the referral
-          await supabase
-            .from('referrals')
-            .insert({
-              referrer_id: referrer.customer_id,
-              referred_id: customerId,
-              status: 'pending' // Will be converted to 'completed' after first purchase
-            });
+        if (referrer && referrer.customer_id) {
+          // Record the referral using rpc
+          await supabase.rpc('create_referral', {
+            referrer_id: referrer.customer_id,
+            referred_id: customerId,
+            referred_name: name,
+            referred_email: email
+          });
             
           // Add referral bonus points to referrer
           await supabase.rpc('add_loyalty_points', { 
@@ -372,13 +367,11 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
   const resetPassword = async (email: string) => {
     try {
       // Check if email exists in customer_users
-      const { data: user, error: userError } = await supabase
-        .from('customer_users')
-        .select('pin')
-        .eq('email', email)
-        .single();
+      const { data: user, error: userError } = await supabase.rpc('find_customer_by_email', {
+        email_address: email
+      });
         
-      if (userError || !user) {
+      if (userError || !user || !user.pin) {
         return { success: false, message: 'No account found with this email' };
       }
       
@@ -404,15 +397,13 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
   // Reset password with PIN
   const resetPasswordWithPin = async (email: string, pin: string, newPassword: string) => {
     try {
-      // Check if email and PIN match
-      const { data: user, error: userError } = await supabase
-        .from('customer_users')
-        .select('auth_id')
-        .eq('email', email)
-        .eq('pin', pin)
-        .single();
+      // Check if email and PIN match using rpc
+      const { data: user, error: userError } = await supabase.rpc('verify_customer_pin', {
+        email_address: email,
+        reset_pin: pin
+      });
         
-      if (userError || !user) {
+      if (userError || !user || !user.auth_id) {
         return { success: false, message: 'Invalid email or PIN' };
       }
       
@@ -428,10 +419,11 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
       // Generate new PIN for future password resets
       const newPin = Math.floor(1000 + Math.random() * 9000).toString();
       
-      await supabase
-        .from('customer_users')
-        .update({ pin: newPin })
-        .eq('auth_id', user.auth_id);
+      // Use RPC to update customer PIN
+      await supabase.rpc('update_customer_pin', {
+        auth_id: user.auth_id,
+        new_pin: newPin
+      });
         
       toast({
         title: 'Password Reset Successful',
@@ -456,14 +448,12 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         return { success: false, message: 'You must be logged in' };
       }
       
-      // Update in customer_users table
-      const { error: userError } = await supabase
-        .from('customer_users')
-        .update({
-          name: data.name,
-          phone: data.phone,
-        })
-        .eq('auth_id', customerUser.id);
+      // Update in customer_users table using RPC
+      const { error: userError } = await supabase.rpc('update_customer_user_profile', {
+        auth_id: customerUser.id,
+        user_name: data.name,
+        user_phone: data.phone
+      });
         
       if (userError) {
         return { success: false, message: userError.message };
@@ -562,10 +552,4 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
   );
 };
 
-export const useCustomerAuth = () => {
-  const context = useContext(CustomerAuthContext);
-  if (!context) {
-    throw new Error('useCustomerAuth must be used within a CustomerAuthProvider');
-  }
-  return context;
-};
+export { CustomerAuthContext };
