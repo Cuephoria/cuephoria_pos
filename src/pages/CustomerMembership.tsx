@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -164,6 +165,7 @@ const CustomerMembership = () => {
       originalPrice: 3499,
       duration: 'monthly',
       type: '8ball',
+      tier: 'gold', // Add the missing tier property
       hours: 50,
       benefits: [
         '50 hours of pool gameplay',

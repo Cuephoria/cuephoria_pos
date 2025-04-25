@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -79,15 +80,17 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Use type assertion for customer properties that aren't in the type definition
         const customerData = customer as any;
         
-        const redeemedRewards = customerData.redeemed_rewards 
-          ? customerData.redeemed_rewards.map((reward: any) => ({
-              id: reward.id,
-              name: reward.name,
-              points: reward.points,
-              redemptionCode: reward.redemption_code,
-              redeemedAt: new Date(reward.redeemed_at)
-            }))
-          : [];
+        let redeemedRewards: RedeemedReward[] = [];
+        
+        if (customerData.redeemed_rewards && Array.isArray(customerData.redeemed_rewards)) {
+          redeemedRewards = customerData.redeemed_rewards.map((reward: any) => ({
+            id: reward.id,
+            name: reward.name,
+            points: reward.points,
+            redemptionCode: reward.redemption_code,
+            redeemedAt: new Date(reward.redeemed_at)
+          }));
+        }
         
         setUser({
           id: customer.id,
@@ -230,8 +233,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           }
         }
         
-        if (existingCustomers && existingCustomers.length > 0) {
-          // Type the updateData explicitly
+        if (existingCustomers && Array.isArray(existingCustomers) && existingCustomers.length > 0) {
+          // Create an update object with proper types
           const updateData: Record<string, any> = { 
             id: data.user.id,
             reset_pin: resetPin,
@@ -291,7 +294,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
               p_referrer_id: referrerData.id,
               p_referee_id: data.user.id,
               p_code: referralCode
-            });
+            } as any);
           } catch (referralError) {
             console.error('Error creating referral record:', referralError);
           }
@@ -350,7 +353,7 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Get reward details using RPC
       const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', {
         p_reward_id: rewardId
-      });
+      } as any);
       
       if (rewardError || !rewardData || !Array.isArray(rewardData) || rewardData.length === 0) {
         showErrorToast('Error', 'Could not find reward details');

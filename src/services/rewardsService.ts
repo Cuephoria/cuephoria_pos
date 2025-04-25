@@ -12,8 +12,8 @@ export const fetchAvailableRewards = async (): Promise<Reward[]> => {
     // Safely handle potentially null data
     if (!data) return [];
     
-    // Map the data to our Reward interface
-    return data.map((reward: any) => ({
+    // Explicitly type the response and use type assertion
+    return (data as any[]).map((reward) => ({
       id: reward.id,
       name: reward.name,
       description: reward.description,
@@ -40,8 +40,8 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
     // Safely handle potentially null data
     if (!data) return [];
     
-    // Map the data to our Promotion interface
-    return data.map((promo: any) => ({
+    // Explicitly type the response and use type assertion
+    return (data as any[]).map((promo) => ({
       id: promo.id,
       title: promo.title,
       description: promo.description,
@@ -86,7 +86,7 @@ export const createReward = async (reward: Omit<Reward, 'id'>): Promise<string |
     });
     
     if (error) throw error;
-    return data;
+    return data as string;
   } catch (error) {
     console.error('Error creating reward:', error);
     return null;
@@ -104,7 +104,7 @@ export const updateReward = async (id: string, reward: Partial<Reward>): Promise
     updateObj.p_id = id;
     
     // Using RPC to handle the rewards table
-    const { error } = await supabase.rpc('update_reward', updateObj);
+    const { error } = await supabase.rpc('update_reward', updateObj as any);
     
     if (error) throw error;
     return true;
@@ -129,7 +129,7 @@ export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise
     });
       
     if (error) throw error;
-    return data;
+    return data as string;
   } catch (error) {
     console.error('Error creating promotion:', error);
     return null;
@@ -149,7 +149,7 @@ export const updatePromotion = async (id: string, promotion: Partial<Promotion>)
     if (promotion.isActive !== undefined) updateObj.p_is_active = promotion.isActive;
     
     // Using RPC to handle the promotions table
-    const { error } = await supabase.rpc('update_promotion', updateObj);
+    const { error } = await supabase.rpc('update_promotion', updateObj as any);
     
     if (error) throw error;
     return true;
