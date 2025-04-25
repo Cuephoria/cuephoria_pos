@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +16,10 @@ interface CustomerAuthContextType {
   refreshProfile: () => Promise<void>;
   redeemPoints: (rewardId: string, pointsCost: number) => Promise<string | null>;
   getReferralCode: () => Promise<string>;
+}
+
+interface RpcParams {
+  [key: string]: any;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType>({
@@ -77,7 +80,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       if (customer) {
-        // Use type assertion for customer properties that aren't in the type definition
         const customerData = customer as any;
         
         let redeemedRewards: RedeemedReward[] = [];
@@ -216,10 +218,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       if (data.user) {
-        // Generate a unique referral code for this new user
         const newReferralCode = generateRandomCode();
         
-        // Check if referral code exists and is valid
         let referrerData = null;
         if (referralCode) {
           const { data: referrerCheck } = await supabase
@@ -234,7 +234,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
         
         if (existingCustomers && Array.isArray(existingCustomers) && existingCustomers.length > 0) {
-          // Create an update object with proper types
           const updateData: Record<string, any> = { 
             id: data.user.id,
             reset_pin: resetPin,
@@ -286,18 +285,13 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           });
         }
         
-        // If referral code was provided and valid, store the referral record using RPC
         if (referrerData) {
-          try {
-            // Using RPC to handle custom tables not in the TypeScript definitions
-            await supabase.rpc('create_referral', {
-              p_referrer_id: referrerData.id,
-              p_referee_id: data.user.id,
-              p_code: referralCode
-            } as any);
-          } catch (referralError) {
-            console.error('Error creating referral record:', referralError);
-          }
+          const params: RpcParams = {
+            p_referrer_id: referrerData.id,
+            p_referee_id: data.user.id,
+            p_code: referralCode
+          };
+          await supabase.rpc('create_referral', params);
         }
         
         showSuccessToast('Account created', 'Welcome to Cuephoria!');
@@ -316,14 +310,11 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const getReferralCode = async () => {
     if (!user?.id) return '';
     
-    // If user already has a referral code, return it
     if (user.referralCode) return user.referralCode;
     
-    // Otherwise generate a new one
     const referralCode = generateRandomCode();
     
     try {
-      // Create an object with the referral code
       const updateData: Record<string, any> = {
         referral_code: referralCode
       };
@@ -350,20 +341,24 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     
     try {
-      // Get reward details using RPC
-      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', {
+      const params: RpcParams = {
         p_reward_id: rewardId
-      } as any);
+      };
       
-      if (rewardError || !rewardData || !Array.isArray(rewardData) || rewardData.length === 0) {
+      const { data: rewardData, error: rewardError } = await supabase.rpc('get_reward_by_id', params);
+      
+      if (rewardError) {
         showErrorToast('Error', 'Could not find reward details');
         return null;
       }
       
-      // Generate a random redemption code
+      if (!rewardData || !Array.isArray(rewardData) || rewardData.length === 0) {
+        showErrorToast('Error', 'Could not find reward details');
+        return null;
+      }
+      
       const redemptionCode = generateRandomCode(6);
       
-      // Create redemption record
       const redemption = {
         id: rewardId,
         name: rewardData[0].name,
@@ -372,7 +367,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         redeemed_at: new Date().toISOString()
       };
       
-      // Update customer's points and add redemption record
       const updatedPoints = user.loyaltyPoints - pointsCost;
       const updatedRedemptions = [...(user.redeemedRewards || []), {
         id: rewardId,
@@ -382,7 +376,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         redeemedAt: new Date()
       }];
       
-      // Create the update object
       const updateData: Record<string, any> = {
         loyalty_points: updatedPoints,
         redeemed_rewards: updatedRedemptions.map(r => ({
@@ -404,7 +397,6 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return null;
       }
       
-      // Update local user state
       setUser(prev => {
         if (!prev) return null;
         return {

@@ -2,10 +2,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Promotion, Reward } from "@/types/customer.types";
 
+interface RpcParams {
+  [key: string]: any;
+}
+
 export const fetchAvailableRewards = async (): Promise<Reward[]> => {
   try {
     // Using rpc to handle the table not being in the TypeScript definition
-    const { data, error } = await supabase.rpc('get_available_rewards');
+    const { data, error } = await supabase.rpc('get_available_rewards', {} as RpcParams);
     
     if (error) throw error;
     
@@ -33,7 +37,7 @@ export const fetchActivePromotions = async (): Promise<Promotion[]> => {
     // Using rpc to handle the table not being in the TypeScript definition
     const { data, error } = await supabase.rpc('get_active_promotions', {
       current_time: now
-    });
+    } as RpcParams);
     
     if (error) throw error;
     
@@ -64,7 +68,7 @@ export const addReferralPoints = async (billId: string, customerId: string): Pro
     const { data, error } = await supabase.rpc('process_referral_points', {
       p_bill_id: billId,
       p_customer_id: customerId
-    });
+    } as RpcParams);
     
     if (error) throw error;
     
@@ -83,7 +87,7 @@ export const createReward = async (reward: Omit<Reward, 'id'>): Promise<string |
       p_description: reward.description,
       p_points_required: reward.pointsRequired,
       p_is_active: reward.isActive
-    });
+    } as RpcParams);
     
     if (error) throw error;
     return data as string;
@@ -104,7 +108,7 @@ export const updateReward = async (id: string, reward: Partial<Reward>): Promise
     updateObj.p_id = id;
     
     // Using RPC to handle the rewards table
-    const { error } = await supabase.rpc('update_reward', updateObj as any);
+    const { error } = await supabase.rpc('update_reward', updateObj as RpcParams);
     
     if (error) throw error;
     return true;
@@ -126,7 +130,7 @@ export const createPromotion = async (promotion: Omit<Promotion, 'id'>): Promise
       p_starts_at: promotion.startsAt.toISOString(),
       p_ends_at: promotion.endsAt?.toISOString(),
       p_is_active: promotion.isActive
-    });
+    } as RpcParams);
       
     if (error) throw error;
     return data as string;
@@ -149,7 +153,7 @@ export const updatePromotion = async (id: string, promotion: Partial<Promotion>)
     if (promotion.isActive !== undefined) updateObj.p_is_active = promotion.isActive;
     
     // Using RPC to handle the promotions table
-    const { error } = await supabase.rpc('update_promotion', updateObj as any);
+    const { error } = await supabase.rpc('update_promotion', updateObj as RpcParams);
     
     if (error) throw error;
     return true;
