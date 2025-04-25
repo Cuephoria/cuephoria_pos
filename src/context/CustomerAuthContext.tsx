@@ -377,7 +377,7 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
         return { success: false, message: 'Error checking email: ' + userError.message };
       }
       
-      if (!user || !user.pin) {
+      if (!user) {
         return { success: false, message: 'No account found with this email' };
       }
       
@@ -563,5 +563,3 @@ export const CustomerAuthProvider = ({ children }: { children: React.ReactNode }
     </CustomerAuthContext.Provider>
   );
 };
-
-export { CustomerAuthContext };
