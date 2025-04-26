@@ -1,26 +1,31 @@
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Check, Copy, Share2, Users, Clock } from 'lucide-react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { getReferrals } from '@/services/referralsService';
+import { getCustomerReferrals, createReferral, getReferredFriends } from '@/services/referralsService';
+import { Users, Mail, Award, Clock, CheckCircle, AlertCircle, Share2 } from 'lucide-react';
+import { Referral } from '@/types/customer.types';
 
-interface ReferralDisplay {
-  id: string;
-  referredName: string;
-  referredEmail: string;
-  status: 'pending' | 'completed';
+interface ReferredFriend {
+  customer_id: string;
+  name: string;
+  email?: string;
+  status: "pending" | "completed";
+  joinDate: Date;
   pointsAwarded: number;
-  createdAt: Date;
 }
 
 const CustomerReferrals = () => {
   const { customerUser, customerProfile } = useCustomerAuth();
-  const [referrals, setReferrals] = useState<ReferralDisplay[]>([]);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [referredFriends, setReferredFriends] = useState<ReferredFriend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [friendEmail, setFriendEmail] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,8 +33,17 @@ const CustomerReferrals = () => {
       if (customerUser) {
         try {
           setIsLoading(true);
-          const referrals = await getReferrals(customerUser.customer_id);
-          setReferrals(referrals);
+          const [referralsData, friendsData] = await Promise.all([
+            getCustomerReferrals(customerUser.customer_id),
+            getReferredFriends(customerUser.customer_id)
+          ]);
+          
+          setReferrals(referralsData);
+          setReferredFriends(friendsData);
+          
+          if (customerProfile) {
+            setReferralCode(customerProfile.referralCode);
+          }
         } catch (error) {
           console.error('Error loading referrals:', error);
           toast({
@@ -44,132 +58,200 @@ const CustomerReferrals = () => {
     };
     
     loadReferrals();
-  }, [customerUser, toast]);
+  }, [customerUser, customerProfile, toast]);
 
-  const copyReferralLink = () => {
-    if (!customerProfile) return;
+  const handleReferFriend = async () => {
+    if (!friendEmail) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your friend\'s email address',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    const referralLink = `${window.location.origin}/customer/register?ref=${customerProfile.referralCode}`;
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    toast({
-      title: 'Copied',
-      description: 'Referral link copied to clipboard',
-    });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(friendEmail)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    setTimeout(() => setCopied(false), 2000);
+    setIsSending(true);
+    
+    try {
+      if (customerUser) {
+        const success = await createReferral(customerUser.customer_id, friendEmail);
+        
+        if (success) {
+          toast({
+            title: 'Referral Sent',
+            description: 'Your friend has been invited!',
+          });
+          setFriendEmail('');
+          
+          // Refresh the referrals data
+          const [referralsData, friendsData] = await Promise.all([
+            getCustomerReferrals(customerUser.customer_id),
+            getReferredFriends(customerUser.customer_id)
+          ]);
+          
+          setReferrals(referralsData);
+          setReferredFriends(friendsData);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending referral:', error);
+      toast({
+        title: 'Referral Failed',
+        description: 'Failed to send referral invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const shareReferral = () => {
-    if (!customerProfile) return;
-    
-    const referralLink = `${window.location.origin}/customer/register?ref=${customerProfile.referralCode}`;
-    const shareText = `Join me at Cuephoria 8-Ball Club! Use my referral code ${customerProfile.referralCode} to sign up.`;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: 'Cuephoria 8-Ball Club Referral',
-        text: shareText,
-        url: referralLink,
-      }).catch((error) => {
-        console.error('Error sharing:', error);
-      });
-    } else {
-      copyReferralLink();
-    }
+  const copyReferralCode = () => {
+    navigator.clipboard.writeText(referralCode);
+    toast({
+      title: 'Copied!',
+      description: 'Referral code copied to clipboard',
+    });
   };
 
   return (
     <div className="container mx-auto p-4 mb-16">
       <div className="flex flex-col items-center justify-center mb-8 mt-4">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Referrals</h1>
-        <p className="text-muted-foreground text-sm sm:text-base">Invite friends and earn loyalty points</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Refer Friends</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">Invite friends and earn rewards</p>
       </div>
 
-      <Card className="mb-8 bg-cuephoria-darker border-cuephoria-orange/20">
-        <CardHeader>
-          <CardTitle>Your Referral Code</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center mb-4">
-            <p className="text-muted-foreground mb-2">Share this code with friends to earn 100 loyalty points for each person who signs up</p>
-            <div className="inline-block bg-black/20 px-6 py-3 rounded-lg font-mono text-2xl tracking-wider font-bold text-cuephoria-orange">
-              {customerProfile?.referralCode || 'Loading...'}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Referral Code</CardTitle>
+            <CardDescription>Share this code with friends to earn 100 points when they join</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 font-mono text-center p-3 bg-muted rounded-md tracking-wider text-lg">
+                {referralCode}
+              </div>
+              <Button onClick={copyReferralCode} size="icon" variant="outline">
+                <Share2 size={18} />
+              </Button>
             </div>
-          </div>
-          
-          <div className="bg-primary/10 p-4 rounded-md mb-4">
-            <h3 className="font-bold mb-2">How it works</h3>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-              <li>Share your unique referral code with friends</li>
-              <li>They enter your code when registering a new account</li>
-              <li>Once they make their first purchase or play a session, you'll earn 100 loyalty points</li>
-              <li>There's no limit to how many friends you can refer!</li>
-            </ol>
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col sm:flex-row gap-3">
-          <Button 
-            onClick={copyReferralLink} 
-            className="w-full sm:w-auto flex items-center gap-2 bg-cuephoria-orange hover:bg-cuephoria-orange/90"
-          >
-            {copied ? <Check size={18} /> : <Copy size={18} />}
-            {copied ? 'Copied!' : 'Copy Referral Link'}
-          </Button>
-          <Button 
-            onClick={shareReferral}
-            variant="outline"
-            className="w-full sm:w-auto flex items-center gap-2 border-cuephoria-orange/30 text-cuephoria-orange hover:bg-cuephoria-orange/10"
-          >
-            <Share2 size={18} />
-            Share with Friends
-          </Button>
-        </CardFooter>
-      </Card>
+            
+            <div className="mt-4 bg-primary/10 p-3 rounded-md">
+              <p className="text-sm flex items-center gap-2">
+                <Award size={16} className="text-primary flex-shrink-0" />
+                <span>Earn 100 points when your friend signs up with your code!</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Refer a Friend</CardTitle>
+            <CardDescription>Send an invitation to your friends by email</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <label htmlFor="friendEmail" className="text-sm font-medium">
+                Friend's Email Address
+              </label>
+              <Input
+                id="friendEmail"
+                type="email"
+                placeholder="Enter your friend's email"
+                value={friendEmail}
+                onChange={(e) => setFriendEmail(e.target.value)}
+              />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              className="w-full" 
+              onClick={handleReferFriend} 
+              disabled={isSending || !friendEmail}
+            >
+              {isSending ? (
+                <>
+                  <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Sending Invitation...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2" size={18} />
+                  Send Invitation
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Your Referrals</CardTitle>
+          <CardTitle>Referred Friends</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
             </div>
-          ) : referrals.length > 0 ? (
+          ) : referredFriends.length > 0 ? (
             <div className="space-y-4">
-              {referrals.map((referral) => (
-                <div key={referral.id} className="flex justify-between items-center border-b border-border pb-4 last:border-0">
-                  <div>
-                    <p className="font-medium">{referral.referredName}</p>
-                    <p className="text-sm text-muted-foreground">{referral.referredEmail}</p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Clock size={12} />
-                      <span>{referral.createdAt.toLocaleDateString()}</span>
+              {referredFriends.map((friend) => (
+                <div key={friend.customer_id} className="p-4 border border-border rounded-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-muted rounded-full w-10 h-10 flex items-center justify-center">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <p className="font-medium">{friend.name}</p>
+                        <p className="text-sm text-muted-foreground">{friend.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium sm:text-right">
+                      {friend.status === 'completed' ? (
+                        <div className="text-green-500 flex items-center gap-1">
+                          <CheckCircle size={14} />
+                          <span>Completed</span>
+                        </div>
+                      ) : (
+                        <div className="text-amber-500 flex items-center gap-1">
+                          <AlertCircle size={14} />
+                          <span>Pending</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      referral.status === 'completed' 
-                        ? 'bg-green-500/20 text-green-500' 
-                        : 'bg-yellow-500/20 text-yellow-500'
-                    }`}>
-                      {referral.status === 'completed' ? 'Completed' : 'Pending'}
+                  <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock size={12} />
+                      <span>Invited: {friend.joinDate.toLocaleDateString()}</span>
                     </div>
-                    {referral.pointsAwarded > 0 && (
-                      <span className="text-sm text-green-500 mt-1">
-                        +{referral.pointsAwarded} points
-                      </span>
+                    {friend.status === 'completed' && (
+                      <div className="flex items-center gap-1 text-green-500">
+                        <Award size={12} />
+                        <span>+{friend.pointsAwarded} points earned</span>
+                      </div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Users size={48} className="mx-auto text-muted-foreground mb-3" />
-              <p className="mb-2">You haven't referred anyone yet.</p>
-              <p className="text-sm text-muted-foreground">Share your referral code to start earning points!</p>
+            <div className="text-center py-8 text-muted-foreground">
+              <p className="mb-2">You haven't referred any friends yet.</p>
+              <p className="text-sm">Share your referral code to start earning rewards!</p>
             </div>
           )}
         </CardContent>

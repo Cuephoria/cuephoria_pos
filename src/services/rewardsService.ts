@@ -1,105 +1,46 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { Reward } from '@/types/customer.types';
 
-export const getRewards = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('*')
-      .eq('active', true)
-      .order('points_required', { ascending: true });
-      
-    if (error) {
-      console.error('Error fetching rewards:', error);
-      return [];
+// Mock rewards
+export const getAvailableRewards = async (customerId: string): Promise<Reward[]> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return [
+    {
+      id: "reward-1",
+      name: "Free Drink",
+      description: "Redeem for a free soft drink",
+      points_required: 50,
+      image: "/lovable-uploads/1ce327a1-4c4e-4a4f-9887-ca76023e50e9.png",
+      active: true,
+      created_at: new Date()
+    },
+    {
+      id: "reward-2",
+      name: "Free Hour of Play",
+      description: "Redeem for a free hour on any gaming station",
+      points_required: 100,
+      image: "/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png",
+      active: true,
+      created_at: new Date()
+    },
+    {
+      id: "reward-3",
+      name: "Exclusive Tournament Entry",
+      description: "Free entry to our monthly tournament",
+      points_required: 200,
+      active: true,
+      created_at: new Date()
     }
-    
-    return data.map(reward => ({
-      id: reward.id,
-      name: reward.name,
-      description: reward.description,
-      pointsRequired: reward.points_required,
-      image: reward.image || undefined,
-      active: reward.active,
-      createdAt: new Date(reward.created_at)
-    }));
-  } catch (error) {
-    console.error('Error in getRewards:', error);
-    return [];
-  }
+  ];
 };
 
-export const redeemReward = async (rewardId: string, customerId: string) => {
-  try {
-    // Get reward details
-    const { data: reward, error: rewardError } = await supabase
-      .from('rewards')
-      .select('*')
-      .eq('id', rewardId)
-      .single();
-      
-    if (rewardError || !reward) {
-      console.error('Error fetching reward:', rewardError);
-      return { success: false, message: 'Reward not found' };
-    }
-    
-    // Get customer
-    const { data: customer, error: customerError } = await supabase
-      .from('customers')
-      .select('loyalty_points')
-      .eq('id', customerId)
-      .single();
-      
-    if (customerError || !customer) {
-      console.error('Error fetching customer:', customerError);
-      return { success: false, message: 'Customer not found' };
-    }
-    
-    // Check if customer has enough points
-    if (customer.loyalty_points < reward.points_required) {
-      return { 
-        success: false, 
-        message: `Not enough points. You need ${reward.points_required} points but have ${customer.loyalty_points}.` 
-      };
-    }
-    
-    // Begin transaction
-    const { error: pointsError } = await supabase
-      .from('customers')
-      .update({ 
-        loyalty_points: customer.loyalty_points - reward.points_required 
-      })
-      .eq('id', customerId);
-      
-    if (pointsError) {
-      console.error('Error updating customer points:', pointsError);
-      return { success: false, message: 'Failed to redeem reward' };
-    }
-    
-    // Create transaction record
-    const { error: transactionError } = await supabase
-      .from('loyalty_transactions')
-      .insert([{
-        customer_id: customerId,
-        points: -reward.points_required,
-        source: 'reward',
-        description: `Redeemed reward: ${reward.name}`
-      }]);
-      
-    if (transactionError) {
-      console.error('Error creating transaction record:', transactionError);
-      // We would need to rollback the points in a real system
-    }
-    
-    return { 
-      success: true, 
-      message: `Successfully redeemed ${reward.name}`,
-      rewardName: reward.name,
-      pointsUsed: reward.points_required
-    };
-  } catch (error) {
-    console.error('Error in redeemReward:', error);
-    return { success: false, message: 'An error occurred while redeeming the reward' };
-  }
+// Mock reward redemption
+export const redeemReward = async (customerId: string, rewardId: string): Promise<boolean> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Mock successful redemption
+  return true;
 };

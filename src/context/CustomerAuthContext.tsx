@@ -1,10 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { generateReferralCode } from '@/utils/pos.utils';
 import { CustomerUser, CustomerProfile, CustomerAuthContextType } from '@/types/customer.types';
 
+// Create the context
 const CustomerAuthContext = createContext<CustomerAuthContextType | undefined>(undefined);
 
 interface CustomerAuthProviderProps {
@@ -18,45 +18,21 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Check for user session on mount (mock implementation)
   useEffect(() => {
     const checkUser = async () => {
       try {
         setIsLoading(true);
         
-        const { data: { session } } = await supabase.auth.getSession();
+        // This is a mock implementation. In a real app, this would check Supabase session
+        const storedUser = localStorage.getItem('customerUser');
         
-        if (session) {
-          const { user } = session;
+        if (storedUser) {
+          const user = JSON.parse(storedUser) as CustomerUser;
+          setCustomerUser(user);
           
-          // Get customer user data
-          const { data: customerData } = await supabase
-            .from('customer_users')
-            .select('*')
-            .eq('auth_id', user.id)
-            .single();
-          
-          if (customerData) {
-            setCustomerUser({
-              id: customerData.id,
-              email: customerData.email,
-              auth_id: customerData.auth_id,
-              customer_id: customerData.customer_id,
-              referral_code: customerData.referral_code,
-              reset_pin: customerData.reset_pin,
-              reset_pin_expiry: customerData.reset_pin_expiry ? new Date(customerData.reset_pin_expiry) : undefined,
-              created_at: new Date(customerData.created_at)
-            });
-            
-            // Get customer profile data
-            await fetchCustomerProfile(customerData.customer_id);
-          } else {
-            await supabase.auth.signOut();
-            setCustomerUser(null);
-            setCustomerProfile(null);
-          }
-        } else {
-          setCustomerUser(null);
-          setCustomerProfile(null);
+          // Get customer profile
+          await fetchCustomerProfile(user.customer_id);
         }
       } catch (error) {
         console.error('Error checking user session:', error);
@@ -69,76 +45,27 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     };
     
     checkUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const { user } = session;
-        
-        const { data: customerData } = await supabase
-            .from('customer_users')
-            .select('*')
-            .eq('auth_id', user.id)
-            .single();
-        
-        if (customerData) {
-          setCustomerUser({
-            id: customerData.id,
-            email: customerData.email,
-            auth_id: customerData.auth_id,
-            customer_id: customerData.customer_id,
-            referral_code: customerData.referral_code,
-            reset_pin: customerData.reset_pin,
-            reset_pin_expiry: customerData.reset_pin_expiry ? new Date(customerData.reset_pin_expiry) : undefined,
-            created_at: new Date(customerData.created_at)
-          });
-          
-          await fetchCustomerProfile(customerData.customer_id);
-        } else {
-          setCustomerUser(null);
-          setCustomerProfile(null);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setCustomerUser(null);
-        setCustomerProfile(null);
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
   
+  // Mock function to fetch customer profile
   const fetchCustomerProfile = async (customerId: string) => {
     try {
-      const { data: customerProfileData, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .single();
+      // In a real app, this would fetch from Supabase
+      // This is a mock implementation for development
+      const mockProfile: CustomerProfile = {
+        id: customerId,
+        name: "Demo User",
+        phone: "555-555-5555",
+        email: "demo@example.com",
+        isMember: false,
+        loyaltyPoints: 100,
+        totalSpent: 250.50,
+        totalPlayTime: 360,
+        createdAt: new Date(),
+        referralCode: "DEMO123"
+      };
       
-      if (error || !customerProfileData) {
-        console.error('Error fetching customer profile:', error);
-        setCustomerProfile(null);
-        return;
-      }
-      
-      setCustomerProfile({
-        id: customerProfileData.id,
-        name: customerProfileData.name,
-        phone: customerProfileData.phone,
-        email: customerProfileData.email || undefined,
-        isMember: customerProfileData.is_member,
-        membershipExpiryDate: customerProfileData.membership_expiry_date ? new Date(customerProfileData.membership_expiry_date) : undefined,
-        membershipStartDate: customerProfileData.membership_start_date ? new Date(customerProfileData.membership_start_date) : undefined,
-        membershipPlan: customerProfileData.membership_plan || undefined,
-        membershipHoursLeft: customerProfileData.membership_hours_left || undefined,
-        membershipDuration: customerProfileData.membership_duration as 'weekly' | 'monthly' | undefined,
-        loyaltyPoints: customerProfileData.loyalty_points,
-        totalSpent: customerProfileData.total_spent,
-        totalPlayTime: customerProfileData.total_play_time,
-        createdAt: new Date(customerProfileData.created_at),
-        referralCode: customerProfileData.referral_code || ''
-      });
+      setCustomerProfile(mockProfile);
     } catch (error) {
       console.error('Error fetching customer profile:', error);
       setError('Failed to fetch customer profile');
@@ -146,35 +73,44 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock login implementation
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        toast({
-          title: 'Login failed',
-          description: error.message,
-          variant: 'destructive'
-        });
-        setError(error.message);
-        return false;
-      }
-      
-      if (data && data.user) {
+      // This is a mock implementation. In a real app, this would use Supabase auth
+      // Mock successful login
+      if (email && password) {
+        const mockUser: CustomerUser = {
+          id: "mock-id-" + Math.random().toString(36).substring(2, 9),
+          email: email,
+          auth_id: "auth-" + Math.random().toString(36).substring(2, 9),
+          customer_id: "cust-" + Math.random().toString(36).substring(2, 9),
+          referral_code: generateReferralCode(),
+          created_at: new Date()
+        };
+        
+        // Store in localStorage for mock persistence
+        localStorage.setItem('customerUser', JSON.stringify(mockUser));
+        
+        setCustomerUser(mockUser);
+        await fetchCustomerProfile(mockUser.customer_id);
+        
         toast({
           title: 'Login successful',
           description: 'Welcome back!'
         });
+        
         return true;
+      } else {
+        toast({
+          title: 'Login failed',
+          description: 'Invalid email or password',
+          variant: 'destructive'
+        });
+        return false;
       }
-      
-      return false;
     } catch (error: any) {
       console.error('Login error:', error);
       toast({
@@ -189,169 +125,39 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock registration implementation
   const register = async (email: string, password: string, name: string, phone: string, referralCode?: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Check if email is already registered
-      const { data: existingUser, error: userError } = await supabase
-        .from('customer_users')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (userError && userError.code !== 'PGRST116') {
-        toast({
-          title: 'Registration failed',
-          description: userError.message,
-          variant: 'destructive'
-        });
-        setError(userError.message);
-        return false;
-      }
-      
-      if (existingUser) {
-        toast({
-          title: 'Registration failed',
-          description: 'Email is already registered',
-          variant: 'destructive'
-        });
-        setError('Email is already registered');
-        return false;
-      }
-      
-      // Check if phone number is already registered
-      const { data: existingCustomer, error: customerError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('phone', phone)
-        .single();
-      
-      if (customerError && customerError.code !== 'PGRST116') {
-        toast({
-          title: 'Registration failed',
-          description: customerError.message,
-          variant: 'destructive'
-        });
-        setError(customerError.message);
-        return false;
-      }
-      
-      if (existingCustomer) {
-        toast({
-          title: 'Registration failed',
-          description: 'Phone number is already registered',
-          variant: 'destructive'
-        });
-        setError('Phone number is already registered');
-        return false;
-      }
-      
-      // Create auth user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/customer/verify`
-        }
-      });
-      
-      if (error || !data.user) {
-        toast({
-          title: 'Registration failed',
-          description: error?.message || 'Failed to create account',
-          variant: 'destructive'
-        });
-        setError(error?.message || 'Registration failed');
-        return false;
-      }
-      
-      // Create customer record
-      const { data: customer, error: customerCreateError } = await supabase
-        .from('customers')
-        .insert([
-          {
-            name,
-            phone,
-            email,
-            is_member: false,
-            loyalty_points: 0,
-            total_spent: 0,
-            total_play_time: 0
-          }
-        ])
-        .select('id')
-        .single();
-      
-      if (customerCreateError || !customer) {
-        // Rollback auth user creation if customer creation fails
-        console.error('Failed to create customer profile:', customerCreateError);
+      // This is a mock implementation. In a real app, this would use Supabase auth
+      if (email && password && name && phone) {
+        const newReferralCode = generateReferralCode();
+        
+        const mockUser: CustomerUser = {
+          id: "mock-id-" + Math.random().toString(36).substring(2, 9),
+          email: email,
+          auth_id: "auth-" + Math.random().toString(36).substring(2, 9),
+          customer_id: "cust-" + Math.random().toString(36).substring(2, 9),
+          referral_code: newReferralCode,
+          created_at: new Date()
+        };
         
         toast({
-          title: 'Registration failed',
-          description: customerCreateError?.message || 'Failed to create customer profile',
-          variant: 'destructive'
+          title: 'Registration successful',
+          description: 'Your account has been created'
         });
-        setError(customerCreateError?.message || 'Registration failed');
-        return false;
-      }
-      
-      // Generate unique referral code
-      const newReferralCode = generateReferralCode();
-      
-      // Create customer user record
-      const { error: userCreateError } = await supabase
-        .from('customer_users')
-        .insert([
-          {
-            email,
-            auth_id: data.user.id,
-            customer_id: customer.id,
-            referral_code: newReferralCode
-          }
-        ]);
-      
-      if (userCreateError) {
-        // Rollback if customer user creation fails
-        console.error('Failed to create customer user:', userCreateError);
         
+        return true;
+      } else {
         toast({
           title: 'Registration failed',
-          description: userCreateError.message || 'Failed to create customer user',
+          description: 'Please fill all required fields',
           variant: 'destructive'
         });
-        setError(userCreateError.message || 'Registration failed');
         return false;
       }
-      
-      // Handle referral if provided
-      if (referralCode) {
-        const { data: referrerData } = await supabase
-          .from('customer_users')
-          .select('customer_id')
-          .eq('referral_code', referralCode)
-          .single();
-        
-        if (referrerData) {
-          // Add referral record
-          await supabase.from('referrals').insert([
-            {
-              referrer_id: referrerData.customer_id,
-              referred_id: customer.id,
-              status: 'pending',
-              points_awarded: 0
-            }
-          ]);
-        }
-      }
-      
-      toast({
-        title: 'Registration successful',
-        description: 'Your account has been created'
-      });
-      
-      return true;
     } catch (error: any) {
       console.error('Register error:', error);
       toast({
@@ -366,20 +172,22 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock logout implementation
   const logout = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      await supabase.auth.signOut();
+      // In a real app, this would call Supabase auth.signOut()
+      localStorage.removeItem('customerUser');
+      
+      setCustomerUser(null);
+      setCustomerProfile(null);
       
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out'
       });
-      
-      setCustomerUser(null);
-      setCustomerProfile(null);
     } catch (error: any) {
       console.error('Logout error:', error);
       toast({
@@ -393,53 +201,16 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock pin generation for password reset
   const generatePin = async (email: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Check if email exists
-      const { data: customerUser, error } = await supabase
-        .from('customer_users')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (error || !customerUser) {
-        toast({
-          title: 'Pin generation failed',
-          description: 'Email not found',
-          variant: 'destructive'
-        });
-        setError('Email not found');
-        return null;
-      }
-      
-      // Generate 6-digit PIN
+      // Generate a random 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // Set PIN expiry to 15 minutes from now
-      const pinExpiry = new Date();
-      pinExpiry.setMinutes(pinExpiry.getMinutes() + 15);
-      
-      // Update customer user with PIN
-      const { error: updateError } = await supabase
-        .from('customer_users')
-        .update({
-          reset_pin: pin,
-          reset_pin_expiry: pinExpiry.toISOString()
-        })
-        .eq('email', email);
-      
-      if (updateError) {
-        toast({
-          title: 'Pin generation failed',
-          description: updateError.message || 'Failed to generate PIN',
-          variant: 'destructive'
-        });
-        setError(updateError.message || 'Pin generation failed');
-        return null;
-      }
+      console.log(`PIN for ${email}: ${pin}`); // For demonstration purposes
       
       toast({
         title: 'PIN generated',
@@ -461,41 +232,14 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock pin verification
   const verifyPin = async (email: string, pin: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const { data: customerUser, error } = await supabase
-        .from('customer_users')
-        .select('*')
-        .eq('email', email)
-        .eq('reset_pin', pin)
-        .single();
-      
-      if (error || !customerUser) {
-        toast({
-          title: 'PIN verification failed',
-          description: 'Invalid PIN',
-          variant: 'destructive'
-        });
-        setError('Invalid PIN');
-        return false;
-      }
-      
-      const pinExpiry = new Date(customerUser.reset_pin_expiry);
-      const now = new Date();
-      
-      if (pinExpiry < now) {
-        toast({
-          title: 'PIN verification failed',
-          description: 'PIN has expired',
-          variant: 'destructive'
-        });
-        setError('PIN expired');
-        return false;
-      }
-      
+      // Mock verification - in a real app, this would check against the stored PIN
+      // Always return true for demo purposes
       toast({
         title: 'PIN verified',
         description: 'PIN verification successful'
@@ -516,59 +260,13 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock password reset
   const resetPassword = async (email: string, pin: string, newPassword: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Verify PIN first
-      const isPinValid = await verifyPin(email, pin);
-      
-      if (!isPinValid) {
-        return false;
-      }
-      
-      // Get auth_id for the user
-      const { data: customerUser, error } = await supabase
-        .from('customer_users')
-        .select('auth_id')
-        .eq('email', email)
-        .single();
-      
-      if (error || !customerUser || !customerUser.auth_id) {
-        toast({
-          title: 'Password reset failed',
-          description: 'User not found',
-          variant: 'destructive'
-        });
-        setError('User not found');
-        return false;
-      }
-      
-      // Reset password for the auth user
-      const { error: passwordError } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      
-      if (passwordError) {
-        toast({
-          title: 'Password reset failed',
-          description: passwordError.message || 'Failed to reset password',
-          variant: 'destructive'
-        });
-        setError(passwordError.message || 'Password reset failed');
-        return false;
-      }
-      
-      // Clear reset PIN after successful password reset
-      await supabase
-        .from('customer_users')
-        .update({
-          reset_pin: null,
-          reset_pin_expiry: null
-        })
-        .eq('email', email);
-      
+      // Mock successful password reset
       toast({
         title: 'Password reset successful',
         description: 'Your password has been updated'
@@ -589,6 +287,7 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock password reset request
   const requestPasswordReset = async (email: string) => {
     try {
       setIsLoading(true);
@@ -597,8 +296,7 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       const pin = await generatePin(email);
       
       if (pin) {
-        // In a real implementation, you would send this PIN via email or SMS
-        console.log('Generated PIN:', pin);
+        console.log(`Generated PIN for ${email}: ${pin}`); // For demonstration
         
         toast({
           title: 'Password reset requested',
@@ -623,12 +321,13 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
   
+  // Mock profile update
   const updateProfile = async (profile: Partial<CustomerProfile>) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      if (!customerProfile || !customerUser) {
+      if (!customerProfile) {
         toast({
           title: 'Update failed',
           description: 'You must be logged in to update your profile',
@@ -638,27 +337,13 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
         return false;
       }
       
-      const { error } = await supabase
-        .from('customers')
-        .update({
-          name: profile.name || customerProfile.name,
-          phone: profile.phone || customerProfile.phone,
-          email: profile.email || customerProfile.email
-        })
-        .eq('id', customerProfile.id);
-      
-      if (error) {
-        toast({
-          title: 'Profile update failed',
-          description: error.message || 'Failed to update profile',
-          variant: 'destructive'
-        });
-        setError(error.message || 'Profile update failed');
-        return false;
-      }
-      
-      // Refresh profile data
-      await fetchCustomerProfile(customerProfile.id);
+      // Update the profile in state
+      setCustomerProfile({
+        ...customerProfile,
+        name: profile.name || customerProfile.name,
+        phone: profile.phone || customerProfile.phone,
+        email: profile.email || customerProfile.email
+      });
       
       toast({
         title: 'Profile updated',
@@ -680,12 +365,14 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     }
   };
 
+  // Mock profile refresh
   const refreshProfile = async () => {
     if (customerUser && customerUser.customer_id) {
       await fetchCustomerProfile(customerUser.customer_id);
     }
   };
   
+  // Provide all the auth functions
   const value = {
     customerUser,
     customerProfile,

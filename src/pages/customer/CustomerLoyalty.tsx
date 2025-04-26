@@ -5,18 +5,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { getLoyaltyTransactions } from '@/services/customerService';
 import { ArrowUp, ArrowDown, Clock } from 'lucide-react';
-
-interface LoyaltyTransactionDisplay {
-  id: string;
-  points: number;
-  source: string;
-  description: string;
-  createdAt: Date;
-}
+import { LoyaltyTransaction } from '@/types/customer.types';
 
 const CustomerLoyalty = () => {
   const { customerUser, customerProfile } = useCustomerAuth();
-  const [transactions, setTransactions] = useState<LoyaltyTransactionDisplay[]>([]);
+  const [transactions, setTransactions] = useState<LoyaltyTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -110,7 +103,7 @@ const CustomerLoyalty = () => {
                     <p className="text-sm text-muted-foreground">{transaction.description}</p>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <Clock size={12} />
-                      <span>{transaction.createdAt.toLocaleString()}</span>
+                      <span>{new Date(transaction.created_at).toLocaleString()}</span>
                     </div>
                   </div>
                   <div className={`flex items-center gap-1 ${transaction.points > 0 ? 'text-green-500' : 'text-red-500'}`}>
