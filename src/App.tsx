@@ -15,7 +15,7 @@ import NotFound from './pages/NotFound';
 import { Suspense } from 'react';
 import { POSProvider } from './context/POSContext';
 import AppSidebar from './components/AppSidebar';
-import { CustomerAuthProvider } from './context/CustomerAuthContext';
+import { CustomerAuthProvider, useCustomerAuth } from './context/CustomerAuthContext';
 import { useEffect, useState } from 'react';
 import { useToast } from './hooks/use-toast';
 import { ExpenseProvider } from './context/ExpenseContext';

@@ -47,7 +47,7 @@ const AppSidebar = () => {
       )}
     >
       <div className={cn("p-4 flex items-center", collapsed ? "justify-center" : "justify-between")}>
-        {!collapsed && <Logo size="small" />}
+        {!collapsed && <Logo size="sm" />}
         <Button
           variant="ghost"
           size="icon"
