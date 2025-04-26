@@ -1,10 +1,11 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { generateReferralCode } from '@/utils/pos.utils';
 import { CustomerUser, CustomerProfile, CustomerAuthContextType } from '@/types/customer.types';
 import { useCustomers } from '@/hooks/useCustomers';
 import { Customer } from '@/types/pos.types';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
 
 // Create the context
 const CustomerAuthContext = createContext<CustomerAuthContextType | undefined>(undefined);
@@ -21,39 +22,52 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
   const { toast } = useToast();
   const { addCustomer, customers } = useCustomers([]);
 
-  // Check for user session on mount (mock implementation)
+  // Initialize auth state
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        setIsLoading(true);
-        
-        // This is a mock implementation using localStorage instead of Supabase
-        const storedUser = localStorage.getItem('customerUser');
-        
-        if (storedUser) {
-          const user = JSON.parse(storedUser) as CustomerUser;
-          setCustomerUser(user);
-          
-          // Get customer profile
-          await fetchCustomerProfile(user.customer_id);
-        }
-      } catch (error) {
-        console.error('Error checking user session:', error);
-        setError('Failed to authenticate user');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        await fetchCustomerUser(session.user);
+      } else {
         setCustomerUser(null);
         setCustomerProfile(null);
-      } finally {
-        setIsLoading(false);
       }
+    });
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchCustomerUser(session.user);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
     };
-    
-    checkUser();
   }, []);
-  
-  // Fetch customer profile from the POS customers
+
+  const fetchCustomerUser = async (authUser: User) => {
+    try {
+      const { data: customerUserData, error: customerUserError } = await supabase
+        .from('customer_users')
+        .select('*')
+        .eq('auth_id', authUser.id)
+        .single();
+
+      if (customerUserError) throw customerUserError;
+
+      if (customerUserData) {
+        setCustomerUser(customerUserData as CustomerUser);
+        await fetchCustomerProfile(customerUserData.customer_id);
+      }
+    } catch (error) {
+      console.error('Error fetching customer user:', error);
+      setError('Failed to fetch user data');
+    }
+  };
+
   const fetchCustomerProfile = async (customerId: string) => {
     try {
-      // Find the customer in the POS customers array
       const customer = customers.find(c => c.id === customerId);
       
       if (customer) {
@@ -96,147 +110,85 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
     } catch (error) {
       console.error('Error fetching customer profile:', error);
       setError('Failed to fetch customer profile');
-      setCustomerProfile(null);
     }
   };
-  
-  // Login implementation
+
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Find user with matching email and password
-      const foundUser = await findUserByEmailAndPassword(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (foundUser) {
-        // Store in localStorage for persistence
-        localStorage.setItem('customerUser', JSON.stringify(foundUser));
-        
-        setCustomerUser(foundUser);
-        await fetchCustomerProfile(foundUser.customer_id);
-        
-        toast({
-          title: 'Login successful',
-          description: 'Welcome back!'
-        });
-        
-        return true;
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password',
-          variant: 'destructive'
-        });
-        return false;
-      }
+      if (error) throw error;
+      
+      return true;
     } catch (error: any) {
       console.error('Login error:', error);
       toast({
-        title: 'Login error',
-        description: error.message || 'An unexpected error occurred',
+        title: 'Login failed',
+        description: error.message,
         variant: 'destructive'
       });
-      setError(error.message || 'Login failed');
+      setError(error.message);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Helper function to find user by email and password
-  const findUserByEmailAndPassword = async (email: string, password: string): Promise<CustomerUser | null> => {
-    // Mock implementation - in a real app, this would validate against stored credentials
-    const usersJson = localStorage.getItem('customerUsers');
-    if (usersJson) {
-      const users: CustomerUser[] = JSON.parse(usersJson);
-      const user = users.find(u => u.email === email);
-      
-      if (user) {
-        // In a real app, you would compare hashed passwords
-        const storedPassword = localStorage.getItem(`password_${user.id}`);
-        if (storedPassword === password) {
-          return user;
-        }
-      }
-    }
-    
-    // For demo purposes, accept a demo account
-    if (email === 'demo@example.com' && password === 'password') {
-      return {
-        id: "mock-id-demo123",
-        email: email,
-        auth_id: "auth-demo123",
-        customer_id: "cust-demo123",
-        referral_code: "DEMO123",
-        reset_pin: "123456",
-        reset_pin_expiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-        created_at: new Date()
-      };
-    }
-    
-    return null;
-  };
-  
-  // Registration implementation
-  const register = async (email: string, password: string, name: string, phone: string, pin: string, referralCode?: string) => {
+
+  const register = async (
+    email: string, 
+    password: string, 
+    name: string, 
+    phone: string, 
+    pin: string, 
+    referralCode?: string
+  ) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Check if email already exists
-      const existingUser = await findUserByEmail(email);
-      if (existingUser) {
-        toast({
-          title: 'Registration failed',
-          description: 'Email already in use',
-          variant: 'destructive'
-        });
-        return false;
-      }
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
       
-      // Create a customer in the POS system
-      const customerId = `cust-${Math.random().toString(36).substring(2, 9)}`;
-      
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user');
+
+      // 2. Create customer record
       const newCustomer: Omit<Customer, 'id' | 'createdAt'> = {
-        name: name,
-        phone: phone,
-        email: email,
+        name,
+        phone,
+        email,
         isMember: false,
-        loyaltyPoints: referralCode ? 50 : 0, // Bonus points if using referral code
+        loyaltyPoints: referralCode ? 50 : 0,
         totalSpent: 0,
         totalPlayTime: 0
       };
       
-      // Add the customer to the POS system
       const createdCustomer = await addCustomer(newCustomer);
-      
-      if (!createdCustomer) {
-        throw new Error("Failed to create customer record");
-      }
-      
-      const newReferralCode = generateReferralCode();
-      
-      const newUser: CustomerUser = {
-        id: `user-${Math.random().toString(36).substring(2, 9)}`,
-        email: email,
-        auth_id: `auth-${Math.random().toString(36).substring(2, 9)}`,
-        customer_id: createdCustomer.id,
-        referral_code: newReferralCode,
-        reset_pin: pin,
-        reset_pin_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-        created_at: new Date()
-      };
-      
-      // Save user to localStorage
-      const usersJson = localStorage.getItem('customerUsers');
-      const users: CustomerUser[] = usersJson ? JSON.parse(usersJson) : [];
-      users.push(newUser);
-      localStorage.setItem('customerUsers', JSON.stringify(users));
-      
-      // Store password (in a real app, this would be hashed)
-      localStorage.setItem(`password_${newUser.id}`, password);
-      
+      if (!createdCustomer) throw new Error('Failed to create customer record');
+
+      // 3. Create customer user record
+      const { error: customerUserError } = await supabase
+        .from('customer_users')
+        .insert({
+          auth_id: authData.user.id,
+          customer_id: createdCustomer.id,
+          email,
+          referral_code: generateReferralCode(),
+          reset_pin: pin,
+          reset_pin_expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        });
+
+      if (customerUserError) throw customerUserError;
+
       toast({
         title: 'Registration successful',
         description: 'Your account has been created'
@@ -247,34 +199,23 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       console.error('Register error:', error);
       toast({
         title: 'Registration error',
-        description: error.message || 'An unexpected error occurred',
+        description: error.message,
         variant: 'destructive'
       });
-      setError(error.message || 'Registration failed');
+      setError(error.message);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Helper function to find user by email
-  const findUserByEmail = async (email: string): Promise<CustomerUser | null> => {
-    const usersJson = localStorage.getItem('customerUsers');
-    if (usersJson) {
-      const users: CustomerUser[] = JSON.parse(usersJson);
-      const user = users.find(u => u.email === email);
-      if (user) return user;
-    }
-    return null;
-  };
-  
-  // Logout implementation
+
   const logout = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      localStorage.removeItem('customerUser');
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       
       setCustomerUser(null);
       setCustomerProfile(null);
@@ -287,24 +228,38 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       console.error('Logout error:', error);
       toast({
         title: 'Logout error',
-        description: error.message || 'Failed to log out',
+        description: error.message,
         variant: 'destructive'
       });
-      setError(error.message || 'Logout failed');
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   // Verify PIN for password reset
   const verifyPin = async (email: string, pin: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const user = await findUserByEmail(email);
+      const { data, error } = await supabase
+        .from('customer_users')
+        .select('*')
+        .eq('email', email)
+        .eq('reset_pin', pin)
+        .single();
       
-      if (!user) {
+      if (error) {
+        toast({
+          title: 'PIN verification failed',
+          description: 'Invalid email or PIN',
+          variant: 'destructive'
+        });
+        return false;
+      }
+      
+      if (!data) {
         toast({
           title: 'PIN verification failed',
           description: 'User not found',
@@ -313,18 +268,9 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
         return false;
       }
       
-      if (user.reset_pin !== pin) {
-        toast({
-          title: 'PIN verification failed',
-          description: 'Invalid PIN',
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
       // Check if PIN has expired
       const now = new Date();
-      if (user.reset_pin_expiry && new Date(user.reset_pin_expiry) < now) {
+      if (data.reset_pin_expiry && new Date(data.reset_pin_expiry) < now) {
         toast({
           title: 'PIN verification failed',
           description: 'PIN has expired. Please request a new one',
@@ -359,36 +305,25 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       setIsLoading(true);
       setError(null);
       
-      const user = await findUserByEmail(email);
+      // Generate a random 6-digit PIN
+      const pin = Math.floor(100000 + Math.random() * 900000).toString();
       
-      if (!user) {
+      // Update user with new PIN
+      const { data, error } = await supabase
+        .from('customer_users')
+        .update({
+          reset_pin: pin,
+          reset_pin_expiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+        })
+        .eq('email', email);
+      
+      if (error) {
         toast({
           title: 'Error',
           description: 'User not found',
           variant: 'destructive'
         });
         return null;
-      }
-      
-      // Generate a random 6-digit PIN
-      const pin = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Update user with new PIN
-      const usersJson = localStorage.getItem('customerUsers');
-      if (usersJson) {
-        const users: CustomerUser[] = JSON.parse(usersJson);
-        const updatedUsers = users.map(u => {
-          if (u.id === user.id) {
-            return {
-              ...u,
-              reset_pin: pin,
-              reset_pin_expiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
-            };
-          }
-          return u;
-        });
-        
-        localStorage.setItem('customerUsers', JSON.stringify(updatedUsers));
       }
       
       console.log(`PIN for ${email}: ${pin}`); // For demonstration purposes
@@ -426,35 +361,31 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
         return false;
       }
       
-      const user = await findUserByEmail(email);
+      // Update password
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
       
-      if (!user) {
+      if (error) {
         toast({
           title: 'Error',
-          description: 'User not found',
+          description: 'Failed to reset password',
           variant: 'destructive'
         });
         return false;
       }
       
-      // Update password
-      localStorage.setItem(`password_${user.id}`, newPassword);
-      
       // Reset PIN after successful password change
-      const usersJson = localStorage.getItem('customerUsers');
-      if (usersJson) {
-        const users: CustomerUser[] = JSON.parse(usersJson);
-        const updatedUsers = users.map(u => {
-          if (u.id === user.id) {
-            return {
-              ...u,
-              reset_pin_expiry: new Date() // Expire the PIN
-            };
-          }
-          return u;
-        });
-        
-        localStorage.setItem('customerUsers', JSON.stringify(updatedUsers));
+      const { error: pinError } = await supabase
+        .from('customer_users')
+        .update({
+          reset_pin: null,
+          reset_pin_expiry: null
+        })
+        .eq('email', email);
+      
+      if (pinError) {
+        console.error('Failed to reset PIN:', pinError);
       }
       
       toast({
@@ -539,33 +470,37 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       
       // Update the user's email if it was changed
       if (profile.email && profile.email !== customerUser.email) {
-        const usersJson = localStorage.getItem('customerUsers');
-        if (usersJson) {
-          const users: CustomerUser[] = JSON.parse(usersJson);
-          const updatedUsers = users.map(u => {
-            if (u.id === customerUser.id) {
-              return {
-                ...u,
-                email: profile.email
-              };
-            }
-            return u;
+        const { data, error } = await supabase.auth.updateUser({
+          email: profile.email
+        });
+        
+        if (error) {
+          toast({
+            title: 'Update failed',
+            description: 'Failed to update email',
+            variant: 'destructive'
           });
-          
-          localStorage.setItem('customerUsers', JSON.stringify(updatedUsers));
-          
-          // Update the current user
-          setCustomerUser({
-            ...customerUser,
-            email: profile.email
-          });
-          
-          // Update the stored user
-          localStorage.setItem('customerUser', JSON.stringify({
-            ...customerUser,
-            email: profile.email
-          }));
+          return false;
         }
+      }
+      
+      // Update customer record
+      const { error: customerError } = await supabase
+        .from('customers')
+        .update({
+          name: profile.name || customerProfile.name,
+          phone: profile.phone || customerProfile.phone,
+          email: profile.email || customerProfile.email
+        })
+        .eq('id', customerUser.customer_id);
+      
+      if (customerError) {
+        toast({
+          title: 'Update failed',
+          description: 'Failed to update customer record',
+          variant: 'destructive'
+        });
+        return false;
       }
       
       toast({

@@ -127,6 +127,47 @@ export type Database = {
           },
         ]
       }
+      customer_users: {
+        Row: {
+          auth_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          email: string
+          id: string
+          referral_code: string | null
+          reset_pin: string | null
+          reset_pin_expiry: string | null
+        }
+        Insert: {
+          auth_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          email: string
+          id?: string
+          referral_code?: string | null
+          reset_pin?: string | null
+          reset_pin_expiry?: string | null
+        }
+        Update: {
+          auth_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string
+          id?: string
+          referral_code?: string | null
+          reset_pin?: string | null
+          reset_pin_expiry?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_users_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -216,6 +257,41 @@ export type Database = {
           notes?: string | null
         }
         Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          points: number
+          source: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          points: number
+          source: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          points?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
