@@ -1,7 +1,7 @@
 
 import { Promotion, PromotionValidationResponse } from '@/types/customer.types';
 
-// Mock promotions
+// Mock promotions with INR currency
 export const getActivePromotions = async (customerId: string): Promise<Promotion[]> => {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -26,12 +26,24 @@ export const getActivePromotions = async (customerId: string): Promise<Promotion
     {
       id: "promo-2",
       name: "Food & Beverage Combo",
-      description: "Get $5 off when you buy any food and beverage combo",
+      description: "Get ₹50 off when you buy any food and beverage combo",
       discount_type: "fixed",
-      discount_value: 5,
-      code: "COMBO5",
+      discount_value: 50,
+      code: "COMBO50",
       start_date: now,
       end_date: nextMonth,
+      active: true,
+      created_at: new Date()
+    },
+    {
+      id: "promo-3",
+      name: "Online Booking Discount",
+      description: "10% off on all online bookings",
+      discount_type: "percentage", 
+      discount_value: 10,
+      code: "ONLINE10",
+      start_date: now,
+      end_date: new Date(2025, 5, 30), // June 30, 2025
       active: true,
       created_at: new Date()
     }
@@ -60,12 +72,19 @@ export const validatePromoCode = async (promoCode: string, customerId: string): 
       discount_value: 10,
       message: "Promo code applied: 10% off"
     };
-  } else if (promoCode === "COMBO5") {
+  } else if (promoCode === "COMBO50") {
     return {
       valid: true,
       discount_type: "fixed",
-      discount_value: 5,
-      message: "Promo code applied: $5 off"
+      discount_value: 50,
+      message: "Promo code applied: ₹50 off"
+    };
+  } else if (promoCode === "ONLINE10") {
+    return {
+      valid: true,
+      discount_type: "percentage",
+      discount_value: 10,
+      message: "Promo code applied: 10% off"
     };
   } else {
     return {

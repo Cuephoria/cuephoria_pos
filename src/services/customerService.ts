@@ -13,7 +13,7 @@ export const getCustomerProfile = async (customerId: string): Promise<CustomerPr
     email: "demo@example.com",
     isMember: false,
     loyaltyPoints: 100,
-    totalSpent: 250.50,
+    totalSpent: 23802.50, // In INR
     totalPlayTime: 360,
     createdAt: new Date(),
     referralCode: "DEMO123"
@@ -41,8 +41,8 @@ export const getCustomerSessions = async (customerId: string): Promise<CustomerS
       startTime: yesterday,
       endTime: new Date(yesterday.getTime() + 2 * 60 * 60 * 1000), // 2 hours later
       duration: 120, // 2 hours in minutes
-      hourlyRate: 15,
-      totalCost: 30
+      hourlyRate: 150, // ₹150 per hour
+      totalCost: 300 // ₹300 total
     },
     {
       id: "session-2",
@@ -52,8 +52,8 @@ export const getCustomerSessions = async (customerId: string): Promise<CustomerS
       startTime: lastWeek,
       endTime: new Date(lastWeek.getTime() + 1.5 * 60 * 60 * 1000), // 1.5 hours later
       duration: 90, // 1.5 hours in minutes
-      hourlyRate: 12,
-      totalCost: 18
+      hourlyRate: 120, // ₹120 per hour
+      totalCost: 180 // ₹180 total
     },
     {
       id: "session-3",
@@ -61,7 +61,7 @@ export const getCustomerSessions = async (customerId: string): Promise<CustomerS
       stationName: "PS5 Station 1",
       stationType: "ps5",
       startTime: now,
-      hourlyRate: 15,
+      hourlyRate: 150, // ₹150 per hour
       totalCost: 0 // Active session
     }
   ];

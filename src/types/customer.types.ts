@@ -98,6 +98,23 @@ export interface CustomerSession {
   totalCost: number;
 }
 
+// Customer game statistics
+export interface GameStats {
+  averageScore: number;
+  winRate: number;
+  accuracy: number;
+  recentGames: RecentGame[];
+}
+
+// Recent game activity
+export interface RecentGame {
+  id: string;
+  type: 'Pool Match' | 'Practice Session' | 'Tournament';
+  result: string;
+  duration: number;
+  date: Date;
+}
+
 // Customer auth context type
 export interface CustomerAuthContextType {
   customerUser: CustomerUser | null;
@@ -105,7 +122,7 @@ export interface CustomerAuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, name: string, phone: string, referralCode?: string) => Promise<boolean>;
+  register: (email: string, password: string, name: string, phone: string, pin: string, referralCode?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   resetPassword: (email: string, pin: string, newPassword: string) => Promise<boolean>;
   requestPasswordReset: (email: string) => Promise<boolean>;

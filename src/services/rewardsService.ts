@@ -1,7 +1,7 @@
 
 import { Reward } from '@/types/customer.types';
 
-// Mock rewards
+// Mock rewards with INR currency
 export const getAvailableRewards = async (customerId: string): Promise<Reward[]> => {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -27,9 +27,17 @@ export const getAvailableRewards = async (customerId: string): Promise<Reward[]>
     },
     {
       id: "reward-3",
-      name: "Exclusive Tournament Entry",
-      description: "Free entry to our monthly tournament",
+      name: "₹200 Discount Voucher",
+      description: "Get ₹200 off on your next visit",
       points_required: 200,
+      active: true,
+      created_at: new Date()
+    },
+    {
+      id: "reward-4",
+      name: "Free Coaching Session",
+      description: "One free 30-minute coaching session with our pros",
+      points_required: 300,
       active: true,
       created_at: new Date()
     }

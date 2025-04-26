@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Users, KeyRound, Eye, EyeOff, Mail, ArrowRight, Phone, User, UserPlus } from 'lucide-react';
+import { Users, KeyRound, Eye, EyeOff, Mail, ArrowRight, Phone, User, UserPlus, LockKeyhole } from 'lucide-react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 
 const CustomerRegister = () => {
@@ -14,8 +14,10 @@ const CustomerRegister = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [animationClass, setAnimationClass] = useState('');
   const { register, customerUser } = useCustomerAuth();
@@ -37,7 +39,7 @@ const CustomerRegister = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password || !confirmPassword || !name || !phone) {
+    if (!email || !password || !confirmPassword || !name || !phone || !pin) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields',
@@ -55,10 +57,19 @@ const CustomerRegister = () => {
       return;
     }
     
+    if (pin.length < 4 || pin.length > 6) {
+      toast({
+        title: 'Error',
+        description: 'PIN must be between 4-6 digits',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      const success = await register(email, password, name, phone, referralCode);
+      const success = await register(email, password, name, phone, pin, referralCode);
       
       if (success) {
         toast({
@@ -76,6 +87,10 @@ const CustomerRegister = () => {
   
   const toggleShowPassword = () => {
     setShowPassword(!showPassword);
+  };
+  
+  const toggleShowPin = () => {
+    setShowPin(!showPin);
   };
   
   return (
@@ -197,6 +212,33 @@ const CustomerRegister = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-background/50 border-cuephoria-orange/30 focus-visible:ring-cuephoria-orange transition-all duration-300 hover:border-cuephoria-orange/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-orange/30 text-sm"
                 />
+              </div>
+              
+              <div className="space-y-2 group">
+                <label htmlFor="pin" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-orange group-hover:text-accent transition-colors duration-300">
+                  <LockKeyhole size={14} className="inline-block" />
+                  Security PIN
+                  <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-orange/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
+                </label>
+                <div className="relative">
+                  <Input
+                    id="pin"
+                    type={showPin ? "text" : "password"}
+                    placeholder="Create a 4-6 digit PIN for account recovery"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className="bg-background/50 border-cuephoria-orange/30 focus-visible:ring-cuephoria-orange transition-all duration-300 hover:border-cuephoria-orange/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-orange/30 text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleShowPin}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">This PIN will be used to reset your password if needed</p>
               </div>
               
               <div className="space-y-2 group">

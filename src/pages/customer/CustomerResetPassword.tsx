@@ -9,7 +9,7 @@ import { KeyRound, Mail, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-r
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 
 enum ResetStep {
-  RequestPin,
+  EnterEmail,
   EnterPin,
   SetNewPassword
 }
@@ -21,46 +21,17 @@ const CustomerResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(ResetStep.RequestPin);
+  const [currentStep, setCurrentStep] = useState(ResetStep.EnterEmail);
   const [animationClass, setAnimationClass] = useState('');
-  const { requestPasswordReset, verifyPin, resetPassword } = useCustomerAuth();
+  const { verifyPin, resetPassword } = useCustomerAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  const handleRequestPin = async () => {
-    if (!email) {
-      toast({
-        title: 'Error',
-        description: 'Please enter your email address',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      const success = await requestPasswordReset(email);
-      
-      if (success) {
-        toast({
-          title: 'PIN Sent',
-          description: 'Check your email for the verification PIN',
-        });
-        setCurrentStep(ResetStep.EnterPin);
-      }
-    } catch (error) {
-      console.error('Error requesting PIN:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   const handleVerifyPin = async () => {
-    if (!pin) {
+    if (!pin || !email) {
       toast({
         title: 'Error',
-        description: 'Please enter the verification PIN',
+        description: 'Please enter your email and security PIN',
         variant: 'destructive',
       });
       return;
@@ -129,7 +100,7 @@ const CustomerResetPassword = () => {
   
   const renderStepContent = () => {
     switch (currentStep) {
-      case ResetStep.RequestPin:
+      case ResetStep.EnterEmail:
         return (
           <>
             <CardContent className="space-y-4">
@@ -151,26 +122,20 @@ const CustomerResetPassword = () => {
               <div className="bg-amber-500/10 p-3 rounded-md">
                 <div className="flex items-center gap-2 text-amber-500 mb-1">
                   <AlertTriangle size={16} />
-                  <span className="font-medium">Note</span>
+                  <span className="font-medium">Security PIN Required</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  For this demo, PINs are displayed in the console since email sending is not implemented.
+                  You'll need to enter the security PIN you created during registration to reset your password.
                 </p>
               </div>
             </CardContent>
             
             <CardFooter className="flex-col space-y-4">
               <Button 
-                onClick={handleRequestPin} 
+                onClick={() => setCurrentStep(ResetStep.EnterPin)} 
                 className="w-full bg-cuephoria-orange hover:bg-cuephoria-orange/90" 
-                disabled={isLoading}
               >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    Sending PIN...
-                  </>
-                ) : 'Send Verification PIN'}
+                Continue
               </Button>
             </CardFooter>
           </>
@@ -183,25 +148,25 @@ const CustomerResetPassword = () => {
               <div className="space-y-2">
                 <label htmlFor="pin" className="text-sm font-medium flex items-center gap-2 text-cuephoria-orange">
                   <KeyRound size={14} className="inline-block" />
-                  Verification PIN
+                  Security PIN
                 </label>
                 <Input
                   id="pin"
-                  placeholder="Enter the 6-digit PIN from your email"
+                  placeholder="Enter your security PIN"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  className="bg-background/50 border-cuephoria-orange/30 focus-visible:ring-cuephoria-orange text-center tracking-widest"
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   maxLength={6}
+                  className="bg-background/50 border-cuephoria-orange/30 focus-visible:ring-cuephoria-orange text-center tracking-widest"
                 />
               </div>
               
               <div className="text-center">
                 <button 
                   type="button" 
-                  onClick={() => setCurrentStep(ResetStep.RequestPin)}
+                  onClick={() => setCurrentStep(ResetStep.EnterEmail)}
                   className="text-cuephoria-orange hover:underline text-sm"
                 >
-                  Change email or resend PIN
+                  Change email
                 </button>
               </div>
             </CardContent>
@@ -314,8 +279,8 @@ const CustomerResetPassword = () => {
           <CardHeader className="text-center relative z-10">
             <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Reset Password</CardTitle>
             <CardDescription className="text-muted-foreground">
-              {currentStep === ResetStep.RequestPin && "Enter your email to receive a verification PIN"}
-              {currentStep === ResetStep.EnterPin && "Enter the verification PIN from your email"}
+              {currentStep === ResetStep.EnterEmail && "Enter your email and security PIN to reset your password"}
+              {currentStep === ResetStep.EnterPin && "Enter your security PIN"}
               {currentStep === ResetStep.SetNewPassword && "Create a new password for your account"}
             </CardDescription>
           </CardHeader>
