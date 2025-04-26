@@ -17,6 +17,28 @@ export const generateId = (): string => {
   });
 };
 
+// Generate a unique referral code
+export const generateReferralCode = (): string => {
+  const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing characters like I, O, 0, 1
+  let result = '';
+  
+  // Generate first 3 characters (letters)
+  for (let i = 0; i < 3; i++) {
+    const letterChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    result += letterChars.charAt(Math.floor(Math.random() * letterChars.length));
+  }
+  
+  // Add a separator
+  result += '-';
+  
+  // Generate last 4 characters (alphanumeric)
+  for (let i = 0; i < 4; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  
+  return result;
+};
+
 // Export functions for CSV generation
 export const exportCustomersToCSV = (customers: Customer[]) => {
   let csvContent = "data:text/csv;charset=utf-8,";
