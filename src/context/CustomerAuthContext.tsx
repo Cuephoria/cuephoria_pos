@@ -75,10 +75,10 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
         const { user } = session;
         
         const { data: customerData } = await supabase
-          .from('customer_users')
-          .select('*')
-          .eq('auth_id', user.id)
-          .single();
+            .from('customer_users')
+            .select('*')
+            .eq('auth_id', user.id)
+            .single();
         
         if (customerData) {
           setCustomerUser({
@@ -110,33 +110,35 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
   
   const fetchCustomerProfile = async (customerId: string) => {
     try {
-      const { data: customerProfileData } = await supabase
+      const { data: customerProfileData, error } = await supabase
         .from('customers')
         .select('*')
         .eq('id', customerId)
         .single();
       
-      if (customerProfileData) {
-        setCustomerProfile({
-          id: customerProfileData.id,
-          name: customerProfileData.name,
-          phone: customerProfileData.phone,
-          email: customerProfileData.email || undefined,
-          isMember: customerProfileData.is_member,
-          membershipExpiryDate: customerProfileData.membership_expiry_date ? new Date(customerProfileData.membership_expiry_date) : undefined,
-          membershipStartDate: customerProfileData.membership_start_date ? new Date(customerProfileData.membership_start_date) : undefined,
-          membershipPlan: customerProfileData.membership_plan || undefined,
-          membershipHoursLeft: customerProfileData.membership_hours_left || undefined,
-          membershipDuration: customerProfileData.membership_duration as 'weekly' | 'monthly' | undefined,
-          loyaltyPoints: customerProfileData.loyalty_points,
-          totalSpent: customerProfileData.total_spent,
-          totalPlayTime: customerProfileData.total_play_time,
-          createdAt: new Date(customerProfileData.created_at),
-          referralCode: customerProfileData.referral_code || ''
-        });
-      } else {
+      if (error || !customerProfileData) {
+        console.error('Error fetching customer profile:', error);
         setCustomerProfile(null);
+        return;
       }
+      
+      setCustomerProfile({
+        id: customerProfileData.id,
+        name: customerProfileData.name,
+        phone: customerProfileData.phone,
+        email: customerProfileData.email || undefined,
+        isMember: customerProfileData.is_member,
+        membershipExpiryDate: customerProfileData.membership_expiry_date ? new Date(customerProfileData.membership_expiry_date) : undefined,
+        membershipStartDate: customerProfileData.membership_start_date ? new Date(customerProfileData.membership_start_date) : undefined,
+        membershipPlan: customerProfileData.membership_plan || undefined,
+        membershipHoursLeft: customerProfileData.membership_hours_left || undefined,
+        membershipDuration: customerProfileData.membership_duration as 'weekly' | 'monthly' | undefined,
+        loyaltyPoints: customerProfileData.loyalty_points,
+        totalSpent: customerProfileData.total_spent,
+        totalPlayTime: customerProfileData.total_play_time,
+        createdAt: new Date(customerProfileData.created_at),
+        referralCode: customerProfileData.referral_code || ''
+      });
     } catch (error) {
       console.error('Error fetching customer profile:', error);
       setError('Failed to fetch customer profile');
@@ -193,11 +195,21 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       setError(null);
       
       // Check if email is already registered
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: userError } = await supabase
         .from('customer_users')
         .select('*')
         .eq('email', email)
         .single();
+      
+      if (userError && userError.code !== 'PGRST116') {
+        toast({
+          title: 'Registration failed',
+          description: userError.message,
+          variant: 'destructive'
+        });
+        setError(userError.message);
+        return false;
+      }
       
       if (existingUser) {
         toast({
@@ -210,11 +222,21 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       }
       
       // Check if phone number is already registered
-      const { data: existingCustomer } = await supabase
+      const { data: existingCustomer, error: customerError } = await supabase
         .from('customers')
         .select('*')
         .eq('phone', phone)
         .single();
+      
+      if (customerError && customerError.code !== 'PGRST116') {
+        toast({
+          title: 'Registration failed',
+          description: customerError.message,
+          variant: 'destructive'
+        });
+        setError(customerError.message);
+        return false;
+      }
       
       if (existingCustomer) {
         toast({
@@ -246,7 +268,7 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       }
       
       // Create customer record
-      const { data: customer, error: customerError } = await supabase
+      const { data: customer, error: customerCreateError } = await supabase
         .from('customers')
         .insert([
           {
@@ -262,16 +284,16 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
         .select('id')
         .single();
       
-      if (customerError || !customer) {
+      if (customerCreateError || !customer) {
         // Rollback auth user creation if customer creation fails
-        await supabase.auth.admin.deleteUser(data.user.id);
+        console.error('Failed to create customer profile:', customerCreateError);
         
         toast({
           title: 'Registration failed',
-          description: customerError?.message || 'Failed to create customer profile',
+          description: customerCreateError?.message || 'Failed to create customer profile',
           variant: 'destructive'
         });
-        setError(customerError?.message || 'Registration failed');
+        setError(customerCreateError?.message || 'Registration failed');
         return false;
       }
       
@@ -279,7 +301,7 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       const newReferralCode = generateReferralCode();
       
       // Create customer user record
-      const { error: userError } = await supabase
+      const { error: userCreateError } = await supabase
         .from('customer_users')
         .insert([
           {
@@ -290,17 +312,16 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
           }
         ]);
       
-      if (userError) {
+      if (userCreateError) {
         // Rollback if customer user creation fails
-        await supabase.auth.admin.deleteUser(data.user.id);
-        await supabase.from('customers').delete().eq('id', customer.id);
+        console.error('Failed to create customer user:', userCreateError);
         
         toast({
           title: 'Registration failed',
-          description: userError.message || 'Failed to create customer user',
+          description: userCreateError.message || 'Failed to create customer user',
           variant: 'destructive'
         });
-        setError(userError.message || 'Registration failed');
+        setError(userCreateError.message || 'Registration failed');
         return false;
       }
       
@@ -378,13 +399,13 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       setError(null);
       
       // Check if email exists
-      const { data: customerUser } = await supabase
+      const { data: customerUser, error } = await supabase
         .from('customer_users')
         .select('*')
         .eq('email', email)
         .single();
       
-      if (!customerUser) {
+      if (error || !customerUser) {
         toast({
           title: 'Pin generation failed',
           description: 'Email not found',
@@ -445,14 +466,14 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       setIsLoading(true);
       setError(null);
       
-      const { data: customerUser } = await supabase
+      const { data: customerUser, error } = await supabase
         .from('customer_users')
         .select('*')
         .eq('email', email)
         .eq('reset_pin', pin)
         .single();
       
-      if (!customerUser) {
+      if (error || !customerUser) {
         toast({
           title: 'PIN verification failed',
           description: 'Invalid PIN',
@@ -508,13 +529,13 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       }
       
       // Get auth_id for the user
-      const { data: customerUser } = await supabase
+      const { data: customerUser, error } = await supabase
         .from('customer_users')
         .select('auth_id')
         .eq('email', email)
         .single();
       
-      if (!customerUser || !customerUser.auth_id) {
+      if (error || !customerUser || !customerUser.auth_id) {
         toast({
           title: 'Password reset failed',
           description: 'User not found',
@@ -525,17 +546,17 @@ export const CustomerAuthProvider = ({ children }: CustomerAuthProviderProps) =>
       }
       
       // Reset password for the auth user
-      const { error } = await supabase.auth.updateUser({
+      const { error: passwordError } = await supabase.auth.updateUser({
         password: newPassword
       });
       
-      if (error) {
+      if (passwordError) {
         toast({
           title: 'Password reset failed',
-          description: error.message || 'Failed to reset password',
+          description: passwordError.message || 'Failed to reset password',
           variant: 'destructive'
         });
-        setError(error.message || 'Password reset failed');
+        setError(passwordError.message || 'Password reset failed');
         return false;
       }
       
