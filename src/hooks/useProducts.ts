@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/pos.types';
 import { supabase, handleSupabaseError, convertFromSupabaseProduct, convertToSupabaseProduct } from "@/integrations/supabase/client";
@@ -233,7 +234,7 @@ export const useProducts = () => {
         const uniqueProductsById = new Map<string, Product>();
         const duplicates: string[] = [];
         
-        dbProducts.forEach(product => {
+        dbProducts.forEach((product: Product) => {
           if (!uniqueProductsById.has(product.id)) {
             const productNameLower = product.name.toLowerCase();
             const duplicateByName = Array.from(uniqueProductsById.values()).find(
