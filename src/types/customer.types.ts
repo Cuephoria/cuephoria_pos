@@ -1,4 +1,3 @@
-
 // Customer Portal Types
 
 // Customer User type for authentication and profile management
@@ -75,7 +74,7 @@ export interface CustomerStatistics {
 // Customer Dashboard Data type for aggregated dashboard view
 export interface CustomerDashboardData {
   statistics: CustomerStatistics;
-  recentSessions: Session[];
+  recentSessions: CustomerSession[];
   recentTransactions: LoyaltyTransaction[];
   activePromotions: Promotion[];
   availableRewards: Reward[];
@@ -90,7 +89,7 @@ export interface NotificationSettings {
   accountUpdates: boolean;
 }
 
-// Customer Session extended from pos.types Session
+// Customer Session type
 export interface CustomerSession {
   id: string;
   stationId: string;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -36,7 +35,7 @@ const CustomerSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { toggleSidebar, isOpen } = useSidebar();
+  const { toggleSidebar, collapsed } = useSidebar();
 
   const menuItems = [
     { path: '/customer/dashboard', label: 'Dashboard', icon: Home },

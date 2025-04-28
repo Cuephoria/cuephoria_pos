@@ -5,7 +5,7 @@ import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import CustomerSidebar from './CustomerSidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import LoadingSpinner from '../ui/loading-spinner';
+import { LoadingSpinner } from '../ui/loading-spinner';
 
 const CustomerLayout: React.FC = () => {
   const { user, isLoading } = useCustomerAuth();

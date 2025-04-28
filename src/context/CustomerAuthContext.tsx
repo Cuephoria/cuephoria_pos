@@ -337,16 +337,30 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           description: `Referral reward for inviting ${referredEmail}`
         });
         
-      // Record the completed referral
-      await supabase
-        .from('referrals')
-        .insert({
-          referrer_id: referrerId,
-          referred_email: referredEmail,
-          status: 'completed',
-          points_awarded: REFERRAL_POINTS,
-          completed_at: new Date().toISOString()
-        });
+      // If referrals table exists, record the completed referral
+      try {
+        // Check if referrals table exists
+        const { error: tableCheckError } = await supabase
+          .from('referrals')
+          .select('id')
+          .limit(1);
+          
+        if (!tableCheckError) {
+          // Table exists, insert referral record
+          await supabase
+            .from('referrals')
+            .insert({
+              referrer_id: referrerId,
+              referred_email: referredEmail,
+              status: 'completed',
+              points_awarded: REFERRAL_POINTS,
+              completed_at: new Date().toISOString()
+            });
+        }
+      } catch (err) {
+        console.error('Error checking or recording referral:', err);
+        // Continue execution even if referrals table doesn't exist
+      }
     } catch (err) {
       console.error('Error processing referral reward:', err);
     }

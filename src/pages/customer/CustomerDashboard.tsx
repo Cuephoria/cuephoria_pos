@@ -1,20 +1,19 @@
-
 import React, { useEffect, useState } from 'react';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, Award, Trophy, Calendar, Calendar } from 'lucide-react';
-import { CustomerStatistics, LoyaltyTransaction, Promotion, Session } from '@/types/customer.types';
-import LoadingSpinner from '@/components/ui/loading-spinner';
+import { Clock, Award, Trophy, Calendar } from 'lucide-react';
+import { CustomerStatistics, LoyaltyTransaction, Promotion, CustomerSession } from '@/types/customer.types';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const CustomerDashboard: React.FC = () => {
   const { customerUser } = useCustomerAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [statistics, setStatistics] = useState<CustomerStatistics | null>(null);
-  const [recentSessions, setRecentSessions] = useState<Session[]>([]);
+  const [recentSessions, setRecentSessions] = useState<CustomerSession[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<LoyaltyTransaction[]>([]);
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
 
@@ -53,7 +52,7 @@ const CustomerDashboard: React.FC = () => {
         }
         
         // Format sessions data
-        const formattedSessions: Session[] = sessionsData.map((session: any) => ({
+        const formattedSessions: CustomerSession[] = sessionsData.map((session: any) => ({
           id: session.id,
           stationId: session.station_id,
           stationName: session.stations?.name,
@@ -85,43 +84,43 @@ const CustomerDashboard: React.FC = () => {
           createdAt: new Date(transaction.created_at)
         }));
         
-        // Fetch active promotions
-        const { data: promotionsData, error: promotionsError } = await supabase
-          .from('promotions')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
-        
-        if (promotionsError) {
-          throw new Error(`Error fetching promotions: ${promotionsError.message}`);
-        }
-        
-        // Format promotions data
-        const formattedPromotions: Promotion[] = promotionsData?.map((promo: any) => ({
-          id: promo.id,
-          name: promo.name,
-          description: promo.description,
-          startDate: promo.start_date ? new Date(promo.start_date) : null,
-          endDate: promo.end_date ? new Date(promo.end_date) : null,
-          discountType: promo.discount_type,
-          discountValue: promo.discount_value,
-          isActive: promo.is_active,
-          imageUrl: promo.image_url,
-          createdAt: new Date(promo.created_at)
-        })) || [];
+        // Mock promotions data since we don't have a promotions table yet
+        const mockPromotions: Promotion[] = [
+          {
+            id: '1',
+            name: 'Happy Hour Special',
+            description: 'Get 20% off all table bookings between 2-5pm, Monday to Thursday.',
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+            discountType: 'percentage',
+            discountValue: 20,
+            isActive: true,
+            imageUrl: undefined,
+            createdAt: new Date()
+          },
+          {
+            id: '2',
+            name: 'Weekend Tournament',
+            description: 'Join our weekend tournament and win exciting prizes!',
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+            discountType: 'fixed',
+            discountValue: 10,
+            isActive: true,
+            imageUrl: undefined,
+            createdAt: new Date()
+          }
+        ];
+        setActivePromotions(mockPromotions);
         
         // Count sessions
         const { count: sessionsCount } = await supabase
           .from('sessions')
-          .select('id', { count: 'exact' })
+          .select('id', { count: 'exact', head: false })
           .eq('customer_id', customerUser.customerId);
           
-        // Count referrals
-        const { count: referralsCount } = await supabase
-          .from('referrals')
-          .select('id', { count: 'exact' })
-          .eq('referrer_id', customerUser.customerId)
-          .eq('status', 'completed');
+        // Mock referrals count since we don't have a referrals table yet
+        const referralsCount = 0;
         
         // Set the statistics
         setStatistics({
@@ -138,7 +137,6 @@ const CustomerDashboard: React.FC = () => {
         // Set the fetched data
         setRecentSessions(formattedSessions);
         setRecentTransactions(formattedTransactions);
-        setActivePromotions(formattedPromotions);
         
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -158,7 +156,7 @@ const CustomerDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
