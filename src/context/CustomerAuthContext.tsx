@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, convertFromSupabaseCustomerUser, convertToSupabaseCustomerUser } from '@/integrations/supabase/client';
@@ -316,15 +317,20 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           description: `Referral reward for inviting ${referredEmail}`
         });
         
-      try {
-        const { count, error: countError } = await supabase
-          .from('loyalty_transactions')
-          .select('*', { count: 'exact', head: true });
-          
-        console.log("Completed referral processing");
-      } catch (err) {
-        console.error('Error checking loyalty transactions:', err);
+      // Store referral data in Supabase
+      if (referrerId) {
+        await supabase
+          .from('referrals')
+          .insert({
+            referrer_id: referrerId,
+            referred_email: referredEmail,
+            status: 'completed',
+            points_awarded: REFERRAL_POINTS,
+            created_at: new Date().toISOString(),
+            completed_at: new Date().toISOString()
+          });
       }
+        
     } catch (err) {
       console.error('Error processing referral reward:', err);
     }
@@ -471,16 +477,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
   const setNewPassword = async (email: string, password: string, pin: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
-    
-    if (!customerUser?.id) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to update your profile',
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      return false;
-    }
     
     try {
       const isValid = await verifyResetPin(email, pin);

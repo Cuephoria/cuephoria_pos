@@ -1,181 +1,196 @@
 
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
-  Home, 
-  User, 
+  LayoutDashboard, 
   Award, 
   Gift, 
-  Tag, 
-  Settings, 
-  LogOut, 
-  Clock, 
-  BarChart2,
-  Menu,
-  X
+  Gamepad, 
+  User, 
+  Settings,
+  LogOut,
+  ChevronLeft,
+  Menu
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import { 
   Sidebar, 
+  SidebarTrigger, 
   SidebarContent, 
-  SidebarFooter, 
-  SidebarHeader, 
-  SidebarMenu, 
-  SidebarMenuItem, 
-  SidebarMenuButton, 
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar
+  SidebarHeader,
+  SidebarFooter,
+  useSidebarContext
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
-const CustomerSidebar: React.FC = () => {
-  const { customerUser, signOut } = useCustomerAuth();
-  const location = useLocation();
+const CustomerSidebar = () => {
+  const { signOut, customerUser } = useCustomerAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const { toggleSidebar, state } = useSidebar();
+  const { isOpen } = useSidebarContext();
 
-  const menuItems = [
-    { path: '/customer/dashboard', label: 'Dashboard', icon: Home },
-    { path: '/customer/game-stats', label: 'Game Stats', icon: BarChart2 },
-    { path: '/customer/membership', label: 'Membership', icon: Clock },
-    { path: '/customer/rewards', label: 'Rewards', icon: Gift },
-    { path: '/customer/promotions', label: 'Promotions', icon: Tag },
-    { path: '/customer/profile', label: 'Profile', icon: User },
-    { path: '/customer/settings', label: 'Settings', icon: Settings },
-  ];
-
-  const handleSignOut = async () => {
-    await signOut();
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: 'Signed Out',
+        description: 'You have been successfully logged out.',
+      });
+      navigate('/customer/login');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  // Mobile version with sheet
-  if (isMobile) {
-    return (
-      <>
-        <div className="fixed top-0 left-0 w-full z-30 bg-[#1A1F2C] p-4 flex justify-between items-center shadow-md">
+  return (
+    <>
+      <Sidebar className="border-r border-cuephoria-lightpurple/10 bg-cuephoria-darker">
+        <SidebarHeader className="p-4 border-b border-cuephoria-lightpurple/10">
           <div className="flex items-center gap-2">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-[80%] max-w-[280px] bg-[#1A1F2C] border-r-0">
-                <div className="h-full flex flex-col">
-                  <div className="p-4 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow">
-                      <img 
-                        src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
-                        alt="Cuephoria" 
-                        className="h-8 w-8 object-contain"
-                      />
-                    </div>
-                    <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
-                  </div>
-                  <div className="mx-4 h-px bg-cuephoria-purple/30" />
-                  <div className="flex-1 overflow-auto py-2">
-                    <div className="px-2">
-                      {menuItems.map((item) => (
-                        <Link 
-                          key={item.path}
-                          to={item.path} 
-                          className={`flex items-center py-3 px-3 rounded-md my-1 ${location.pathname === item.path ? 'bg-cuephoria-dark text-cuephoria-lightpurple' : 'text-white hover:bg-cuephoria-dark/50'}`}
-                        >
-                          <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
-                          <span className="font-quicksand text-base">{item.label}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 shadow-md">
-                      <div className="flex items-center">
-                        <User className="h-5 w-5 text-cuephoria-blue" />
-                        <span className="ml-2 text-sm font-medium font-quicksand text-white">
-                          {customerUser?.email}
-                        </span>
-                      </div>
-                      <button 
-                        onClick={handleSignOut}
-                        className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading text-white flex items-center gap-1"
-                      >
-                        <LogOut className="h-3 w-3" />
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-            <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
+            <div className="relative w-8 h-8">
+              <div className="absolute inset-0 bg-cuephoria-lightpurple/20 rounded-full blur-sm"></div>
+              <img
+                src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png"
+                alt="Cuephoria"
+                className="w-8 h-8 relative z-10"
+              />
+            </div>
+            {isOpen && (
+              <div className="flex-1 overflow-hidden transition-all duration-300">
+                <h2 className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange">
+                  Cuephoria
+                </h2>
+                <p className="text-xs text-muted-foreground -mt-1">Member Portal</p>
+              </div>
+            )}
+            <SidebarTrigger asChild>
+              <Button variant="ghost" size="icon" className="ml-auto">
+                {isOpen ? (
+                  <ChevronLeft size={18} />
+                ) : (
+                  <Menu size={18} />
+                )}
+              </Button>
+            </SidebarTrigger>
           </div>
-          
-          <div className="flex items-center gap-2">
+        </SidebarHeader>
+        <SidebarContent className="py-4 px-2">
+          <div className="flex flex-col space-y-1">
+            <NavLink 
+              to="/customer/dashboard" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <LayoutDashboard size={18} />
+              {isOpen && <span>Dashboard</span>}
+            </NavLink>
+            <NavLink 
+              to="/customer/game-stats" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <Gamepad size={18} />
+              {isOpen && <span>Game Stats</span>}
+            </NavLink>
+            <NavLink 
+              to="/customer/membership" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <Award size={18} />
+              {isOpen && <span>Membership</span>}
+            </NavLink>
+            <NavLink 
+              to="/customer/rewards" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <Award size={18} />
+              {isOpen && <span>Rewards</span>}
+            </NavLink>
+            <NavLink 
+              to="/customer/promotions" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <Gift size={18} />
+              {isOpen && <span>Promotions</span>}
+            </NavLink>
+            <NavLink 
+              to="/customer/profile" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <User size={18} />
+              {isOpen && <span>Profile</span>}
+            </NavLink>
+            <NavLink 
+              to="/customer/settings" 
+              className={({isActive}) => cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "hover:bg-cuephoria-lightpurple/10 hover:text-white",
+                isActive ? "bg-cuephoria-lightpurple/15 text-cuephoria-lightpurple" : "text-muted-foreground"
+              )}
+            >
+              <Settings size={18} />
+              {isOpen && <span>Settings</span>}
+            </NavLink>
+          </div>
+        </SidebarContent>
+        <SidebarFooter className="p-4 border-t border-cuephoria-lightpurple/10 mt-auto">
+          {isOpen && customerUser ? (
+            <div className="flex flex-col space-y-3">
+              <div>
+                <p className="text-sm font-medium truncate">{customerUser.email}</p>
+                <p className="text-xs text-muted-foreground">{customerUser.referralCode || 'Member'}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="justify-start text-muted-foreground hover:text-white hover:bg-red-900/20"
+              >
+                <LogOut size={16} className="mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          ) : (
             <Button 
-              onClick={() => navigate('/customer/profile')}
               variant="ghost" 
               size="icon" 
-              className="text-white"
+              onClick={handleLogout}
+              className="w-full justify-center text-muted-foreground hover:text-white hover:bg-red-900/20"
             >
-              <User className="h-5 w-5" />
+              <LogOut size={16} />
             </Button>
-          </div>
-        </div>
-        <div className="pt-16"></div> {/* Space for the fixed header */}
-      </>
-    );
-  }
-
-  // Desktop version with Sidebar
-  return (
-    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white w-[250px]">
-      <SidebarHeader className="p-4 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow">
-          <img 
-            src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
-            alt="Cuephoria" 
-            className="h-10 w-10 object-contain"
-          />
-        </div>
-        <span className="text-2xl font-bold gradient-text font-heading">Cuephoria</span>
-      </SidebarHeader>
-      <SidebarSeparator className="mx-4 bg-cuephoria-purple/30" />
-      <SidebarContent className="mt-2">
-        <SidebarMenu className="space-y-1">
-          {menuItems.map((item, index) => (
-            <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100} text-base`}>
-              <SidebarMenuButton asChild isActive={location.pathname === item.path}>
-                <Link to={item.path} className="flex items-center py-2.5">
-                  <item.icon className={`mr-3 h-6 w-6 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
-                  <span className="font-quicksand">{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter className="p-4">
-        <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 animate-scale-in shadow-md">
-          <div className="flex items-center">
-            <User className="h-6 w-6 text-cuephoria-blue" />
-            <span className="ml-2 text-sm font-medium font-quicksand truncate max-w-[120px]">
-              {customerUser?.email}
-            </span>
-          </div>
-          <button 
-            onClick={handleSignOut}
-            className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading flex items-center gap-1"
-          >
-            <LogOut className="h-3 w-3" />
-            Logout
-          </button>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
+          )}
+        </SidebarFooter>
+      </Sidebar>
+    </>
   );
 };
 

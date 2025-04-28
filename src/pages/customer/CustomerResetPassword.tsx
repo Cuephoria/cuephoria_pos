@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { Mail, ArrowLeft, Key, Eye, EyeOff } from 'lucide-react';
+import { Mail, ArrowLeft, Key, Eye, EyeOff, HelpCircle, AlertCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { motion } from 'framer-motion';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CustomerResetPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -149,11 +151,22 @@ const CustomerResetPassword: React.FC = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
+  // Animation variants
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
+
   const renderStepContent = () => {
     switch (step) {
       case 1:
         return (
-          <form onSubmit={handleRequestReset}>
+          <motion.form 
+            onSubmit={handleRequestReset}
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+          >
             <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
               <div className="space-y-2 group">
                 <label htmlFor="email" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
@@ -169,6 +182,15 @@ const CustomerResetPassword: React.FC = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm"
                 />
               </div>
+
+              <Alert className="bg-cuephoria-darker border-cuephoria-orange/30 mt-4">
+                <AlertCircle className="h-4 w-4 text-cuephoria-orange" />
+                <AlertTitle className="text-white text-sm">Important</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground">
+                  You'll receive a PIN code to verify your identity. If you don't receive the PIN, 
+                  you can contact our staff for assistance.
+                </AlertDescription>
+              </Alert>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col space-y-4">
@@ -181,13 +203,25 @@ const CustomerResetPassword: React.FC = () => {
                   {isLoading ? 'Sending PIN...' : 'Send Reset PIN'}
                 </span>
               </Button>
+
+              <div className="text-center text-sm">
+                <span className="text-muted-foreground">Remember your password?</span>{' '}
+                <Link to="/customer/login" className="text-cuephoria-lightpurple hover:text-accent hover:underline transition-colors">
+                  Back to Login
+                </Link>
+              </div>
             </CardFooter>
-          </form>
+          </motion.form>
         );
         
       case 2:
         return (
-          <form onSubmit={handleVerifyPin}>
+          <motion.form 
+            onSubmit={handleVerifyPin}
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+          >
             <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
               <div className="text-sm text-center mb-2 text-muted-foreground">
                 A 6-digit PIN has been sent to your email. Please enter it below.
@@ -207,6 +241,14 @@ const CustomerResetPassword: React.FC = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm text-center tracking-widest"
                 />
               </div>
+
+              <Alert className="bg-cuephoria-darker border-cuephoria-orange/30 mt-4">
+                <HelpCircle className="h-4 w-4 text-cuephoria-orange" />
+                <AlertTitle className="text-white text-sm">Need help?</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground">
+                  If you didn't receive the PIN or need assistance, please contact our staff who can help you reset your password.
+                </AlertDescription>
+              </Alert>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col space-y-4">
@@ -229,12 +271,17 @@ const CustomerResetPassword: React.FC = () => {
                 Back to Email
               </Button>
             </CardFooter>
-          </form>
+          </motion.form>
         );
         
       case 3:
         return (
-          <form onSubmit={handleResetPassword}>
+          <motion.form 
+            onSubmit={handleResetPassword}
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+          >
             <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
               <div className="space-y-2 group">
                 <label htmlFor="newPassword" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
@@ -283,6 +330,10 @@ const CustomerResetPassword: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              <div className="text-xs text-muted-foreground mt-2">
+                <p>Password must be at least 6 characters long.</p>
+              </div>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col space-y-4">
@@ -295,24 +346,45 @@ const CustomerResetPassword: React.FC = () => {
                   {isLoading ? 'Updating Password...' : 'Update Password'}
                 </span>
               </Button>
+
+              <Button 
+                type="button"
+                variant="ghost"
+                className="text-sm text-muted-foreground hover:text-white"
+                onClick={() => setStep(2)}
+              >
+                Back to PIN Entry
+              </Button>
             </CardFooter>
-          </form>
+          </motion.form>
         );
     }
   };
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4">
+      {/* Animated background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+      </div>
+
       <div className="w-full max-w-md z-10 animate-scale-in">
         <div className="mb-6 text-center">
-          <div className="relative mx-auto w-full max-w-[120px] h-auto">
+          <motion.div 
+            className="relative mx-auto w-full max-w-[120px] h-auto"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
             <img 
               src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
               alt="Cuephoria 8-Ball Club" 
               className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
             />
-          </div>
+          </motion.div>
         </div>
         
         <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden">

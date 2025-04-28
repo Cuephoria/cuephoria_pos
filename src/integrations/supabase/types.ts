@@ -338,6 +338,167 @@ export type Database = {
         }
         Relationships: []
       }
+      promotions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          start_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          start_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          start_date?: string | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          points_awarded: number | null
+          referred_email: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          points_awarded?: number | null
+          referred_email: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          points_awarded?: number | null
+          referred_email?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_redemptions: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          points_spent: number
+          redeemed_at: string | null
+          redemption_code: string
+          reward_id: string
+          staff_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          points_spent: number
+          redeemed_at?: string | null
+          redemption_code: string
+          reward_id: string
+          staff_id?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          points_spent?: number
+          redeemed_at?: string | null
+          redemption_code?: string
+          reward_id?: string
+          staff_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_redemptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rewards: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          points_cost: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          points_cost: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          points_cost?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           created_at: string
