@@ -11,6 +11,7 @@ export interface CustomerUser {
   resetPin: string | null;
   resetPinExpiry: Date | null;
   createdAt: Date;
+  pin?: string; // Added PIN for authentication
 }
 
 // Reward type for loyalty rewards program
@@ -58,6 +59,7 @@ export interface RewardRedemption {
   redemptionDate: Date;
   status: 'pending' | 'completed' | 'cancelled' | string; // Modified to accept string from database
   rewardName?: string;
+  redemptionCode?: string; // Add redemption code for staff verification
 }
 
 // Customer Statistics type for dashboard data

@@ -70,11 +70,7 @@ const CustomerSidebar = () => {
           )}
           <SidebarTrigger>
             <Button variant="ghost" size="icon" className="ml-auto">
-              {isOpen ? (
-                <ChevronLeft size={18} />
-              ) : (
-                <Menu size={18} />
-              )}
+              {isOpen ? <ChevronLeft size={18} /> : <Menu size={18} />}
             </Button>
           </SidebarTrigger>
         </div>

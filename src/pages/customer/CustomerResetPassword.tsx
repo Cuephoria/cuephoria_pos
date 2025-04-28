@@ -19,72 +19,55 @@ const CustomerResetPassword: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   
-  const { resetPassword, verifyResetPin, setNewPassword } = useCustomerAuth();
+  const { verifyPinAndResetPassword } = useCustomerAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  const handleRequestReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email) {
-      toast({
-        title: 'Error',
-        description: 'Please enter your email',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const success = await resetPassword(email);
-      if (success) {
-        setStep(2);
-        toast({
-          title: 'PIN Sent',
-          description: 'A reset PIN has been sent to your email',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to send reset PIN. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   const handleVerifyPin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!pin) {
+    if (!email || !pin) {
       toast({
         title: 'Error',
-        description: 'Please enter the PIN sent to your email',
+        description: 'Please enter your email and security PIN',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+      toast({
+        title: 'Error',
+        description: 'PIN must be exactly 4 digits',
         variant: 'destructive',
       });
       return;
     }
     
     setIsLoading(true);
+    
     try {
-      const success = await verifyResetPin(email, pin);
+      const success = await verifyPinAndResetPassword(email, pin);
       if (success) {
-        setStep(3);
+        setStep(2);
         toast({
           title: 'PIN Verified',
           description: 'You can now set a new password',
         });
+      } else {
+        toast({
+          title: 'Invalid PIN',
+          description: 'The PIN you entered is incorrect. Please try again or contact staff for assistance.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Invalid or expired PIN. Please try again.',
+        description: 'Failed to verify PIN. Please try again or contact staff for assistance.',
         variant: 'destructive',
       });
     } finally {
@@ -123,8 +106,9 @@ const CustomerResetPassword: React.FC = () => {
     }
     
     setIsLoading(true);
+    
     try {
-      const success = await setNewPassword(email, password, pin);
+      const success = await verifyPinAndResetPassword(email, pin, password);
       if (success) {
         toast({
           title: 'Password Reset',
@@ -162,7 +146,7 @@ const CustomerResetPassword: React.FC = () => {
       case 1:
         return (
           <motion.form 
-            onSubmit={handleRequestReset}
+            onSubmit={handleVerifyPin}
             initial="hidden"
             animate="visible"
             variants={fadeInUp}
@@ -182,62 +166,24 @@ const CustomerResetPassword: React.FC = () => {
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm"
                 />
               </div>
-
-              <Alert className="bg-cuephoria-darker border-cuephoria-orange/30 mt-4">
-                <AlertCircle className="h-4 w-4 text-cuephoria-orange" />
-                <AlertTitle className="text-white text-sm">Important</AlertTitle>
-                <AlertDescription className="text-xs text-muted-foreground">
-                  You'll receive a PIN code to verify your identity. If you don't receive the PIN, 
-                  you can contact our staff for assistance.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-            
-            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col space-y-4">
-              <Button 
-                type="submit" 
-                className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300 font-medium text-sm sm:text-base" 
-                disabled={isLoading}
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isLoading ? 'Sending PIN...' : 'Send Reset PIN'}
-                </span>
-              </Button>
-
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">Remember your password?</span>{' '}
-                <Link to="/customer/login" className="text-cuephoria-lightpurple hover:text-accent hover:underline transition-colors">
-                  Back to Login
-                </Link>
-              </div>
-            </CardFooter>
-          </motion.form>
-        );
-        
-      case 2:
-        return (
-          <motion.form 
-            onSubmit={handleVerifyPin}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-          >
-            <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
-              <div className="text-sm text-center mb-2 text-muted-foreground">
-                A 6-digit PIN has been sent to your email. Please enter it below.
-              </div>
+              
               <div className="space-y-2 group">
                 <label htmlFor="pin" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
                   <Key size={14} className="inline-block" />
-                  Reset PIN
+                  Security PIN
                 </label>
                 <Input
                   id="pin"
-                  type="text"
-                  placeholder="Enter 6-digit PIN"
+                  type="password"
+                  placeholder="Enter 4-digit PIN"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.slice(0, 6))}
-                  maxLength={6}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 4) {
+                      setPin(value);
+                    }
+                  }}
+                  maxLength={4}
                   className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm text-center tracking-widest"
                 />
               </div>
@@ -246,7 +192,7 @@ const CustomerResetPassword: React.FC = () => {
                 <HelpCircle className="h-4 w-4 text-cuephoria-orange" />
                 <AlertTitle className="text-white text-sm">Need help?</AlertTitle>
                 <AlertDescription className="text-xs text-muted-foreground">
-                  If you didn't receive the PIN or need assistance, please contact our staff who can help you reset your password.
+                  If you forgot your PIN, please contact our staff who can help you reset your password.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -262,19 +208,17 @@ const CustomerResetPassword: React.FC = () => {
                 </span>
               </Button>
               
-              <Button 
-                type="button"
-                variant="ghost"
-                className="text-sm text-muted-foreground hover:text-white"
-                onClick={() => setStep(1)}
-              >
-                Back to Email
-              </Button>
+              <div className="text-center text-sm">
+                <span className="text-muted-foreground">Remember your password?</span>{' '}
+                <Link to="/customer/login" className="text-cuephoria-lightpurple hover:text-accent hover:underline transition-colors">
+                  Back to Login
+                </Link>
+              </div>
             </CardFooter>
           </motion.form>
         );
         
-      case 3:
+      case 2:
         return (
           <motion.form 
             onSubmit={handleResetPassword}
@@ -351,7 +295,7 @@ const CustomerResetPassword: React.FC = () => {
                 type="button"
                 variant="ghost"
                 className="text-sm text-muted-foreground hover:text-white"
-                onClick={() => setStep(2)}
+                onClick={() => setStep(1)}
               >
                 Back to PIN Entry
               </Button>
@@ -402,11 +346,10 @@ const CustomerResetPassword: React.FC = () => {
                 Back to Login
               </Button>
             </div>
-            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Reset Password</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold bg-gradient-to-r from-[#5D6BFF] via-[#8A7CFE] to-[#C77DFF] bg-clip-text text-transparent">Reset Password</CardTitle>
             <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">
-              {step === 1 && "Enter your email to reset your password"}
-              {step === 2 && "Enter the PIN sent to your email"}
-              {step === 3 && "Create a new password"}
+              {step === 1 && "Enter your email and security PIN"}
+              {step === 2 && "Create a new password"}
             </CardDescription>
           </CardHeader>
           

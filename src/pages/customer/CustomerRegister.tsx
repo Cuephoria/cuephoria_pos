@@ -15,6 +15,7 @@ const CustomerRegister: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [pin, setPin] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -29,10 +30,10 @@ const CustomerRegister: React.FC = () => {
     e.preventDefault();
     
     // Form validation
-    if (!name || !email || !phone || !password || !confirmPassword) {
+    if (!name || !email || !phone || !password || !confirmPassword || !pin) {
       toast({
         title: 'Error',
-        description: 'All fields are required',
+        description: 'All fields are required except referral code',
         variant: 'destructive',
       });
       return;
@@ -56,10 +57,19 @@ const CustomerRegister: React.FC = () => {
       return;
     }
     
+    if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+      toast({
+        title: 'Error',
+        description: 'PIN must be exactly 4 digits',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      const success = await signUp(email, password, name, phone, referralCode || undefined);
+      const success = await signUp(email, password, name, phone, pin, referralCode || undefined);
       
       if (success) {
         toast({
@@ -116,7 +126,7 @@ const CustomerRegister: React.FC = () => {
                 Back
               </Button>
             </div>
-            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Create Account</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#5D6BFF] via-[#8A7CFE] to-[#C77DFF] bg-clip-text text-transparent">Create Account</CardTitle>
             <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Join Cuephoria to track your games and earn rewards</CardDescription>
           </CardHeader>
           
@@ -213,6 +223,28 @@ const CustomerRegister: React.FC = () => {
                     {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+              </div>
+              
+              <div className="space-y-2 group">
+                <label htmlFor="pin" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
+                  <Key size={14} className="inline-block" />
+                  Security PIN (4 digits)
+                </label>
+                <Input
+                  id="pin"
+                  type="password"
+                  placeholder="Enter 4-digit PIN"
+                  value={pin}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 4) {
+                      setPin(value);
+                    }
+                  }}
+                  maxLength={4}
+                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm text-center tracking-widest"
+                />
+                <p className="text-xs text-muted-foreground">This PIN will be used for password recovery</p>
               </div>
               
               <div className="space-y-2 group">

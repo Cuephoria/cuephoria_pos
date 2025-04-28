@@ -14,11 +14,9 @@ interface CustomerAuthContextType {
   isLoading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, name: string, phone: string, referralCode?: string) => Promise<boolean>;
+  signUp: (email: string, password: string, name: string, phone: string, pin: string, referralCode?: string) => Promise<boolean>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<boolean>;
-  verifyResetPin: (email: string, pin: string) => Promise<boolean>;
-  setNewPassword: (email: string, password: string, pin: string) => Promise<boolean>;
+  verifyPinAndResetPassword: (email: string, pin: string, newPassword?: string) => Promise<boolean>;
   updateProfile: (data: Partial<CustomerUser>) => Promise<boolean>;
 }
 
@@ -31,9 +29,7 @@ const CustomerAuthContext = createContext<CustomerAuthContextType>({
   signIn: async () => false,
   signUp: async () => false,
   signOut: async () => {},
-  resetPassword: async () => false,
-  verifyResetPin: async () => false,
-  setNewPassword: async () => false,
+  verifyPinAndResetPassword: async () => false,
   updateProfile: async () => false,
 });
 
@@ -72,6 +68,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
+        // Set up auth state listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, currentSession) => {
             setSession(currentSession);
@@ -88,6 +85,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           }
         );
 
+        // Then check for existing session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
@@ -131,6 +129,16 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
 
       if (data.user) {
         const customerData = await fetchCustomerUser(data.user.id);
+        if (!customerData) {
+          toast({
+            title: 'Customer account not found',
+            description: 'Your account was not found in the customer database',
+            variant: 'destructive',
+          });
+          await supabase.auth.signOut();
+          return false;
+        }
+        
         setCustomerUser(customerData);
         
         toast({
@@ -159,11 +167,22 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     email: string, 
     password: string, 
     name: string, 
-    phone: string, 
+    phone: string,
+    pin: string,
     referralCode?: string
   ): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
+    
+    if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+      toast({
+        title: 'Invalid PIN',
+        description: 'PIN must be exactly 4 digits',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return false;
+    }
     
     try {
       const { data: existingCustomers, error: customerError } = await supabase
@@ -242,6 +261,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           customerId,
           email,
           referralCode: generateReferralCode(),
+          pin, // Store PIN for password recovery
           resetPin: null,
           resetPinExpiry: null,
           createdAt: new Date()
@@ -249,7 +269,10 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         
         const { error: customerUserError } = await supabase
           .from('customer_users')
-          .insert(convertToSupabaseCustomerUser(newCustomerUser));
+          .insert(convertToSupabaseCustomerUser({
+            ...newCustomerUser,
+            id: undefined // Let Supabase generate the ID
+          }));
           
         if (customerUserError) {
           throw new Error(handleSupabaseError(customerUserError, 'customer user creation'));
@@ -263,6 +286,10 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           title: 'Account created successfully!',
           description: 'Welcome to Cuephoria!',
         });
+        
+        // Fetch the newly created customer user to update state
+        const customerData = await fetchCustomerUser(data.user.id);
+        setCustomerUser(customerData);
         
         return true;
       }
@@ -363,74 +390,19 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  const resetPassword = async (email: string): Promise<boolean> => {
+  const verifyPinAndResetPassword = async (email: string, pin: string, newPassword?: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const pin = Math.floor(100000 + Math.random() * 900000).toString();
-      const pinExpiry = new Date();
-      pinExpiry.setHours(pinExpiry.getHours() + 1);
-      
-      const { data, error } = await supabase
-        .from('customer_users')
-        .select('id')
-        .eq('email', email)
-        .single();
-        
-      if (error) {
-        toast({
-          title: 'Account not found',
-          description: 'No account found with that email address.',
-          variant: 'destructive',
-        });
-        return false;
-      }
-
-      const { error: updateError } = await supabase
-        .from('customer_users')
-        .update({
-          reset_pin: pin,
-          reset_pin_expiry: pinExpiry.toISOString()
-        })
-        .eq('id', data.id);
-        
-      if (updateError) {
-        throw new Error(handleSupabaseError(updateError, 'update reset PIN'));
-      }
-      
-      toast({
-        title: 'Reset PIN sent',
-        description: `Your PIN is: ${pin} (This would normally be sent via email)`,
-      });
-      
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(errorMessage);
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const verifyResetPin = async (email: string, pin: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase
+      // First check if user exists and verify PIN
+      const { data: customerUserData, error: customerUserError } = await supabase
         .from('customer_users')
         .select('*')
         .eq('email', email)
         .single();
         
-      if (error) {
+      if (customerUserError || !customerUserData) {
         toast({
           title: 'Account not found',
           description: 'No account found with that email address.',
@@ -439,80 +411,28 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         return false;
       }
       
-      const customerUser = convertFromSupabaseCustomerUser(data);
-      
-      if (customerUser.resetPin !== pin) {
+      if (customerUserData.pin !== pin) {
         toast({
           title: 'Invalid PIN',
-          description: 'The PIN you entered is incorrect.',
+          description: 'The security PIN you entered is incorrect.',
           variant: 'destructive',
         });
         return false;
       }
       
-      if (!customerUser.resetPinExpiry || new Date() > customerUser.resetPinExpiry) {
-        toast({
-          title: 'PIN expired',
-          description: 'The reset PIN has expired. Please request a new one.',
-          variant: 'destructive',
-        });
-        return false;
+      // If only verifying PIN, return success
+      if (!newPassword) {
+        return true;
       }
       
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(errorMessage);
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const setNewPassword = async (email: string, password: string, pin: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const isValid = await verifyResetPin(email, pin);
-      if (!isValid) {
-        return false;
-      }
-      
-      const { data, error } = await supabase
-        .from('customer_users')
-        .select('auth_id')
-        .eq('email', email)
-        .single();
-        
-      if (error) {
-        throw new Error(handleSupabaseError(error, 'find user'));
-      }
-      
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        data.auth_id,
-        { password: password }
+      // If setting new password, update it
+      const { data, error } = await supabase.auth.admin.updateUserById(
+        customerUserData.auth_id,
+        { password: newPassword }
       );
       
-      if (updateError) {
-        throw new Error(updateError.message);
-      }
-      
-      const { error: clearPinError } = await supabase
-        .from('customer_users')
-        .update({
-          reset_pin: null,
-          reset_pin_expiry: null
-        })
-        .eq('email', email);
-        
-      if (clearPinError) {
-        console.error('Error clearing reset PIN:', clearPinError);
+      if (error) {
+        throw new Error(error.message);
       }
       
       toast({
@@ -593,9 +513,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     signIn,
     signUp,
     signOut,
-    resetPassword,
-    verifyResetPin,
-    setNewPassword,
+    verifyPinAndResetPassword,
     updateProfile
   };
 
