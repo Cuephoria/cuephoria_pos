@@ -22,14 +22,14 @@ import {
   SidebarContent, 
   SidebarHeader,
   SidebarFooter,
-  useSidebarContext
+  useSidebar
 } from '@/components/ui/sidebar';
 
 const CustomerSidebar = () => {
   const { signOut, customerUser } = useCustomerAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isOpen } = useSidebarContext();
+  const { open: isOpen } = useSidebar();
 
   const handleLogout = async () => {
     try {

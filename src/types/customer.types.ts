@@ -56,7 +56,7 @@ export interface RewardRedemption {
   rewardId: string;
   pointsSpent: number;
   redemptionDate: Date;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled' | string; // Modified to accept string from database
   rewardName?: string;
 }
 
@@ -107,7 +107,7 @@ export interface Referral {
   id: string;
   referrerId: string;
   referredEmail: string;
-  status: 'pending' | 'completed' | 'expired';
+  status: 'pending' | 'completed' | 'expired' | string;
   pointsAwarded: number;
   createdAt: Date;
   completedAt?: Date;
