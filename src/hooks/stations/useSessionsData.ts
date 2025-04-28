@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";

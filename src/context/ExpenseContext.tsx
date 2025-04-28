@@ -46,16 +46,18 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setError(null);
     
     try {
+      // Try to fetch expenses from Supabase using a type assertion to bypass type checking
       const { data: supabaseExpenses, error: supabaseError } = await (supabase
         .from('expenses' as any)
         .select('*')
         .order('date', { ascending: false }) as any);
       
-      console.log('Supabase Expenses Fetched:', supabaseExpenses);
+      console.log('Supabase Expenses Fetched:', supabaseExpenses); // Added console log
       
       if (supabaseError) {
         console.error('Error fetching expenses from Supabase:', supabaseError);
         
+        // Fall back to localStorage if Supabase fails
         const storedExpenses = localStorage.getItem(STORAGE_KEY);
         
         if (storedExpenses) {
@@ -63,6 +65,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setExpenses(parsedExpenses);
           console.log(`Loaded ${parsedExpenses.length} expenses from localStorage`);
           
+          // Try to sync localStorage expenses to Supabase
           parsedExpenses.forEach(async (expense) => {
             await (supabase.from('expenses' as any).upsert({
               id: expense.id,
@@ -80,6 +83,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.log('No expenses found in localStorage');
         }
       } else {
+        // Use Supabase data
         const formattedExpenses = supabaseExpenses.map((item: any) => ({
           id: item.id,
           name: item.name,
@@ -94,6 +98,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setExpenses(formattedExpenses);
         console.log(`Loaded ${formattedExpenses.length} expenses from Supabase`);
         
+        // Update localStorage with the latest data from Supabase
         localStorage.setItem(STORAGE_KEY, JSON.stringify(formattedExpenses));
       }
     } catch (err) {
@@ -153,17 +158,19 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const id = generateId();
       
+      // The date is already an ISO string from ExpenseDialog
       const newExpense: Expense = {
         id,
         name: formData.name,
         amount: formData.amount,
         category: formData.category,
         frequency: formData.frequency,
-        date: formData.date,
+        date: formData.date, // Already a string from ExpenseDialog
         isRecurring: formData.isRecurring,
         notes: formData.notes
       };
       
+      // Insert to Supabase with type assertion to bypass type checking
       const { error: supabaseError } = await (supabase
         .from('expenses' as any)
         .insert({
@@ -187,6 +194,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
+      // Update local state
       const updatedExpenses = [newExpense, ...expenses];
       setExpenses(updatedExpenses);
       saveExpensesToStorage(updatedExpenses);
@@ -210,6 +218,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateExpense = async (expense: Expense): Promise<boolean> => {
     try {
+      // Update in Supabase with type assertion
       const { error: supabaseError } = await (supabase
         .from('expenses' as any)
         .update({
@@ -233,6 +242,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
+      // Update local state
       const updatedExpenses = expenses.map(item => 
         item.id === expense.id ? expense : item
       );
@@ -259,6 +269,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteExpense = async (id: string): Promise<boolean> => {
     try {
+      // Delete from Supabase with type assertion
       const { error: supabaseError } = await (supabase
         .from('expenses' as any)
         .delete()
@@ -274,6 +285,7 @@ export const ExpenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return false;
       }
       
+      // Update local state
       const updatedExpenses = expenses.filter(item => item.id !== id);
       setExpenses(updatedExpenses);
       saveExpensesToStorage(updatedExpenses);

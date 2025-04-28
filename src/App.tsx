@@ -1,238 +1,141 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@/components/ThemeProvider';
-import { Toaster } from '@/components/ui/toaster';
-import Index from './pages/Index';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import POS from './pages/POS';
-import Products from './pages/Products';
-import Customers from './pages/Customers';
-import Stations from './pages/Stations';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import NotFound from './pages/NotFound';
-import { Suspense } from 'react';
-import { POSProvider } from './context/POSContext';
-import AppSidebar from './components/AppSidebar';
-import { CustomerAuthProvider, useCustomerAuth } from './context/CustomerAuthContext';
-import { useEffect, useState } from 'react';
-import { useToast } from './hooks/use-toast';
-import { ExpenseProvider } from './context/ExpenseContext';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { POSProvider } from "@/context/POSContext";
+import { ExpenseProvider } from "@/context/ExpenseContext";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import AppSidebar from "@/components/AppSidebar";
 
-// Customer Portal Pages
-import CustomerLogin from './pages/customer/CustomerLogin';
-import CustomerRegister from './pages/customer/CustomerRegister';
-import CustomerDashboard from './pages/customer/CustomerDashboard'; 
-import CustomerSessions from './pages/customer/CustomerSessions';
-import CustomerLoyalty from './pages/customer/CustomerLoyalty';
-import CustomerRewards from './pages/customer/CustomerRewards';
-import CustomerPromotions from './pages/customer/CustomerPromotions';
-import CustomerReferrals from './pages/customer/CustomerReferrals';
-import CustomerProfile from './pages/customer/CustomerProfile';
-import CustomerResetPassword from './pages/customer/CustomerResetPassword';
-import CustomerPortalManagement from './pages/CustomerPortalManagement';
+// Pages
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Stations from "./pages/Stations";
+import Products from "./pages/Products";
+import POS from "./pages/POS";
+import Customers from "./pages/Customers";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 
-// Loading component
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-  </div>
-);
+// Create a new QueryClient instance outside of the component
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
-// Admin layout component
-const AdminLayout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <div className="flex">
-      <AppSidebar />
-      <main className="flex-1 bg-background">{children}</main>
-    </div>
-  );
-};
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireAdmin?: boolean;
+}
 
-// Admin route guard
-const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  // In a real app, this would check for admin authentication
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
-  return <AdminLayout>{children}</AdminLayout>;
-};
-
-// Customer route guard
-const ProtectedCustomerRoute = ({ children }: { children: React.ReactNode }) => {
-  const { customerUser, isLoading } = useCustomerAuth();
+// Enhanced Protected route component that checks for authentication
+const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
   
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <div className="min-h-screen flex items-center justify-center bg-cuephoria-dark">
+      <div className="animate-spin-slow h-10 w-10 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent"></div>
+    </div>;
   }
-
-  if (!customerUser) {
-    return <Navigate to="/customer/login" />;
+  
+  if (!user) {
+    // Redirect to login page while preserving the intended destination
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
-
-  return <>{children}</>;
+  
+  // If route requires admin access and user is not admin, redirect to dashboard
+  if (requireAdmin && !user.isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col">
+          <div className="hidden md:block">
+            <SidebarTrigger />
+          </div>
+          {children}
+        </div>
+      </div>
+    </SidebarProvider>
+  );
 };
 
-function App() {
-  const { toast } = useToast();
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    // Simulate initial loading
-    setTimeout(() => {
-      setIsInitializing(false);
-      // Prepare sample data for the demo
-      if (!localStorage.getItem('initialized')) {
-        toast({
-          title: 'Demo initialized',
-          description: 'Sample data has been loaded for demonstration purposes.',
-        });
-        localStorage.setItem('initialized', 'true');
-      }
-    }, 1000);
-  }, [toast]);
-
-  if (isInitializing) {
-    return (
-      <ThemeProvider defaultTheme="dark" storageKey="color-theme">
-        <LoadingSpinner />
-      </ThemeProvider>
-    );
-  }
-
-  return (
-    <ThemeProvider defaultTheme="dark" storageKey="color-theme">
-      <CustomerAuthProvider>
-        <POSProvider>
-          <ExpenseProvider>
-            <Router>
-              <Suspense fallback={<LoadingSpinner />}>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  
-                  {/* Customer portal routes */}
-                  <Route path="/customer/login" element={<CustomerLogin />} />
-                  <Route path="/customer/register" element={<CustomerRegister />} />
-                  <Route path="/customer/reset-password" element={<CustomerResetPassword />} />
-                  <Route path="/customer/dashboard" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerDashboard />
-                    </ProtectedCustomerRoute>
-                  } />
-                  <Route path="/customer/sessions" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerSessions />
-                    </ProtectedCustomerRoute>
-                  } />
-                  <Route path="/customer/loyalty" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerLoyalty />
-                    </ProtectedCustomerRoute>
-                  } />
-                  <Route path="/customer/rewards" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerRewards />
-                    </ProtectedCustomerRoute>
-                  } />
-                  <Route path="/customer/promotions" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerPromotions />
-                    </ProtectedCustomerRoute>
-                  } />
-                  <Route path="/customer/referrals" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerReferrals />
-                    </ProtectedCustomerRoute>
-                  } />
-                  <Route path="/customer/profile" element={
-                    <ProtectedCustomerRoute>
-                      <CustomerProfile />
-                    </ProtectedCustomerRoute>
-                  } />
-                  
-                  {/* Admin routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedAdminRoute>
-                        <Dashboard />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/pos"
-                    element={
-                      <ProtectedAdminRoute>
-                        <POS />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/products"
-                    element={
-                      <ProtectedAdminRoute>
-                        <Products />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/customers"
-                    element={
-                      <ProtectedAdminRoute>
-                        <Customers />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/stations"
-                    element={
-                      <ProtectedAdminRoute>
-                        <Stations />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/reports"
-                    element={
-                      <ProtectedAdminRoute>
-                        <Reports />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                    element={
-                      <ProtectedAdminRoute>
-                        <Settings />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/customer-portal"
-                    element={
-                      <ProtectedAdminRoute>
-                        <CustomerPortalManagement />
-                      </ProtectedAdminRoute>
-                    }
-                  />
-                  
-                  {/* Not found route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </Router>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <POSProvider>
+        <ExpenseProvider>
+          <TooltipProvider>
             <Toaster />
-          </ExpenseProvider>
-        </POSProvider>
-      </CustomerAuthProvider>
-    </ThemeProvider>
-  );
-}
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/pos" element={
+                  <ProtectedRoute>
+                    <POS />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/stations" element={
+                  <ProtectedRoute>
+                    <Stations />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/products" element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/customers" element={
+                  <ProtectedRoute>
+                    <Customers />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <Reports />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/settings" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ExpenseProvider>
+      </POSProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
