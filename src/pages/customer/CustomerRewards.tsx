@@ -1,13 +1,44 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { supabase } from '@/integrations/supabase/client';
 
 const CustomerRewards: React.FC = () => {
   const { customerUser, isLoading } = useCustomerAuth();
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number>(0);
+  const [isLoadingPoints, setIsLoadingPoints] = useState<boolean>(true);
 
-  if (isLoading) {
+  useEffect(() => {
+    const fetchLoyaltyPoints = async () => {
+      if (customerUser?.customerId) {
+        try {
+          const { data, error } = await supabase
+            .from('customers')
+            .select('loyalty_points')
+            .eq('id', customerUser.customerId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching loyalty points:', error);
+          } else {
+            setLoyaltyPoints(data.loyalty_points || 0);
+          }
+        } catch (err) {
+          console.error('Error in fetchLoyaltyPoints:', err);
+        } finally {
+          setIsLoadingPoints(false);
+        }
+      } else {
+        setIsLoadingPoints(false);
+      }
+    };
+
+    fetchLoyaltyPoints();
+  }, [customerUser]);
+
+  if (isLoading || isLoadingPoints) {
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="md" />
@@ -33,7 +64,7 @@ const CustomerRewards: React.FC = () => {
         <CardContent>
           <div className="flex items-center gap-2">
             <div className="text-3xl font-bold text-cuephoria-lightpurple">
-              {customerUser?.loyaltyPoints || 0}
+              {loyaltyPoints}
             </div>
             <div className="text-muted-foreground text-sm">
               points available to redeem
