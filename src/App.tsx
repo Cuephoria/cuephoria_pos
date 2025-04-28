@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
 import { POSProvider } from "@/context/POSContext";
 import { ExpenseProvider } from "@/context/ExpenseContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -21,6 +21,9 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
+
+// Customer Routes
+import CustomerRoutes from "./routes/CustomerRoutes";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -127,6 +130,9 @@ const App = () => (
                     <Settings />
                   </ProtectedRoute>
                 } />
+                
+                {/* Customer Portal Routes */}
+                <Route path="/customer/*" element={<CustomerRoutes />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
