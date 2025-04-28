@@ -1,8 +1,20 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const CustomerProfile: React.FC = () => {
+  const { customerUser, isLoading } = useCustomerAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="md" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto">
       <div className="mb-6">
@@ -14,14 +26,27 @@ const CustomerProfile: React.FC = () => {
         </p>
       </div>
       
-      <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
+      <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6">
         <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
+          <CardTitle>Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            Profile management will be available in a future update. Check back soon!
-          </p>
+          {customerUser ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">Email</label>
+                  <p className="font-medium">{customerUser.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Referral Code</label>
+                  <p className="font-medium">{customerUser.referralCode || 'Not available'}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Unable to load profile information.</p>
+          )}
         </CardContent>
       </Card>
     </div>

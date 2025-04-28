@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, convertFromSupabaseCustomerUser, convertToSupabaseCustomerUser } from '@/integrations/supabase/client';
@@ -48,7 +47,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Helper function to fetch customer user data
   const fetchCustomerUser = async (authId: string) => {
     try {
       const { data, error } = await supabase
@@ -69,20 +67,16 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, currentSession) => {
             setSession(currentSession);
             setUser(currentSession?.user ?? null);
             
             if (currentSession?.user) {
-              // Fetch customer user data after auth state changes
-              // Using setTimeout to prevent potential recursion issues
               setTimeout(async () => {
                 const customerData = await fetchCustomerUser(currentSession.user.id);
                 setCustomerUser(customerData);
@@ -93,7 +87,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           }
         );
 
-        // THEN check for existing session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
@@ -115,7 +108,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     initializeAuth();
   }, []);
 
-  // Sign in with email and password
   const signIn = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -162,7 +154,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Sign up with email, password, and customer info
   const signUp = async (
     email: string, 
     password: string, 
@@ -174,7 +165,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     setError(null);
     
     try {
-      // Check if a customer with this email already exists
       const { data: existingCustomers, error: customerError } = await supabase
         .from('customers')
         .select('id, email')
@@ -185,7 +175,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         throw new Error(handleSupabaseError(customerError, 'customer lookup'));
       }
 
-      // Sign up the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -211,11 +200,9 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         let customerId: string;
         let referrerId: string | null = null;
         
-        // If customer exists, use that ID, otherwise create a new customer
         if (existingCustomers && existingCustomers.length > 0) {
           customerId = existingCustomers[0].id;
         } else {
-          // Check referral code if provided
           if (referralCode) {
             const { data: referrerData } = await supabase
               .from('customer_users')
@@ -228,7 +215,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
             }
           }
           
-          // Create a new customer record
           const { data: newCustomer, error: createError } = await supabase
             .from('customers')
             .insert({
@@ -250,7 +236,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           customerId = newCustomer.id;
         }
 
-        // Create a customer user record linking auth user to customer
         const newCustomerUser = {
           authId: data.user.id,
           customerId,
@@ -269,9 +254,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           throw new Error(handleSupabaseError(customerUserError, 'customer user creation'));
         }
         
-        // If there was a valid referral, award points to referrer
         if (referrerId) {
-          // Award points to the referrer
           await processReferralReward(referrerId, email);
         }
 
@@ -298,12 +281,10 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Process referral reward - award points to referrer
   const processReferralReward = async (referrerId: string, referredEmail: string) => {
-    const REFERRAL_POINTS = 100; // Points awarded for successful referral
+    const REFERRAL_POINTS = 100;
     
     try {
-      // Get referrer customer data
       const { data: referrer, error: referrerError } = await supabase
         .from('customers')
         .select('loyalty_points')
@@ -315,7 +296,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         return;
       }
       
-      // Update referrer's loyalty points
       const updatedPoints = referrer.loyalty_points + REFERRAL_POINTS;
       const { error: updateError } = await supabase
         .from('customers')
@@ -327,7 +307,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         return;
       }
       
-      // Record loyalty transaction
       await supabase
         .from('loyalty_transactions')
         .insert({
@@ -337,44 +316,25 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           description: `Referral reward for inviting ${referredEmail}`
         });
         
-      // If referrals table exists, record the completed referral
       try {
-        // Check if referrals table exists
-        const { error: tableCheckError } = await supabase
-          .from('referrals')
-          .select('id')
-          .limit(1);
+        const { count, error: countError } = await supabase
+          .from('loyalty_transactions')
+          .select('*', { count: 'exact', head: true });
           
-        if (!tableCheckError) {
-          // Table exists, insert referral record
-          await supabase
-            .from('referrals')
-            .insert({
-              referrer_id: referrerId,
-              referred_email: referredEmail,
-              status: 'completed',
-              points_awarded: REFERRAL_POINTS,
-              completed_at: new Date().toISOString()
-            });
-        }
+        console.log("Completed referral processing");
       } catch (err) {
-        console.error('Error checking or recording referral:', err);
-        // Continue execution even if referrals table doesn't exist
+        console.error('Error checking loyalty transactions:', err);
       }
     } catch (err) {
       console.error('Error processing referral reward:', err);
     }
   };
 
-  // Helper function to generate a unique referral code
   const generateReferralCode = (): string => {
-    // Generate a code using the first part of a UUID
     const uuid = generateId().split('-')[0];
-    // Format it as a readable code with a prefix
     return `CUE-${uuid.substring(0, 6).toUpperCase()}`;
   };
 
-  // Sign out
   const signOut = async (): Promise<void> => {
     try {
       await supabase.auth.signOut();
@@ -397,26 +357,22 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Reset password (send reset pin)
   const resetPassword = async (email: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Generate a 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
-      // Set expiry to 1 hour from now
       const pinExpiry = new Date();
       pinExpiry.setHours(pinExpiry.getHours() + 1);
       
-      // Find the customer user by email
-      const { data: userData, error: userError } = await supabase
+      const { data, error } = await supabase
         .from('customer_users')
         .select('id')
         .eq('email', email)
         .single();
         
-      if (userError) {
+      if (error) {
         toast({
           title: 'Account not found',
           description: 'No account found with that email address.',
@@ -425,21 +381,18 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         return false;
       }
 
-      // Update the customer user with the reset PIN
       const { error: updateError } = await supabase
         .from('customer_users')
         .update({
           reset_pin: pin,
           reset_pin_expiry: pinExpiry.toISOString()
         })
-        .eq('id', userData.id);
+        .eq('id', data.id);
         
       if (updateError) {
         throw new Error(handleSupabaseError(updateError, 'update reset PIN'));
       }
       
-      // In a real application, send an email with the PIN
-      // For now, just show the PIN in a toast for demonstration
       toast({
         title: 'Reset PIN sent',
         description: `Your PIN is: ${pin} (This would normally be sent via email)`,
@@ -460,13 +413,11 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Verify reset PIN
   const verifyResetPin = async (email: string, pin: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Find the customer user by email
       const { data, error } = await supabase
         .from('customer_users')
         .select('*')
@@ -484,7 +435,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
       
       const customerUser = convertFromSupabaseCustomerUser(data);
       
-      // Check if PIN is correct and not expired
       if (customerUser.resetPin !== pin) {
         toast({
           title: 'Invalid PIN',
@@ -518,19 +468,26 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Set new password after PIN verification
   const setNewPassword = async (email: string, password: string, pin: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
+    if (!customerUser?.id) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to update your profile',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return false;
+    }
+    
     try {
-      // Verify PIN first
       const isValid = await verifyResetPin(email, pin);
       if (!isValid) {
         return false;
       }
       
-      // Find user by email to get auth ID
       const { data, error } = await supabase
         .from('customer_users')
         .select('auth_id')
@@ -541,7 +498,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         throw new Error(handleSupabaseError(error, 'find user'));
       }
       
-      // Update password in auth.users
       const { error: updateError } = await supabase.auth.admin.updateUserById(
         data.auth_id,
         { password: password }
@@ -551,7 +507,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         throw new Error(updateError.message);
       }
       
-      // Clear reset PIN data
       const { error: clearPinError } = await supabase
         .from('customer_users')
         .update({
@@ -584,7 +539,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     }
   };
 
-  // Update customer profile
   const updateProfile = async (data: Partial<CustomerUser>): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -612,7 +566,6 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         throw new Error(handleSupabaseError(error, 'update profile'));
       }
       
-      // Update local state
       setCustomerUser(prev => prev ? { ...prev, ...data } : null);
       
       toast({

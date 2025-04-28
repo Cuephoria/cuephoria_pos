@@ -1,8 +1,20 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const CustomerSettings: React.FC = () => {
+  const { isLoading } = useCustomerAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="md" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto">
       <div className="mb-6">
@@ -16,12 +28,25 @@ const CustomerSettings: React.FC = () => {
       
       <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
         <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
+          <CardTitle>Account Settings</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            Account settings will be available in a future update. Check back soon!
-          </p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Notification Preferences</h3>
+                <p className="text-muted-foreground">
+                  Notification settings will be available in a future update.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium mb-2">Privacy Settings</h3>
+                <p className="text-muted-foreground">
+                  Privacy settings will be available in a future update.
+                </p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
