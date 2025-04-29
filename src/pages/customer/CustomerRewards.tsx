@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { Award, Gift, Star, Clock, Check, AlertCircle, Info } from 'lucide-react';
+import { Award, Gift, Star, Clock, Check, AlertCircle, Info, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -26,6 +27,8 @@ const CustomerRewards: React.FC = () => {
   const [isRedeeming, setIsRedeeming] = useState<boolean>(false);
   const [redemptionCode, setRedemptionCode] = useState<string>('');
   const [isRedemptionSuccess, setIsRedemptionSuccess] = useState<boolean>(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState<boolean>(false);
+  const [selectedRedemption, setSelectedRedemption] = useState<RewardRedemption | null>(null);
 
   useEffect(() => {
     const fetchLoyaltyPoints = async () => {
@@ -137,6 +140,11 @@ const CustomerRewards: React.FC = () => {
     setIsRedeemDialogOpen(true);
     setIsRedemptionSuccess(false);
     setRedemptionCode('');
+  };
+
+  const handleViewRedemption = (redemption: RewardRedemption) => {
+    setSelectedRedemption(redemption);
+    setIsViewDialogOpen(true);
   };
 
   const handleConfirmRedeem = async () => {
@@ -308,28 +316,39 @@ const CustomerRewards: React.FC = () => {
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="flex items-center gap-2">
               <Star className="h-5 w-5 text-cuephoria-orange" />
               Available Points
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <div className="text-3xl font-bold text-cuephoria-lightpurple">
+            <div className="flex items-center gap-3">
+              <div className="text-4xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
                 {loyaltyPoints}
               </div>
               <div className="text-muted-foreground text-sm">
                 points available to redeem
               </div>
             </div>
+            
+            <div className="h-2 w-full bg-gray-800 rounded-full mt-4 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange rounded-full"
+                style={{ width: `${Math.min(100, (loyaltyPoints / 1000) * 100)}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>1000</span>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6">
+        <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="h-5 w-5 text-cuephoria-orange" />
@@ -343,20 +362,54 @@ const CustomerRewards: React.FC = () => {
                 {rewards.map((reward) => (
                   <Card 
                     key={reward.id} 
-                    className={`border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/50 transition-all duration-300 ${loyaltyPoints >= reward.pointsCost ? 'bg-gradient-to-br from-cuephoria-darker/80 to-cuephoria-darker/60' : 'bg-cuephoria-darker/80 opacity-70'}`}
+                    className={`border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/50 transition-all duration-300 ${
+                      loyaltyPoints >= reward.pointsCost 
+                        ? 'bg-gradient-to-br from-cuephoria-darker/80 to-cuephoria-darker/60' 
+                        : 'bg-cuephoria-darker/80 opacity-70'
+                    } overflow-hidden`}
                   >
                     <div className="p-4">
+                      {reward.imageUrl ? (
+                        <div className="h-32 overflow-hidden rounded-md mb-3">
+                          <img 
+                            src={reward.imageUrl} 
+                            alt={reward.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-32 bg-gradient-to-br from-cuephoria-lightpurple/10 to-cuephoria-orange/5 rounded-md mb-3 flex items-center justify-center">
+                          <Gift className="h-12 w-12 text-cuephoria-lightpurple/30" />
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-semibold text-white">{reward.name}</h3>
-                        <Badge className="bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90">{reward.pointsCost} pts</Badge>
+                        <Badge className={`
+                          ${loyaltyPoints >= reward.pointsCost 
+                            ? 'bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90' 
+                            : 'bg-gray-700 hover:bg-gray-600'
+                          }
+                        `}>
+                          {reward.pointsCost} pts
+                        </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-4">{reward.description}</p>
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2 h-10">{reward.description}</p>
                       <Button 
-                        className="w-full bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                        className={`
+                          w-full ${loyaltyPoints >= reward.pointsCost 
+                            ? 'bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90'
+                            : 'bg-gray-700 hover:bg-gray-600 opacity-80'
+                          } transition-all duration-300
+                        `}
                         disabled={loyaltyPoints < reward.pointsCost}
                         onClick={() => handleRedeemClick(reward)}
                       >
-                        {loyaltyPoints >= reward.pointsCost ? 'Redeem Now' : `Need ${reward.pointsCost - loyaltyPoints} more points`}
+                        {loyaltyPoints >= reward.pointsCost ? (
+                          <>Redeem Now</>
+                        ) : (
+                          <>Need {reward.pointsCost - loyaltyPoints} more points</>
+                        )}
                       </Button>
                     </div>
                   </Card>
@@ -370,7 +423,7 @@ const CustomerRewards: React.FC = () => {
       </motion.div>
       
       <motion.div variants={itemVariants}>
-        <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
+        <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gift className="h-5 w-5 text-cuephoria-orange" />
@@ -380,17 +433,29 @@ const CustomerRewards: React.FC = () => {
           </CardHeader>
           <CardContent>
             {myRedemptions.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {myRedemptions.map((redemption) => (
-                  <div key={redemption.id} className="bg-cuephoria-darker/60 p-4 rounded-lg border border-cuephoria-lightpurple/20">
+                  <div 
+                    key={redemption.id} 
+                    className="bg-cuephoria-darker/60 p-4 rounded-lg border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/40 transition-all duration-300 cursor-pointer"
+                    onClick={() => handleViewRedemption(redemption)}
+                  >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-medium text-white">{redemption.rewardName}</h4>
+                        <div className="flex items-center">
+                          <h4 className="font-medium text-white">{redemption.rewardName}</h4>
+                          <ArrowRight className="ml-2 h-4 w-4 text-gray-500" />
+                        </div>
                         <p className="text-xs text-muted-foreground mb-2">
                           {redemption.redemptionDate.toLocaleDateString()} • {redemption.pointsSpent} points
                         </p>
                       </div>
                       {getStatusBadge(redemption.status)}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-800/50 border border-gray-700/50 text-gray-300">
+                        {redemption.redemptionCode}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -402,6 +467,7 @@ const CustomerRewards: React.FC = () => {
         </Card>
       </motion.div>
       
+      {/* Redeem Dialog */}
       <Dialog open={isRedeemDialogOpen} onOpenChange={setIsRedeemDialogOpen}>
         <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 sm:max-w-md">
           {!isRedemptionSuccess ? (
@@ -459,6 +525,64 @@ const CustomerRewards: React.FC = () => {
                   onClick={() => setIsRedeemDialogOpen(false)}
                 >
                   Done
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Redemption Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 sm:max-w-md">
+          {selectedRedemption && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-cuephoria-orange" /> 
+                  {selectedRedemption.rewardName}
+                </DialogTitle>
+                <DialogDescription className="flex items-center gap-2 pt-1">
+                  {getStatusBadge(selectedRedemption.status)}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Redemption Code</h3>
+                  <div className="bg-cuephoria-darker border border-cuephoria-lightpurple/50 rounded-lg p-4 w-full text-center">
+                    <h3 className="text-2xl font-mono tracking-wider text-white">{selectedRedemption.redemptionCode}</h3>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Details</h3>
+                  <div className="space-y-2 p-4 bg-cuephoria-dark/50 rounded-md">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-400">Points Spent:</span>
+                      <span className="text-sm text-white">{selectedRedemption.pointsSpent} points</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-400">Redemption Date:</span>
+                      <span className="text-sm text-white">{selectedRedemption.redemptionDate.toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-cuephoria-lightpurple/10 rounded-md border border-cuephoria-lightpurple/20">
+                  <Info className="h-5 w-5 text-cuephoria-lightpurple" />
+                  <p className="text-sm text-gray-300">
+                    Show this code to our staff to redeem your reward.
+                  </p>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  className="w-full bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90 transition-all duration-300"
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  Close
                 </Button>
               </DialogFooter>
             </>

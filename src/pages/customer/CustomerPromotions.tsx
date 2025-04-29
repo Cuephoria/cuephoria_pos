@@ -1,16 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Promotion } from '@/types/customer.types';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Calendar, Clock, Tag, Percent } from 'lucide-react';
+import { Calendar, Clock, Tag, Percent, Star, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const CustomerPromotions: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchPromotions = async () => {
@@ -58,7 +61,7 @@ const CustomerPromotions: React.FC = () => {
       case 'percentage':
         return `${promotion.discountValue}% off`;
       case 'fixed':
-        return `$${promotion.discountValue} off`;
+        return `₹${promotion.discountValue} off`;
       case 'free_hours':
         return `${promotion.discountValue} free hour${promotion.discountValue !== 1 ? 's' : ''}`;
       default:
@@ -77,6 +80,23 @@ const CustomerPromotions: React.FC = () => {
       default:
         return <Tag className="h-5 w-5 text-gray-400" />;
     }
+  };
+
+  const getValidityText = (promotion: Promotion) => {
+    if (promotion.startDate && promotion.endDate) {
+      return `Valid from ${promotion.startDate.toLocaleDateString()} to ${promotion.endDate.toLocaleDateString()}`;
+    } else if (promotion.endDate) {
+      return `Valid until ${promotion.endDate.toLocaleDateString()}`;
+    } else if (promotion.startDate) {
+      return `Valid from ${promotion.startDate.toLocaleDateString()}`;
+    } else {
+      return 'No expiration date';
+    }
+  };
+
+  const handlePromotionClick = (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
+    setIsDialogOpen(true);
   };
 
   const containerVariants = {
@@ -119,10 +139,10 @@ const CustomerPromotions: React.FC = () => {
     >
       <motion.div className="mb-6" variants={itemVariants}>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
-          Promotions
+          Current Promotions
         </h1>
         <p className="text-muted-foreground mt-1">
-          Check out our latest special offers and events.
+          Check out our latest special offers and exclusive deals
         </p>
       </motion.div>
       
@@ -130,20 +150,47 @@ const CustomerPromotions: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {promotions.map((promotion) => (
             <motion.div key={promotion.id} variants={itemVariants}>
-              <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 h-full flex flex-col overflow-hidden group hover:border-cuephoria-lightpurple/40 transition-all duration-300">
+              <Card 
+                className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 h-full flex flex-col overflow-hidden group hover:border-cuephoria-lightpurple/40 transition-all duration-300 cursor-pointer"
+                onClick={() => handlePromotionClick(promotion)}
+              >
                 {promotion.imageUrl ? (
-                  <div className="relative h-40 overflow-hidden">
+                  <div className="relative h-52 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-t from-cuephoria-darker via-transparent to-transparent z-10" />
                     <img 
                       src={promotion.imageUrl} 
                       alt={promotion.name} 
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                     />
+                    <div className="absolute top-3 left-3 z-20">
+                      <Badge 
+                        className={`
+                          ${promotion.discountType === 'percentage' ? 'bg-green-600 hover:bg-green-700' : ''}
+                          ${promotion.discountType === 'fixed' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                          ${promotion.discountType === 'free_hours' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                          text-sm font-medium px-2.5 py-1.5
+                        `}
+                      >
+                        {formatDiscountValue(promotion)}
+                      </Badge>
+                    </div>
                   </div>
                 ) : (
-                  <div className="h-40 bg-gradient-to-br from-cuephoria-lightpurple/10 to-cuephoria-orange/5 flex items-center justify-center">
-                    <div className="text-cuephoria-lightpurple/30 text-5xl">
+                  <div className="h-52 bg-gradient-to-br from-cuephoria-lightpurple/10 to-cuephoria-orange/5 flex items-center justify-center">
+                    <div className="text-cuephoria-lightpurple/30 text-7xl">
                       {getDiscountTypeIcon(promotion.discountType)}
+                    </div>
+                    <div className="absolute top-3 left-3">
+                      <Badge 
+                        className={`
+                          ${promotion.discountType === 'percentage' ? 'bg-green-600 hover:bg-green-700' : ''}
+                          ${promotion.discountType === 'fixed' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                          ${promotion.discountType === 'free_hours' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                          text-sm font-medium px-2.5 py-1.5
+                        `}
+                      >
+                        {formatDiscountValue(promotion)}
+                      </Badge>
                     </div>
                   </div>
                 )}
@@ -153,15 +200,6 @@ const CustomerPromotions: React.FC = () => {
                     <CardTitle className="text-lg text-white group-hover:text-cuephoria-lightpurple transition-colors duration-300">
                       {promotion.name}
                     </CardTitle>
-                    <Badge 
-                      className={`
-                        ${promotion.discountType === 'percentage' ? 'bg-green-600 hover:bg-green-700' : ''}
-                        ${promotion.discountType === 'fixed' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                        ${promotion.discountType === 'free_hours' ? 'bg-amber-600 hover:bg-amber-700' : ''}
-                      `}
-                    >
-                      {formatDiscountValue(promotion)}
-                    </Badge>
                   </div>
                   <CardDescription className="line-clamp-2 h-10">
                     {promotion.description}
@@ -171,19 +209,11 @@ const CustomerPromotions: React.FC = () => {
                   {(promotion.startDate || promotion.endDate) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-4">
                       <Calendar className="h-3 w-3" />
-                      <span>
-                        {promotion.startDate && promotion.endDate 
-                          ? `Valid from ${promotion.startDate.toLocaleDateString()} to ${promotion.endDate.toLocaleDateString()}`
-                          : promotion.endDate 
-                            ? `Valid until ${promotion.endDate.toLocaleDateString()}`
-                            : promotion.startDate 
-                              ? `Valid from ${promotion.startDate.toLocaleDateString()}`
-                              : 'No expiration date'
-                        }
-                      </span>
+                      <span>{getValidityText(promotion)}</span>
                     </div>
                   )}
                 </CardContent>
+                <div className="h-1 bg-gradient-to-r from-cuephoria-lightpurple/30 to-cuephoria-orange/30 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
               </Card>
             </motion.div>
           ))}
@@ -199,6 +229,66 @@ const CustomerPromotions: React.FC = () => {
           </Card>
         </motion.div>
       )}
+
+      {/* Promotion Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 sm:max-w-md">
+          {selectedPromotion && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl flex items-center gap-2">
+                  {getDiscountTypeIcon(selectedPromotion.discountType)}
+                  <span>{selectedPromotion.name}</span>
+                </DialogTitle>
+                <DialogDescription>
+                  <Badge 
+                    className={`
+                      ${selectedPromotion.discountType === 'percentage' ? 'bg-green-600 hover:bg-green-700' : ''}
+                      ${selectedPromotion.discountType === 'fixed' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                      ${selectedPromotion.discountType === 'free_hours' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+                      mt-2
+                    `}
+                  >
+                    {formatDiscountValue(selectedPromotion)}
+                  </Badge>
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedPromotion.imageUrl && (
+                <div className="w-full h-48 overflow-hidden rounded-md mb-4">
+                  <img 
+                    src={selectedPromotion.imageUrl} 
+                    alt={selectedPromotion.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Description</h3>
+                  <p className="text-white">{selectedPromotion.description}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Validity Period</h3>
+                  <p className="flex items-center gap-2 text-white">
+                    <Calendar className="h-4 w-4 text-cuephoria-orange" />
+                    {getValidityText(selectedPromotion)}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-cuephoria-orange/10 rounded-md border border-cuephoria-orange/20">
+                  <Info className="h-5 w-5 text-cuephoria-orange" />
+                  <p className="text-sm text-gray-300">
+                    Show this promotion to our staff when making a purchase to avail this offer.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { motion } from 'framer-motion';
 import { Trophy, Calendar, Clock, Award, CreditCard, Target, Gift, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface CustomerData {
   name: string;
@@ -19,8 +20,10 @@ interface CustomerData {
 
 const CustomerDashboard: React.FC = () => {
   const { customerUser } = useCustomerAuth();
+  const { toast } = useToast();
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     if (!customerUser?.customerId) return;
@@ -70,6 +73,21 @@ const CustomerDashboard: React.FC = () => {
     }
     
     return `${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
+  };
+
+  const handleCopyReferralCode = () => {
+    if (customerUser?.referralCode) {
+      navigator.clipboard.writeText(customerUser.referralCode);
+      setIsCopied(true);
+      toast({
+        title: "Referral Code Copied!",
+        description: "Your referral code has been copied to clipboard",
+      });
+      
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 3000);
+    }
   };
 
   if (isLoading) {
@@ -216,9 +234,11 @@ const CustomerDashboard: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full">
                   <p className="text-center text-muted-foreground mb-4">No active membership plan</p>
-                  <Button className="bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300">
-                    Get Membership
-                  </Button>
+                  <a href="https://cuephoria.in/membership" target="_blank" rel="noopener noreferrer">
+                    <Button className="bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300">
+                      Get Membership
+                    </Button>
+                  </a>
                 </div>
               )}
             </CardContent>
@@ -275,20 +295,47 @@ const CustomerDashboard: React.FC = () => {
                 <p className="text-center text-lg font-mono font-bold text-cuephoria-blue">{customerUser?.referralCode}</p>
               </div>
               <Button 
-                className="w-full bg-gradient-to-r from-cuephoria-blue to-cuephoria-lightpurple hover:shadow-lg hover:shadow-cuephoria-blue/20 transition-all duration-300"
-                onClick={() => {
-                  if (customerUser?.referralCode) {
-                    navigator.clipboard.writeText(customerUser.referralCode);
-                    alert('Referral code copied to clipboard!');
-                  }
-                }}
+                className={`w-full ${isCopied 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-gradient-to-r from-cuephoria-blue to-cuephoria-lightpurple hover:shadow-lg hover:shadow-cuephoria-blue/20'
+                } transition-all duration-300`}
+                onClick={handleCopyReferralCode}
               >
-                Copy Referral Code
+                {isCopied ? 'Copied!' : 'Copy Referral Code'}
               </Button>
             </CardContent>
           </Card>
         </motion.div>
       </div>
+
+      {/* Book Now Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.6 }}
+        className="mt-8"
+      >
+        <Card className="border-cuephoria-orange/30 bg-gradient-to-r from-cuephoria-darker to-cuephoria-dark/90 overflow-hidden shadow-lg shadow-orange-500/5">
+          <CardContent className="p-6 sm:p-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                  <Calendar className="text-cuephoria-orange h-6 w-6" />
+                  <span>Get 10% Off When You Book Online</span>
+                </h3>
+                <p className="text-muted-foreground">
+                  Reserve your gaming session in advance through our website and enjoy a 10% discount on your bill.
+                </p>
+              </div>
+              <a href="https://cuephoria.in" target="_blank" rel="noopener noreferrer" className="shrink-0">
+                <Button className="bg-gradient-to-r from-cuephoria-orange to-cuephoria-orange/80 hover:from-cuephoria-orange/90 hover:to-cuephoria-orange/70 text-white px-8 py-6 h-auto text-lg shadow-lg shadow-cuephoria-orange/20">
+                  Book Now
+                </Button>
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

@@ -71,6 +71,16 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         // Set up auth state listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, currentSession) => {
+            console.log("Auth state change event:", event);
+            
+            // Show success toast for confirmed signup
+            if (event === 'SIGNED_IN') {
+              toast({
+                title: "Authentication successful",
+                description: "You have been signed in successfully!",
+              });
+            }
+            
             setSession(currentSession);
             setUser(currentSession?.user ?? null);
             
@@ -84,6 +94,19 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
             }
           }
         );
+
+        // Check URL params for confirmation success
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('confirmation') && url.searchParams.get('confirmation') === 'success') {
+          toast({
+            title: "Email confirmed!",
+            description: "Your account has been successfully activated.",
+          });
+          
+          // Remove the params from URL to prevent showing the message on refresh
+          url.searchParams.delete('confirmation');
+          window.history.replaceState({}, document.title, url.pathname + url.search);
+        }
 
         // Then check for existing session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
