@@ -147,7 +147,7 @@ const CustomerLogin = () => {
       
     // Award points to referrer
     try {
-      // Call the RPC function without type issues
+      // Call the RPC function with parameters as the second argument
       const { error: referrerPointsError } = await supabase.rpc(
         'award_referral_points', 
         { 
@@ -165,7 +165,7 @@ const CustomerLogin = () => {
     
     // Award points to the referred customer
     try {
-      // Call the RPC function without type issues
+      // Call the RPC function with parameters as the second argument
       const { error: referredPointsError } = await supabase.rpc(
         'award_referral_points', 
         { 
