@@ -134,6 +134,7 @@ export type Database = {
           customer_id: string | null
           email: string
           id: string
+          pin: string | null
           referral_code: string | null
           reset_pin: string | null
           reset_pin_expiry: string | null
@@ -144,6 +145,7 @@ export type Database = {
           customer_id?: string | null
           email: string
           id?: string
+          pin?: string | null
           referral_code?: string | null
           reset_pin?: string | null
           reset_pin_expiry?: string | null
@@ -154,6 +156,7 @@ export type Database = {
           customer_id?: string | null
           email?: string
           id?: string
+          pin?: string | null
           referral_code?: string | null
           reset_pin?: string | null
           reset_pin_expiry?: string | null

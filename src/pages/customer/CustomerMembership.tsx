@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ interface MembershipDetails {
   membershipExpiryDate?: Date;
   membershipHoursLeft?: number;
   membershipDuration?: string;
+  loyaltyPoints?: number;
 }
 
 const CustomerMembership: React.FC = () => {
@@ -37,7 +39,8 @@ const CustomerMembership: React.FC = () => {
             membership_start_date,
             membership_expiry_date,
             membership_hours_left,
-            membership_duration
+            membership_duration,
+            loyalty_points
           `)
           .eq('id', customerUser.customerId)
           .single();
@@ -58,7 +61,8 @@ const CustomerMembership: React.FC = () => {
           membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
           membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
           membershipHoursLeft: data.membership_hours_left,
-          membershipDuration: data.membership_duration
+          membershipDuration: data.membership_duration,
+          loyaltyPoints: data.loyalty_points
         });
       } catch (err) {
         console.error('Error in fetchMembershipDetails:', err);
@@ -96,6 +100,14 @@ const CustomerMembership: React.FC = () => {
     return Math.min(Math.round((elapsedTime / totalTime) * 100), 100);
   };
 
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-12 flex justify-center">
@@ -116,255 +128,217 @@ const CustomerMembership: React.FC = () => {
           My Membership
         </h1>
         <p className="text-muted-foreground mt-1">
-          View and manage your membership details
+          View and manage your membership details and loyalty points
         </p>
       </motion.div>
       
-      {membershipDetails?.membershipStatus ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <motion.div
-            className="lg:col-span-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 h-full flex flex-col">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-full bg-cuephoria-lightpurple/10">
-                    <Award className="h-6 w-6 text-cuephoria-lightpurple" />
-                  </div>
-                  <CardTitle className="text-xl bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-blue bg-clip-text text-transparent">
-                    Active Membership
-                  </CardTitle>
-                </div>
-                <CardDescription className="text-base text-muted-foreground">
-                  You have an active {membershipDetails.membershipPlan} membership
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CalendarDays className="h-4 w-4" />
-                      <span className="text-sm">Start Date</span>
-                    </div>
-                    <p className="text-lg font-medium">{formatDate(membershipDetails.membershipStartDate)}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CalendarClock className="h-4 w-4" />
-                      <span className="text-sm">Expiry Date</span>
-                    </div>
-                    <p className="text-lg font-medium">{formatDate(membershipDetails.membershipExpiryDate)}</p>
-                  </div>
-                </div>
-                
-                <div className="mt-8">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-muted-foreground">Membership Period</span>
-                    <span className="text-sm font-medium">{calculateProgressPercentage()}% complete</span>
-                  </div>
-                  <Progress 
-                    value={calculateProgressPercentage()} 
-                    className="h-2 bg-cuephoria-darker" 
-                  />
-                </div>
-                
-                <div className="mt-8">
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-cuephoria-darker/80 to-cuephoria-dark/80 border border-cuephoria-lightpurple/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-cuephoria-green" />
-                        <span className="font-medium">Hours Remaining</span>
-                      </div>
-                      <span className="text-xl font-bold text-cuephoria-green">
-                        {membershipDetails.membershipHoursLeft || 0}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      You have {membershipDetails.membershipHoursLeft || 0} hours left in your membership package
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mt-auto pt-6">
-                  <Button className="w-full bg-gradient-to-r from-cuephoria-lightpurple to-accent">
-                    Upgrade Membership
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 h-full">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-2 rounded-full bg-cuephoria-orange/10">
-                    <Hourglass className="h-6 w-6 text-cuephoria-orange" />
-                  </div>
-                  <CardTitle className="text-xl bg-gradient-to-r from-cuephoria-orange to-amber-500 bg-clip-text text-transparent">
-                    Membership Benefits
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mt-2">
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 rounded-full bg-cuephoria-orange/10 p-1">
-                      <Award className="h-4 w-4 text-cuephoria-orange" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Priority booking</p>
-                      <p className="text-sm text-muted-foreground">Get priority access to tables and stations</p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 rounded-full bg-cuephoria-orange/10 p-1">
-                      <Award className="h-4 w-4 text-cuephoria-orange" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Exclusive events</p>
-                      <p className="text-sm text-muted-foreground">Access to member-only tournaments and events</p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 rounded-full bg-cuephoria-orange/10 p-1">
-                      <Award className="h-4 w-4 text-cuephoria-orange" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Bonus loyalty points</p>
-                      <p className="text-sm text-muted-foreground">Earn 2x loyalty points on purchases</p>
-                    </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <div className="flex-shrink-0 rounded-full bg-cuephoria-orange/10 p-1">
-                      <Award className="h-4 w-4 text-cuephoria-orange" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Discounted F&B</p>
-                      <p className="text-sm text-muted-foreground">10% off on food and beverages</p>
-                    </div>
-                  </li>
-                </ul>
-                
-                <div className="mt-6 p-4 rounded-lg bg-gradient-to-r from-cuephoria-darker/80 to-cuephoria-dark/80 border border-cuephoria-lightpurple/10">
-                  <p className="font-medium mb-1">Current Plan: {membershipDetails.membershipPlan}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Duration: {membershipDetails.membershipDuration || 'Not specified'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      ) : (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Membership Status Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cuephoria-lightpurple/10 via-transparent to-transparent opacity-60"></div>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                No Active Membership
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-cuephoria-lightpurple animate-pulse-soft" />
+                <CardTitle className="text-lg">Membership Status</CardTitle>
+              </div>
+              <CardDescription>Your current membership details</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                You currently don't have an active membership. Purchase a membership package to enjoy exclusive benefits!
-              </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {/* Membership packages */}
-                <Card className="border-cuephoria-lightpurple/20 bg-cuephoria-darker/60 overflow-hidden">
-                  <div className="p-1 bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-blue"></div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg">Basic</h3>
-                    <div className="my-3">
-                      <span className="text-2xl font-bold">₹1,999</span>
-                      <span className="text-muted-foreground"> / month</span>
-                    </div>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-lightpurple" />
-                        <span>15 hours of play time</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-lightpurple" />
-                        <span>Basic member benefits</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-lightpurple" />
-                        <span>5% discount on F&B</span>
-                      </li>
-                    </ul>
-                    <Button className="w-full">Select</Button>
-                  </div>
-                </Card>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${membershipDetails?.membershipStatus ? 'bg-cuephoria-green/20 text-cuephoria-green' : 'bg-cuephoria-orange/20 text-cuephoria-orange'}`}>
+                    {membershipDetails?.membershipStatus ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
                 
-                <Card className="border-cuephoria-lightpurple/20 bg-cuephoria-darker/60 overflow-hidden">
-                  <div className="p-1 bg-gradient-to-r from-cuephoria-green to-cuephoria-blue"></div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg">Premium</h3>
-                    <div className="my-3">
-                      <span className="text-2xl font-bold">₹3,499</span>
-                      <span className="text-muted-foreground"> / month</span>
-                    </div>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-green" />
-                        <span>30 hours of play time</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-green" />
-                        <span>All basic benefits</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-green" />
-                        <span>10% discount on F&B</span>
-                      </li>
-                    </ul>
-                    <Button className="w-full" variant="outline">Select</Button>
-                  </div>
-                </Card>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Membership Plan</span>
+                  <span className="text-sm font-medium">{membershipDetails?.membershipPlan || 'N/A'}</span>
+                </div>
                 
-                <Card className="border-cuephoria-lightpurple/20 bg-cuephoria-darker/60 overflow-hidden">
-                  <div className="p-1 bg-gradient-to-r from-cuephoria-orange to-amber-500"></div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg">Elite</h3>
-                    <div className="my-3">
-                      <span className="text-2xl font-bold">₹6,999</span>
-                      <span className="text-muted-foreground"> / month</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Type</span>
+                  <span className="text-sm font-medium capitalize">{membershipDetails?.membershipDuration || 'N/A'}</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Start Date</span>
+                  <span className="text-sm font-medium">{membershipDetails?.membershipStartDate ? formatDate(membershipDetails.membershipStartDate) : 'N/A'}</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Expiry Date</span>
+                  <span className="text-sm font-medium">{membershipDetails?.membershipExpiryDate ? formatDate(membershipDetails.membershipExpiryDate) : 'N/A'}</span>
+                </div>
+                
+                {membershipDetails?.membershipStatus && membershipDetails?.membershipStartDate && membershipDetails?.membershipExpiryDate && (
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">Membership Period</span>
+                      <span className="text-sm font-medium">{calculateProgressPercentage()}% complete</span>
                     </div>
-                    <ul className="space-y-2 mb-4">
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-orange" />
-                        <span>60 hours of play time</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-orange" />
-                        <span>All premium benefits</span>
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <Award size={14} className="text-cuephoria-orange" />
-                        <span>15% discount on F&B</span>
-                      </li>
-                    </ul>
-                    <Button className="w-full" variant="outline">Select</Button>
+                    <Progress 
+                      value={calculateProgressPercentage()} 
+                      className="h-2 bg-cuephoria-darker"
+                    />
                   </div>
-                </Card>
+                )}
+                
+                <div className="mt-8">
+                  <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-cuephoria-lightpurple" /> 
+                    Hours Remaining
+                  </h3>
+                  {membershipDetails?.membershipHoursLeft !== undefined ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-full bg-cuephoria-darker h-4 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-cuephoria-blue/80 to-cuephoria-lightpurple/80 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min((membershipDetails.membershipHoursLeft / 20) * 100, 100)}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium">{membershipDetails.membershipHoursLeft}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">No hours plan active</span>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-      )}
+        
+        {/* Loyalty Points Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative h-full">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-cuephoria-orange/10 via-transparent to-transparent opacity-60"></div>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-cuephoria-orange animate-pulse-soft" />
+                <CardTitle className="text-lg">Loyalty Points</CardTitle>
+              </div>
+              <CardDescription>Your earned rewards points</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center p-4">
+                <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-cuephoria-orange/20 to-cuephoria-lightpurple/20 mb-4 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+                  <div className="absolute inset-0 bg-[conic-gradient(from_0deg,rgba(0,0,0,0),rgba(155,135,245,0.3),rgba(0,0,0,0))] animate-spin-slow"></div>
+                  <div className="relative text-4xl font-bold bg-gradient-to-r from-cuephoria-orange to-cuephoria-lightpurple bg-clip-text text-transparent">
+                    {membershipDetails?.loyaltyPoints || 0}
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold bg-gradient-to-r from-cuephoria-orange to-cuephoria-lightpurple bg-clip-text text-transparent">Points</h3>
+                <p className="text-sm text-muted-foreground mt-2">Use your points to redeem exciting rewards!</p>
+                
+                <Button 
+                  className="mt-6 bg-gradient-to-r from-cuephoria-orange/80 to-cuephoria-lightpurple/80 hover:from-cuephoria-orange hover:to-cuephoria-lightpurple text-white shadow-lg shadow-cuephoria-lightpurple/10 hover:shadow-cuephoria-lightpurple/20 transition-all duration-300"
+                  onClick={() => window.location.href = "/customer/rewards"}
+                >
+                  View Rewards
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        {/* Referral Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative h-full">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-cuephoria-blue/10 via-transparent to-transparent opacity-60"></div>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-cuephoria-blue animate-pulse-soft" />
+                <CardTitle className="text-lg">Refer & Earn</CardTitle>
+              </div>
+              <CardDescription>Share your referral code and earn rewards</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center p-4">
+                {customerUser?.referralCode ? (
+                  <>
+                    <div className="mb-4 bg-gradient-to-r from-cuephoria-blue/20 to-cuephoria-lightpurple/20 p-4 rounded-lg border border-cuephoria-blue/30 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+                      <p className="text-sm text-muted-foreground mb-2">Your Referral Code</p>
+                      <p className="text-2xl font-mono font-bold tracking-wider bg-gradient-to-r from-cuephoria-blue to-cuephoria-lightpurple bg-clip-text text-transparent">{customerUser.referralCode}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">Share this code with your friends and earn 100 loyalty points for each successful referral!</p>
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(customerUser.referralCode);
+                        toast({
+                          title: "Copied!",
+                          description: "Referral code copied to clipboard",
+                        });
+                      }}
+                      className="bg-gradient-to-r from-cuephoria-blue/80 to-cuephoria-lightpurple/80 hover:from-cuephoria-blue hover:to-cuephoria-lightpurple text-white shadow-lg shadow-cuephoria-lightpurple/10 hover:shadow-cuephoria-lightpurple/20 transition-all duration-300"
+                    >
+                      Copy Code
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Referral code not available.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+      
+      {/* Upcoming Features Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="mt-6"
+      >
+        <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-accent/5 via-transparent to-transparent opacity-60"></div>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-accent animate-pulse-soft" />
+              <CardTitle className="text-lg">Upcoming Membership Benefits</CardTitle>
+            </div>
+            <CardDescription>New features and benefits coming soon</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-cuephoria-darker to-cuephoria-darker/70 p-4 rounded-lg border border-accent/20 flex items-start gap-3">
+                <div className="bg-accent/10 p-2 rounded-full">
+                  <CalendarDays className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">Extended Playing Hours</h4>
+                  <p className="text-xs text-muted-foreground mt-1">Members will get extended playing hours during weekends.</p>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-cuephoria-darker to-cuephoria-darker/70 p-4 rounded-lg border border-cuephoria-blue/20 flex items-start gap-3">
+                <div className="bg-cuephoria-blue/10 p-2 rounded-full">
+                  <Award className="h-5 w-5 text-cuephoria-blue" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">Premium Tournament Access</h4>
+                  <p className="text-xs text-muted-foreground mt-1">Exclusive access to premium tournaments with special prizes.</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

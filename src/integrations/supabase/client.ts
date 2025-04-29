@@ -94,8 +94,8 @@ export const convertFromSupabaseCustomerUser = (item: any): any => {
     email: item.email,
     referralCode: item.referral_code,
     resetPin: item.reset_pin,
+    pin: item.pin, // Add pin field
     resetPinExpiry: item.reset_pin_expiry ? new Date(item.reset_pin_expiry) : null,
-    pin: item.pin,
     createdAt: item.created_at ? new Date(item.created_at) : new Date()
   };
 };
@@ -108,8 +108,8 @@ export const convertToSupabaseCustomerUser = (user: any): any => {
     email: user.email,
     referral_code: user.referralCode,
     reset_pin: user.resetPin,
+    pin: user.pin, // Add pin field
     reset_pin_expiry: user.resetPinExpiry ? user.resetPinExpiry.toISOString() : null,
-    pin: user.pin,
     created_at: user.createdAt ? user.createdAt.toISOString() : new Date().toISOString()
   };
 };

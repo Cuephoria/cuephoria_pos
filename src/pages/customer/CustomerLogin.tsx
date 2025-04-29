@@ -146,7 +146,7 @@ const CustomerLogin: React.FC = () => {
           
           <CardHeader className="text-center relative z-10 p-4 sm:p-6">
             <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#5D6BFF] via-[#8A7CFE] to-[#C77DFF] bg-clip-text text-transparent">Member Login</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access your account</CardDescription>
+            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access exclusive member benefits</CardDescription>
           </CardHeader>
           
           <form onSubmit={handleSubmit}>

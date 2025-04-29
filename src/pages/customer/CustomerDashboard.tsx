@@ -1,447 +1,294 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { Clock, Award, Trophy, Calendar } from 'lucide-react';
-import { CustomerStatistics, LoyaltyTransaction, Promotion, CustomerSession } from '@/types/customer.types';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { motion } from 'framer-motion';
+import { Trophy, Calendar, Clock, Award, CreditCard, Target, Gift, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface CustomerData {
+  name: string;
+  membershipStatus: boolean;
+  membershipExpiryDate?: Date;
+  loyaltyPoints: number;
+  totalPlayTime: number;
+}
 
 const CustomerDashboard: React.FC = () => {
   const { customerUser } = useCustomerAuth();
-  const { toast } = useToast();
+  const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [statistics, setStatistics] = useState<CustomerStatistics | null>(null);
-  const [recentSessions, setRecentSessions] = useState<CustomerSession[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<LoyaltyTransaction[]>([]);
-  const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!customerUser?.customerId) {
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 500);
-        return;
-      }
-      
-      setIsLoading(true);
+    if (!customerUser?.customerId) return;
+    
+    const fetchCustomerData = async () => {
       try {
-        // Fetch customer info for statistics
-        const { data: customerData, error: customerError } = await supabase
+        const { data, error } = await supabase
           .from('customers')
-          .select('loyalty_points, total_spent, total_play_time, is_member, membership_expiry_date, membership_hours_left')
+          .select(`
+            name,
+            is_member,
+            membership_expiry_date,
+            loyalty_points,
+            total_play_time
+          `)
           .eq('id', customerUser.customerId)
           .single();
           
-        if (customerError) {
-          throw new Error(`Error fetching customer data: ${customerError.message}`);
+        if (error) {
+          console.error('Error fetching customer data:', error);
+          return;
         }
         
-        // Fetch recent sessions
-        const { data: sessionsData, error: sessionsError } = await supabase
-          .from('sessions')
-          .select('id, station_id, start_time, end_time, duration, stations(name, type)')
-          .eq('customer_id', customerUser.customerId)
-          .order('start_time', { ascending: false })
-          .limit(5);
-        
-        if (sessionsError) {
-          throw new Error(`Error fetching sessions: ${sessionsError.message}`);
-        }
-        
-        // Format sessions data
-        const formattedSessions: CustomerSession[] = sessionsData.map((session: any) => ({
-          id: session.id,
-          stationId: session.station_id,
-          stationName: session.stations?.name,
-          stationType: session.stations?.type,
-          startTime: new Date(session.start_time),
-          endTime: session.end_time ? new Date(session.end_time) : undefined,
-          duration: session.duration
-        }));
-        
-        // Fetch loyalty transactions
-        const { data: transactionsData, error: transactionsError } = await supabase
-          .from('loyalty_transactions')
-          .select('*')
-          .eq('customer_id', customerUser.customerId)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        
-        if (transactionsError) {
-          throw new Error(`Error fetching transactions: ${transactionsError.message}`);
-        }
-        
-        // Format transactions data
-        const formattedTransactions: LoyaltyTransaction[] = transactionsData.map((transaction: any) => ({
-          id: transaction.id,
-          customerId: transaction.customer_id,
-          points: transaction.points,
-          source: transaction.source,
-          description: transaction.description,
-          createdAt: new Date(transaction.created_at)
-        }));
-        
-        // Mock promotions data since we don't have a promotions table yet
-        const mockPromotions: Promotion[] = [
-          {
-            id: '1',
-            name: 'Happy Hour Special',
-            description: 'Get 20% off all table bookings between 2-5pm, Monday to Thursday.',
-            startDate: new Date(),
-            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-            discountType: 'percentage',
-            discountValue: 20,
-            isActive: true,
-            imageUrl: undefined,
-            createdAt: new Date()
-          },
-          {
-            id: '2',
-            name: 'Weekend Tournament',
-            description: 'Join our weekend tournament and win exciting prizes!',
-            startDate: new Date(),
-            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-            discountType: 'fixed',
-            discountValue: 10,
-            isActive: true,
-            imageUrl: undefined,
-            createdAt: new Date()
-          }
-        ];
-        setActivePromotions(mockPromotions);
-        
-        // Count sessions
-        const { count: sessionsCount } = await supabase
-          .from('sessions')
-          .select('id', { count: 'exact', head: false })
-          .eq('customer_id', customerUser.customerId);
-          
-        // Mock referrals count since we don't have a referrals table yet
-        const referralsCount = 0;
-        
-        // Set the statistics
-        setStatistics({
-          totalPlayTime: customerData.total_play_time,
-          totalSpent: customerData.total_spent,
-          loyaltyPoints: customerData.loyalty_points,
-          membershipStatus: customerData.is_member,
-          membershipExpiryDate: customerData.membership_expiry_date ? new Date(customerData.membership_expiry_date) : undefined,
-          membershipHoursLeft: customerData.membership_hours_left,
-          sessionsCount: sessionsCount || 0,
-          referralsCount: referralsCount || 0
+        setCustomerData({
+          name: data.name,
+          membershipStatus: data.is_member,
+          membershipExpiryDate: data.membership_expiry_date ? new Date(data.membership_expiry_date) : undefined,
+          loyaltyPoints: data.loyalty_points || 0,
+          totalPlayTime: data.total_play_time || 0
         });
-        
-        // Set the fetched data
-        setRecentSessions(formattedSessions);
-        setRecentTransactions(formattedTransactions);
-        
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        toast({
-          title: 'Error',
-          description: error instanceof Error ? error.message : 'Failed to load dashboard data',
-          variant: 'destructive',
-        });
+      } catch (err) {
+        console.error('Error in fetchCustomerData:', err);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchDashboardData();
-  }, [customerUser?.customerId, toast]);
+    
+    fetchCustomerData();
+  }, [customerUser?.customerId]);
+  
+  const formatTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0) {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'}${mins > 0 ? ` ${mins} min` : ''}`;
+    }
+    
+    return `${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
+  };
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <LoadingSpinner size="lg" />
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="md" />
       </div>
     );
   }
 
-  // Format time for display
-  const formatPlayTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
-  // Format date for display
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return 'N/A';
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
   return (
-    <div className="container mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
-          Welcome back{customerUser?.customerId ? '!' : ''}
+    <div className="container mx-auto py-6">
+      <motion.div
+        className="mb-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-[#5D6BFF] via-[#8A7CFE] to-[#C77DFF] bg-clip-text text-transparent">
+          Welcome back, {customerData?.name.split(' ')[0] || 'Member'}!
         </h1>
         <p className="text-muted-foreground mt-1">
-          Here's an overview of your gaming activity and rewards.
+          Your personal Cuephoria dashboard
         </p>
+      </motion.div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/5 overflow-hidden relative h-full hover:shadow-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/50 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-lightpurple/10 to-transparent rounded-bl-[50%] opacity-60"></div>
+            <CardContent className="p-4 flex flex-col h-full">
+              <div className="bg-cuephoria-lightpurple/10 p-2 rounded-full w-10 h-10 flex items-center justify-center mb-4">
+                <Award className="h-5 w-5 text-cuephoria-lightpurple" />
+              </div>
+              <div className="mt-auto">
+                <p className="text-sm text-muted-foreground">Loyalty Points</p>
+                <p className="text-2xl font-bold">{customerData?.loyaltyPoints}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-blue/30 shadow-lg shadow-cuephoria-blue/5 overflow-hidden relative h-full hover:shadow-cuephoria-blue/20 hover:border-cuephoria-blue/50 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-blue/10 to-transparent rounded-bl-[50%] opacity-60"></div>
+            <CardContent className="p-4 flex flex-col h-full">
+              <div className="bg-cuephoria-blue/10 p-2 rounded-full w-10 h-10 flex items-center justify-center mb-4">
+                <Clock className="h-5 w-5 text-cuephoria-blue" />
+              </div>
+              <div className="mt-auto">
+                <p className="text-sm text-muted-foreground">Total Play Time</p>
+                <p className="text-2xl font-bold">{formatTime(customerData?.totalPlayTime || 0)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-orange/30 shadow-lg shadow-cuephoria-orange/5 overflow-hidden relative h-full hover:shadow-cuephoria-orange/20 hover:border-cuephoria-orange/50 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-orange/10 to-transparent rounded-bl-[50%] opacity-60"></div>
+            <CardContent className="p-4 flex flex-col h-full">
+              <div className="bg-cuephoria-orange/10 p-2 rounded-full w-10 h-10 flex items-center justify-center mb-4">
+                <CreditCard className="h-5 w-5 text-cuephoria-orange" />
+              </div>
+              <div className="mt-auto">
+                <p className="text-sm text-muted-foreground">Membership</p>
+                <p className="text-lg font-bold">
+                  {customerData?.membershipStatus ? 'Active' : 'Inactive'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-green/30 shadow-lg shadow-cuephoria-green/5 overflow-hidden relative h-full hover:shadow-cuephoria-green/20 hover:border-cuephoria-green/50 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-green/10 to-transparent rounded-bl-[50%] opacity-60"></div>
+            <CardContent className="p-4 flex flex-col h-full">
+              <div className="bg-cuephoria-green/10 p-2 rounded-full w-10 h-10 flex items-center justify-center mb-4">
+                <Target className="h-5 w-5 text-cuephoria-green" />
+              </div>
+              <div className="mt-auto">
+                <p className="text-sm text-muted-foreground">Goal Progress</p>
+                <p className="text-lg font-bold">Coming Soon</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
-      {!customerUser?.customerId ? (
-        <div className="bg-cuephoria-dark/50 rounded-lg p-8 text-center">
-          <p className="text-lg text-muted-foreground mb-4">
-            Your account setup is still being processed. Please check back soon!
-          </p>
-        </div>
-      ) : statistics ? (
-        <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
-                  <span>Total Play Time</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {formatPlayTime(statistics.totalPlayTime)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  From {statistics.sessionsCount} sessions
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <Award className="h-4 w-4" />
-                  <span>Loyalty Points</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {statistics.loyaltyPoints}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Available to redeem
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Membership Status</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {statistics.membershipStatus ? (
-                    <span className="text-cuephoria-lightpurple">Active</span>
-                  ) : (
-                    <span className="text-muted-foreground">Inactive</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {statistics.membershipStatus && statistics.membershipHoursLeft
-                    ? `${statistics.membershipHoursLeft} hours remaining`
-                    : 'Not a member'}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <Trophy className="h-4 w-4" />
-                  <span>Referrals</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {statistics.referralsCount}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Successful referrals
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Sessions */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <Clock className="mr-2 h-5 w-5 text-cuephoria-lightpurple" />
-              Recent Sessions
-            </h2>
-            <div className="bg-cuephoria-darker/40 rounded-lg border border-cuephoria-lightpurple/20 overflow-hidden">
-              {recentSessions.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-xs text-muted-foreground border-b border-cuephoria-lightpurple/10">
-                        <th className="px-4 py-3 text-left">Station</th>
-                        <th className="px-4 py-3 text-left">Date</th>
-                        <th className="px-4 py-3 text-left">Duration</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentSessions.map((session) => (
-                        <tr key={session.id} className="border-b border-cuephoria-lightpurple/10 hover:bg-cuephoria-dark/30">
-                          <td className="px-4 py-3">
-                            <div className="font-medium">{session.stationName || `Station ${session.stationId.slice(0, 8)}`}</div>
-                            <div className="text-xs text-muted-foreground">{session.stationType}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div>{formatDate(session.startTime)}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {session.duration ? (
-                              <div>{formatPlayTime(session.duration)}</div>
-                            ) : session.endTime ? (
-                              <div>{formatPlayTime(Math.floor((session.endTime.getTime() - session.startTime.getTime()) / 60000))}</div>
-                            ) : (
-                              <div className="text-cuephoria-orange">Active</div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-6 text-center text-muted-foreground">
-                  No recent sessions found.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Point Transactions */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <Award className="mr-2 h-5 w-5 text-cuephoria-lightpurple" />
-              Recent Point Activity
-            </h2>
-            <div className="bg-cuephoria-darker/40 rounded-lg border border-cuephoria-lightpurple/20 overflow-hidden">
-              {recentTransactions.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-xs text-muted-foreground border-b border-cuephoria-lightpurple/10">
-                        <th className="px-4 py-3 text-left">Activity</th>
-                        <th className="px-4 py-3 text-left">Date</th>
-                        <th className="px-4 py-3 text-right">Points</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentTransactions.map((transaction) => (
-                        <tr key={transaction.id} className="border-b border-cuephoria-lightpurple/10 hover:bg-cuephoria-dark/30">
-                          <td className="px-4 py-3">
-                            <div className="font-medium">
-                              {transaction.source.charAt(0).toUpperCase() + transaction.source.slice(1)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">{transaction.description}</div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div>{formatDate(transaction.createdAt)}</div>
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium">
-                            <span className={transaction.points > 0 ? 'text-green-500' : 'text-red-500'}>
-                              {transaction.points > 0 ? '+' : ''}{transaction.points}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-6 text-center text-muted-foreground">
-                  No recent point activity found.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Active Promotions */}
-          {activePromotions.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <Calendar className="mr-2 h-5 w-5 text-cuephoria-lightpurple" />
-                Current Promotions
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activePromotions.map((promotion) => (
-                  <Card key={promotion.id} className="bg-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
-                    <CardContent className="p-5">
-                      <h3 className="font-bold text-lg mb-1 text-cuephoria-lightpurple">{promotion.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{promotion.description}</p>
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm">
-                          {promotion.discountType === 'percentage' ? (
-                            <span className="font-semibold text-cuephoria-orange">{promotion.discountValue}% Off</span>
-                          ) : promotion.discountType === 'fixed' ? (
-                            <span className="font-semibold text-cuephoria-orange">${promotion.discountValue} Off</span>
-                          ) : (
-                            <span className="font-semibold text-cuephoria-orange">{promotion.discountValue} Free Hours</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {promotion.endDate ? `Ends ${formatDate(promotion.endDate)}` : 'Limited time offer'}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Membership Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative h-full">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cuephoria-lightpurple/10 via-transparent to-transparent opacity-60"></div>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-cuephoria-lightpurple" />
+                <CardTitle className="text-lg">Membership Status</CardTitle>
               </div>
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <Button 
-              variant="outline" 
-              className="h-16 bg-cuephoria-darker border-cuephoria-lightpurple/30 hover:bg-cuephoria-lightpurple hover:text-white"
-            >
-              Book a Session
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-16 bg-cuephoria-darker border-cuephoria-lightpurple/30 hover:bg-cuephoria-lightpurple hover:text-white"
-            >
-              View Membership Plans
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-16 bg-cuephoria-darker border-cuephoria-lightpurple/30 hover:bg-cuephoria-lightpurple hover:text-white"
-            >
-              Browse Rewards
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-16 bg-cuephoria-darker border-cuephoria-lightpurple/30 hover:bg-cuephoria-lightpurple hover:text-white"
-            >
-              Share Referral Code
-            </Button>
-          </div>
-        </>
-      ) : (
-        <div className="bg-cuephoria-dark/50 rounded-lg p-8 text-center">
-          <p className="text-lg text-muted-foreground mb-4">
-            Unable to load dashboard data. Please try refreshing the page.
-          </p>
-          <Button onClick={() => window.location.reload()}>Refresh</Button>
-        </div>
-      )}
+              <CardDescription>Manage your membership plan</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col h-40">
+              {customerData?.membershipStatus ? (
+                <>
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="h-24 w-24 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 flex items-center justify-center">
+                      <Award className="h-10 w-10 text-cuephoria-lightpurple" />
+                    </div>
+                  </div>
+                  <p className="text-center text-cuephoria-lightpurple font-medium">Active Membership</p>
+                  {customerData.membershipExpiryDate && (
+                    <p className="text-center text-sm text-muted-foreground mt-1">
+                      Expires on {new Date(customerData.membershipExpiryDate).toLocaleDateString('en-IN', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-center text-muted-foreground mb-4">No active membership plan</p>
+                  <Button className="bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300">
+                    Get Membership
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        {/* Rewards Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-orange/30 shadow-lg shadow-cuephoria-orange/10 overflow-hidden relative h-full">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-cuephoria-orange/10 via-transparent to-transparent opacity-60"></div>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-cuephoria-orange" />
+                <CardTitle className="text-lg">Rewards & Promotions</CardTitle>
+              </div>
+              <CardDescription>Exclusive offers and benefits</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col h-40">
+              <div className="bg-gradient-to-r from-cuephoria-orange/20 to-cuephoria-orange/5 p-4 rounded-lg mb-4 flex-1 flex flex-col justify-center">
+                <p className="text-center font-medium mb-2">Use your loyalty points to earn rewards!</p>
+                <p className="text-center text-sm text-muted-foreground">Redeem exclusive Cuephoria merchandise, free play sessions, and more.</p>
+              </div>
+              <Link to="/customer/rewards">
+                <Button className="w-full bg-gradient-to-r from-cuephoria-orange to-cuephoria-lightpurple hover:shadow-lg hover:shadow-cuephoria-orange/20 transition-all duration-300">
+                  View Rewards
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        {/* Referral Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-blue/30 shadow-lg shadow-cuephoria-blue/10 overflow-hidden relative h-full">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-cuephoria-blue/10 via-transparent to-transparent opacity-60"></div>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-cuephoria-blue" />
+                <CardTitle className="text-lg">Refer & Earn</CardTitle>
+              </div>
+              <CardDescription>Invite friends and earn points</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col h-40">
+              <div className="bg-gradient-to-r from-cuephoria-blue/20 to-cuephoria-blue/5 p-4 rounded-lg mb-4 flex-1 flex flex-col justify-center">
+                <p className="text-center font-medium mb-2">Share your referral code</p>
+                <p className="text-center text-lg font-mono font-bold text-cuephoria-blue">{customerUser?.referralCode}</p>
+              </div>
+              <Button 
+                className="w-full bg-gradient-to-r from-cuephoria-blue to-cuephoria-lightpurple hover:shadow-lg hover:shadow-cuephoria-blue/20 transition-all duration-300"
+                onClick={() => {
+                  if (customerUser?.referralCode) {
+                    navigator.clipboard.writeText(customerUser.referralCode);
+                    alert('Referral code copied to clipboard!');
+                  }
+                }}
+              >
+                Copy Referral Code
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 };
