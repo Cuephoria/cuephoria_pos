@@ -361,7 +361,12 @@ const POS = () => {
           </CardFooter>
         </Card>
 
-        <Card className="lg:col-span-2 h-[calc(100vh-12rem)] flex flex-col animate-slide-up delay-200 overflow-hidden">
+        <Card
+          className="lg:col-span-2 h-full flex flex-col animate-slide-up delay-200 overflow-visible"
+          style={{
+            minHeight: 0,
+          }}
+        >
           <CardHeader className="pb-3 bg-gradient-to-r from-transparent to-cuephoria-blue/10">
             <CardTitle className="text-xl font-heading">Products</CardTitle>
             <div className="flex space-x-2">
@@ -376,53 +381,128 @@ const POS = () => {
               </div>
             </div>
           </CardHeader>
-          
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-grow animate-scale-in">
-            <TabsList className="px-6 flex flex-wrap items-center justify-start gap-2 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
-              <TabsTrigger value="all" className="font-heading flex-grow basis-0">
-                All ({categoryCounts.all || 0})
-              </TabsTrigger>
-              <TabsTrigger value="food" className="font-heading flex-grow basis-0">
-                Food ({categoryCounts.food || 0})
-              </TabsTrigger>
-              <TabsTrigger value="drinks" className="font-heading flex-grow basis-0">
-                Drinks ({categoryCounts.drinks || 0})
-              </TabsTrigger>
-              <TabsTrigger value="tobacco" className="font-heading flex-grow basis-0">
-                Tobacco ({categoryCounts.tobacco || 0})
-              </TabsTrigger>
-              <TabsTrigger value="challenges" className="font-heading flex-grow basis-0">
-                Challenges ({categoryCounts.challenges || 0})
-              </TabsTrigger>
-              <TabsTrigger value="membership" className="font-heading flex-grow basis-0">
-                <Award className="h-4 w-4 mr-1" /> 
-                Membership ({categoryCounts.membership || 0})
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value={activeTab} className="flex-grow overflow-auto px-4 mt-4">
-              {searchedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
-                  {searchedProducts.map((product, index) => (
-                    <div 
-                      key={product.id} 
-                      className="animate-scale-in h-full"
-                      style={{animationDelay: `${(index % 5) * 100}ms`}}
+
+          <div
+            className="flex flex-col flex-grow px-0"
+            style={{
+              minHeight: 0,
+            }}
+          >
+            <Tabs
+              defaultValue="all"
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex flex-col flex-grow animate-scale-in"
+            >
+              <div className="px-1 sm:px-6 bg-gradient-to-r from-cuephoria-purple/30 to-cuephoria-blue/20">
+                <TabsList
+                  className={`
+                    cuephoria-scrollbar-hide
+                    flex items-center
+                    gap-x-2
+                    py-2
+                    sm:justify-center
+                    justify-start
+                    w-full
+                    whitespace-nowrap
+                    rounded-xl
+                  `}
+                  style={{
+                    WebkitOverflowScrolling: "touch",
+                    paddingBottom: 0,
+                  }}
+                >
+                  <TabsTrigger
+                    value="all"
+                    className="cuephoria-filter-tag"
+                  >
+                    All ({categoryCounts.all || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="food"
+                    className="cuephoria-filter-tag"
+                  >
+                    Food ({categoryCounts.food || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="drinks"
+                    className="cuephoria-filter-tag"
+                  >
+                    Drinks ({categoryCounts.drinks || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="tobacco"
+                    className="cuephoria-filter-tag"
+                  >
+                    Tobacco ({categoryCounts.tobacco || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="challenges"
+                    className="cuephoria-filter-tag"
+                  >
+                    Challenges ({categoryCounts.challenges || 0})
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="membership"
+                    className="cuephoria-filter-tag flex items-center gap-1"
+                  >
+                    <Award className="h-4 w-4" />
+                    Membership ({categoryCounts.membership || 0})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent
+                value={activeTab}
+                className="flex-grow"
+                style={{
+                  minHeight: 0,
+                  padding: 0,
+                  marginTop: 0,
+                }}
+              >
+                <div
+                  style={{
+                    maxHeight: 'calc(100vh - 14rem)',
+                    overflowY: 'auto',
+                    padding: '1rem 1.5rem 1.5rem 1.5rem',
+                    borderRadius: 'inherit',
+                    background: 'inherit',
+                    boxShadow: 'inherit',
+                    scrollbarGutter: 'stable',
+                  }}
+                  className="w-full"
+                >
+                  {searchedProducts.length > 0 ? (
+                    <div
+                      className="grid gap-3"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                      }}
                     >
-                      <ProductCard product={product} className="h-full" />
+                      {searchedProducts.map((product, index) => (
+                        <div
+                          key={product.id}
+                          className="animate-scale-in h-full"
+                          style={{ animationDelay: `${(index % 5) * 100}ms` }}
+                        >
+                          <ProductCard product={product} className="h-full" />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full animate-fade-in">
+                      <h3 className="text-xl font-medium font-heading">No Products Found</h3>
+                      <p className="text-muted-foreground mt-2">
+                        Try a different search or category
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full animate-fade-in">
-                  <h3 className="text-xl font-medium font-heading">No Products Found</h3>
-                  <p className="text-muted-foreground mt-2">
-                    Try a different search or category
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+            </Tabs>
+          </div>
         </Card>
       </div>
 
