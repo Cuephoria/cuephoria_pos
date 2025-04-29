@@ -89,12 +89,13 @@ export function useReferral(options: UseReferralOptions = {}) {
         return false;
       }
       
-      // Update referrer's loyalty points - Fix TypeScript error here
+      // Update referrer's loyalty points
       try {
-        // Call the RPC function with parameters in a single object
-        const { data, error: updateReferrerError } = await supabase.rpc('award_referral_points', {
-          customer_identifier: referrerData.customer_id,
-          points_to_award: 100
+        const { data, error: updateReferrerError } = await supabase.functions.invoke('award_referral_points', {
+          body: {
+            customer_identifier: referrerData.customer_id,
+            points_to_award: 100
+          }
         });
         
         if (updateReferrerError) {
@@ -111,12 +112,13 @@ export function useReferral(options: UseReferralOptions = {}) {
         console.error('Error calling RPC function:', error);
       }
       
-      // Update new customer's points as well - Fix TypeScript error here
+      // Update new customer's points as well
       try {
-        // Call the RPC function with parameters in a single object
-        const { data, error: updateReferredError } = await supabase.rpc('award_referral_points', {
-          customer_identifier: newCustomerData.customer_id,
-          points_to_award: 50
+        const { data, error: updateReferredError } = await supabase.functions.invoke('award_referral_points', {
+          body: {
+            customer_identifier: newCustomerData.customer_id,
+            points_to_award: 50
+          }
         });
         
         if (updateReferredError) {
