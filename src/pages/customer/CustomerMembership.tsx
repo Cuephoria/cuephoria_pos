@@ -25,6 +25,7 @@ const CustomerMembership: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { customerUser } = useCustomerAuth();
   const { toast } = useToast();
+  const [progressValue, setProgressValue] = useState(0);
 
   useEffect(() => {
     if (!customerUser?.customerId) return;
@@ -55,7 +56,7 @@ const CustomerMembership: React.FC = () => {
           return;
         }
         
-        setMembershipDetails({
+        const details = {
           membershipStatus: data.is_member,
           membershipPlan: data.membership_plan,
           membershipStartDate: data.membership_start_date ? new Date(data.membership_start_date) : undefined,
@@ -63,7 +64,15 @@ const CustomerMembership: React.FC = () => {
           membershipHoursLeft: data.membership_hours_left,
           membershipDuration: data.membership_duration,
           loyaltyPoints: data.loyalty_points
-        });
+        };
+        
+        setMembershipDetails(details);
+        
+        // Calculate progress
+        if (details.membershipStartDate && details.membershipExpiryDate) {
+          const progress = calculateProgressPercentage(details.membershipStartDate, details.membershipExpiryDate);
+          setProgressValue(progress);
+        }
       } catch (err) {
         console.error('Error in fetchMembershipDetails:', err);
       } finally {
@@ -83,13 +92,9 @@ const CustomerMembership: React.FC = () => {
     });
   };
 
-  const calculateProgressPercentage = () => {
-    if (!membershipDetails || !membershipDetails.membershipStartDate || !membershipDetails.membershipExpiryDate) {
-      return 0;
-    }
-    
-    const startTime = membershipDetails.membershipStartDate.getTime();
-    const endTime = membershipDetails.membershipExpiryDate.getTime();
+  const calculateProgressPercentage = (startDate: Date, endDate: Date) => {
+    const startTime = new Date(startDate).getTime();
+    const endTime = new Date(endDate).getTime();
     const currentTime = new Date().getTime();
     const totalTime = endTime - startTime;
     const elapsedTime = currentTime - startTime;
@@ -100,12 +105,43 @@ const CustomerMembership: React.FC = () => {
     return Math.min(Math.round((elapsedTime / totalTime) * 100), 100);
   };
 
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
+  const handleCopyReferralCode = async () => {
+    if (!customerUser?.referralCode) return;
+    
+    try {
+      await navigator.clipboard.writeText(customerUser.referralCode);
+      toast({
+        title: "Copied!",
+        description: "Referral code copied to clipboard",
+      });
+    } catch (err) {
+      console.error("Error copying to clipboard:", err);
+      toast({
+        title: "Could not copy code",
+        description: "Please try again or copy manually",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleGetMembership = () => {
+    window.open("https://cuephoria.in/membership", "_blank");
+  };
+
+  const handleRenewMembership = () => {
+    window.open("https://cuephoria.in/membership", "_blank");
+    toast({
+      title: "Redirecting to membership page",
+      description: "You'll be able to select and purchase your preferred plan",
+    });
+  };
+
+  const handleUpgradeMembership = () => {
+    window.open("https://cuephoria.in/membership?upgrade=true", "_blank");
+    toast({
+      title: "Redirecting to upgrade options",
+      description: "Explore premium membership tiers",
+    });
   };
 
   if (isLoading) {
@@ -138,6 +174,7 @@ const CustomerMembership: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
+          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cuephoria-lightpurple/10 via-transparent to-transparent opacity-60"></div>
@@ -181,10 +218,10 @@ const CustomerMembership: React.FC = () => {
                   <div className="pt-2">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Membership Period</span>
-                      <span className="text-sm font-medium">{calculateProgressPercentage()}% complete</span>
+                      <span className="text-sm font-medium">{progressValue}% complete</span>
                     </div>
                     <Progress 
-                      value={calculateProgressPercentage()} 
+                      value={progressValue} 
                       className="h-2 bg-cuephoria-darker"
                     />
                   </div>
@@ -209,6 +246,35 @@ const CustomerMembership: React.FC = () => {
                     <span className="text-sm text-muted-foreground">No hours plan active</span>
                   )}
                 </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col gap-2 mt-2">
+                  {membershipDetails?.membershipStatus ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="border-cuephoria-lightpurple/30 hover:border-cuephoria-lightpurple/50 text-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/10 w-full"
+                        onClick={handleRenewMembership}
+                      >
+                        Renew Membership
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-cuephoria-blue/30 hover:border-cuephoria-blue/50 text-cuephoria-blue hover:bg-cuephoria-blue/10 w-full"
+                        onClick={handleUpgradeMembership}
+                      >
+                        Upgrade Plan
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      className="bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-blue w-full"
+                      onClick={handleGetMembership}
+                    >
+                      Get Membership
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -219,6 +285,7 @@ const CustomerMembership: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
+          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative h-full">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-cuephoria-orange/10 via-transparent to-transparent opacity-60"></div>
@@ -231,14 +298,30 @@ const CustomerMembership: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-center p-4">
-                <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-cuephoria-orange/20 to-cuephoria-lightpurple/20 mb-4 relative overflow-hidden">
+                <motion.div 
+                  className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-cuephoria-orange/20 to-cuephoria-lightpurple/20 mb-4 relative overflow-hidden"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                >
                   <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
                   <div className="absolute inset-0 bg-[conic-gradient(from_0deg,rgba(0,0,0,0),rgba(155,135,245,0.3),rgba(0,0,0,0))] animate-spin-slow"></div>
                   <div className="relative text-4xl font-bold bg-gradient-to-r from-cuephoria-orange to-cuephoria-lightpurple bg-clip-text text-transparent">
                     {membershipDetails?.loyaltyPoints || 0}
                   </div>
-                </div>
-                <h3 className="text-xl font-semibold bg-gradient-to-r from-cuephoria-orange to-cuephoria-lightpurple bg-clip-text text-transparent">Points</h3>
+                </motion.div>
+                <motion.h3 
+                  className="text-xl font-semibold bg-gradient-to-r from-cuephoria-orange to-cuephoria-lightpurple bg-clip-text text-transparent"
+                  animate={{ 
+                    textShadow: [
+                      "0 0 5px rgba(249, 115, 22, 0)",
+                      "0 0 15px rgba(249, 115, 22, 0.3)",
+                      "0 0 5px rgba(249, 115, 22, 0)"
+                    ]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  Points
+                </motion.h3>
                 <p className="text-sm text-muted-foreground mt-2">Use your points to redeem exciting rewards!</p>
                 
                 <Button 
@@ -257,6 +340,7 @@ const CustomerMembership: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
+          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative h-full">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-cuephoria-blue/10 via-transparent to-transparent opacity-60"></div>
@@ -278,13 +362,7 @@ const CustomerMembership: React.FC = () => {
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">Share this code with your friends and earn 100 loyalty points for each successful referral!</p>
                     <Button
-                      onClick={() => {
-                        navigator.clipboard.writeText(customerUser.referralCode);
-                        toast({
-                          title: "Copied!",
-                          description: "Referral code copied to clipboard",
-                        });
-                      }}
+                      onClick={handleCopyReferralCode}
                       className="bg-gradient-to-r from-cuephoria-blue/80 to-cuephoria-lightpurple/80 hover:from-cuephoria-blue hover:to-cuephoria-lightpurple text-white shadow-lg shadow-cuephoria-lightpurple/10 hover:shadow-cuephoria-lightpurple/20 transition-all duration-300"
                     >
                       Copy Code
@@ -317,7 +395,10 @@ const CustomerMembership: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-r from-cuephoria-darker to-cuephoria-darker/70 p-4 rounded-lg border border-accent/20 flex items-start gap-3">
+              <motion.div 
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                className="bg-gradient-to-r from-cuephoria-darker to-cuephoria-darker/70 p-4 rounded-lg border border-accent/20 flex items-start gap-3"
+              >
                 <div className="bg-accent/10 p-2 rounded-full">
                   <CalendarDays className="h-5 w-5 text-accent" />
                 </div>
@@ -325,8 +406,11 @@ const CustomerMembership: React.FC = () => {
                   <h4 className="font-medium text-sm">Extended Playing Hours</h4>
                   <p className="text-xs text-muted-foreground mt-1">Members will get extended playing hours during weekends.</p>
                 </div>
-              </div>
-              <div className="bg-gradient-to-r from-cuephoria-darker to-cuephoria-darker/70 p-4 rounded-lg border border-cuephoria-blue/20 flex items-start gap-3">
+              </motion.div>
+              <motion.div 
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                className="bg-gradient-to-r from-cuephoria-darker to-cuephoria-darker/70 p-4 rounded-lg border border-cuephoria-blue/20 flex items-start gap-3"
+              >
                 <div className="bg-cuephoria-blue/10 p-2 rounded-full">
                   <Award className="h-5 w-5 text-cuephoria-blue" />
                 </div>
@@ -334,7 +418,7 @@ const CustomerMembership: React.FC = () => {
                   <h4 className="font-medium text-sm">Premium Tournament Access</h4>
                   <p className="text-xs text-muted-foreground mt-1">Exclusive access to premium tournaments with special prizes.</p>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
