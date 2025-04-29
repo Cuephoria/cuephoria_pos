@@ -147,14 +147,11 @@ const CustomerLogin = () => {
       
     // Award points to referrer
     try {
-      // Call the RPC function with parameters as the second argument
-      const { error: referrerPointsError } = await supabase.rpc(
-        'award_referral_points', 
-        { 
-          customer_identifier: referrerData.customer_id, 
-          points_to_award: 100 
-        }
-      );
+      // Call the RPC function with parameters in a single object
+      const { error: referrerPointsError } = await supabase.rpc('award_referral_points', {
+        customer_identifier: referrerData.customer_id,
+        points_to_award: 100
+      });
       
       if (referrerPointsError) {
         console.error("Error awarding points to referrer:", referrerPointsError);
@@ -165,14 +162,11 @@ const CustomerLogin = () => {
     
     // Award points to the referred customer
     try {
-      // Call the RPC function with parameters as the second argument
-      const { error: referredPointsError } = await supabase.rpc(
-        'award_referral_points', 
-        { 
-          customer_identifier: userData.customer_id, 
-          points_to_award: 50 
-        }
-      );
+      // Call the RPC function with parameters in a single object
+      const { error: referredPointsError } = await supabase.rpc('award_referral_points', {
+        customer_identifier: userData.customer_id,
+        points_to_award: 50
+      });
       
       if (referredPointsError) {
         console.error("Error awarding points to referred customer:", referredPointsError);
