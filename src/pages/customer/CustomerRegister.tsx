@@ -1,67 +1,48 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { User, Mail, Phone, Key, Eye, EyeOff, Tag, ArrowLeft } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff, UserRound, KeyRound, Mail, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const CustomerRegister: React.FC = () => {
+const CustomerRegister = () => {
+  const navigate = useNavigate();
+  const { signUp, isLoading: authLoading } = useCustomerAuth();
+  const { toast } = useToast();
+  
+  const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [pin, setPin] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { signUp } = useCustomerAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  
+  const [showReferralInput, setShowReferralInput] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Form validation
-    if (!name || !email || !phone || !password || !confirmPassword || !pin) {
+    if (!name || !email || !password || !confirmPassword) {
       toast({
-        title: 'Error',
-        description: 'All fields are required except referral code',
-        variant: 'destructive',
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
       });
       return;
     }
     
     if (password !== confirmPassword) {
       toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (password.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (pin.length !== 4 || !/^\d+$/.test(pin)) {
-      toast({
-        title: 'Error',
-        description: 'PIN must be exactly 4 digits',
-        variant: 'destructive',
+        title: "Passwords don't match",
+        description: "Please make sure both passwords match.",
+        variant: "destructive",
       });
       return;
     }
@@ -69,231 +50,235 @@ const CustomerRegister: React.FC = () => {
     setIsLoading(true);
     
     try {
-      const success = await signUp(email, password, name, phone, pin, referralCode || undefined);
+      const { error, data } = await signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            referral_code: referralCode || undefined,
+          },
+        }
+      });
       
-      if (success) {
+      if (error) {
         toast({
-          title: 'Account created',
-          description: 'Your account has been created successfully',
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
         });
-        navigate('/customer/dashboard');
+      } else {
+        toast({
+          title: "Registration successful!",
+          description: "Please check your email to verify your account.",
+        });
+        // Direct to login with email pre-filled
+        navigate('/customer/login', { state: { email } });
       }
     } catch (error) {
+      console.error("Registration error:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to create account. Please try again.',
-        variant: 'destructive',
+        title: "Registration failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleShowConfirmPassword = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4 py-8">
-      <div className="w-full max-w-md z-10 animate-scale-in">
-        <div className="mb-6 text-center">
-          <div className="relative mx-auto w-full max-w-[120px] h-auto">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
-            <img 
-              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
-              alt="Cuephoria 8-Ball Club" 
-              className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
-            />
-          </div>
-        </div>
-        
-        <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cuephoria-lightpurple/5 to-accent/5 opacity-50 rounded-xl"></div>
-          
-          <CardHeader className="text-center relative z-10 p-4 sm:p-6">
-            <div className="absolute top-4 left-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1 text-muted-foreground hover:text-white"
-                onClick={() => navigate('/customer/login')}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </Button>
-            </div>
-            <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#5D6BFF] via-[#8A7CFE] to-[#C77DFF] bg-clip-text text-transparent">Create Account</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Join Cuephoria to track your games and earn rewards</CardDescription>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-cuephoria-darker to-black">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(93,107,255,0.15)_0%,_transparent_70%)] pointer-events-none"></div>
+      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
+      
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 flex flex-col items-center"
+      >
+        <Link to="/" className="mb-2">
+          <img 
+            src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
+            alt="Cuephoria" 
+            className="w-16 h-16"
+          />
+        </Link>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
+          Create Account
+        </h1>
+      </motion.div>
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="w-full max-w-md"
+      >
+        <Card className="border-cuephoria-lightpurple/20 bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/70">
+          <CardHeader>
+            <CardTitle>Sign Up</CardTitle>
+            <CardDescription>Create your Cuephoria customer account</CardDescription>
           </CardHeader>
-          
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
-              <div className="space-y-2 group">
-                <label htmlFor="name" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <User size={14} className="inline-block" />
-                  Full Name
-                </label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm"
-                />
-              </div>
-              
-              <div className="space-y-2 group">
-                <label htmlFor="email" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Mail size={14} className="inline-block" />
-                  Email Address
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm"
-                />
-              </div>
-              
-              <div className="space-y-2 group">
-                <label htmlFor="phone" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Phone size={14} className="inline-block" />
-                  Phone Number
-                </label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm"
-                />
-              </div>
-              
-              <div className="space-y-2 group">
-                <label htmlFor="password" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Key size={14} className="inline-block" />
-                  Password
-                </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleShowPassword}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+          <CardContent>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <Input
+                      id="name"
+                      placeholder="Enter your full name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="pl-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
+                      disabled={isLoading || authLoading}
+                      required
+                      autoComplete="name"
+                    />
+                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-2 group">
-                <label htmlFor="confirmPassword" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Key size={14} className="inline-block" />
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleShowConfirmPassword}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      placeholder="Enter your email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
+                      disabled={isLoading || authLoading}
+                      required
+                      autoComplete="email"
+                    />
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  </div>
                 </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Create a password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
+                      disabled={isLoading || authLoading}
+                      required
+                      autoComplete="new-password"
+                    />
+                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-300"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pl-10 pr-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
+                      disabled={isLoading || authLoading}
+                      required
+                      autoComplete="new-password"
+                    />
+                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-300"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                {showReferralInput && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="referral">Referral Code (Optional)</Label>
+                    <Input
+                      id="referral"
+                      placeholder="Enter referral code if you have one"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value)}
+                      className="bg-cuephoria-dark border-cuephoria-lightpurple/20"
+                      disabled={isLoading || authLoading}
+                    />
+                  </div>
+                )}
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90"
+                  disabled={isLoading || authLoading}
+                >
+                  {isLoading || authLoading ? "Creating account..." : "Create Account"}
+                </Button>
+                
+                {!showReferralInput && (
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="text-cuephoria-lightpurple w-full"
+                    onClick={() => setShowReferralInput(true)}
+                  >
+                    Have a referral code?
+                  </Button>
+                )}
               </div>
-              
-              <div className="space-y-2 group">
-                <label htmlFor="pin" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Key size={14} className="inline-block" />
-                  Security PIN (4 digits)
-                </label>
-                <Input
-                  id="pin"
-                  type="password"
-                  placeholder="Enter 4-digit PIN"
-                  value={pin}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 4) {
-                      setPin(value);
-                    }
-                  }}
-                  maxLength={4}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm text-center tracking-widest"
-                />
-                <p className="text-xs text-muted-foreground">This PIN will be used for password recovery</p>
-              </div>
-              
-              <div className="space-y-2 group">
-                <label htmlFor="referralCode" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple">
-                  <Tag size={14} className="inline-block" />
-                  Referral Code (Optional)
-                </label>
-                <Input
-                  id="referralCode"
-                  type="text"
-                  placeholder="Enter referral code if you have one"
-                  value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value)}
-                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 text-sm"
-                />
-              </div>
-            </CardContent>
-            
-            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col space-y-4">
-              <Button 
-                type="submit" 
-                className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300 font-medium text-sm sm:text-base" 
-                disabled={isLoading}
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Creating Account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </span>
-              </Button>
-              
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">Already have an account?</span>{' '}
-                <Link to="/customer/login" className="text-cuephoria-lightpurple hover:text-accent hover:underline transition-colors">
-                  Login
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col">
+            <Separator className="mb-4 bg-gray-700" />
+            <div className="text-center w-full">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link to="/customer/login" className="text-cuephoria-lightpurple hover:underline">
+                  Sign in
                 </Link>
-              </div>
-            </CardFooter>
-          </form>
+              </p>
+            </div>
+          </CardFooter>
         </Card>
-      </div>
+      </motion.div>
+      
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-6"
+      >
+        <Link to="/" className="text-sm text-gray-400 hover:text-white flex items-center">
+          ← Back to Home
+        </Link>
+      </motion.div>
     </div>
   );
 };
