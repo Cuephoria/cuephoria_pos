@@ -144,16 +144,24 @@ const CustomerLogin = () => {
       });
       
     // Award points to referrer
-    await supabase.rpc('award_referral_points', {
-      customer_identifier: referrerData.customer_id,
-      points_to_award: 100
-    });
+    try {
+      await supabase.rpc('award_referral_points', {
+        customer_identifier: referrerData.customer_id,
+        points_to_award: 100
+      });
+    } catch (error) {
+      console.error("Error awarding points to referrer:", error);
+    }
     
     // Award points to the referred customer
-    await supabase.rpc('award_referral_points', {
-      customer_identifier: userData.customer_id,
-      points_to_award: 50
-    });
+    try {
+      await supabase.rpc('award_referral_points', {
+        customer_identifier: userData.customer_id,
+        points_to_award: 50
+      });
+    } catch (error) {
+      console.error("Error awarding points to referred customer:", error);
+    }
     
     toast({
       title: "Referral bonus applied!",

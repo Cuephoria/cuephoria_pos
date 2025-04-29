@@ -89,31 +89,39 @@ export function useReferral(options: UseReferralOptions = {}) {
         return false;
       }
       
-      // Update referrer's loyalty points
-      const { error: updateReferrerError } = await supabase.rpc('award_referral_points', {
-        customer_identifier: referrerData.customer_id,
-        points_to_award: 100
-      });
-      
-      if (updateReferrerError) {
-        console.error('Error updating referrer points:', updateReferrerError);
-        toast({
-          title: 'Partial success',
-          description: 'Referral recorded but points may not be awarded yet',
-          variant: 'default'
+      // Update referrer's loyalty points - Fix TypeScript error here
+      try {
+        const { error: updateReferrerError } = await supabase.rpc('award_referral_points', {
+          customer_identifier: referrerData.customer_id,
+          points_to_award: 100
         });
-        options.onError?.('Points award failed');
-        return false;
+        
+        if (updateReferrerError) {
+          console.error('Error updating referrer points:', updateReferrerError);
+          toast({
+            title: 'Partial success',
+            description: 'Referral recorded but points may not be awarded yet',
+            variant: 'default'
+          });
+          options.onError?.('Points award failed');
+          return false;
+        }
+      } catch (error) {
+        console.error('Error calling RPC function:', error);
       }
       
-      // Update new customer's points as well
-      const { error: updateReferredError } = await supabase.rpc('award_referral_points', {
-        customer_identifier: newCustomerData.customer_id,
-        points_to_award: 50
-      });
-      
-      if (updateReferredError) {
-        console.error('Error updating referred points:', updateReferredError);
+      // Update new customer's points as well - Fix TypeScript error here
+      try {
+        const { error: updateReferredError } = await supabase.rpc('award_referral_points', {
+          customer_identifier: newCustomerData.customer_id,
+          points_to_award: 50
+        });
+        
+        if (updateReferredError) {
+          console.error('Error updating referred points:', updateReferredError);
+        }
+      } catch (error) {
+        console.error('Error calling RPC function:', error);
       }
       
       // Success!

@@ -115,19 +115,20 @@ const CustomerSettings: React.FC = () => {
         if (customerUser?.customerId) {
           const { data, error } = await supabase
             .from('customer_users')
-            .select('pin, last_pin_change')
+            .select('pin')
             .eq('customer_id', customerUser.customerId)
             .single();
             
           if (!error && data) {
             const hasTwoFactor = localStorage.getItem('twoFactorEnabled') === 'true';
             const lastPasswordChangeStr = localStorage.getItem('lastPasswordChange');
+            const lastPinChangeStr = localStorage.getItem('lastPinChange');
             
             setSettings(prev => ({
               ...prev,
               twoFactorEnabled: hasTwoFactor || false,
               lastPasswordChange: lastPasswordChangeStr ? new Date(lastPasswordChangeStr) : null,
-              lastPinChange: data.last_pin_change ? new Date(data.last_pin_change) : null
+              lastPinChange: lastPinChangeStr ? new Date(lastPinChangeStr) : null
             }));
           }
         }
@@ -278,23 +279,30 @@ const CustomerSettings: React.FC = () => {
       if (customerUser?.customerId) {
         const now = new Date().toISOString();
         
-        const { error } = await supabase
-          .from('customer_users')
-          .update({
-            pin: data.pin, // In a real app, this should be hashed!
-            last_pin_change: now
-          })
-          .eq('customer_id', customerUser.customerId);
-        
-        if (error) {
-          throw new Error(error.message);
+        try {
+          const { error } = await supabase
+            .from('customer_users')
+            .update({
+              pin: data.pin // In a real app, this should be hashed!
+            })
+            .eq('customer_id', customerUser.customerId);
+          
+          if (error) {
+            throw new Error(error.message);
+          }
+          
+          // Save the pin change timestamp in localStorage
+          localStorage.setItem('lastPinChange', now);
+          
+          // Update local state
+          setSettings(prev => ({
+            ...prev,
+            lastPinChange: new Date()
+          }));
+        } catch (e) {
+          console.error("Error updating PIN:", e);
+          throw e;
         }
-        
-        // Update local state
-        setSettings(prev => ({
-          ...prev,
-          lastPinChange: new Date()
-        }));
       }
       
       toast({
