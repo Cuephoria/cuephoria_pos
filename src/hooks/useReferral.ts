@@ -52,10 +52,10 @@ export function useReferral(options: UseReferralOptions = {}) {
       
       // Check if this referral has already been processed
       const { data: existingReferral, error: referralCheckError } = await supabase
-        .from('customer_referrals')
+        .from('referrals')
         .select('id')
         .eq('referrer_id', referrerData.customer_id)
-        .eq('referred_id', newCustomerData.customer_id)
+        .eq('referred_email', customerEmail)
         .maybeSingle();
         
       if (existingReferral) {
@@ -70,10 +70,10 @@ export function useReferral(options: UseReferralOptions = {}) {
       
       // Create the referral record
       const { error: createReferralError } = await supabase
-        .from('customer_referrals')
+        .from('referrals')
         .insert({
           referrer_id: referrerData.customer_id,
-          referred_id: newCustomerData.customer_id,
+          referred_email: customerEmail,
           points_awarded: 100,
           status: 'completed'
         });

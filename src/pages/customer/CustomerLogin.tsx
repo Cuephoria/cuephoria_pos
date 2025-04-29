@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -64,10 +63,10 @@ const CustomerLogin = () => {
     setIsLoading(true);
     
     try {
-      const { error: signInError } = await signIn(email, password);
+      const result = await signIn(email, password);
       
-      if (signInError) {
-        if (signInError.message.includes('Email not confirmed')) {
+      if (result && typeof result === 'object' && 'error' in result) {
+        if (result.error.message.includes('Email not confirmed')) {
           toast({
             title: "Email not verified",
             description: "Please check your inbox and verify your email address.",
@@ -76,7 +75,7 @@ const CustomerLogin = () => {
         } else {
           toast({
             title: "Login failed",
-            description: signInError.message,
+            description: result.error.message,
             variant: "destructive",
           });
         }
@@ -135,10 +134,10 @@ const CustomerLogin = () => {
     
     // Check if this referral has already been applied
     const { data: existingReferral } = await supabase
-      .from('customer_referrals')
+      .from('referrals')
       .select('id')
       .eq('referrer_id', referrerData.customer_id)
-      .eq('referred_id', userData.customer_id)
+      .eq('referred_email', userEmail)
       .maybeSingle();
       
     if (existingReferral) {
@@ -148,10 +147,10 @@ const CustomerLogin = () => {
     
     // Create the referral record
     await supabase
-      .from('customer_referrals')
+      .from('referrals')
       .insert({
         referrer_id: referrerData.customer_id,
-        referred_id: userData.customer_id,
+        referred_email: userEmail,
         points_awarded: 100,
         status: 'completed'
       });

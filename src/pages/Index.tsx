@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -279,7 +278,7 @@ const Index = () => {
               className="bg-cuephoria-darker/50 border border-cuephoria-lightpurple/20 rounded-lg p-4 flex flex-col items-center justify-center text-center"
             >
               <div className="bg-gradient-to-br from-cuephoria-lightpurple/20 to-cuephoria-blue/10 p-2 rounded-full mb-2">
-                <Trophy className="h-5 w-5 text-cuephoria-lightpurple" />
+                <Award className="h-5 w-5 text-cuephoria-lightpurple" />
               </div>
               <h3 className="text-sm font-medium text-white">Regular Tournaments</h3>
               <p className="text-xs text-gray-400 mt-1">Compete with the best players</p>

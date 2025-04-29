@@ -49,20 +49,22 @@ export function useRewards(options: UseRewardsOptions = {}) {
       // Generate a random redemption code
       const redemptionCode = generateRedemptionCode();
       
-      // Create redemption record
-      const newRedemption: Omit<RewardRedemption, 'id'> = {
-        customerId,
-        rewardId: reward.id,
-        pointsSpent: reward.pointsCost,
-        redemptionDate: new Date(),
-        status: 'pending',
-        redemptionCode,
-        rewardName: reward.name
+      // Create the insert data with proper types
+      const newRedemptionData = {
+        customer_id: customerId,
+        reward_id: reward.id,
+        points_spent: reward.pointsCost,
+        redemption_code: redemptionCode,
+        status: 'pending' as const, // Specify the exact type
+        created_at: new Date().toISOString(),
+        // The database schema will have a 'redeemed_at' field that is null initially
+        // Note: If rewardName is needed, it's handled at application level, not DB level
       };
       
+      // Create redemption record
       const { data: redemptionData, error: redemptionError } = await supabase
         .from('reward_redemptions')
-        .insert(newRedemption)
+        .insert(newRedemptionData)
         .select()
         .single();
         
@@ -100,19 +102,19 @@ export function useRewards(options: UseRewardsOptions = {}) {
         return null;
       }
       
-      // Add record to points history if table exists
+      // Add record to loyalty_transactions instead of points_history
       try {
         await supabase
-          .from('points_history')
+          .from('loyalty_transactions')
           .insert({
             customer_id: customerId,
             points: -reward.pointsCost,
-            action_type: 'redemption',
+            source: 'redemption',
             description: `Redeemed reward: ${reward.name}`
           });
       } catch (e) {
-        // Table might not exist, just continue
-        console.log('Points history table might not exist:', e);
+        // Table might not exist or have different structure, just log and continue
+        console.log('Error recording transaction:', e);
       }
       
       toast({
@@ -120,7 +122,18 @@ export function useRewards(options: UseRewardsOptions = {}) {
         description: `You've successfully redeemed ${reward.name}`,
       });
       
-      const typedRedemption = redemptionData as unknown as RewardRedemption;
+      // Create a properly typed RewardRedemption object for the client
+      const typedRedemption: RewardRedemption = {
+        id: redemptionData.id,
+        customerId: redemptionData.customer_id,
+        rewardId: redemptionData.reward_id,
+        pointsSpent: redemptionData.points_spent,
+        redemptionDate: new Date(redemptionData.created_at),
+        status: redemptionData.status as "pending" | "completed" | "cancelled",
+        redemptionCode: redemptionData.redemption_code,
+        rewardName: reward.name
+      };
+      
       options.onSuccess?.(typedRedemption);
       return typedRedemption;
     } catch (error) {
