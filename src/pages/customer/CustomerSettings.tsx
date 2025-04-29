@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +61,7 @@ const passwordSchema = z.object({
 });
 
 const CustomerSettings: React.FC = () => {
-  const { customerUser, signOut, updateCustomerUser } = useCustomerAuth();
+  const { customerUser, signOut } = useCustomerAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [saveLoading, setSaveLoading] = useState<boolean>(false);
@@ -116,15 +115,18 @@ const CustomerSettings: React.FC = () => {
         if (customerUser?.customerId) {
           const { data, error } = await supabase
             .from('customer_users')
-            .select('last_password_change, last_pin_change, has_pin, has_2fa')
+            .select('pin, last_pin_change')
             .eq('customer_id', customerUser.customerId)
             .single();
             
           if (!error && data) {
+            const hasTwoFactor = localStorage.getItem('twoFactorEnabled') === 'true';
+            const lastPasswordChangeStr = localStorage.getItem('lastPasswordChange');
+            
             setSettings(prev => ({
               ...prev,
-              twoFactorEnabled: data.has_2fa || false,
-              lastPasswordChange: data.last_password_change ? new Date(data.last_password_change) : null,
+              twoFactorEnabled: hasTwoFactor || false,
+              lastPasswordChange: lastPasswordChangeStr ? new Date(lastPasswordChangeStr) : null,
               lastPinChange: data.last_pin_change ? new Date(data.last_pin_change) : null
             }));
           }
@@ -208,6 +210,9 @@ const CustomerSettings: React.FC = () => {
         twoFactorEnabled: enabled
       }));
       
+      // Store 2FA status separately for the security data loading
+      localStorage.setItem('twoFactorEnabled', enabled.toString());
+      
       if (enabled) {
         toast({
           title: "Two-factor authentication enabled",
@@ -271,12 +276,13 @@ const CustomerSettings: React.FC = () => {
       // For demo, we'll just save that the user has set a PIN
       
       if (customerUser?.customerId) {
+        const now = new Date().toISOString();
+        
         const { error } = await supabase
           .from('customer_users')
           .update({
             pin: data.pin, // In a real app, this should be hashed!
-            last_pin_change: new Date().toISOString(),
-            has_pin: true
+            last_pin_change: now
           })
           .eq('customer_id', customerUser.customerId);
         
@@ -325,20 +331,14 @@ const CustomerSettings: React.FC = () => {
           
           if (error) throw error;
           
-          // Update our records
-          const { error: updateError } = await supabase
-            .from('customer_users')
-            .update({
-              last_password_change: new Date().toISOString()
-            })
-            .eq('customer_id', customerUser.customerId);
-            
-          if (updateError) throw updateError;
+          // Store password change timestamp
+          const now = new Date();
+          localStorage.setItem('lastPasswordChange', now.toISOString());
           
           // Update local state
           setSettings(prev => ({
             ...prev,
-            lastPasswordChange: new Date()
+            lastPasswordChange: now
           }));
         } catch (error) {
           console.error("Password update error:", error);

@@ -63,22 +63,10 @@ const CustomerLogin = () => {
     setIsLoading(true);
     
     try {
-      const result = await signIn(email, password);
+      const success = await signIn(email, password);
       
-      if (result && typeof result === 'object' && 'error' in result) {
-        if (result.error.message.includes('Email not confirmed')) {
-          toast({
-            title: "Email not verified",
-            description: "Please check your inbox and verify your email address.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Login failed",
-            description: result.error.message,
-            variant: "destructive",
-          });
-        }
+      if (!success) {
+        // The error message will be shown by the signIn function
       } else {
         // Handle referral code if provided
         if (referralCode) {

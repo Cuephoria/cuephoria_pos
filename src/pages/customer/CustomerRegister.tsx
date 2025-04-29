@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -50,23 +49,10 @@ const CustomerRegister = () => {
     setIsLoading(true);
     
     try {
-      const { error, data } = await signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name,
-            referral_code: referralCode || undefined,
-          },
-        }
-      });
+      const success = await signUp(email, password, name, '', '1234', referralCode);
       
-      if (error) {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
+      if (!success) {
+        // Error will be shown by the signUp function
       } else {
         toast({
           title: "Registration successful!",

@@ -39,7 +39,7 @@ import { Reward, RewardRedemption } from '@/types/customer.types';
 
 const CustomerRewards = () => {
   const navigate = useNavigate();
-  const { user, customerData } = useCustomerAuth();
+  const { user, customerUser } = useCustomerAuth();
   const { toast } = useToast();
   const { redeemReward, isRedeeming } = useRewards({
     onSuccess: (redemption) => {
@@ -59,6 +59,7 @@ const CustomerRewards = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [currentReward, setCurrentReward] = useState<Reward | null>(null);
   const [redemptionDetails, setRedemptionDetails] = useState<RewardRedemption | null>(null);
+  const [customerData, setCustomerData] = useState<any>(null);
   
   useEffect(() => {
     if (!user) {
@@ -67,10 +68,28 @@ const CustomerRewards = () => {
     }
     
     fetchRewards();
-    if (customerData) {
-      fetchRedemptions(customerData.id);
+    
+    if (customerUser?.customerId) {
+      fetchCustomerData(customerUser.customerId);
+      fetchRedemptions(customerUser.customerId);
     }
-  }, [user, customerData, navigate]);
+  }, [user, customerUser, navigate]);
+  
+  const fetchCustomerData = async (customerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+        
+      if (!error && data) {
+        setCustomerData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching customer data:', error);
+    }
+  };
   
   const fetchRewards = async () => {
     try {

@@ -49,16 +49,13 @@ export function useRewards(options: UseRewardsOptions = {}) {
       // Generate a random redemption code
       const redemptionCode = generateRedemptionCode();
       
-      // Create the insert data with proper types
+      // Create the redemption data with proper types
       const newRedemptionData = {
         customer_id: customerId,
         reward_id: reward.id,
         points_spent: reward.pointsCost,
         redemption_code: redemptionCode,
         status: 'pending' as const, // Specify the exact type
-        created_at: new Date().toISOString(),
-        // The database schema will have a 'redeemed_at' field that is null initially
-        // Note: If rewardName is needed, it's handled at application level, not DB level
       };
       
       // Create redemption record
