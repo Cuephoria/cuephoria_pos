@@ -10,3 +10,38 @@ export interface CustomerUser {
   resetPinExpiry: Date | null;
   createdAt: Date;
 }
+
+export interface Promotion {
+  id: string;
+  name: string;
+  description: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  discountType: "percentage" | "fixed" | "free_hours";
+  discountValue: number;
+  isActive: boolean;
+  imageUrl?: string;
+  createdAt: Date;
+}
+
+export interface Reward {
+  id: string;
+  name: string;
+  description?: string;
+  pointsCost: number;
+  isActive: boolean;
+  imageUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RewardRedemption {
+  id: string;
+  customerId: string;
+  rewardId: string;
+  pointsSpent: number;
+  redemptionDate: Date;
+  status: "pending" | "completed" | "cancelled";
+  redemptionCode?: string;
+  rewardName?: string;
+}
