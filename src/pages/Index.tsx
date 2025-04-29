@@ -72,7 +72,7 @@ const Index = () => {
             CUEPHORIA
           </h1>
           <motion.p 
-            className="mt-1 text-lg md:text-xl font-light text-white/80 text-center max-w-xl"
+            className="mt-1 text-lg md:text-xl font-light text-gray-300 text-center max-w-xl"
             animate={{ 
               background: [
                 "linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.8) 100%)",
@@ -81,7 +81,6 @@ const Index = () => {
               ]
             }}
             transition={{ duration: 5, repeat: Infinity }}
-            style={{ WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent" }}
           >
             Where precision meets passion in the ultimate gaming experience
           </motion.p>
@@ -204,7 +203,7 @@ const Index = () => {
                   </Button>
                 </Link>
                 <Link to="/customer/register" className="flex-1">
-                  <Button className="w-full bg-gradient-to-r from-orange-400/20 to-orange-500/20 hover:from-orange-400/30 hover:to-orange-500/30 text-orange-400 border border-orange-500/40 h-10">
+                  <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white h-10 border-none">
                     <span>Sign Up</span>
                   </Button>
                 </Link>

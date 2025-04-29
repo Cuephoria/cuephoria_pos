@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -121,10 +122,9 @@ const CustomerRegister = () => {
                       onChange={(e) => setName(e.target.value)}
                       className="pl-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
                       disabled={isLoading || authLoading}
-                      required
                       autoComplete="name"
                     />
-                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
                 
@@ -139,10 +139,9 @@ const CustomerRegister = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
                       disabled={isLoading || authLoading}
-                      required
                       autoComplete="email"
                     />
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
                 
@@ -157,10 +156,9 @@ const CustomerRegister = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
                       disabled={isLoading || authLoading}
-                      required
                       autoComplete="new-password"
                     />
-                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -187,10 +185,9 @@ const CustomerRegister = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="pl-10 pr-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
                       disabled={isLoading || authLoading}
-                      required
                       autoComplete="new-password"
                     />
-                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}

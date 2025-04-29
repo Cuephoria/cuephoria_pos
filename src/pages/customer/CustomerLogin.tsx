@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
@@ -231,10 +232,9 @@ const CustomerLogin = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
                       disabled={isLoading || authLoading}
-                      required
                       autoComplete="email"
                     />
-                    <UserRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <UserRound className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
                 <div className="grid gap-2">
@@ -253,10 +253,9 @@ const CustomerLogin = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
                       disabled={isLoading || authLoading}
-                      required
                       autoComplete="current-password"
                     />
-                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
