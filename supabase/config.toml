@@ -1,4 +1,1 @@
-
 project_id = "apltkougkglbsfphbghi"
-[functions."award_referral_points"]
-verify_jwt = true

@@ -1,474 +1,595 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { useRewards } from '@/hooks/useRewards';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { Award, Gift, Sparkles, Clock, Check, X } from 'lucide-react';
-import { format } from 'date-fns';
+import { Award, Gift, Star, Clock, Check, AlertCircle, Info, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Reward, RewardRedemption } from '@/types/customer.types';
+import { generateId } from '@/utils/pos.utils';
 
-const CustomerRewards = () => {
-  const navigate = useNavigate();
-  const { user, customerUser } = useCustomerAuth();
+const CustomerRewards: React.FC = () => {
+  const { customerUser, isLoading } = useCustomerAuth();
   const { toast } = useToast();
-  const { redeemReward, isRedeeming } = useRewards({
-    onSuccess: (redemption) => {
-      setRedemptionDetails(redemption);
-      setShowSuccessDialog(true);
-    },
-    onError: (error) => {
-      console.error('Reward redemption error:', error);
-    }
-  });
-  
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number>(0);
+  const [isLoadingPoints, setIsLoadingPoints] = useState<boolean>(true);
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const [rewardsLoading, setRewardsLoading] = useState(true);
-  const [redemptions, setRedemptions] = useState<RewardRedemption[]>([]);
-  const [redemptionsLoading, setRedemptionsLoading] = useState(true);
-  const [showRedeemDialog, setShowRedeemDialog] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [currentReward, setCurrentReward] = useState<Reward | null>(null);
-  const [redemptionDetails, setRedemptionDetails] = useState<RewardRedemption | null>(null);
-  const [customerData, setCustomerData] = useState<any>(null);
-  
+  const [isLoadingRewards, setIsLoadingRewards] = useState<boolean>(true);
+  const [myRedemptions, setMyRedemptions] = useState<RewardRedemption[]>([]);
+  const [isLoadingRedemptions, setIsLoadingRedemptions] = useState<boolean>(true);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [isRedeemDialogOpen, setIsRedeemDialogOpen] = useState<boolean>(false);
+  const [isRedeeming, setIsRedeeming] = useState<boolean>(false);
+  const [redemptionCode, setRedemptionCode] = useState<string>('');
+  const [isRedemptionSuccess, setIsRedemptionSuccess] = useState<boolean>(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState<boolean>(false);
+  const [selectedRedemption, setSelectedRedemption] = useState<RewardRedemption | null>(null);
+
   useEffect(() => {
-    if (!user) {
-      navigate('/customer/login');
-      return;
-    }
-    
+    const fetchLoyaltyPoints = async () => {
+      if (customerUser?.customerId) {
+        try {
+          const { data, error } = await supabase
+            .from('customers')
+            .select('loyalty_points')
+            .eq('id', customerUser.customerId)
+            .single();
+
+          if (error) {
+            console.error('Error fetching loyalty points:', error);
+          } else {
+            setLoyaltyPoints(data.loyalty_points || 0);
+          }
+        } catch (err) {
+          console.error('Error in fetchLoyaltyPoints:', err);
+        } finally {
+          setIsLoadingPoints(false);
+        }
+      } else {
+        setIsLoadingPoints(false);
+      }
+    };
+
+    fetchLoyaltyPoints();
+  }, [customerUser]);
+
+  useEffect(() => {
+    const fetchRewards = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('rewards')
+          .select('*')
+          .eq('is_active', true)
+          .order('points_cost', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching rewards:', error);
+        } else {
+          const formattedRewards = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            pointsCost: item.points_cost,
+            isActive: item.is_active,
+            imageUrl: item.image_url,
+            createdAt: new Date(item.created_at),
+            updatedAt: new Date(item.updated_at)
+          }));
+          setRewards(formattedRewards);
+        }
+      } catch (err) {
+        console.error('Error in fetchRewards:', err);
+      } finally {
+        setIsLoadingRewards(false);
+      }
+    };
+
     fetchRewards();
+  }, []);
+
+  useEffect(() => {
+    const fetchRedemptions = async () => {
+      if (customerUser?.customerId) {
+        try {
+          const { data, error } = await supabase
+            .from('reward_redemptions')
+            .select(`
+              *,
+              rewards (
+                name
+              )
+            `)
+            .eq('customer_id', customerUser.customerId)
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.error('Error fetching redemptions:', error);
+          } else {
+            const formattedRedemptions: RewardRedemption[] = data.map(item => ({
+              id: item.id,
+              customerId: item.customer_id,
+              rewardId: item.reward_id,
+              pointsSpent: item.points_spent,
+              redemptionDate: new Date(item.created_at),
+              status: item.status as "pending" | "completed" | "cancelled", // Ensure type safety
+              redemptionCode: item.redemption_code,
+              rewardName: item.rewards?.name
+            }));
+            setMyRedemptions(formattedRedemptions);
+          }
+        } catch (err) {
+          console.error('Error in fetchRedemptions:', err);
+        } finally {
+          setIsLoadingRedemptions(false);
+        }
+      } else {
+        setIsLoadingRedemptions(false);
+      }
+    };
+
+    fetchRedemptions();
+  }, [customerUser]);
+
+  const handleRedeemClick = (reward: Reward) => {
+    setSelectedReward(reward);
+    setIsRedeemDialogOpen(true);
+    setIsRedemptionSuccess(false);
+    setRedemptionCode('');
+  };
+
+  const handleViewRedemption = (redemption: RewardRedemption) => {
+    setSelectedRedemption(redemption);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleConfirmRedeem = async () => {
+    if (!customerUser?.customerId || !selectedReward) return;
+
+    setIsRedeeming(true);
     
-    if (customerUser?.customerId) {
-      fetchCustomerData(customerUser.customerId);
-      fetchRedemptions(customerUser.customerId);
-    }
-  }, [user, customerUser, navigate]);
-  
-  const fetchCustomerData = async (customerId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .single();
-        
-      if (!error && data) {
-        setCustomerData(data);
+      // Check if user has enough points
+      if (loyaltyPoints < selectedReward.pointsCost) {
+        toast({
+          title: "Not enough points",
+          description: `You need ${selectedReward.pointsCost - loyaltyPoints} more points to redeem this reward.`,
+          variant: "destructive",
+        });
+        setIsRedeeming(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching customer data:', error);
-    }
-  };
-  
-  const fetchRewards = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('rewards')
-        .select('*')
-        .eq('is_active', true)
-        .order('points_cost', { ascending: true });
       
-      if (error) throw error;
-      
-      if (data) {
-        // Transform the database records to match our Reward type
-        const typedRewards: Reward[] = data.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || undefined,
-          pointsCost: item.points_cost,
-          isActive: item.is_active,
-          imageUrl: item.image_url || undefined,
-          createdAt: new Date(item.created_at || Date.now()),
-          updatedAt: new Date(item.updated_at || Date.now())
-        }));
-        setRewards(typedRewards);
-      }
-    } catch (error) {
-      console.error('Error fetching rewards:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load rewards. Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setRewardsLoading(false);
-    }
-  };
-  
-  const fetchRedemptions = async (customerId: string) => {
-    try {
-      const { data, error } = await supabase
+      // Generate unique redemption code
+      const code = `CQPR-${generateId().substring(0, 6).toUpperCase()}`;
+      setRedemptionCode(code);
+
+      // Create redemption record
+      const { error: redemptionError } = await supabase
         .from('reward_redemptions')
-        .select('*, rewards(name)')
-        .eq('customer_id', customerId)
+        .insert({
+          customer_id: customerUser.customerId,
+          reward_id: selectedReward.id,
+          points_spent: selectedReward.pointsCost,
+          redemption_code: code,
+          status: 'pending'
+        });
+
+      if (redemptionError) {
+        throw new Error(redemptionError.message);
+      }
+
+      // Update customer's loyalty points
+      const { error: pointsError } = await supabase
+        .from('customers')
+        .update({ loyalty_points: loyaltyPoints - selectedReward.pointsCost })
+        .eq('id', customerUser.customerId);
+
+      if (pointsError) {
+        throw new Error(pointsError.message);
+      }
+
+      // Add transaction record
+      await supabase
+        .from('loyalty_transactions')
+        .insert({
+          customer_id: customerUser.customerId,
+          points: -selectedReward.pointsCost,
+          source: 'reward',
+          description: `Redeemed reward: ${selectedReward.name}`
+        });
+      
+      // Update local state
+      setLoyaltyPoints(loyaltyPoints - selectedReward.pointsCost);
+      setIsRedemptionSuccess(true);
+      
+      // Refresh redemptions list
+      const { data } = await supabase
+        .from('reward_redemptions')
+        .select(`
+          *,
+          rewards (
+            name
+          )
+        `)
+        .eq('customer_id', customerUser.customerId)
         .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
+        
       if (data) {
-        // Transform the database records to match our RewardRedemption type
-        const typedRedemptions: RewardRedemption[] = data.map(item => ({
+        const formattedRedemptions: RewardRedemption[] = data.map(item => ({
           id: item.id,
           customerId: item.customer_id,
           rewardId: item.reward_id,
           pointsSpent: item.points_spent,
-          redemptionDate: new Date(item.created_at || Date.now()),
-          status: item.status as "pending" | "completed" | "cancelled",
+          redemptionDate: new Date(item.created_at),
+          status: item.status as "pending" | "completed" | "cancelled", // Ensure type safety
           redemptionCode: item.redemption_code,
-          rewardName: item.rewards?.name || 'Reward'
+          rewardName: item.rewards?.name
         }));
-        setRedemptions(typedRedemptions);
+        setMyRedemptions(formattedRedemptions);
       }
+      
+      toast({
+        title: "Reward redeemed!",
+        description: "Your reward has been successfully redeemed. Show the code to staff to claim your reward.",
+      });
     } catch (error) {
-      console.error('Error fetching redemptions:', error);
+      console.error('Error redeeming reward:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load your redemption history.',
-        variant: 'destructive',
+        title: "Redemption failed",
+        description: "There was a problem redeeming your reward. Please try again.",
+        variant: "destructive",
       });
+      setIsRedemptionSuccess(false);
     } finally {
-      setRedemptionsLoading(false);
+      setIsRedeeming(false);
     }
   };
-  
-  const handleRedeemClick = (reward: Reward) => {
-    if (!customerData) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to redeem rewards.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (customerData.loyalty_points < reward.pointsCost) {
-      toast({
-        title: 'Not enough points',
-        description: `You need ${reward.pointsCost} points to redeem this reward.`,
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setCurrentReward(reward);
-    setShowRedeemDialog(true);
+
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
   };
-  
-  const confirmRedemption = async () => {
-    if (!currentReward || !customerData) return;
-    
-    const result = await redeemReward(currentReward, customerData.id);
-    if (result) {
-      // Refresh redemptions list
-      fetchRedemptions(customerData.id);
-      // Update the customer data to reflect the new points balance
-      if (customerData) {
-        customerData.loyalty_points -= currentReward.pointsCost;
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
       }
     }
-    
-    setShowRedeemDialog(false);
   };
-  
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 100
+      }
+    }
+  };
+
   const getStatusBadge = (status: "pending" | "completed" | "cancelled") => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
+        return <Badge className="bg-amber-500 hover:bg-amber-600 flex gap-1 items-center"><Clock className="h-3 w-3" /> Pending</Badge>;
       case 'completed':
-        return <Badge className="bg-green-500 hover:bg-green-600"><Check className="h-3 w-3 mr-1" /> Completed</Badge>;
+        return <Badge className="bg-green-600 hover:bg-green-700 flex gap-1 items-center"><Check className="h-3 w-3" /> Completed</Badge>;
       case 'cancelled':
-        return <Badge className="bg-red-500 hover:bg-red-600"><X className="h-3 w-3 mr-1" /> Cancelled</Badge>;
+        return <Badge className="bg-red-600 hover:bg-red-700 flex gap-1 items-center"><AlertCircle className="h-3 w-3" /> Cancelled</Badge>;
       default:
-        return <Badge className="bg-gray-500 hover:bg-gray-600">Unknown</Badge>;
+        return <Badge>{status}</Badge>;
     }
   };
-  
-  return (
-    <div className="container mx-auto px-4 py-4">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 flex-col sm:flex-row gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent flex items-center">
-            <Award className="mr-2 h-6 w-6 text-cuephoria-orange" />
-            Rewards
-          </h1>
-          <p className="text-gray-400">Redeem your loyalty points for exclusive rewards</p>
-        </div>
-        {customerData && (
-          <div className="bg-gradient-to-r from-cuephoria-darker to-black p-3 rounded-lg border border-cuephoria-lightpurple/30">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-cuephoria-orange" />
-              <span className="text-gray-300 font-medium">Your Points:</span>
-              <span className="text-xl font-bold text-cuephoria-lightpurple">{customerData.loyalty_points}</span>
-            </div>
-          </div>
-        )}
+
+  if (isLoading || isLoadingPoints || isLoadingRewards || isLoadingRedemptions) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="md" />
       </div>
+    );
+  }
+
+  return (
+    <motion.div 
+      className="container mx-auto"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <motion.div className="mb-6" variants={fadeInUp}>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
+          Rewards
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Redeem your loyalty points for exciting rewards.
+        </p>
+      </motion.div>
       
-      {/* Available Rewards Section */}
-      <Card className="mb-8 shadow-lg bg-cuephoria-darker border-cuephoria-lightpurple/30">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center">
-            <Gift className="mr-2 h-5 w-5 text-cuephoria-orange" />
-            Available Rewards
-          </CardTitle>
-          <CardDescription>
-            Choose from our selection of rewards to redeem with your points
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rewardsLoading ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin h-8 w-8 border-4 border-cuephoria-lightpurple border-t-transparent rounded-full"></div>
+      <motion.div variants={itemVariants}>
+        <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-cuephoria-orange" />
+              Available Points
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="text-4xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
+                {loyaltyPoints}
+              </div>
+              <div className="text-muted-foreground text-sm">
+                points available to redeem
+              </div>
             </div>
-          ) : rewards.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rewards.map((reward) => (
-                <Card key={reward.id} className="bg-cuephoria-dark border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/50 transition-all overflow-hidden">
-                  <div className="relative">
-                    <div className="h-32 bg-gradient-to-r from-cuephoria-lightpurple/20 to-cuephoria-blue/20 flex items-center justify-center">
+            
+            <div className="h-2 w-full bg-gray-800 rounded-full mt-4 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange rounded-full"
+                style={{ width: `${Math.min(100, (loyaltyPoints / 1000) * 100)}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>1000</span>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+      
+      <motion.div variants={itemVariants}>
+        <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-cuephoria-orange" />
+              Available Rewards
+            </CardTitle>
+            <CardDescription>Redeem your points for these exciting rewards</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {rewards.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rewards.map((reward) => (
+                  <Card 
+                    key={reward.id} 
+                    className={`border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/50 transition-all duration-300 ${
+                      loyaltyPoints >= reward.pointsCost 
+                        ? 'bg-gradient-to-br from-cuephoria-darker/80 to-cuephoria-darker/60' 
+                        : 'bg-cuephoria-darker/80 opacity-70'
+                    } overflow-hidden`}
+                  >
+                    <div className="p-4">
                       {reward.imageUrl ? (
-                        <img 
-                          src={reward.imageUrl} 
-                          alt={reward.name} 
-                          className="h-full w-full object-cover"
-                        />
+                        <div className="h-32 overflow-hidden rounded-md mb-3">
+                          <img 
+                            src={reward.imageUrl} 
+                            alt={reward.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       ) : (
-                        <Gift className="h-12 w-12 text-cuephoria-lightpurple opacity-50" />
+                        <div className="h-32 bg-gradient-to-br from-cuephoria-lightpurple/10 to-cuephoria-orange/5 rounded-md mb-3 flex items-center justify-center">
+                          <Gift className="h-12 w-12 text-cuephoria-lightpurple/30" />
+                        </div>
                       )}
+                      
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-white">{reward.name}</h3>
+                        <Badge className={`
+                          ${loyaltyPoints >= reward.pointsCost 
+                            ? 'bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90' 
+                            : 'bg-gray-700 hover:bg-gray-600'
+                          }
+                        `}>
+                          {reward.pointsCost} pts
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2 h-10">{reward.description}</p>
+                      <Button 
+                        className={`
+                          w-full ${loyaltyPoints >= reward.pointsCost 
+                            ? 'bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90'
+                            : 'bg-gray-700 hover:bg-gray-600 opacity-80'
+                          } transition-all duration-300
+                        `}
+                        disabled={loyaltyPoints < reward.pointsCost}
+                        onClick={() => handleRedeemClick(reward)}
+                      >
+                        {loyaltyPoints >= reward.pointsCost ? (
+                          <>Redeem Now</>
+                        ) : (
+                          <>Need {reward.pointsCost - loyaltyPoints} more points</>
+                        )}
+                      </Button>
                     </div>
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-cuephoria-purple hover:bg-cuephoria-purple/90">
-                        {reward.pointsCost} Points
-                      </Badge>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No rewards available at the moment. Check back soon!</p>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+      
+      <motion.div variants={itemVariants}>
+        <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-cuephoria-orange" />
+              My Redemptions
+            </CardTitle>
+            <CardDescription>Track the status of your redeemed rewards</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {myRedemptions.length > 0 ? (
+              <div className="space-y-3">
+                {myRedemptions.map((redemption) => (
+                  <div 
+                    key={redemption.id} 
+                    className="bg-cuephoria-darker/60 p-4 rounded-lg border border-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/40 transition-all duration-300 cursor-pointer"
+                    onClick={() => handleViewRedemption(redemption)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center">
+                          <h4 className="font-medium text-white">{redemption.rewardName}</h4>
+                          <ArrowRight className="ml-2 h-4 w-4 text-gray-500" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {redemption.redemptionDate.toLocaleDateString()} • {redemption.pointsSpent} points
+                        </p>
+                      </div>
+                      {getStatusBadge(redemption.status)}
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-800/50 border border-gray-700/50 text-gray-300">
+                        {redemption.redemptionCode}
+                      </span>
                     </div>
                   </div>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg">{reward.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-sm text-gray-400">
-                      {reward.description || 'Redeem this exclusive reward with your loyalty points.'}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0">
-                    <Button 
-                      className="w-full bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-blue hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-blue/90"
-                      disabled={!customerData || customerData.loyalty_points < reward.pointsCost || isRedeeming}
-                      onClick={() => handleRedeemClick(reward)}
-                    >
-                      {isRedeeming ? 'Processing...' : 'Redeem Reward'}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-400">No rewards are currently available. Check back soon!</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">You haven't redeemed any rewards yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
       
-      {/* Redemption History Section */}
-      <Card className="shadow-lg bg-cuephoria-darker border-cuephoria-lightpurple/30">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center">
-            <Clock className="mr-2 h-5 w-5 text-cuephoria-orange" />
-            Redemption History
-          </CardTitle>
-          <CardDescription>
-            View your previously redeemed rewards
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {redemptionsLoading ? (
-            <div className="flex justify-center p-8">
-              <div className="animate-spin h-8 w-8 border-4 border-cuephoria-lightpurple border-t-transparent rounded-full"></div>
-            </div>
-          ) : redemptions.length > 0 ? (
-            <div className="rounded-md border border-cuephoria-lightpurple/20 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-cuephoria-dark hover:bg-cuephoria-dark/80">
-                    <TableHead className="text-cuephoria-lightpurple">Reward</TableHead>
-                    <TableHead className="text-cuephoria-lightpurple">Points</TableHead>
-                    <TableHead className="text-cuephoria-lightpurple">Date</TableHead>
-                    <TableHead className="text-cuephoria-lightpurple">Code</TableHead>
-                    <TableHead className="text-cuephoria-lightpurple">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {redemptions.map((redemption) => (
-                    <TableRow key={redemption.id} className="hover:bg-cuephoria-dark/50">
-                      <TableCell className="font-medium">{redemption.rewardName}</TableCell>
-                      <TableCell>{redemption.pointsSpent}</TableCell>
-                      <TableCell>{format(new Date(redemption.redemptionDate), 'MMM dd, yyyy')}</TableCell>
-                      <TableCell>
-                        <span className="font-mono bg-cuephoria-darker/50 px-2 py-1 rounded text-sm">
-                          {redemption.redemptionCode}
-                        </span>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(redemption.status)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-400">You haven't redeemed any rewards yet.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Redeem Confirmation Dialog */}
-      <Dialog open={showRedeemDialog} onOpenChange={setShowRedeemDialog}>
-        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30">
-          <DialogHeader>
-            <DialogTitle>Confirm Redemption</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to redeem this reward?
-            </DialogDescription>
-          </DialogHeader>
-          
-          {currentReward && (
-            <div className="py-4">
-              <div className="bg-cuephoria-dark border border-cuephoria-lightpurple/20 rounded-lg p-4 mb-4">
-                <h3 className="text-lg font-medium">{currentReward.name}</h3>
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-gray-400">{currentReward.description}</span>
-                  <Badge className="bg-cuephoria-purple hover:bg-cuephoria-purple/90">
-                    {currentReward.pointsCost} Points
-                  </Badge>
+      {/* Redeem Dialog */}
+      <Dialog open={isRedeemDialogOpen} onOpenChange={setIsRedeemDialogOpen}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 sm:max-w-md">
+          {!isRedemptionSuccess ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Redeem Reward</DialogTitle>
+                <DialogDescription>
+                  {selectedReward && `Are you sure you want to redeem "${selectedReward.name}" for ${selectedReward.pointsCost} points?`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="p-4 mb-2 bg-cuephoria-dark/50 rounded-md">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-cuephoria-orange mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Once redeemed, you will receive a unique code to show to our staff to claim your reward. 
+                    Points will be deducted from your account immediately.
+                  </p>
                 </div>
               </div>
-              
-              {customerData && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="text-gray-400">Your current balance:</span>
-                    <span className="ml-2 font-bold text-white">{customerData.loyalty_points} points</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-400">Balance after redemption:</span>
-                    <span className="ml-2 font-bold text-cuephoria-orange">
-                      {customerData.loyalty_points - currentReward.pointsCost} points
-                    </span>
-                  </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setIsRedeemDialogOpen(false)} disabled={isRedeeming}>
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90 transition-all duration-300"
+                  onClick={handleConfirmRedeem}
+                  disabled={isRedeeming}
+                >
+                  {isRedeeming ? <LoadingSpinner size="sm" /> : 'Confirm Redemption'}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-green-400 flex items-center gap-2">
+                  <Check className="h-5 w-5" /> Reward Redeemed Successfully!
+                </DialogTitle>
+                <DialogDescription>
+                  Show this code to our staff to claim your reward
+                </DialogDescription>
+              </DialogHeader>
+              <div className="p-6 flex flex-col items-center justify-center">
+                <div className="bg-cuephoria-darker border border-cuephoria-lightpurple/50 rounded-lg p-4 mb-4 w-full text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Your redemption code</p>
+                  <h3 className="text-3xl font-mono tracking-wider text-white">{redemptionCode}</h3>
                 </div>
-              )}
-            </div>
-          )}
-          
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button 
-              className="bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90"
-              onClick={confirmRedemption}
-              disabled={isRedeeming}
-            >
-              {isRedeeming ? 'Processing...' : 'Confirm Redemption'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30">
-          <DialogHeader>
-            <DialogTitle className="text-center flex items-center justify-center gap-2">
-              <Check className="h-5 w-5 text-green-500" />
-              Redemption Successful!
-            </DialogTitle>
-          </DialogHeader>
-          
-          {redemptionDetails && (
-            <div className="py-4">
-              <div className="flex items-center justify-center my-4">
-                <div className="h-16 w-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <Check className="h-8 w-8 text-green-500" />
-                </div>
-              </div>
-              
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-medium">{redemptionDetails.rewardName}</h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  You've successfully redeemed this reward for {redemptionDetails.pointsSpent} points
+                <p className="text-sm text-muted-foreground text-center">
+                  This code has been saved to your account. You can view all your redeemed rewards in the "My Redemptions" section.
                 </p>
               </div>
+              <DialogFooter>
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 transition-all duration-300"
+                  onClick={() => setIsRedeemDialogOpen(false)}
+                >
+                  Done
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Redemption Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 sm:max-w-md">
+          {selectedRedemption && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-cuephoria-orange" /> 
+                  {selectedRedemption.rewardName}
+                </DialogTitle>
+                <DialogDescription className="flex items-center gap-2 pt-1">
+                  {getStatusBadge(selectedRedemption.status)}
+                </DialogDescription>
+              </DialogHeader>
               
-              <Separator className="my-4" />
-              
-              <div className="bg-cuephoria-dark border border-cuephoria-lightpurple/20 rounded-lg p-4 mb-4">
-                <div className="text-sm text-gray-400 mb-2">Redemption Code:</div>
-                <div className="font-mono text-xl text-center bg-black/30 py-2 rounded">
-                  {redemptionDetails.redemptionCode}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Redemption Code</h3>
+                  <div className="bg-cuephoria-darker border border-cuephoria-lightpurple/50 rounded-lg p-4 w-full text-center">
+                    <h3 className="text-2xl font-mono tracking-wider text-white">{selectedRedemption.redemptionCode}</h3>
+                  </div>
                 </div>
-                <div className="text-xs text-center mt-2 text-gray-500">
-                  Present this code to staff to claim your reward
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400 mb-1">Details</h3>
+                  <div className="space-y-2 p-4 bg-cuephoria-dark/50 rounded-md">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-400">Points Spent:</span>
+                      <span className="text-sm text-white">{selectedRedemption.pointsSpent} points</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-400">Redemption Date:</span>
+                      <span className="text-sm text-white">{selectedRedemption.redemptionDate.toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-cuephoria-lightpurple/10 rounded-md border border-cuephoria-lightpurple/20">
+                  <Info className="h-5 w-5 text-cuephoria-lightpurple" />
+                  <p className="text-sm text-gray-300">
+                    Show this code to our staff to redeem your reward.
+                  </p>
                 </div>
               </div>
               
-              {customerData && (
-                <div className="text-sm text-center">
-                  <span className="text-gray-400">Your updated balance:</span>
-                  <span className="ml-2 font-bold text-cuephoria-lightpurple">
-                    {customerData.loyalty_points} points
-                  </span>
-                </div>
-              )}
-            </div>
+              <DialogFooter>
+                <Button
+                  className="w-full bg-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/90 transition-all duration-300"
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
           )}
-          
-          <DialogFooter className="flex justify-center">
-            <Button 
-              className="bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90"
-              onClick={() => setShowSuccessDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };
 

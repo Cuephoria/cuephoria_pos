@@ -1,335 +1,249 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useCustomerAuth } from '@/context/CustomerAuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, UserRound, KeyRound } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
-import { useReferral } from '@/hooks/useReferral';
+import { useCustomerAuth } from '@/context/CustomerAuthContext';
+import { 
+  Gamepad, 
+  ZapIcon, 
+  Stars, 
+  Dice1, 
+  Dice3, 
+  Dice5, 
+  Trophy, 
+  Joystick, 
+  User, 
+  Eye, 
+  EyeOff 
+} from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const CustomerLogin = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { signIn, isLoading: authLoading, user } = useCustomerAuth();
-  const { toast } = useToast();
-  const { applyReferralCode } = useReferral();
-  
-  const [isLoading, setIsLoading] = useState(false);
+interface LocationState {
+  from?: string;
+}
+
+const CustomerLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [referralCode, setReferralCode] = useState('');
-  const [showReferralInput, setShowReferralInput] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useCustomerAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LocationState;
+  const [animationClass, setAnimationClass] = useState('');
+  const isMobile = useIsMobile();
   
-  // Check for email_confirmed=true in the URL params which indicates coming from a successful email verification
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const emailConfirmed = params.get('email_confirmed');
-    
-    if (emailConfirmed === 'true') {
-      navigate('/customer/signup-success');
-    }
-    
-    // Check for 'from' param in location state to set initial email
-    if (location.state && location.state.email) {
-      setEmail(location.state.email);
-      setShowReferralInput(true);
-    }
-  }, [location, navigate]);
-  
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      const from = location.state?.from || '/customer/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [user, navigate, location]);
+    const timer = setTimeout(() => {
+      setAnimationClass('animate-scale-in');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
       toast({
-        title: "Error",
-        description: "Please enter both email and password.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please enter both email and password',
+        variant: 'destructive',
       });
       return;
     }
     
     setIsLoading(true);
-    
     try {
       const success = await signIn(email, password);
-      
-      if (!success) {
-        // The error message will be shown by the signIn function
-      } else {
-        // Handle referral code if provided
-        if (referralCode) {
-          try {
-            await applyReferralCode(referralCode, email);
-          } catch (err) {
-            console.error("Error applying referral code:", err);
-            // Continue with login even if referral code application fails
-          }
-        }
-          
-        // Redirect to dashboard or the page user came from
-        const from = location.state?.from || '/customer/dashboard';
-        navigate(from, { replace: true });
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'Logged in successfully!',
+        });
+        
+        const redirectTo = locationState?.from || '/customer/dashboard';
+        navigate(redirectTo);
       }
     } catch (error) {
-      console.error("Login error:", error);
       toast({
-        title: "Login failed",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Function to apply referral code
-  const handleApplyReferralCode = async (code: string, userEmail: string) => {
-    // Get customer ID for the user who just logged in
-    const { data: userData, error: userError } = await supabase
-      .from('customer_users')
-      .select('customer_id')
-      .eq('email', userEmail)
-      .single();
-      
-    if (userError || !userData) {
-      console.error("Error finding customer:", userError);
-      return;
-    }
-    
-    // Find the referrer using the code
-    const { data: referrerData, error: referrerError } = await supabase
-      .from('customer_users')
-      .select('customer_id')
-      .eq('referral_code', code)
-      .single();
-      
-    if (referrerError || !referrerData) {
-      console.error("Invalid referral code:", referrerError);
-      return;
-    }
-    
-    // Check if this referral has already been applied
-    const { data: existingReferral } = await supabase
-      .from('referrals')
-      .select('id')
-      .eq('referrer_id', referrerData.customer_id)
-      .eq('referred_email', userEmail)
-      .maybeSingle();
-      
-    if (existingReferral) {
-      // Referral already exists
-      return;
-    }
-    
-    // Create the referral record
-    await supabase
-      .from('referrals')
-      .insert({
-        referrer_id: referrerData.customer_id,
-        referred_email: userEmail,
-        points_awarded: 100,
-        status: 'completed'
-      });
-      
-    // Award points to referrer
-    try {
-      const { error: referrerPointsError } = await supabase.functions.invoke('award_referral_points', {
-        body: {
-          customer_identifier: referrerData.customer_id,
-          points_to_award: 100
-        }
-      });
-      
-      if (referrerPointsError) {
-        console.error("Error awarding points to referrer:", referrerPointsError);
-      }
-    } catch (error) {
-      console.error("Error awarding points to referrer:", error);
-    }
-    
-    // Award points to the referred customer
-    try {
-      const { error: referredPointsError } = await supabase.functions.invoke('award_referral_points', {
-        body: {
-          customer_identifier: userData.customer_id,
-          points_to_award: 50
-        }
-      });
-      
-      if (referredPointsError) {
-        console.error("Error awarding points to referred customer:", referredPointsError);
-      }
-    } catch (error) {
-      console.error("Error awarding points to referred customer:", error);
-    }
-    
-    toast({
-      title: "Referral bonus applied!",
-      description: "You've earned 50 loyalty points from the referral.",
-    });
+
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-cuephoria-darker to-black">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(93,107,255,0.15)_0%,_transparent_70%)] pointer-events-none"></div>
-      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4">
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
+        
+        <div className="absolute top-1/3 right-1/4 w-48 h-64 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent rounded-tr-[50%]"></div>
+        
+        <div className="absolute top-[8%] left-[12%] text-cuephoria-lightpurple opacity-20 animate-float">
+          <Gamepad size={isMobile ? 24 : 36} className="animate-wiggle" />
+        </div>
+        <div className="absolute bottom-[15%] right-[15%] text-accent opacity-20 animate-float delay-300">
+          <ZapIcon size={isMobile ? 24 : 36} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[30%] right-[30%] text-cuephoria-lightpurple opacity-20 animate-float delay-150">
+          <Stars size={isMobile ? 18 : 24} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[15%] right-[12%] text-cuephoria-orange opacity-20 animate-float delay-250">
+          <Dice1 size={isMobile ? 20 : 28} className="animate-wiggle" />
+        </div>
+        <div className="absolute bottom-[25%] left-[25%] text-cuephoria-blue opacity-20 animate-float delay-200">
+          <Dice3 size={isMobile ? 22 : 30} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[50%] left-[15%] text-cuephoria-green opacity-20 animate-float delay-150">
+          <Dice5 size={isMobile ? 24 : 32} className="animate-wiggle" />
+        </div>
+        <div className="absolute bottom-[10%] left-[10%] text-cuephoria-orange opacity-20 animate-float delay-300">
+          <Trophy size={isMobile ? 24 : 34} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[25%] left-[25%] text-accent opacity-20 animate-float delay-400">
+          <Joystick size={isMobile ? 28 : 38} className="animate-wiggle" />
+        </div>
+        
+        <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent"></div>
+        <div className="absolute top-0 left-1/2 h-full w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent"></div>
+        <div className="absolute top-1/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent"></div>
+        <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-green/20 to-transparent"></div>
+        
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+      </div>
       
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-6 flex flex-col items-center"
-      >
-        <Link to="/" className="mb-2">
-          <img 
-            src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
-            alt="Cuephoria" 
-            className="w-16 h-16"
-          />
-        </Link>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange bg-clip-text text-transparent">
-          Customer Login
-        </h1>
-      </motion.div>
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="w-full max-w-md"
-      >
-        <Card className="border-cuephoria-lightpurple/20 bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/70">
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Access your Cuephoria account</CardDescription>
+      <div className={`w-full max-w-md z-10 ${animationClass}`}>
+        <div className="mb-8 text-center">
+          <div className="relative mx-auto w-full max-w-[220px] h-auto sm:w-64 sm:h-64">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
+            <img 
+              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
+              alt="Cuephoria 8-Ball Club" 
+              className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
+            />
+          </div>
+          <p className="mt-2 text-muted-foreground font-bold tracking-wider animate-fade-in bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent text-sm sm:text-base">
+            MEMBER PORTAL
+          </p>
+        </div>
+        
+        <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-cuephoria-lightpurple/5 to-accent/5 opacity-50 rounded-xl"></div>
+          <div className="absolute w-full h-full bg-grid-pattern opacity-5"></div>
+          
+          <CardHeader className="text-center relative z-10 p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#5D6BFF] via-[#8A7CFE] to-[#C77DFF] bg-clip-text text-transparent">Member Login</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access exclusive member benefits</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Input
-                      id="email"
-                      placeholder="Enter your email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
-                      disabled={isLoading || authLoading}
-                      autoComplete="email"
-                    />
-                    <UserRound className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link to="/customer/reset-password" className="text-xs text-cuephoria-lightpurple hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 bg-cuephoria-dark border-cuephoria-lightpurple/20"
-                      disabled={isLoading || authLoading}
-                      autoComplete="current-password"
-                    />
-                    <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-300"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                
-                {showReferralInput && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="referral">Referral Code (Optional)</Label>
-                    <Input
-                      id="referral"
-                      placeholder="Enter referral code if you have one"
-                      value={referralCode}
-                      onChange={(e) => setReferralCode(e.target.value)}
-                      className="bg-cuephoria-dark border-cuephoria-lightpurple/20"
-                      disabled={isLoading || authLoading}
-                    />
-                  </div>
-                )}
-                
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90"
-                  disabled={isLoading || authLoading}
-                >
-                  {isLoading || authLoading ? "Signing in..." : "Sign In"}
-                </Button>
-                
-                {!showReferralInput && (
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="text-cuephoria-lightpurple w-full"
-                    onClick={() => setShowReferralInput(true)}
-                  >
-                    Have a referral code?
-                  </Button>
-                )}
+          
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="space-y-2 group">
+                <label htmlFor="email" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
+                  <User size={14} className="inline-block" />
+                  Email
+                  <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
+                />
               </div>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <Separator className="mb-4 bg-gray-700" />
-            <div className="text-center w-full">
-              <p className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Link to="/customer/register" className="text-cuephoria-lightpurple hover:underline">
-                  Sign up
+              
+              <div className="space-y-2 group">
+                <label htmlFor="password" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
+                  <ZapIcon size={14} className="inline-block" />
+                  Password
+                  <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleShowPassword}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-cuephoria-lightpurple hover:text-accent p-0 h-auto text-xs"
+                  onClick={() => navigate('/customer/reset-password')}
+                >
+                  Forgot password?
+                </Button>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col space-y-4">
+              <Button 
+                type="submit" 
+                className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 hover:scale-[1.02] transition-all duration-300 btn-hover-effect font-medium text-sm sm:text-base" 
+                disabled={isLoading}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      <User size={16} />
+                      Login
+                    </>
+                  )}
+                </span>
+              </Button>
+              
+              <div className="text-center text-sm">
+                <span className="text-muted-foreground">Don't have an account?</span>{' '}
+                <Link to="/customer/register" className="text-cuephoria-lightpurple hover:text-accent hover:underline transition-colors">
+                  Register
                 </Link>
-              </p>
-            </div>
-          </CardFooter>
+              </div>
+            </CardFooter>
+          </form>
         </Card>
-      </motion.div>
-      
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-6"
-      >
-        <Link to="/" className="text-sm text-gray-400 hover:text-white flex items-center">
-          ← Back to Home
-        </Link>
-      </motion.div>
+        
+        <div className="mt-6 text-center">
+          <Link to="/login" className="text-sm text-muted-foreground hover:text-white transition-colors">
+            Admin and Staff login
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };

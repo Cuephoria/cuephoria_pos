@@ -24,7 +24,6 @@ const CustomerDashboard: React.FC = () => {
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
-  const [copyLoading, setCopyLoading] = useState(false);
 
   useEffect(() => {
     if (!customerUser?.customerId) return;
@@ -76,12 +75,9 @@ const CustomerDashboard: React.FC = () => {
     return `${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
   };
 
-  const handleCopyReferralCode = async () => {
-    if (!customerUser?.referralCode) return;
-    
-    try {
-      setCopyLoading(true);
-      await navigator.clipboard.writeText(customerUser.referralCode);
+  const handleCopyReferralCode = () => {
+    if (customerUser?.referralCode) {
+      navigator.clipboard.writeText(customerUser.referralCode);
       setIsCopied(true);
       toast({
         title: "Referral Code Copied!",
@@ -91,24 +87,7 @@ const CustomerDashboard: React.FC = () => {
       setTimeout(() => {
         setIsCopied(false);
       }, 3000);
-    } catch (err) {
-      console.error("Error copying to clipboard:", err);
-      toast({
-        title: "Could not copy code",
-        description: "Please try again or copy manually",
-        variant: "destructive"
-      });
-    } finally {
-      setCopyLoading(false);
     }
-  };
-  
-  const handleBookNow = () => {
-    window.open("https://cuephoria.in", "_blank");
-  };
-  
-  const handleGetMembership = () => {
-    window.open("https://cuephoria.in/membership", "_blank");
   };
 
   if (isLoading) {
@@ -141,7 +120,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/5 overflow-hidden relative h-full hover:shadow-cuephoria-lightpurple/20 hover:border-cuephoria-lightpurple/50 transition-all duration-300">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-lightpurple/10 to-transparent rounded-bl-[50%] opacity-60"></div>
@@ -161,7 +139,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-blue/30 shadow-lg shadow-cuephoria-blue/5 overflow-hidden relative h-full hover:shadow-cuephoria-blue/20 hover:border-cuephoria-blue/50 transition-all duration-300">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-blue/10 to-transparent rounded-bl-[50%] opacity-60"></div>
@@ -181,7 +158,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-orange/30 shadow-lg shadow-cuephoria-orange/5 overflow-hidden relative h-full hover:shadow-cuephoria-orange/20 hover:border-cuephoria-orange/50 transition-all duration-300">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-orange/10 to-transparent rounded-bl-[50%] opacity-60"></div>
@@ -203,7 +179,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-green/30 shadow-lg shadow-cuephoria-green/5 overflow-hidden relative h-full hover:shadow-cuephoria-green/20 hover:border-cuephoria-green/50 transition-all duration-300">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-cuephoria-green/10 to-transparent rounded-bl-[50%] opacity-60"></div>
@@ -227,7 +202,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-lightpurple/30 shadow-lg shadow-cuephoria-lightpurple/10 overflow-hidden relative h-full">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cuephoria-lightpurple/10 via-transparent to-transparent opacity-60"></div>
@@ -260,12 +234,11 @@ const CustomerDashboard: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full">
                   <p className="text-center text-muted-foreground mb-4">No active membership plan</p>
-                  <Button 
-                    className="bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300"
-                    onClick={handleGetMembership}
-                  >
-                    Get Membership
-                  </Button>
+                  <a href="https://cuephoria.in/membership" target="_blank" rel="noopener noreferrer">
+                    <Button className="bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 transition-all duration-300">
+                      Get Membership
+                    </Button>
+                  </a>
                 </div>
               )}
             </CardContent>
@@ -277,7 +250,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-orange/30 shadow-lg shadow-cuephoria-orange/10 overflow-hidden relative h-full">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-cuephoria-orange/10 via-transparent to-transparent opacity-60"></div>
@@ -307,7 +279,6 @@ const CustomerDashboard: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          whileHover={{ y: -5, transition: { duration: 0.2 } }}
         >
           <Card className="bg-gradient-to-br from-cuephoria-darker/90 to-cuephoria-darker/80 border-cuephoria-blue/30 shadow-lg shadow-cuephoria-blue/10 overflow-hidden relative h-full">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-cuephoria-blue/10 via-transparent to-transparent opacity-60"></div>
@@ -329,9 +300,8 @@ const CustomerDashboard: React.FC = () => {
                   : 'bg-gradient-to-r from-cuephoria-blue to-cuephoria-lightpurple hover:shadow-lg hover:shadow-cuephoria-blue/20'
                 } transition-all duration-300`}
                 onClick={handleCopyReferralCode}
-                disabled={copyLoading}
               >
-                {copyLoading ? 'Copying...' : isCopied ? 'Copied!' : 'Copy Referral Code'}
+                {isCopied ? 'Copied!' : 'Copy Referral Code'}
               </Button>
             </CardContent>
           </Card>
@@ -357,12 +327,11 @@ const CustomerDashboard: React.FC = () => {
                   Reserve your gaming session in advance through our website and enjoy a 10% discount on your bill.
                 </p>
               </div>
-              <Button 
-                className="shrink-0 bg-gradient-to-r from-cuephoria-orange to-cuephoria-orange/80 hover:from-cuephoria-orange/90 hover:to-cuephoria-orange/70 text-white px-8 py-6 h-auto text-lg shadow-lg shadow-cuephoria-orange/20"
-                onClick={handleBookNow}
-              >
-                Book Now
-              </Button>
+              <a href="https://cuephoria.in" target="_blank" rel="noopener noreferrer" className="shrink-0">
+                <Button className="bg-gradient-to-r from-cuephoria-orange to-cuephoria-orange/80 hover:from-cuephoria-orange/90 hover:to-cuephoria-orange/70 text-white px-8 py-6 h-auto text-lg shadow-lg shadow-cuephoria-orange/20">
+                  Book Now
+                </Button>
+              </a>
             </div>
           </CardContent>
         </Card>
