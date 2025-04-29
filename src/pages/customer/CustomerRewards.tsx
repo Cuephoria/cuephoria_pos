@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -108,13 +107,14 @@ const CustomerRewards: React.FC = () => {
           if (error) {
             console.error('Error fetching redemptions:', error);
           } else {
-            const formattedRedemptions = data.map(item => ({
+            const formattedRedemptions: RewardRedemption[] = data.map(item => ({
               id: item.id,
               customerId: item.customer_id,
               rewardId: item.reward_id,
               pointsSpent: item.points_spent,
               redemptionDate: new Date(item.created_at),
-              status: item.status,
+              status: item.status as "pending" | "completed" | "cancelled", // Ensure type safety
+              redemptionCode: item.redemption_code,
               rewardName: item.rewards?.name
             }));
             setMyRedemptions(formattedRedemptions);
@@ -212,13 +212,14 @@ const CustomerRewards: React.FC = () => {
         .order('created_at', { ascending: false });
         
       if (data) {
-        const formattedRedemptions = data.map(item => ({
+        const formattedRedemptions: RewardRedemption[] = data.map(item => ({
           id: item.id,
           customerId: item.customer_id,
           rewardId: item.reward_id,
           pointsSpent: item.points_spent,
           redemptionDate: new Date(item.created_at),
-          status: item.status,
+          status: item.status as "pending" | "completed" | "cancelled", // Ensure type safety
+          redemptionCode: item.redemption_code,
           rewardName: item.rewards?.name
         }));
         setMyRedemptions(formattedRedemptions);
@@ -269,7 +270,7 @@ const CustomerRewards: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: "pending" | "completed" | "cancelled") => {
     switch (status) {
       case 'pending':
         return <Badge className="bg-amber-500 hover:bg-amber-600 flex gap-1 items-center"><Clock className="h-3 w-3" /> Pending</Badge>;
