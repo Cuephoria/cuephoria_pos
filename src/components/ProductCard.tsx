@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { usePOS, Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { ShoppingCart, Edit, Trash, Tag, Clock, GraduationCap } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProductCardProps {
   product: Product;
@@ -103,46 +101,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const remainingStock = getRemainingStock();
   const isOutOfStock = product.category !== 'membership' && remainingStock <= 0;
 
-  // Helper for fade/overflow styling for name
-  const nameTooLong = product.name.length > 18;
-
   return (
-    <Card className={`flex flex-col h-full card-hover transition-all ${className} shadow-md`}>
+    <Card className={`flex flex-col h-full ${className}`}>
       <CardHeader className="pb-2 space-y-1">
         <div className="flex justify-between items-center">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={`relative text-lg font-semibold max-w-[170px] pl-0 transition-all flex-1 overflow-hidden whitespace-nowrap group`}
-                tabIndex={0}
-                aria-label={product.name}
-                style={{
-                  cursor: nameTooLong ? "pointer" : "default",
-                }}
-              >
-                <span
-                  className={`block transition-all ${
-                    nameTooLong
-                      ? "overflow-hidden text-ellipsis group-hover:overflow-visible group-hover:whitespace-normal group-hover:bg-background after:content-[''] after:absolute after:right-0 after:top-0 after:w-8 after:h-full after:bg-gradient-to-l after:from-background after:to-transparent"
-                      : ""
-                  }`}
-                  style={{
-                    transition: "all 180ms cubic-bezier(.4,0,.2,1)",
-                  }}
-                >
-                  {product.name}
-                </span>
-                {nameTooLong && (
-                  <span className="absolute bottom-0 right-0 w-8 h-full pointer-events-none bg-gradient-to-l from-background to-transparent"></span>
-                )}
-              </div>
-            </TooltipTrigger>
-            {nameTooLong && (
-              <TooltipContent side="top" className="max-w-xs break-words text-center font-medium">
-                {product.name}
-              </TooltipContent>
-            )}
-          </Tooltip>
+          <CardTitle className="text-lg text-ellipsis overflow-hidden whitespace-nowrap">{product.name}</CardTitle>
           <Badge className={getCategoryColor(product.category)}>
             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
           </Badge>
