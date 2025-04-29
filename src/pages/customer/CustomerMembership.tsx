@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -166,7 +165,10 @@ const CustomerMembership: React.FC = () => {
                     <span className="text-sm text-muted-foreground">Membership Period</span>
                     <span className="text-sm font-medium">{calculateProgressPercentage()}% complete</span>
                   </div>
-                  <Progress value={calculateProgressPercentage()} className="h-2 bg-cuephoria-darker" indicatorClassName="bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-blue" />
+                  <Progress 
+                    value={calculateProgressPercentage()} 
+                    className="h-2 bg-cuephoria-darker" 
+                  />
                 </div>
                 
                 <div className="mt-8">

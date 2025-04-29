@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, convertFromSupabaseCustomerUser, convertToSupabaseCustomerUser } from '@/integrations/supabase/client';
@@ -202,6 +201,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           data: {
             name,
             phone,
+            pin, // Store PIN in user metadata
           },
         },
       });
@@ -261,8 +261,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
           customerId,
           email,
           referralCode: generateReferralCode(),
-          pin, // Store PIN for password recovery
-          resetPin: null,
+          resetPin: pin, // Store PIN as resetPin instead
           resetPinExpiry: null,
           createdAt: new Date()
         };
@@ -411,7 +410,7 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         return false;
       }
       
-      if (customerUserData.pin !== pin) {
+      if (customerUserData.reset_pin !== pin) {
         toast({
           title: 'Invalid PIN',
           description: 'The security PIN you entered is incorrect.',
