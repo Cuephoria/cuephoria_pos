@@ -10,12 +10,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, UserRound, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { useReferral } from '@/hooks/useReferral';
 
 const CustomerLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, isLoading: authLoading, user } = useCustomerAuth();
   const { toast } = useToast();
+  const { applyReferralCode } = useReferral();
   
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -95,7 +97,7 @@ const CustomerLogin = () => {
   };
   
   // Function to apply referral code
-  const applyReferralCode = async (code: string, userEmail: string) => {
+  const handleApplyReferralCode = async (code: string, userEmail: string) => {
     // Get customer ID for the user who just logged in
     const { data: userData, error: userError } = await supabase
       .from('customer_users')
@@ -145,20 +147,36 @@ const CustomerLogin = () => {
       
     // Award points to referrer
     try {
-      await supabase.rpc('award_referral_points', {
-        customer_identifier: referrerData.customer_id,
-        points_to_award: 100
-      });
+      // Call the RPC function without type issues
+      const { error: referrerPointsError } = await supabase.rpc(
+        'award_referral_points', 
+        { 
+          customer_identifier: referrerData.customer_id, 
+          points_to_award: 100 
+        }
+      );
+      
+      if (referrerPointsError) {
+        console.error("Error awarding points to referrer:", referrerPointsError);
+      }
     } catch (error) {
       console.error("Error awarding points to referrer:", error);
     }
     
     // Award points to the referred customer
     try {
-      await supabase.rpc('award_referral_points', {
-        customer_identifier: userData.customer_id,
-        points_to_award: 50
-      });
+      // Call the RPC function without type issues
+      const { error: referredPointsError } = await supabase.rpc(
+        'award_referral_points', 
+        { 
+          customer_identifier: userData.customer_id, 
+          points_to_award: 50 
+        }
+      );
+      
+      if (referredPointsError) {
+        console.error("Error awarding points to referred customer:", referredPointsError);
+      }
     } catch (error) {
       console.error("Error awarding points to referred customer:", error);
     }
