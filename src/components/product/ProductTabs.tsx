@@ -5,6 +5,7 @@ import { Product } from '@/types/pos.types';
 import ProductCard from '@/components/ProductCard';
 import NoProductsFound from './NoProductsFound';
 import { useAuth } from '@/context/AuthContext';
+import { usePOS } from '@/context/POSContext';
 
 interface ProductTabsProps {
   products: Product[];
@@ -26,6 +27,7 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
   onAddProduct
 }) => {
   const { user } = useAuth();
+  const { categories } = usePOS();
   const isAdmin = user?.isAdmin || false;
   
   const filteredProducts = activeTab === 'all' 
@@ -36,11 +38,11 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
     <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="mb-4 flex flex-wrap gap-1 justify-start sm:justify-center">
         <TabsTrigger value="all">All ({categoryCounts.all || 0})</TabsTrigger>
-        <TabsTrigger value="food">Food ({categoryCounts.food || 0})</TabsTrigger>
-        <TabsTrigger value="drinks">Drinks ({categoryCounts.drinks || 0})</TabsTrigger>
-        <TabsTrigger value="tobacco">Tobacco ({categoryCounts.tobacco || 0})</TabsTrigger>
-        <TabsTrigger value="challenges">Challenges ({categoryCounts.challenges || 0})</TabsTrigger>
-        <TabsTrigger value="membership">Membership ({categoryCounts.membership || 0})</TabsTrigger>
+        {categories.map(category => (
+          <TabsTrigger key={category} value={category}>
+            {category.charAt(0).toUpperCase() + category.slice(1)} ({categoryCounts[category] || 0})
+          </TabsTrigger>
+        ))}
       </TabsList>
       
       <TabsContent value={activeTab} className="mt-6">

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,20 +25,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { addToCart, isStudentDiscount, setIsStudentDiscount, cart } = usePOS();
 
   const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'food':
-        return 'bg-cuephoria-orange';
-      case 'drinks':
-        return 'bg-cuephoria-blue';
-      case 'tobacco':
-        return 'bg-red-500';
-      case 'challenges':
-        return 'bg-green-500';
-      case 'membership':
-        return 'bg-gradient-to-r from-violet-600 to-indigo-600';
-      default:
-        return 'bg-gray-500';
-    }
+    const categoryColorMap: Record<string, string> = {
+      'food': 'bg-cuephoria-orange',
+      'drinks': 'bg-cuephoria-blue',
+      'tobacco': 'bg-red-500',
+      'challenges': 'bg-green-500',
+      'membership': 'bg-gradient-to-r from-violet-600 to-indigo-600',
+    };
+    
+    return categoryColorMap[category] || 'bg-gray-500';
   };
 
   const handleAddToCart = () => {

@@ -4,7 +4,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
+  category: string; // Changed from enum to string for custom categories
   stock: number;
   image?: string;
   originalPrice?: number;
@@ -56,7 +56,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   total: number;
-  category?: 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership';
+  category?: string; // Changed from enum to string for custom categories
 }
 
 export interface Bill {
@@ -101,6 +101,7 @@ export interface POSContextType {
   discountType: 'percentage' | 'fixed';
   loyaltyPointsUsed: number;
   isStudentDiscount: boolean;
+  categories: string[]; // New property to store available categories
   setIsStudentDiscount: (value: boolean) => void;
   
   // Station state setter
@@ -111,11 +112,16 @@ export interface POSContextType {
   updateProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
   
+  // Category functions
+  addCategory: (category: string) => void; // New function to add category
+  updateCategory: (oldCategory: string, newCategory: string) => void; // New function to update category
+  deleteCategory: (category: string) => void; // New function to delete category
+  
   // Station functions
   startSession: (stationId: string, customerId: string) => Promise<void>;
   endSession: (stationId: string) => Promise<void>;
   deleteStation: (stationId: string) => Promise<boolean>;
-  updateStation: (stationId: string, name: string, hourlyRate: number) => Promise<boolean>; // Add this property
+  updateStation: (stationId: string, name: string, hourlyRate: number) => Promise<boolean>;
   
   // Customer functions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;

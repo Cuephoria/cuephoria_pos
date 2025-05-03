@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
@@ -6,7 +7,7 @@ import { BarChartHorizontal } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 
 const ProductPerformance: React.FC = () => {
-  const { bills, products } = usePOS();
+  const { bills, products, categories } = usePOS();
   
   const generateProductData = () => {
     const productSales = new Map();
@@ -14,10 +15,16 @@ const ProductPerformance: React.FC = () => {
     bills.forEach(bill => {
       bill.items.forEach(item => {
         if (item.type === 'product') {
-          const current = productSales.get(item.name) || { sales: 0, count: 0 };
+          const current = productSales.get(item.name) || { 
+            sales: 0, 
+            count: 0, 
+            category: item.category || 'unknown'
+          };
+          
           productSales.set(item.name, {
             sales: current.sales + item.total,
-            count: current.count + item.quantity
+            count: current.count + item.quantity,
+            category: item.category || current.category
           });
         }
       });
@@ -26,14 +33,25 @@ const ProductPerformance: React.FC = () => {
     return Array.from(productSales, ([name, data]) => ({
       name,
       sales: data.sales,
-      count: data.count
+      count: data.count,
+      category: data.category
     }))
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 10);
   };
   
-  const getProductColor = () => {
-    return '#10B981';
+  const getCategoryColor = (category?: string) => {
+    if (!category) return '#10B981';
+    
+    const colorMap: Record<string, string> = {
+      'food': '#F97316',      // Orange
+      'drinks': '#3B82F6',    // Blue
+      'tobacco': '#EF4444',   // Red
+      'challenges': '#22C55E', // Green
+      'membership': '#8B5CF6'  // Purple
+    };
+    
+    return colorMap[category] || '#10B981';
   };
   
   const formatCurrency = (value: number) => {
@@ -108,6 +126,10 @@ const ProductPerformance: React.FC = () => {
                             <span className="text-gray-400">Items Sold:</span>
                             <span className="font-bold text-white">{item.count}</span>
                           </div>
+                          <div className="flex justify-between items-center gap-4">
+                            <span className="text-gray-400">Category:</span>
+                            <span className="font-bold text-white capitalize">{item.category}</span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -116,11 +138,11 @@ const ProductPerformance: React.FC = () => {
                 }}
               />
               <Legend 
-                payload={[{ 
-                  value: 'Revenue', 
-                  color: '#10B981', 
+                payload={categories.map(category => ({ 
+                  value: category.charAt(0).toUpperCase() + category.slice(1), 
+                  color: getCategoryColor(category), 
                   type: 'rect' 
-                }]} 
+                }))}
               />
               <Bar 
                 dataKey="sales" 
@@ -130,7 +152,7 @@ const ProductPerformance: React.FC = () => {
                 radius={[0, 4, 4, 0]}
               >
                 {productData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill="#10B981" />
+                  <Cell key={`cell-${index}`} fill={getCategoryColor(entry.category)} />
                 ))}
               </Bar>
             </BarChart>

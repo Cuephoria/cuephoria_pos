@@ -30,11 +30,15 @@ const POSContext = createContext<POSContextType>({
   discountType: 'percentage',
   loyaltyPointsUsed: 0,
   isStudentDiscount: false,
+  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
   setIsStudentDiscount: () => {},
   setStations: () => {},
   addProduct: () => ({}),
   updateProduct: () => ({}),
   deleteProduct: () => {},
+  addCategory: () => {},
+  updateCategory: () => {},
+  deleteCategory: () => {},
   startSession: async () => {},
   endSession: async () => {},
   deleteStation: async () => false,
@@ -66,6 +70,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // State for student discount
   const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
+
+  // State for categories
+  const [categories, setCategories] = useState<string[]>([
+    'food', 'drinks', 'tobacco', 'challenges', 'membership'
+  ]);
   
   // Initialize all hooks
   const { 
@@ -101,7 +110,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     startSession: startSessionBase, 
     endSession: endSessionBase,
     deleteStation,
-    updateStation  // Make sure to destructure updateStation from the hook
+    updateStation
   } = useStations([], updateCustomer);
   
   const { 
@@ -130,6 +139,67 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportBills: exportBillsBase, 
     exportCustomers: exportCustomersBase 
   } = useBills(updateCustomer, updateProduct);
+
+  // Category management functions
+  const addCategory = (category: string) => {
+    const trimmedCategory = category.trim().toLowerCase();
+    if (!categories.includes(trimmedCategory) && trimmedCategory) {
+      setCategories(prev => [...prev, trimmedCategory]);
+    }
+  };
+
+  const updateCategory = (oldCategory: string, newCategory: string) => {
+    const trimmedNewCategory = newCategory.trim().toLowerCase();
+    
+    if (oldCategory === newCategory || !trimmedNewCategory) {
+      return; // No change or empty category
+    }
+    
+    // Don't allow updating default categories
+    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+    if (defaultCategories.includes(oldCategory)) {
+      return;
+    }
+    
+    // Update categories list
+    setCategories(prev => 
+      prev.map(cat => cat === oldCategory ? trimmedNewCategory : cat)
+    );
+    
+    // Update products with this category
+    setProducts(prev =>
+      prev.map(product => 
+        product.category === oldCategory 
+          ? { ...product, category: trimmedNewCategory } 
+          : product
+      )
+    );
+  };
+
+  const deleteCategory = (category: string) => {
+    // Don't allow deleting default categories
+    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+    if (defaultCategories.includes(category)) {
+      return;
+    }
+    
+    // Remove from categories list
+    setCategories(prev => prev.filter(cat => cat !== category));
+    
+    // Update products with this category to 'uncategorized'
+    setProducts(prev =>
+      prev.map(product => 
+        product.category === category 
+          ? { ...product, category: 'uncategorized' } 
+          : product
+      )
+    );
+    
+    // Add 'uncategorized' if it doesn't exist yet
+    if (!categories.includes('uncategorized')) {
+      setCategories(prev => [...prev, 'uncategorized']);
+    }
+  };
   
   // Wrapper functions that combine functionality from multiple hooks
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
@@ -399,15 +469,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountType,
         loyaltyPointsUsed,
         isStudentDiscount,
+        categories,
         setIsStudentDiscount,
         setStations,
         addProduct,
         updateProduct,
         deleteProduct,
+        addCategory,
+        updateCategory,
+        deleteCategory,
         startSession,
         endSession,
         deleteStation,
-        updateStation,  // Include updateStation in the context value
+        updateStation,
         addCustomer,
         updateCustomer,
         updateCustomerMembership: updateCustomerMembershipWrapper,

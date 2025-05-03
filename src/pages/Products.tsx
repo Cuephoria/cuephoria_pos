@@ -1,14 +1,24 @@
+
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/hooks/useProducts';
 import { Product } from '@/types/pos.types';
-import { Plus, RefreshCw, RotateCcw } from 'lucide-react';
+import { Plus, RefreshCw, RotateCcw, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ProductDialog from '@/components/product/ProductDialog';
 import LowStockAlert from '@/components/product/LowStockAlert';
 import ProductTabs from '@/components/product/ProductTabs';
+import CategoryManagement from '@/components/product/CategoryManagement';
 import { ProductFormState } from '@/components/product/ProductForm';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const ProductsPage: React.FC = () => {
   const { addProduct, updateProduct, deleteProduct, products } = usePOS();
@@ -185,6 +195,26 @@ const ProductsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h2 className="text-3xl font-bold tracking-tight">Products</h2>
         <div className="flex flex-wrap gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="h-10">
+                <Settings className="h-4 w-4 mr-2" /> 
+                Categories
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Category Management</SheetTitle>
+                <SheetDescription>
+                  Add, edit, or remove product categories.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                <CategoryManagement />
+              </div>
+            </SheetContent>
+          </Sheet>
+          
           <Button onClick={handleRefreshProducts} variant="outline" disabled={isRefreshing} className="h-10">
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
             Refresh DB

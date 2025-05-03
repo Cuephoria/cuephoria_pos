@@ -8,6 +8,7 @@ import { DialogFooter } from '@/components/ui/dialog';
 import { Product } from '@/types/pos.types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { usePOS } from '@/context/POSContext';
 
 interface ProductFormProps {
   isEditMode: boolean;
@@ -36,6 +37,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   onCancel,
   isSubmitting
 }) => {
+  const { categories } = usePOS();
   const [formState, setFormState] = useState<ProductFormState>({
     name: '',
     price: '',
@@ -219,11 +221,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="food">Food</SelectItem>
-              <SelectItem value="drinks">Drinks</SelectItem>
-              <SelectItem value="tobacco">Tobacco</SelectItem>
-              <SelectItem value="challenges">Challenges</SelectItem>
-              <SelectItem value="membership">Membership</SelectItem>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {validationErrors.category && (
