@@ -358,6 +358,45 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const deleteCustomer = async (id: string) => {
     try {
+      // First, check if customer has any active sessions
+      const { data: activeSessions, error: sessionsError } = await supabase
+        .from('sessions' as any)
+        .select('id')
+        .eq('customer_id', id)
+        .is('end_time', null);
+        
+      if (sessionsError) {
+        console.error('Error checking active sessions:', sessionsError);
+        // Continue with the operation
+      } else if (activeSessions && activeSessions.length > 0) {
+        toast({
+          title: 'Cannot Delete Customer',
+          description: 'This customer has active sessions. Please end all sessions before deleting.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check if the customer has associated bills
+      const { data: bills, error: billsError } = await supabase
+        .from('bills')
+        .select('id')
+        .eq('customer_id', id)
+        .limit(1);
+
+      if (billsError) {
+        console.error('Error checking bills:', billsError);
+        // Continue with deletion attempt
+      } else if (bills && bills.length > 0) {
+        toast({
+          title: 'Cannot Delete Customer',
+          description: 'This customer has associated bills. Please delete the bills first or keep the customer record.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // If we got here, we can attempt to delete the customer
       const { error } = await supabase
         .from('customers')
         .delete()
@@ -367,7 +406,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         console.error('Error deleting customer:', error);
         toast({
           title: 'Error',
-          description: 'Failed to delete customer',
+          description: 'Failed to delete customer: ' + error.message,
           variant: 'destructive'
         });
         return;
@@ -378,6 +417,11 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       if (selectedCustomer && selectedCustomer.id === id) {
         setSelectedCustomer(null);
       }
+      
+      toast({
+        title: 'Success',
+        description: 'Customer deleted successfully',
+      });
     } catch (error) {
       console.error('Error in deleteCustomer:', error);
       toast({

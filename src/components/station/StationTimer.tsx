@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -108,7 +109,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         
         const { data, error } = await supabase
           .from('sessions')
-          .select('start_time')
+          .select('*')
           .eq('id', sessionId)
           .single();
           
@@ -119,24 +120,32 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           return;
         }
         
-        if (data && data.start_time) {
-          const startTime = new Date(data.start_time);
-          console.log("Session start time from Supabase:", startTime);
+        if (data) {
+          // Use type assertion since we know this data should exist
+          const sessionData = data as any;
           
-          // Update the sessionDataRef with data from Supabase
-          if (sessionDataRef.current) {
-            sessionDataRef.current.startTime = startTime;
+          if (sessionData && sessionData.start_time) {
+            const startTime = new Date(sessionData.start_time);
+            console.log("Session start time from Supabase:", startTime);
+            
+            // Update the sessionDataRef with data from Supabase
+            if (sessionDataRef.current) {
+              sessionDataRef.current.startTime = startTime;
+            } else {
+              sessionDataRef.current = {
+                sessionId,
+                startTime,
+                stationId: station.id,
+                customerId: station.currentSession.customerId,
+                hourlyRate: station.hourlyRate
+              };
+            }
+            
+            updateTimerFromLocalData();
           } else {
-            sessionDataRef.current = {
-              sessionId,
-              startTime,
-              stationId: station.id,
-              customerId: station.currentSession.customerId,
-              hourlyRate: station.hourlyRate
-            };
+            // Fallback to local data
+            updateTimerFromLocalData();
           }
-          
-          updateTimerFromLocalData();
         } else {
           // Fallback to local data
           updateTimerFromLocalData();

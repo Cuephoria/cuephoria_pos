@@ -36,7 +36,10 @@ export const useSessionsData = () => {
       
       // Transform data to match our Session type
       if (data && data.length > 0) {
-        const transformedSessions = data.map(item => ({
+        // Use type assertion to handle the TypeScript issues
+        const sessionsData = data as any[];
+        
+        const transformedSessions = sessionsData.map(item => ({
           id: item.id,
           stationId: item.station_id,
           customerId: item.customer_id,

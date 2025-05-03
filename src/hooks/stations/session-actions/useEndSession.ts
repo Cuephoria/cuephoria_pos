@@ -2,7 +2,7 @@
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
-import { SessionActionsProps } from './types';
+import { SessionActionsProps } from '../session-actions/types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
 

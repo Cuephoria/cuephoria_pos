@@ -59,15 +59,16 @@ export const useSessionActions = (props: SessionActionsProps) => {
       
       // Insert into Supabase
       try {
+        // Use type assertion to work around TypeScript issues with Supabase
         const { data, error } = await supabase
-          .from('sessions')
+          .from('sessions' as any)
           .insert({
             id: newSession.id,
             station_id: dbStationId, // Use a valid UUID for database
             customer_id: newSession.customerId,
             start_time: newSession.startTime.toISOString(),
             // No end_time or duration, making it persist until explicitly ended
-          })
+          } as any)
           .select();
           
         if (error) {
