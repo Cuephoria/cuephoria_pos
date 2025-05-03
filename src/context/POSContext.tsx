@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -297,6 +296,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Return a synchronous bill for the UI
       if (selectedCustomer) {
+        // Calculate loyalty points earned using the new rule
+        // Members: 5 points per 100 INR spent
+        // Non-members: 2 points per 100 INR spent
+        const pointsRate = selectedCustomer.isMember ? 5 : 2;
+        const total = calculateTotal();
+        const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+        
         const placeholderBill: Bill = {
           id: `temp-${new Date().getTime()}`,
           customerId: selectedCustomer.id,
@@ -309,8 +315,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               discount) : 0,
           discountType,
           loyaltyPointsUsed,
-          loyaltyPointsEarned: Math.floor(calculateTotal() / 10),
-          total: calculateTotal(),
+          loyaltyPointsEarned,
+          total,
           paymentMethod,
           createdAt: new Date()
         };
@@ -370,6 +376,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
   
+  // Update the deleteBill function to handle bill deletion even if customer has been deleted
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
     return await deleteBillBase(billId, customerId);
   };

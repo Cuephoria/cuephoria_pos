@@ -39,7 +39,11 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ bill }) => {
       <div className="text-xs text-gray-600 mt-4">
         <div>Payment Method: {bill.paymentMethod.toUpperCase()}</div>
         {bill.loyaltyPointsEarned > 0 && (
-          <div className="mt-1">Points Earned: {bill.loyaltyPointsEarned}</div>
+          <div className="mt-1">Points Earned: {bill.loyaltyPointsEarned} 
+            <span className="text-xs text-gray-500 ml-1">
+              ({bill.loyaltyPointsEarned / bill.total * 100 > 2.1 ? '5 points' : '2 points'} per ₹100)
+            </span>
+          </div>
         )}
       </div>
     </div>

@@ -181,7 +181,11 @@ export const useBills = (
         discountValue = discount;
       }
       
-      const loyaltyPointsEarned = Math.floor(total / 100);
+      // Calculate loyalty points based on the new rule
+      // Members: 5 points per 100 INR spent
+      // Non-members: 2 points per 100 INR spent
+      const pointsRate = selectedCustomer.isMember ? 5 : 2;
+      const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
       
       const billId = generateId();
       console.log("Generated bill ID:", billId);
@@ -340,20 +344,20 @@ export const useBills = (
         return false;
       }
       
-      const { data: customer, error: customerError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .single();
-        
-      if (customerError) {
-        console.error('Error fetching customer:', customerError);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch customer data',
-          variant: 'destructive'
-        });
-        return false;
+      // Modified to handle the case where the customer might have been deleted
+      let customerData = null;
+      if (customerId) {
+        const { data: customer, error: customerError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', customerId)
+          .single();
+          
+        if (!customerError) {
+          customerData = customer;
+        } else {
+          console.log('Customer not found or deleted, continuing with bill deletion');
+        }
       }
       
       const { error: itemsDeleteError } = await supabase
@@ -388,8 +392,8 @@ export const useBills = (
       
       setBills(prevBills => prevBills.filter(bill => bill.id !== billId));
       
-      if (customer) {
-        const customerData = customer;
+      // Update the customer data only if the customer still exists
+      if (customerData) {
         const updatedCustomer = {
           ...customerData,
           loyalty_points: Math.max(0, customerData.loyalty_points - billToDelete.loyaltyPointsEarned + billToDelete.loyaltyPointsUsed),
