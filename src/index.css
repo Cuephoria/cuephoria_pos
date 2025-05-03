@@ -1,5 +1,4 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -54,19 +53,305 @@
   body {
     @apply bg-background text-foreground font-quicksand;
     -webkit-tap-highlight-color: transparent;
-    background-image: 
-      radial-gradient(circle at 25% 10%, rgba(155, 135, 245, 0.05) 0%, transparent 20%),
-      radial-gradient(circle at 75% 30%, rgba(14, 165, 233, 0.05) 0%, transparent 20%),
-      radial-gradient(circle at 50% 80%, rgba(249, 115, 22, 0.05) 0%, transparent 20%);
-  }
-
-  /* Futuristic headings */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-gaming tracking-wide;
   }
 }
 
-/* ... keep existing code (the rest of the CSS file) */
+/* Custom styles for Cuephoria */
+.indian-rupee::before {
+  content: "₹";
+  display: inline-block;
+  margin-right: 2px;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Better outlines for focus */
+:focus-visible {
+  outline: 2px solid #9b87f5;
+  outline-offset: 2px;
+}
+
+/* Gradient text for headings */
+.gradient-text {
+  @apply bg-gradient-to-r from-[#9b87f5] to-[#0EA5E9] bg-clip-text text-transparent;
+}
+
+/* Cards hover effects */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:shadow-[#9b87f5]/20 hover:translate-y-[-4px];
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .card {
+    @apply p-3 !important;
+  }
+  
+  h1, h2, h3 {
+    @apply text-center;
+  }
+  
+  .table-container {
+    @apply overflow-x-auto -mx-4 px-4;
+  }
+  
+  /* Fix for tables on mobile */
+  table {
+    @apply min-w-full;
+  }
+  
+  /* Improved touch targets */
+  button, a, [role="button"] {
+    @apply min-h-10 min-w-10;
+  }
+  
+  /* Forms on mobile */
+  input, select, textarea {
+    @apply text-base;
+  }
+  
+  /* Grid adjustments */
+  .grid {
+    @apply grid-cols-1;
+  }
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(155, 135, 245, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(155, 135, 245, 0.6);
+  }
+}
+
+@keyframes pulse-soft {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+/* Animation classes */
+.animate-slide-up {
+  animation: slideUp 0.5s ease forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s infinite ease-in-out;
+}
+
+/* Animation delays */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Menu animation */
+.menu-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-item:hover {
+  transform: translateX(4px);
+}
+
+/* Badge animations */
+.badge-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Button animations */
+.btn-hover-effect {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hover-effect:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.btn-hover-effect:hover:after {
+  transform: translateX(0);
+}
+
+/* Receipt styling */
+.receipt {
+  font-family: 'Courier New', monospace;
+  background: white;
+  color: #222;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+
+.receipt-total {
+  border-top: 1px dashed #ccc;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  font-weight: bold;
+}
+
+/* Mobile fixes for common components */
+@media (max-width: 768px) {
+  /* Card adjustments */
+  .card-title {
+    @apply text-lg;
+  }
+  
+  /* Button size adjustments */
+  .btn-mobile {
+    @apply px-2 py-1 text-sm;
+  }
+  
+  /* Fix for forms */
+  .form-group {
+    @apply mb-3;
+  }
+  
+  /* Dashboard stats cards */
+  .stats-card {
+    @apply mx-auto max-w-[320px];
+  }
+}
+
+/* --- Hide scrollbar elegantly for the product tags filter --- */
+.cuephoria-scrollbar-hide {
+  overflow-x: auto;
+  -ms-overflow-style: none;        /* IE and Edge */
+  scrollbar-width: none;           /* Firefox */
+}
+.cuephoria-scrollbar-hide::-webkit-scrollbar {
+  display: none !important;        /* Chrome, Safari, Opera */
+}
 
 /* --- Product Filter Tag Custom Styling --- */
 .cuephoria-filter-tag {
@@ -75,12 +360,12 @@
   outline: none;
   border-radius: 6px;
   padding: 0.5rem 1rem;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.9rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
   color: #dad8e7;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.18s, color 0.18s;
   min-width: 80px;
   margin-right: 6px;
   margin-left: 0;
@@ -90,7 +375,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  letter-spacing: 0.5px;
 }
 
 .cuephoria-filter-tag:last-child {
@@ -98,164 +382,38 @@
 }
 
 .cuephoria-filter-tag:hover:not([data-state="active"]) {
-  background: rgba(155,135,245,0.1);
+  background: rgba(155,135,245,0.08);
   color: #9b87f5;
-  transform: translateY(-1px);
-  text-shadow: 0 0 8px rgba(155,135,245,0.5);
 }
 
 .cuephoria-filter-tag[data-state="active"] {
-  background: linear-gradient(135deg, rgba(155,135,245,0.2) 0%, rgba(155,135,245,0.3) 100%);
+  background: #9b87f5;
   color: #fff;
-  box-shadow: 0 0 10px rgba(155, 135, 245, 0.3), inset 0 0 5px rgba(155, 135, 245, 0.2);
-  text-shadow: 0 0 8px rgba(255,255,255,0.5);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 10px 0 rgba(155, 135, 245, 0.10);
 }
 
 .cuephoria-filter-tag[data-state="active"]::after {
   content: "";
   display: block;
   position: absolute;
-  left: 15%;
-  right: 15%;
+  left: 18%;
+  right: 18%;
   bottom: 6px;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, #9b87f5, #0EA5E9, #9b87f5, transparent);
-  opacity: 0.8;
-  animation: shimmer 2s infinite linear;
-  background-size: 200% 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #9b87f5 60%, #0EA5E9 100%);
+  opacity: 0.9;
 }
 
 .cuephoria-filter-tag:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #9b87f5bb, 0 0 15px rgba(155, 135, 245, 0.5);
-}
-
-/* New futuristic UI classes */
-.neon-border {
-  @apply relative;
-}
-
-.neon-border::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, #9b87f5, #0EA5E9);
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.glassmorphism {
-  @apply bg-white/5 backdrop-blur-md border border-white/10;
-}
-
-.glassmorphism-dark {
-  @apply bg-black/40 backdrop-blur-md border border-white/5;
-}
-
-.text-gradient {
-  @apply bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent animate-background-pan bg-[length:200%_100%];
-}
-
-.button-glow {
-  @apply relative overflow-hidden;
-}
-
-.button-glow::before {
-  @apply content-[''] absolute inset-0 bg-gradient-to-r from-cuephoria-lightpurple to-accent opacity-0 transition-opacity duration-300;
-}
-
-.button-glow:hover::before {
-  @apply opacity-30;
-}
-
-.animated-border-gradient {
-  position: relative;
-  border-radius: inherit;
-}
-
-.animated-border-gradient::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  z-index: -1;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #9b87f5, #0EA5E9, #F97316, #9b87f5);
-  background-size: 300% 100%;
-  animation: border-flow 6s linear infinite;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.animated-border-gradient:hover::after {
-  opacity: 1;
-}
-
-/* Grid background */
-.bg-grid-pattern {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-}
-
-/* Button neon effect */
-.btn-neon {
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.btn-neon:hover {
-  box-shadow: 0 0 15px rgba(155, 135, 245, 0.7);
-}
-
-.btn-neon::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(155, 135, 245, 0.3), transparent);
-  transform: translateX(-100%);
-  animation: none;
-  transition: transform 0.6s;
-}
-
-.btn-neon:hover::before {
-  transform: translateX(100%);
-  animation: btn-shine 1.5s infinite;
-}
-
-@keyframes btn-shine {
-  100% {
-    transform: translateX(100%);
-  }
+  box-shadow: 0 0 0 2px #9b87f5bb;
 }
 
 @media (max-width: 600px) {
   .cuephoria-filter-tag {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.98rem;
     min-width: 68px;
-    letter-spacing: 0.3px;
   }
-}
-
-/* Card hover effects */
-.card-hover-fx {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-hover-fx:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 10px 25px -5px rgba(155, 135, 245, 0.4);
 }

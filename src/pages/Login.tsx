@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock, TargetIcon, MessageCircle, FlameIcon, SparklesIcon } from 'lucide-react';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { motion } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +27,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loginType, setLoginType] = useState('admin');
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { login, resetPassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -36,7 +34,6 @@ const Login = () => {
   const locationState = location.state as LocationState;
   const [animationClass, setAnimationClass] = useState('');
   const isMobile = useIsMobile();
-  const loginContainerRef = useRef<HTMLDivElement>(null);
   
   const [forgotDialogOpen, setForgotDialogOpen] = useState(false);
   const [forgotUsername, setForgotUsername] = useState('');
@@ -52,25 +49,6 @@ const Login = () => {
       setAnimationClass('animate-scale-in');
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
-
-  // Track mouse position for parallax effect
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (loginContainerRef.current) {
-        const { clientX, clientY } = event;
-        const { width, height, left, top } = loginContainerRef.current.getBoundingClientRect();
-        const x = (clientX - left) / width - 0.5;
-        const y = (clientY - top) / height - 0.5;
-        setMousePosition({ x, y });
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -371,277 +349,162 @@ const Login = () => {
     );
   };
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: 0.1,
-        duration: 0.6
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { type: "spring", stiffness: 100 }
-    }
-  };
-
-  // Floating icons for background
-  const floatingIcons = [
-    { Icon: Gamepad, size: isMobile ? 24 : 36, className: "text-cuephoria-lightpurple opacity-20 animate-float", delay: 0 },
-    { Icon: ZapIcon, size: isMobile ? 24 : 36, className: "text-accent opacity-20 animate-float delay-300" },
-    { Icon: Stars, size: isMobile ? 18 : 24, className: "text-cuephoria-lightpurple opacity-20 animate-float delay-150" },
-    { Icon: Dice1, size: isMobile ? 20 : 28, className: "text-cuephoria-orange opacity-20 animate-float delay-250" },
-    { Icon: Dice3, size: isMobile ? 22 : 30, className: "text-cuephoria-blue opacity-20 animate-float delay-200" },
-    { Icon: Dice5, size: isMobile ? 24 : 32, className: "text-cuephoria-green opacity-20 animate-float delay-150" },
-    { Icon: Trophy, size: isMobile ? 24 : 34, className: "text-cuephoria-orange opacity-20 animate-float delay-300" },
-    { Icon: Joystick, size: isMobile ? 28 : 38, className: "text-accent opacity-20 animate-float delay-400" },
-    { Icon: TargetIcon, size: isMobile ? 26 : 36, className: "text-cuephoria-blue opacity-20 animate-float delay-350" },
-    { Icon: MessageCircle, size: isMobile ? 20 : 30, className: "text-cuephoria-green opacity-20 animate-float delay-180" },
-    { Icon: FlameIcon, size: isMobile ? 24 : 32, className: "text-cuephoria-orange opacity-20 animate-float delay-220" },
-    { Icon: SparklesIcon, size: isMobile ? 26 : 34, className: "text-accent opacity-20 animate-float delay-270" }
-  ];
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4">
-      {/* Dynamic background */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Gradient backgrounds */}
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
         <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
         
-        <div className="absolute top-1/3 right-1/4 w-48 h-64 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent rounded-tr-[50%] blur-xl"></div>
+        <div className="absolute top-1/3 right-1/4 w-48 h-64 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent rounded-tr-[50%]"></div>
         
-        {/* Floating icons */}
-        {floatingIcons.map((IconInfo, index) => (
-          <motion.div 
-            key={index}
-            className={`absolute ${IconInfo.className}`}
-            style={{
-              top: `${15 + Math.random() * 70}%`,
-              left: `${5 + Math.random() * 90}%`,
-            }}
-            animate={{
-              y: [0, -10, 0],
-              x: [0, Math.random() > 0.5 ? 5 : -5, 0]
-            }}
-            transition={{
-              duration: 5 + Math.random() * 3,
-              repeat: Infinity,
-              delay: Math.random() * 2
-            }}
-          >
-            <IconInfo.Icon size={IconInfo.size} className="animate-pulse-soft" />
-          </motion.div>
-        ))}
+        <div className="absolute top-[8%] left-[12%] text-cuephoria-lightpurple opacity-20 animate-float">
+          <Gamepad size={isMobile ? 24 : 36} className="animate-wiggle" />
+        </div>
+        <div className="absolute bottom-[15%] right-[15%] text-accent opacity-20 animate-float delay-300">
+          <ZapIcon size={isMobile ? 24 : 36} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[30%] right-[30%] text-cuephoria-lightpurple opacity-20 animate-float delay-150">
+          <Stars size={isMobile ? 18 : 24} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[15%] right-[12%] text-cuephoria-orange opacity-20 animate-float delay-250">
+          <Dice1 size={isMobile ? 20 : 28} className="animate-wiggle" />
+        </div>
+        <div className="absolute bottom-[25%] left-[25%] text-cuephoria-blue opacity-20 animate-float delay-200">
+          <Dice3 size={isMobile ? 22 : 30} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[50%] left-[15%] text-cuephoria-green opacity-20 animate-float delay-150">
+          <Dice5 size={isMobile ? 24 : 32} className="animate-wiggle" />
+        </div>
+        <div className="absolute bottom-[10%] left-[10%] text-cuephoria-orange opacity-20 animate-float delay-300">
+          <Trophy size={isMobile ? 24 : 34} className="animate-pulse-soft" />
+        </div>
+        <div className="absolute top-[25%] left-[25%] text-accent opacity-20 animate-float delay-400">
+          <Joystick size={isMobile ? 28 : 38} className="animate-wiggle" />
+        </div>
         
-        {/* Grid lines */}
         <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent"></div>
         <div className="absolute top-0 left-1/2 h-full w-px bg-gradient-to-b from-transparent via-accent/30 to-transparent"></div>
         <div className="absolute top-1/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent"></div>
         <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-green/20 to-transparent"></div>
         
-        {/* Dot grid */}
-        <div className="absolute inset-0 opacity-10 bg-grid-pattern"></div>
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
       </div>
       
-      {/* Login container */}
-      <motion.div 
-        className="w-full max-w-md z-10"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        ref={loginContainerRef}
-      >
-        {/* Logo */}
-        <motion.div className="mb-8 text-center" variants={itemVariants}>
+      <div className={`w-full max-w-md z-10 ${animationClass}`}>
+        <div className="mb-8 text-center">
           <div className="relative mx-auto w-full max-w-[220px] h-auto sm:w-64 sm:h-64">
-            <motion.div 
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/30 to-accent/20 blur-lg"
-              animate={{
-                opacity: [0.7, 0.9, 0.7],
-                scale: [1, 1.05, 1],
-              }}
-              transition={{ 
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-            
-            <motion.img 
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
+            <img 
               src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
               alt="Cuephoria 8-Ball Club" 
-              className="relative w-full h-auto mx-auto drop-shadow-[0_0_25px_rgba(155,135,245,0.4)]"
-              style={{
-                transform: !isMobile ? `translate(${mousePosition.x * 15}px, ${mousePosition.y * 15}px)` : 'none'
-              }}
-              animate={{ 
-                rotateZ: [0, 2, 0, -2, 0],
-                scale: [1, 1.02, 1, 1.02, 1]
-              }}
-              transition={{ 
-                duration: 7, 
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
+              className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
             />
           </div>
-          
-          <motion.p
-            className="mt-2 font-bold tracking-wider bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent bg-[length:200%_100%] text-sm sm:text-base font-gaming"
-            animate={{
-              backgroundPosition: ['0% center', '100% center', '0% center'],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-          >
+          <p className="mt-2 text-muted-foreground font-bold tracking-wider animate-fade-in bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent text-sm sm:text-base">
             ADMINISTRATOR PORTAL
-          </motion.p>
-        </motion.div>
+          </p>
+        </div>
         
-        {/* Card */}
-        <motion.div variants={itemVariants}>
-          <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg rounded-xl overflow-hidden animated-border-gradient">
-            <div className="absolute inset-0 bg-gradient-to-br from-cuephoria-lightpurple/5 to-accent/5 opacity-50 rounded-xl"></div>
-            <div className="absolute w-full h-full bg-grid-pattern opacity-5"></div>
-            
-            <CardHeader className="text-center relative z-10 p-4 sm:p-6">
-              <CardTitle className="text-xl sm:text-2xl gradient-text font-bold font-gaming">Game Master Login</CardTitle>
-              <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the control panel</CardDescription>
-            </CardHeader>
-            
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
-                {/* Login type tabs */}
-                <motion.div className="flex justify-center mb-4" variants={itemVariants}>
-                  <Tabs defaultValue="admin" value={loginType} onValueChange={setLoginType} className="w-full max-w-xs">
-                    <TabsList className="grid w-full grid-cols-2 bg-background/30 backdrop-blur-sm border border-cuephoria-lightpurple/20">
-                      <TabsTrigger 
-                        value="admin" 
-                        className="flex items-center gap-2 data-[state=active]:bg-cuephoria-lightpurple data-[state=active]:text-white data-[state=active]:shadow-neon-sm transition-all duration-300"
-                      >
-                        <Shield size={14} />
-                        Admin
-                      </TabsTrigger>
-                      <TabsTrigger 
-                        value="staff" 
-                        className="flex items-center gap-2 data-[state=active]:bg-cuephoria-lightpurple data-[state=active]:text-white data-[state=active]:shadow-neon-sm transition-all duration-300"
-                      >
-                        <Users size={14} />
-                        Staff
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </motion.div>
+        <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-cuephoria-lightpurple/5 to-accent/5 opacity-50 rounded-xl"></div>
+          <div className="absolute w-full h-full bg-grid-pattern opacity-5"></div>
+          
+          <CardHeader className="text-center relative z-10 p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Game Master Login</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the control panel</CardDescription>
+          </CardHeader>
+          
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4 relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="flex justify-center mb-4">
+                <Tabs defaultValue="admin" value={loginType} onValueChange={setLoginType} className="w-full max-w-xs">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="admin" className="flex items-center gap-2">
+                      <Shield size={14} />
+                      Admin
+                    </TabsTrigger>
+                    <TabsTrigger value="staff" className="flex items-center gap-2">
+                      <Users size={14} />
+                      Staff
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
 
-                {/* Username */}
-                <motion.div className="space-y-2 group" variants={itemVariants}>
-                  <label htmlFor="username" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
-                    <User size={14} className="inline-block" />
-                    Username
-                    <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="Enter your username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm pl-10"
-                    />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cuephoria-lightpurple/70">
-                      <User size={16} />
-                    </div>
-                  </div>
-                </motion.div>
-                
-                {/* Password */}
-                <motion.div className="space-y-2 group" variants={itemVariants}>
-                  <label htmlFor="password" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
-                    <ZapIcon size={14} className="inline-block" />
-                    Password
-                    <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm pl-10"
-                    />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cuephoria-lightpurple/70">
-                      <Lock size={16} />
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div className="text-right" variants={itemVariants}>
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="text-cuephoria-lightpurple hover:text-accent p-0 h-auto text-xs"
-                    onClick={() => handleForgotPasswordClick(loginType)}
-                  >
-                    Forgot password?
-                  </Button>
-                </motion.div>
-              </CardContent>
+              <div className="space-y-2 group">
+                <label htmlFor="username" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
+                  <User size={14} className="inline-block" />
+                  Username
+                  <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
+                </label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
+                />
+              </div>
               
-              <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
-                <motion.div 
-                  className="w-full"
-                  variants={itemVariants}
-                  whileHover={{ 
-                    scale: 1.02,
-                    transition: { duration: 0.2 }
-                  }}
-                >
-                  <Button 
-                    type="submit" 
-                    className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-neon transition-all duration-300 btn-neon font-medium text-sm sm:text-base" 
-                    disabled={isLoading}
-                  >
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {isLoading ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Accessing...
-                        </>
-                      ) : (
-                        <>
-                          {loginType === 'admin' ? <Shield size={16} /> : <Users size={16} />}
-                          {loginType === 'admin' ? 'Admin Login' : 'Staff Login'}
-                        </>
-                      )}
-                    </span>
-                  </Button>
-                </motion.div>
-              </CardFooter>
-            </form>
-          </Card>
-        </motion.div>
-      </motion.div>
+              <div className="space-y-2 group">
+                <label htmlFor="password" className="text-xs sm:text-sm font-medium flex items-center gap-2 text-cuephoria-lightpurple group-hover:text-accent transition-colors duration-300">
+                  <ZapIcon size={14} className="inline-block" />
+                  Password
+                  <div className="h-px flex-grow bg-gradient-to-r from-cuephoria-lightpurple/50 to-transparent group-hover:from-accent/50 transition-colors duration-300"></div>
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-background/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple transition-all duration-300 hover:border-cuephoria-lightpurple/60 placeholder:text-muted-foreground/50 focus-within:shadow-sm focus-within:shadow-cuephoria-lightpurple/30 text-sm"
+                />
+              </div>
 
-      {/* No changes needed to Dialog component */}
+              <div className="text-right">
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-cuephoria-lightpurple hover:text-accent p-0 h-auto text-xs"
+                  onClick={() => handleForgotPasswordClick(loginType)}
+                >
+                  Forgot password?
+                </Button>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
+              <Button 
+                type="submit" 
+                className="w-full relative overflow-hidden bg-gradient-to-r from-cuephoria-lightpurple to-accent hover:shadow-lg hover:shadow-cuephoria-lightpurple/20 hover:scale-[1.02] transition-all duration-300 btn-hover-effect font-medium text-sm sm:text-base" 
+                disabled={isLoading}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Accessing...
+                    </>
+                  ) : (
+                    <>
+                      {loginType === 'admin' ? <Shield size={16} /> : <Users size={16} />}
+                      {loginType === 'admin' ? 'Admin Login' : 'Staff Login'}
+                    </>
+                  )}
+                </span>
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+
       <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-background border-cuephoria-purple glassmorphism-dark animate-fade-in">
+        <DialogContent className="sm:max-w-md bg-background border-cuephoria-purple">
           {renderForgotPasswordContent()}
         </DialogContent>
       </Dialog>
