@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -22,6 +23,7 @@ export default {
 				sans: ['Inter', 'sans-serif'],
 				heading: ['Poppins', 'sans-serif'],
 				quicksand: ['Quicksand', 'sans-serif'],
+				gaming: ['Orbitron', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -115,6 +117,43 @@ export default {
 				'spin-slow': {
 					'0%': { transform: 'rotate(0deg)' },
 					'100%': { transform: 'rotate(360deg)' }
+				},
+				'neon-pulse': {
+					'0%, 100%': { 
+						boxShadow: '0 0 5px rgba(155, 135, 245, 0.5), 0 0 10px rgba(155, 135, 245, 0.3), 0 0 15px rgba(155, 135, 245, 0.1)'
+					},
+					'50%': { 
+						boxShadow: '0 0 10px rgba(155, 135, 245, 0.8), 0 0 20px rgba(155, 135, 245, 0.5), 0 0 30px rgba(155, 135, 245, 0.3)'
+					}
+				},
+				'border-flow': {
+					'0%, 100%': { 
+						backgroundPosition: '0% 50%' 
+					},
+					'50%': { 
+						backgroundPosition: '100% 50%' 
+					}
+				},
+				'shimmer': {
+					'0%': { backgroundPosition: '-200% center' },
+					'100%': { backgroundPosition: '200% center' }
+				},
+				'hover-bounce': {
+					'0%, 100%': { transform: 'translateY(-2px)' },
+					'50%': { transform: 'translateY(2px)' }
+				},
+				'background-pan': {
+					'0%': { backgroundPosition: '0% center' },
+					'100%': { backgroundPosition: '-200% center' }
+				},
+				'text-gradient-flow': {
+					'0%, 100%': {
+						'background-size': '200%',
+						'background-position': 'left center'
+					},
+					'50%': {
+						'background-position': 'right center'
+					}
 				}
 			},
 			animation: {
@@ -123,7 +162,21 @@ export default {
 				'pulse-soft': 'pulse-soft 3s infinite ease-in-out',
 				'float': 'float 5s infinite ease-in-out',
 				'wiggle': 'wiggle 1s ease-in-out infinite',
-				'spin-slow': 'spin-slow 8s linear infinite'
+				'spin-slow': 'spin-slow 8s linear infinite',
+				'neon-pulse': 'neon-pulse 2s infinite ease-in-out',
+				'border-flow': 'border-flow 3s ease infinite',
+				'shimmer': 'shimmer 2s infinite linear',
+				'hover-bounce': 'hover-bounce 1s infinite ease-in-out',
+				'background-pan': 'background-pan 3s linear infinite',
+				'text-gradient-flow': 'text-gradient-flow 3s ease infinite'
+			},
+			boxShadow: {
+				'neon-sm': '0 0 5px rgba(155, 135, 245, 0.5), 0 0 10px rgba(155, 135, 245, 0.3)',
+				'neon': '0 0 10px rgba(155, 135, 245, 0.8), 0 0 20px rgba(155, 135, 245, 0.5), 0 0 30px rgba(155, 135, 245, 0.3)',
+				'neon-lg': '0 0 15px rgba(155, 135, 245, 1), 0 0 30px rgba(155, 135, 245, 0.7), 0 0 45px rgba(155, 135, 245, 0.5)',
+				'neon-orange': '0 0 10px rgba(249, 115, 22, 0.8), 0 0 20px rgba(249, 115, 22, 0.5), 0 0 30px rgba(249, 115, 22, 0.3)',
+				'neon-blue': '0 0 10px rgba(14, 165, 233, 0.8), 0 0 20px rgba(14, 165, 233, 0.5), 0 0 30px rgba(14, 165, 233, 0.3)',
+				'inner-glow': 'inset 0 0 10px rgba(155, 135, 245, 0.5)'
 			}
 		}
 	},
