@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -77,7 +78,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
             loyaltyPoints: item.loyalty_points,
             totalSpent: item.total_spent,
-            totalPlayTime: item.total_play_time,
+            totalPlayTime: item.total_play_time || 0, // Ensure we have a default value of 0
             createdAt: new Date(item.created_at)
           }));
           
@@ -209,7 +210,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membershipDuration: data.membership_duration as 'weekly' | 'monthly' | undefined,
           loyaltyPoints: data.loyalty_points,
           totalSpent: data.total_spent,
-          totalPlayTime: data.total_play_time,
+          totalPlayTime: data.total_play_time || 0,
           createdAt: new Date(data.created_at)
         };
         
@@ -305,6 +306,11 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
+      // Ensure totalPlayTime is a number and has a value
+      const totalPlayTime = customer.totalPlayTime || 0;
+      
+      console.log(`Updating customer ${customer.name} with play time: ${totalPlayTime} minutes`);
+      
       const { error } = await supabase
         .from('customers')
         .update({
@@ -319,7 +325,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membership_duration: customer.membershipDuration,
           loyalty_points: customer.loyaltyPoints,
           total_spent: customer.totalSpent,
-          total_play_time: customer.totalPlayTime
+          total_play_time: totalPlayTime
         })
         .eq('id', customer.id);
         
