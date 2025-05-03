@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,12 +29,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   };
 
   const formatTime = (minutes: number) => {
-    if (minutes === 0) return '0h 0m';
-    
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    
-    // Format with hours and minutes
     return `${hours}h ${mins}m`;
   };
 

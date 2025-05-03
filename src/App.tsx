@@ -22,9 +22,6 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 
-// Customer Routes
-import CustomerRoutes from "./routes/CustomerRoutes";
-
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,9 +127,6 @@ const App = () => (
                     <Settings />
                   </ProtectedRoute>
                 } />
-                
-                {/* Customer Portal Routes */}
-                <Route path="/customer/*" element={<CustomerRoutes />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

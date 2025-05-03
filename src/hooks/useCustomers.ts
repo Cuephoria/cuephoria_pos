@@ -77,11 +77,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
             loyaltyPoints: item.loyalty_points,
             totalSpent: item.total_spent,
-            totalPlayTime: item.total_play_time || 0, // Ensure we always have at least 0 for totalPlayTime
+            totalPlayTime: item.total_play_time,
             createdAt: new Date(item.created_at)
           }));
           
-          console.log('Fetched customers with playtime:', transformedCustomers.map(c => `${c.name}: ${c.totalPlayTime} minutes`));
           setCustomers(transformedCustomers);
         } else {
           setCustomers([]);
@@ -234,7 +233,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       return null;
     }
   };
-  
+
   const updateCustomerMembership = async (customerId: string, membershipData: {
     membershipPlan?: string;
     membershipDuration?: 'weekly' | 'monthly';
@@ -306,8 +305,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
-      console.log('Updating customer with playtime:', customer.name, customer.totalPlayTime);
-      
       const { error } = await supabase
         .from('customers')
         .update({
@@ -322,7 +319,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membership_duration: customer.membershipDuration,
           loyalty_points: customer.loyaltyPoints,
           total_spent: customer.totalSpent,
-          total_play_time: customer.totalPlayTime || 0 // Ensure we always save a number
+          total_play_time: customer.totalPlayTime
         })
         .eq('id', customer.id);
         
@@ -336,7 +333,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return null;
       }
       
-      // Update local state
       setCustomers(customers.map(c => c.id === customer.id ? customer : c));
       
       if (selectedCustomer && selectedCustomer.id === customer.id) {
