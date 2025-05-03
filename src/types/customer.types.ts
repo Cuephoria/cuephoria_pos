@@ -45,3 +45,17 @@ export interface RewardRedemption {
   redemptionCode?: string;
   rewardName?: string;
 }
+
+export interface CustomerAuthContextType {
+  session: Session | null;
+  user: User | null;
+  customerUser: CustomerUser | null;
+  isLoading: boolean;
+  error: string | null;
+  signIn: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string, name: string, phone: string, pin: string, referralCode?: string) => Promise<boolean>;
+  signOut: () => Promise<void>;
+  verifyPinAndResetPassword: (email: string, pin: string, newPassword?: string) => Promise<boolean>;
+  updateProfile: (data: Partial<CustomerUser>) => Promise<boolean>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+}

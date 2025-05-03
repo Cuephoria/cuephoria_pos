@@ -1,25 +1,36 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCustomerAuth } from '@/context/CustomerAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { motion } from 'framer-motion';
-import { Bell, Moon, Key, Lock, LogOut, Shield } from 'lucide-react';
+import { Bell, Moon, Key, Lock, LogOut, Shield, Eye, EyeOff } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const CustomerSettings: React.FC = () => {
-  const { customerUser, signOut } = useCustomerAuth();
+  const { customerUser, signOut, updatePassword } = useCustomerAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
   const [darkModeEnabled, setDarkModeEnabled] = useState<boolean>(true);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(false);
-
+  
+  // Password change states
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState<boolean>(false);
+  const [currentPassword, setCurrentPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(false);
+  const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false);
+  
   useEffect(() => {
     // Simulating loading settings
     setTimeout(() => {
@@ -62,6 +73,50 @@ const CustomerSettings: React.FC = () => {
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all password fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      toast({
+        title: 'Error',
+        description: 'New password must be at least 6 characters long',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'New passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    
+    try {
+      const success = await updatePassword(currentPassword, newPassword);
+      
+      if (success) {
+        setIsPasswordDialogOpen(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const containerVariants = {
@@ -113,7 +168,7 @@ const CustomerSettings: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div className="md:col-span-2" variants={itemVariants}>
-          <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 overflow-hidden mb-6">
+          <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-cuephoria-lightpurple" />
@@ -163,7 +218,7 @@ const CustomerSettings: React.FC = () => {
           </Card>
           
           <motion.div variants={itemVariants}>
-            <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 overflow-hidden mb-6">
+            <Card className="bg-gradient-to-br from-cuephoria-darker/70 to-cuephoria-darker/40 border-cuephoria-lightpurple/20 shadow-inner shadow-cuephoria-lightpurple/5 overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Moon className="h-5 w-5 text-cuephoria-orange" />
@@ -229,12 +284,13 @@ const CustomerSettings: React.FC = () => {
                     <Button 
                       variant="outline" 
                       className="border-cuephoria-lightpurple/30 hover:border-cuephoria-lightpurple/50 text-cuephoria-lightpurple hover:bg-cuephoria-lightpurple/10 w-full flex justify-between items-center"
+                      onClick={() => setIsPasswordDialogOpen(true)}
                     >
                       <div className="flex items-center">
                         <Lock className="h-4 w-4 mr-2" /> 
                         <span>Change Password</span>
                       </div>
-                      <span className="text-xs text-gray-500">Last changed: Never</span>
+                      <span className="text-xs text-gray-500">Secure your account</span>
                     </Button>
                   </div>
                 </div>
@@ -269,6 +325,106 @@ const CustomerSettings: React.FC = () => {
           </Card>
         </motion.div>
       </div>
+      
+      {/* Password Change Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="bg-cuephoria-darker border-cuephoria-lightpurple/30 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-cuephoria-lightpurple" /> Change Password
+            </DialogTitle>
+            <DialogDescription>
+              Update your password to keep your account secure
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <div className="relative">
+                <Input
+                  id="current-password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  placeholder="Enter current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="bg-cuephoria-dark/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                >
+                  {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-cuephoria-dark/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-cuephoria-dark/50 border-cuephoria-lightpurple/30 focus-visible:ring-cuephoria-lightpurple"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPasswordDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              className="bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-orange hover:from-cuephoria-lightpurple/90 hover:to-cuephoria-orange/90"
+              disabled={isChangingPassword}
+            >
+              {isChangingPassword ? (
+                <><LoadingSpinner size="sm" /> Updating...</>
+              ) : (
+                'Update Password'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

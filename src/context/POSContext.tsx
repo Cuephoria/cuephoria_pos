@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
@@ -297,6 +296,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Return a synchronous bill for the UI
       if (selectedCustomer) {
+        // Updated to calculate loyalty points at 5 points per 100 INR spent
+        const total = calculateTotal();
+        const loyaltyPointsEarned = Math.floor((total / 100) * 5);
+        
         const placeholderBill: Bill = {
           id: `temp-${new Date().getTime()}`,
           customerId: selectedCustomer.id,
@@ -309,8 +312,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               discount) : 0,
           discountType,
           loyaltyPointsUsed,
-          loyaltyPointsEarned: Math.floor(calculateTotal() / 10),
-          total: calculateTotal(),
+          loyaltyPointsEarned,
+          total,
           paymentMethod,
           createdAt: new Date()
         };

@@ -450,11 +450,46 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
         return true;
       }
       
-      // If setting new password, update it
-      const { data, error } = await supabase.auth.admin.updateUserById(
+      // If setting new password, update it using service role key (admin API)
+      const { error } = await supabase.auth.admin.updateUserById(
         customerUserData.auth_id,
         { password: newPassword }
       );
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been updated successfully.',
+      });
+      
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add a new function to update customer password
+  const updatePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Update password through Supabase Auth API
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword
+      });
       
       if (error) {
         throw new Error(error.message);
@@ -539,7 +574,8 @@ export const CustomerAuthProvider: React.FC<{children: React.ReactNode}> = ({ ch
     signUp,
     signOut,
     verifyPinAndResetPassword,
-    updateProfile
+    updateProfile,
+    updatePassword
   };
 
   return (
