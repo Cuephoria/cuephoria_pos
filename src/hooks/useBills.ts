@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Bill, CartItem, Customer, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -33,13 +34,13 @@ export const useBills = (updateCustomer: Function, updateProduct: Function) => {
             subtotal: item.subtotal,
             discount: item.discount,
             discountValue: item.discount_value,
-            discountType: item.discount_type,
+            discountType: item.discount_type as "percentage" | "fixed", // Explicitly cast to match type
             loyaltyPointsUsed: item.loyalty_points_used,
             loyaltyPointsEarned: item.loyalty_points_earned,
             total: item.total,
-            paymentMethod: item.payment_method,
-            createdAt: new Date()
-          }));
+            paymentMethod: item.payment_method as "cash" | "upi", // Explicitly cast payment method as well
+            createdAt: new Date(item.created_at)
+          })) as Bill[]; // Cast the entire array to Bill[]
           setBills(transformedBills);
         }
       } catch (error) {
@@ -100,7 +101,7 @@ export const useBills = (updateCustomer: Function, updateProduct: Function) => {
       toast({
         title: 'No Bills to Export',
         description: 'There are no bills available to export.',
-        variant: 'warning',
+        variant: 'destructive' // Changed from 'warning' to 'destructive'
       });
       return;
     }
@@ -148,7 +149,7 @@ export const useBills = (updateCustomer: Function, updateProduct: Function) => {
       toast({
         title: 'No Customers to Export',
         description: 'There are no customers available to export.',
-        variant: 'warning',
+        variant: 'destructive' // Changed from 'warning' to 'destructive'
       });
       return;
     }
@@ -271,9 +272,11 @@ export const useBills = (updateCustomer: Function, updateProduct: Function) => {
           .from('bill_items')
           .insert({
             bill_id: bill.id,
-            product_id: item.id,
-            quantity: item.quantity,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
             price: item.price,
+            quantity: item.quantity,
             total: item.total
           });
           

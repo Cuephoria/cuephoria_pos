@@ -27,23 +27,20 @@ export const useStations = (initialStations: Station[], updateCustomer: Function
         }
         
         if (data) {
-          const transformedStations = data.map(item => ({
+          // Transform the data to match our Station type
+          const transformedStations: Station[] = data.map(item => ({
             id: item.id,
             name: item.name,
             type: item.type as 'ps5' | '8ball',
             hourlyRate: item.hourly_rate,
             isOccupied: item.is_occupied,
-            currentSession: item.current_session ? {
-              id: item.current_session.id,
-              stationId: item.current_session.station_id,
-              customerId: item.current_session.customer_id,
-              startTime: new Date(item.current_session.start_time),
-              endTime: item.current_session.end_time ? new Date(item.current_session.end_time) : undefined,
-              duration: item.current_session.duration
-            } : null
+            currentSession: null // Initialize with null, we'll fetch sessions separately
           }));
           
           setStations(transformedStations);
+          
+          // After fetching stations, fetch active sessions for those stations
+          await fetchActiveSessions(transformedStations);
         }
       } catch (error) {
         console.error('Error in fetchStations:', error);
@@ -55,28 +52,21 @@ export const useStations = (initialStations: Station[], updateCustomer: Function
       }
     };
     
-    fetchStations();
-  }, []);
-  
-  useEffect(() => {
-    const fetchSessions = async () => {
+    // Helper function to fetch active sessions for stations
+    const fetchActiveSessions = async (stationsList: Station[]) => {
       try {
         const { data, error } = await supabase
           .from('sessions')
-          .select('*');
-          
+          .select('*')
+          .is('end_time', null); // Only get active sessions (end_time is null)
+        
         if (error) {
-          console.error('Error fetching sessions:', error);
-          toast({
-            title: 'Database Error',
-            description: 'Failed to fetch sessions from database',
-            variant: 'destructive'
-          });
+          console.error('Error fetching active sessions:', error);
           return;
         }
         
-        if (data) {
-          const transformedSessions = data.map(item => ({
+        if (data && data.length > 0) {
+          const activeSessions: Session[] = data.map(item => ({
             id: item.id,
             stationId: item.station_id,
             customerId: item.customer_id,
@@ -85,19 +75,25 @@ export const useStations = (initialStations: Station[], updateCustomer: Function
             duration: item.duration
           }));
           
-          setSessions(transformedSessions);
+          // Update stations with their active sessions
+          const updatedStations = stationsList.map(station => {
+            const activeSession = activeSessions.find(s => s.stationId === station.id);
+            return {
+              ...station,
+              isOccupied: !!activeSession,
+              currentSession: activeSession || null
+            };
+          });
+          
+          setStations(updatedStations);
+          setSessions(prev => [...prev, ...activeSessions]);
         }
       } catch (error) {
-        console.error('Error in fetchSessions:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load sessions',
-          variant: 'destructive'
-        });
+        console.error('Error fetching active sessions:', error);
       }
     };
     
-    fetchSessions();
+    fetchStations();
   }, []);
   
   const startSession = async (stationId: string, customerId: string) => {

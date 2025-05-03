@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, handleSupabaseError, convertFromSupabaseCustomerUser, convertToSupabaseCustomerUser } from '@/integrations/supabase/client';
@@ -18,6 +17,7 @@ interface CustomerAuthContextType {
   signOut: () => Promise<void>;
   verifyPinAndResetPassword: (email: string, pin: string, newPassword?: string) => Promise<boolean>;
   updateProfile: (data: Partial<CustomerUser>) => Promise<boolean>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType>({
@@ -31,6 +31,7 @@ const CustomerAuthContext = createContext<CustomerAuthContextType>({
   signOut: async () => {},
   verifyPinAndResetPassword: async () => false,
   updateProfile: async () => false,
+  updatePassword: async () => false,
 });
 
 export const useCustomerAuth = () => useContext(CustomerAuthContext);

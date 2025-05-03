@@ -47,8 +47,8 @@ export interface RewardRedemption {
 }
 
 export interface CustomerAuthContextType {
-  session: Session | null;
-  user: User | null;
+  session: { user: any } | null;
+  user: { id: string; email: string } | null;
   customerUser: CustomerUser | null;
   isLoading: boolean;
   error: string | null;
