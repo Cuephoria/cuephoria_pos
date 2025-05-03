@@ -502,6 +502,60 @@ export type Database = {
         }
         Relationships: []
       }
+      sessions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          duration: number | null
+          end_time: string | null
+          id: string
+          notes: string | null
+          price: number | null
+          start_time: string
+          station_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          price?: number | null
+          start_time?: string
+          station_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          duration?: number | null
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          price?: number | null
+          start_time?: string
+          station_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stations: {
         Row: {
           created_at: string

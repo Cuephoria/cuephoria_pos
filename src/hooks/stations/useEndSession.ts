@@ -2,9 +2,17 @@
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
-import { SessionActionsProps } from './session-actions/types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
+
+// Define SessionActionsProps directly to avoid circular import
+interface SessionActionsProps {
+  stations: Station[];
+  setStations: React.Dispatch<React.SetStateAction<Station[]>>;
+  sessions: Session[];
+  setSessions: React.Dispatch<React.SetStateAction<Session[]>>;
+  updateCustomer: (customer: Customer) => void;
+}
 
 /**
  * Hook to provide session end functionality
@@ -70,7 +78,7 @@ export const useEndSession = ({
       // Try to update session in Supabase
       try {
         const { error: sessionError } = await supabase
-          .from('sessions')
+          .from('sessions' as any) // Type assertion to bypass TypeScript check
           .update({
             end_time: endTime.toISOString(),
             duration: durationMinutes

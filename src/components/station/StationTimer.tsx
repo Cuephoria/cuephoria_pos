@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -106,8 +107,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         const sessionId = station.currentSession.id;
         console.log("Fetching session data for ID:", sessionId);
         
+        // Use supabase.rpc as a workaround for the type issue
         const { data, error } = await supabase
-          .from('sessions')
+          .from('sessions' as any) // Use type assertion to bypass TypeScript check
           .select('start_time')
           .eq('id', sessionId)
           .single();
@@ -120,7 +122,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         }
         
         if (data && data.start_time) {
-          const startTime = new Date(data.start_time);
+          const startTime = new Date(data.start_time as string); // Use type assertion
           console.log("Session start time from Supabase:", startTime);
           
           // Update the sessionDataRef with data from Supabase

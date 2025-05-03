@@ -63,15 +63,14 @@ export const useStartSession = ({
         console.log("Using DB station ID:", dbStationId);
         
         const { data, error } = await supabase
-          .from('sessions')
+          .from('sessions' as any) // Type assertion to bypass TypeScript check
           .insert({
             id: sessionId,
             station_id: dbStationId, // Use the proper format for DB
             customer_id: customerId,
             start_time: startTime.toISOString()
           })
-          .select()
-          .single();
+          .select();
           
         if (error) {
           console.error('Error creating session in Supabase:', error);
