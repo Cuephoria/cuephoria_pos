@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -405,7 +404,7 @@ const Login = () => {
     { Icon: Trophy, size: isMobile ? 24 : 34, className: "text-cuephoria-orange opacity-20 animate-float delay-300" },
     { Icon: Joystick, size: isMobile ? 28 : 38, className: "text-accent opacity-20 animate-float delay-400" },
     { Icon: TargetIcon, size: isMobile ? 26 : 36, className: "text-cuephoria-blue opacity-20 animate-float delay-350" },
-    { Icon: BubbleIcon, size: isMobile ? 20 : 30, className: "text-cuephoria-green opacity-20 animate-float delay-180" },
+    { Icon: MessageCircle, size: isMobile ? 20 : 30, className: "text-cuephoria-green opacity-20 animate-float delay-180" },
     { Icon: FlameIcon, size: isMobile ? 24 : 32, className: "text-cuephoria-orange opacity-20 animate-float delay-220" },
     { Icon: SparklesIcon, size: isMobile ? 26 : 34, className: "text-accent opacity-20 animate-float delay-270" }
   ];
