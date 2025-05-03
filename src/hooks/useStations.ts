@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session, Customer, CartItem } from '@/types/pos.types';
 import { supabase } from '@/integrations/supabase/client';
@@ -240,16 +241,18 @@ export const useStations = (initialStations: Station[], updateCustomer: Function
         console.error("Error updating station:", stationError);
       }
       
-      // Update customer's total playtime - fixed to properly add minutes
+      // Update customer's total playtime
       const customerId = updatedSession.customerId;
       const customer = customersList.find(c => c.id === customerId);
       
       if (customer) {
-        // Convert existing totalPlayTime to minutes if it's stored as hours
-        let currentPlayTimeMinutes = customer.totalPlayTime || 0;
+        // Make sure totalPlayTime is a number before adding
+        const currentPlayTimeMinutes = customer.totalPlayTime || 0;
         
         // Add the session duration in minutes
         const newTotalPlayTimeMinutes = currentPlayTimeMinutes + durationMinutes;
+        
+        console.log(`Updating customer ${customer.name}'s playtime from ${currentPlayTimeMinutes} to ${newTotalPlayTimeMinutes} minutes`);
         
         const updatedCustomer = {
           ...customer,
@@ -265,7 +268,7 @@ export const useStations = (initialStations: Station[], updateCustomer: Function
         if (customerError) {
           console.error("Error updating customer playtime:", customerError);
         } else {
-          console.log(`Updated customer ${customer.name} playtime to ${newTotalPlayTimeMinutes} minutes`);
+          console.log(`Successfully updated customer ${customer.name} playtime to ${newTotalPlayTimeMinutes} minutes`);
           await updateCustomer(updatedCustomer);
         }
       }
