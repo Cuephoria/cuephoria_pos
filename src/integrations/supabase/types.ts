@@ -80,7 +80,7 @@ export type Database = {
       bills: {
         Row: {
           created_at: string
-          customer_id: string
+          customer_id: string | null
           discount: number
           discount_type: string
           discount_value: number
@@ -93,7 +93,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          customer_id: string
+          customer_id?: string | null
           discount?: number
           discount_type?: string
           discount_value?: number
@@ -106,7 +106,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          customer_id?: string
+          customer_id?: string | null
           discount?: number
           discount_type?: string
           discount_value?: number
@@ -264,7 +264,7 @@ export type Database = {
       loyalty_transactions: {
         Row: {
           created_at: string | null
-          customer_id: string
+          customer_id: string | null
           description: string | null
           id: string
           points: number
@@ -272,7 +272,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          customer_id: string
+          customer_id?: string | null
           description?: string | null
           id?: string
           points: number
@@ -280,7 +280,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          customer_id?: string
+          customer_id?: string | null
           description?: string | null
           id?: string
           points?: number
@@ -421,7 +421,7 @@ export type Database = {
       reward_redemptions: {
         Row: {
           created_at: string | null
-          customer_id: string
+          customer_id: string | null
           id: string
           points_spent: number
           redeemed_at: string | null
@@ -432,7 +432,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          customer_id: string
+          customer_id?: string | null
           id?: string
           points_spent: number
           redeemed_at?: string | null
@@ -443,7 +443,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          customer_id?: string
+          customer_id?: string | null
           id?: string
           points_spent?: number
           redeemed_at?: string | null
@@ -505,7 +505,7 @@ export type Database = {
       sessions: {
         Row: {
           created_at: string
-          customer_id: string
+          customer_id: string | null
           duration: number | null
           end_time: string | null
           id: string
@@ -517,7 +517,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          customer_id: string
+          customer_id?: string | null
           duration?: number | null
           end_time?: string | null
           id?: string
@@ -529,7 +529,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          customer_id?: string
+          customer_id?: string | null
           duration?: number | null
           end_time?: string | null
           id?: string

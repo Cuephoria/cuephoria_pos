@@ -233,7 +233,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       return null;
     }
   };
-
+  
   const updateCustomerMembership = async (customerId: string, membershipData: {
     membershipPlan?: string;
     membershipDuration?: 'weekly' | 'monthly';
@@ -358,6 +358,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const deleteCustomer = async (id: string) => {
     try {
+      console.log('Attempting to delete customer with ID:', id);
+      
       // First, check if customer has any active sessions
       const { data: activeSessions, error: sessionsError } = await supabase
         .from('sessions')
@@ -367,7 +369,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         
       if (sessionsError) {
         console.error('Error checking active sessions:', sessionsError);
-        // Continue with the operation
+        // Continue with the operation since we've updated the schema to handle deletion
       } else if (activeSessions && activeSessions.length > 0) {
         toast({
           title: 'Cannot Delete Customer',
@@ -377,24 +379,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return;
       }
 
-      // Check if the customer has associated bills
-      const { data: bills, error: billsError } = await supabase
-        .from('bills')
-        .select('id')
-        .eq('customer_id', id)
-        .limit(1);
-
-      if (billsError) {
-        console.error('Error checking bills:', billsError);
-        // Continue with deletion attempt
-      } else if (bills && bills.length > 0) {
-        toast({
-          title: 'Warning',
-          description: 'This customer has associated bills. The bills will remain in the system for accounting purposes.',
-        });
-      }
-      
-      // Now proceed with customer deletion
+      // We've already updated the database schema to set NULL on delete,
+      // so we can now safely delete the customer
       const { error } = await supabase
         .from('customers')
         .delete()

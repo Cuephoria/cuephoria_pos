@@ -24,14 +24,25 @@ export const useStartSession = ({
     try {
       console.log("Starting session for station:", stationId, "for customer:", customerId);
       const station = stations.find(s => s.id === stationId);
-      if (!station || station.isOccupied) {
-        console.error("Station not available or already occupied");
+      if (!station) {
+        console.error("Station not found");
         toast({
           title: "Station Error",
-          description: "Station not available or already occupied",
+          description: "Station not found",
           variant: "destructive"
         });
-        throw new Error("Station not available or already occupied");
+        throw new Error("Station not found");
+      }
+      
+      // Check if the station is already occupied
+      if (station.isOccupied || station.currentSession) {
+        console.error("Station already occupied");
+        toast({
+          title: "Station Error",
+          description: "Station is already occupied",
+          variant: "destructive"
+        });
+        throw new Error("Station already occupied");
       }
       
       const startTime = new Date();

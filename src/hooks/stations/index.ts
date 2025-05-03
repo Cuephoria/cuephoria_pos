@@ -27,7 +27,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
   
   // Connect active sessions to stations
   useEffect(() => {
-    if (stations.length > 0) {
+    if (stations.length > 0 && sessions.length >= 0) {
       console.log("Connecting active sessions to stations");
       
       // Find active sessions (without endTime) if sessions exist
