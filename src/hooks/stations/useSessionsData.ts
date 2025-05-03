@@ -20,7 +20,7 @@ export const useSessionsData = () => {
     try {
       // Fetch sessions from Supabase, including active sessions (no end_time)
       const { data, error } = await supabase
-        .from('sessions' as any) // Type assertion to bypass TypeScript check
+        .from('sessions')
         .select('*');
         
       if (error) {
@@ -75,7 +75,7 @@ export const useSessionsData = () => {
       setSessionsLoading(true);
       
       const { error } = await supabase
-        .from('sessions' as any) // Type assertion to bypass TypeScript check
+        .from('sessions')
         .delete()
         .eq('id', sessionId);
         

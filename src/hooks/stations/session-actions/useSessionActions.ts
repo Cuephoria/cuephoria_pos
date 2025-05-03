@@ -60,7 +60,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
       // Insert into Supabase
       try {
         const { data, error } = await supabase
-          .from('sessions' as any) // Type assertion to bypass TypeScript check
+          .from('sessions')
           .insert({
             id: newSession.id,
             station_id: dbStationId, // Use a valid UUID for database
