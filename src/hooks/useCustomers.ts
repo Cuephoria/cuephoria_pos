@@ -360,7 +360,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     try {
       // First, check if customer has any active sessions
       const { data: activeSessions, error: sessionsError } = await supabase
-        .from('sessions' as any)
+        .from('sessions')
         .select('id')
         .eq('customer_id', id)
         .is('end_time', null);
@@ -389,14 +389,12 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         // Continue with deletion attempt
       } else if (bills && bills.length > 0) {
         toast({
-          title: 'Cannot Delete Customer',
-          description: 'This customer has associated bills. Please delete the bills first or keep the customer record.',
-          variant: 'destructive'
+          title: 'Warning',
+          description: 'This customer has associated bills. The bills will remain in the system for accounting purposes.',
         });
-        return;
       }
       
-      // If we got here, we can attempt to delete the customer
+      // Now proceed with customer deletion
       const { error } = await supabase
         .from('customers')
         .delete()

@@ -48,16 +48,17 @@ export const useSessionsData = () => {
           duration: item.duration
         }));
         
-        // Keep all sessions, including those with end time, to maintain history
+        console.log(`Loaded ${transformedSessions.length} total sessions from Supabase`);
         setSessions(transformedSessions);
         
         // Log active sessions (those without end_time)
         const activeSessions = transformedSessions.filter(s => !s.endTime);
-        console.log(`Loaded ${activeSessions.length} active sessions from Supabase`);
+        console.log(`Found ${activeSessions.length} active sessions in loaded data`);
         activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
-        // Don't clear sessions if no data, as it might be a network issue
+        // Clear sessions if no data is returned to prevent stale data
+        setSessions([]);
       }
     } catch (error) {
       console.error('Error in fetchSessions:', error);
@@ -109,6 +110,7 @@ export const useSessionsData = () => {
   };
   
   useEffect(() => {
+    console.log('Initial session load triggered');
     refreshSessions();
     
     // Add listener for page visibility changes to refresh sessions when page becomes visible again

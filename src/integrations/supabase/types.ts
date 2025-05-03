@@ -454,7 +454,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "reward_redemptions_customer_id_fkey"
+            foreignKeyName: "reward_redemptions_customer_id_fkey_new"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"

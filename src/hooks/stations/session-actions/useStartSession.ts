@@ -62,9 +62,9 @@ export const useStartSession = ({
         
         console.log("Using DB station ID:", dbStationId);
         
-        // Use type assertion to work around TypeScript issues with Supabase
+        // Use type assertion for TypeScript compatibility
         const { data, error } = await supabase
-          .from('sessions' as any)
+          .from('sessions')
           .insert({
             id: sessionId,
             station_id: dbStationId, // Use the proper format for DB

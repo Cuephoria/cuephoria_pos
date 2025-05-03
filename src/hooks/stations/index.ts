@@ -3,7 +3,7 @@
 import { useSessionsData } from './useSessionsData';
 import { useStationsData } from './useStationsData';
 import { useSessionActions } from './session-actions';
-import { Station, Session, Customer, SessionResult } from '@/types/pos.types';
+import { Station, Session, Customer } from '@/types/pos.types';
 import { useState, useEffect } from 'react';
 
 export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => void) => {
@@ -27,47 +27,40 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
   
   // Connect active sessions to stations
   useEffect(() => {
-    if (sessions.length > 0 && stations.length > 0) {
+    if (stations.length > 0) {
       console.log("Connecting active sessions to stations");
       
-      // Find active sessions (without endTime)
+      // Find active sessions (without endTime) if sessions exist
       const activeSessions = sessions.filter(s => !s.endTime);
       
-      if (activeSessions.length > 0) {
-        console.log(`Found ${activeSessions.length} active sessions to connect`);
+      console.log(`Found ${activeSessions.length} active sessions to connect, out of ${sessions.length} total sessions`);
+      
+      // Create a mapping of station ID to session
+      const activeSessionMap = new Map<string, Session>();
+      activeSessions.forEach(session => {
+        activeSessionMap.set(session.stationId, session);
+      });
+      
+      // Update stations with their active sessions
+      setStations(prev => prev.map(station => {
+        const activeSession = activeSessionMap.get(station.id);
         
-        // Create a mapping of station ID to session
-        const activeSessionMap = new Map<string, Session>();
-        activeSessions.forEach(session => {
-          activeSessionMap.set(session.stationId, session);
-        });
-        
-        // Update stations with their active sessions
-        setStations(prev => prev.map(station => {
-          const activeSession = activeSessionMap.get(station.id);
-          if (activeSession) {
-            console.log(`Connecting session to station ${station.name}`);
-            return {
-              ...station,
-              isOccupied: true,
-              currentSession: activeSession
-            };
-          }
+        if (activeSession) {
+          console.log(`Connecting session to station ${station.name}`);
+          return {
+            ...station,
+            isOccupied: true,
+            currentSession: activeSession
+          };
+        } else {
+          // If there's no active session for this station, ensure it's marked as unoccupied
           return {
             ...station,
             isOccupied: false,
             currentSession: null
           };
-        }));
-      } else {
-        // If there are no active sessions, make sure all stations are marked as unoccupied
-        console.log("No active sessions found, ensuring all stations are marked as unoccupied");
-        setStations(prev => prev.map(station => ({
-          ...station,
-          isOccupied: false,
-          currentSession: null
-        })));
-      }
+        }
+      }));
     }
   }, [sessions, stations.length]);
   
@@ -83,7 +76,6 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     updateCustomer
   });
 
-  // Return all hooks combined
   return {
     stations,
     setStations,
