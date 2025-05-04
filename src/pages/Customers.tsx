@@ -71,10 +71,13 @@ const Customers = () => {
       // Ensure all customer data has proper totalPlayTime values
       const processedCustomers = customers.map(customer => {
         console.log(`Processing customer ${customer.name}, raw totalPlayTime:`, customer.totalPlayTime);
+        
+        // IMPORTANT: Always ensure totalPlayTime is a number
+        const safePlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
+        
         return {
           ...customer,
-          // Always ensure totalPlayTime is a number (not undefined or null)
-          totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
+          totalPlayTime: safePlayTime
         };
       });
       

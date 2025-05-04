@@ -37,6 +37,8 @@ export const useEndSession = ({
         throw new Error("No active session found");
       }
       
+      console.log("Found station for ending session:", station.name, "Type:", station.type);
+      
       const session = station.currentSession;
       const endTime = new Date();
       
@@ -56,7 +58,7 @@ export const useEndSession = ({
       
       const durationMinutes = Math.max(1, Math.round(actualDurationMs / (1000 * 60)));
       
-      console.log(`Session duration calculation for ${station.type} station:`, {
+      console.log(`Session duration calculation for ${station.name} (${station.type}) station:`, {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         rawDurationMs: durationMs,
@@ -105,6 +107,8 @@ export const useEndSession = ({
         if (sessionError) {
           console.error('Error updating session in Supabase:', sessionError);
           // Continue since local state is already updated
+        } else {
+          console.log("Successfully updated session in Supabase");
         }
       } catch (supabaseError) {
         console.error('Error updating session in Supabase:', supabaseError);
@@ -125,6 +129,8 @@ export const useEndSession = ({
           if (stationError) {
             console.error('Error updating station in Supabase:', stationError);
             // Continue since local state is already updated
+          } else {
+            console.log("Successfully updated station in Supabase");
           }
         } else {
           console.log("Skipping station update in Supabase due to non-UUID station ID");
@@ -152,7 +158,7 @@ export const useEndSession = ({
       const hoursPlayed = actualDurationMs / (1000 * 60 * 60); // Convert ms to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
-      // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
+      // Apply 50% discount for members
       const isMember = customer?.isMember || false;
       const discountApplied = isMember;
       
@@ -184,7 +190,7 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time - CRITICAL FIX: This is the key part that needs proper handling
+      // Update customer's total play time - CRITICAL FIX for 8-ball stations
       if (customer) {
         // Ensure totalPlayTime is always treated as a number
         const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
@@ -206,6 +212,7 @@ export const useEndSession = ({
         };
         
         // Update both local state and Supabase
+        console.log("About to update customer with new play time:", updatedCustomer);
         updateCustomer(updatedCustomer);
         
         // Also update in Supabase directly to ensure persistence

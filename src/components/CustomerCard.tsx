@@ -39,8 +39,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     const hours = Math.floor(mins / 60);
     const remainingMins = Math.floor(mins % 60);
     
-    // Add debug logging to verify the calculation
-    console.log(`Formatting time for ${customer.name}: ${mins} minutes = ${hours}h ${remainingMins}m`);
+    // Add detailed debug logging to verify the calculation
+    console.log(`Formatting time for ${customer.name}: ${mins} minutes = ${hours}h ${remainingMins}m (raw totalPlayTime: ${customer.totalPlayTime}, type: ${typeof customer.totalPlayTime})`);
     
     return `${hours}h ${remainingMins}m`;
   };

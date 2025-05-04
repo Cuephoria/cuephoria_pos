@@ -330,7 +330,23 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       });
       
-      const { error } = await supabase
+      // Ensure we're sending the correct data to Supabase
+      console.log("Full update payload to Supabase:", {
+        name: updatedCustomer.name,
+        phone: updatedCustomer.phone,
+        email: updatedCustomer.email,
+        is_member: updatedCustomer.isMember,
+        membership_expiry_date: updatedCustomer.membershipExpiryDate?.toISOString(),
+        membership_start_date: updatedCustomer.membershipStartDate?.toISOString(),
+        membership_plan: updatedCustomer.membershipPlan,
+        membership_hours_left: updatedCustomer.membershipHoursLeft,
+        membership_duration: updatedCustomer.membershipDuration,
+        loyalty_points: updatedCustomer.loyaltyPoints,
+        total_spent: updatedCustomer.totalSpent,
+        total_play_time: safePlayTime
+      });
+      
+      const { error, data } = await supabase
         .from('customers')
         .update({
           name: updatedCustomer.name,
@@ -346,7 +362,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           total_spent: updatedCustomer.totalSpent,
           total_play_time: safePlayTime
         })
-        .eq('id', updatedCustomer.id);
+        .eq('id', updatedCustomer.id)
+        .select();
         
       if (error) {
         console.error('Error updating customer:', error);
@@ -357,6 +374,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         });
         return null;
       }
+      
+      console.log("Supabase update response:", data);
       
       // Update local state after successful database update
       setCustomers(customers.map(c => 
