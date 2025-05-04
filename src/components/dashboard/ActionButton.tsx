@@ -21,7 +21,6 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   path,
   iconColor,
-  description,
   requiresAdmin = false
 }) => {
   const navigate = useNavigate();
