@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -17,7 +18,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [cost, setCost] = useState<number>(0);
   const { toast } = useToast();
   const { customers } = usePOS();
-  const timerRef = useRef<number | null>(null);
+  // Update the type here from number to NodeJS.Timeout
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const sessionDataRef = useRef<{
     sessionId: string;
     startTime: Date;
