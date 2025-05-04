@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -15,10 +14,6 @@ export default {
 			center: true,
 			padding: '2rem',
 			screens: {
-				'sm': '640px',   // Mobile breakpoint
-				'md': '768px',   // Tablet breakpoint
-				'lg': '1024px',  // Desktop breakpoint
-				'xl': '1280px',
 				'2xl': '1400px'
 			}
 		},
@@ -27,12 +22,6 @@ export default {
 				sans: ['Inter', 'sans-serif'],
 				heading: ['Poppins', 'sans-serif'],
 				quicksand: ['Quicksand', 'sans-serif'],
-			},
-			screens: {
-				'xs': '480px',   // Extra small screens
-				'sm': '640px',   // Mobile breakpoint
-				'md': '768px',   // Tablet breakpoint
-				'lg': '1024px',  // Desktop breakpoint
 			},
 			colors: {
 				border: 'hsl(var(--border))',

@@ -395,7 +395,7 @@ const Login = () => {
           <div className="relative mx-auto w-full max-w-[220px] h-auto sm:w-64 sm:h-64">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
             <img 
-              src="/lovable-uploads/1ce327a1-4c4e-4a4f-9887-ca76023e50e9.png" 
+              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
               alt="Cuephoria 8-Ball Club" 
               className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
             />
