@@ -8,7 +8,7 @@ const ActionButtonSection: React.FC = () => {
   const isMobile = useIsMobile();
   
   return (
-    <div className="grid gap-4 sm:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 w-full mx-auto max-w-7xl">
       <ActionButton
         icon={PlayCircle}
         label={isMobile ? "Game" : "New Gaming Session"}
