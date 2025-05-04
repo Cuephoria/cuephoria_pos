@@ -27,11 +27,11 @@ export const usePauseSession = () => {
       const now = new Date().toISOString();
       
       // Update session with pause information
-      const { data: updatedSession, error: updateError } = await supabase
+      const { data: updatedSessionData, error: updateError } = await supabase
         .from('sessions')
         .update({
           is_paused: true,
-          pause_time: now,
+          paused_at: now,
         })
         .eq('id', sessionId)
         .select()
@@ -43,8 +43,21 @@ export const usePauseSession = () => {
         return { success: false, error: updateError.message };
       }
 
+      // Convert Supabase response to our Session type
+      const updatedSession: Session = {
+        id: updatedSessionData.id,
+        stationId: updatedSessionData.station_id,
+        customerId: updatedSessionData.customer_id,
+        startTime: new Date(updatedSessionData.start_time),
+        endTime: updatedSessionData.end_time ? new Date(updatedSessionData.end_time) : undefined,
+        duration: updatedSessionData.duration,
+        isPaused: updatedSessionData.is_paused,
+        pausedAt: updatedSessionData.paused_at ? new Date(updatedSessionData.paused_at) : undefined,
+        totalPausedTime: updatedSessionData.total_paused_time
+      };
+
       toast.success('Session paused successfully');
-      return { success: true, session: updatedSession as Session };
+      return { success: true, session: updatedSession };
     } catch (error) {
       console.error('Unexpected error pausing session:', error);
       toast.error('An unexpected error occurred');
@@ -70,11 +83,11 @@ export const usePauseSession = () => {
         return { success: false, error: 'Session not found' };
       }
 
-      const pauseTime = sessionData.pause_time ? new Date(sessionData.pause_time) : null;
+      const pauseTime = sessionData.paused_at ? new Date(sessionData.paused_at) : null;
       const now = new Date();
       
       // Calculate pause duration in milliseconds
-      let totalPauseDuration = sessionData.pause_duration || 0;
+      let totalPauseDuration = sessionData.total_paused_time || 0;
       
       if (pauseTime) {
         const pauseDurationMs = now.getTime() - pauseTime.getTime();
@@ -82,12 +95,12 @@ export const usePauseSession = () => {
       }
       
       // Update session with resume information
-      const { data: updatedSession, error: updateError } = await supabase
+      const { data: updatedSessionData, error: updateError } = await supabase
         .from('sessions')
         .update({
           is_paused: false,
-          pause_time: null,
-          pause_duration: totalPauseDuration
+          paused_at: null,
+          total_paused_time: totalPauseDuration
         })
         .eq('id', sessionId)
         .select()
@@ -99,8 +112,21 @@ export const usePauseSession = () => {
         return { success: false, error: updateError.message };
       }
 
+      // Convert Supabase response to our Session type
+      const updatedSession: Session = {
+        id: updatedSessionData.id,
+        stationId: updatedSessionData.station_id,
+        customerId: updatedSessionData.customer_id,
+        startTime: new Date(updatedSessionData.start_time),
+        endTime: updatedSessionData.end_time ? new Date(updatedSessionData.end_time) : undefined,
+        duration: updatedSessionData.duration,
+        isPaused: updatedSessionData.is_paused,
+        pausedAt: updatedSessionData.paused_at ? new Date(updatedSessionData.paused_at) : undefined,
+        totalPausedTime: updatedSessionData.total_paused_time
+      };
+
       toast.success('Session resumed successfully');
-      return { success: true, session: updatedSession as Session };
+      return { success: true, session: updatedSession };
     } catch (error) {
       console.error('Unexpected error resuming session:', error);
       toast.error('An unexpected error occurred');
