@@ -26,16 +26,16 @@ import '@/App.css';
 function App() {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full overflow-x-hidden">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col overflow-x-hidden">
-          <div className="hidden md:block">
-            <SidebarTrigger />
-          </div>
-          <AuthProvider>
-            <POSProvider>
-              <ExpenseProvider>
-                <BrowserRouter>
+      <AuthProvider>
+        <POSProvider>
+          <ExpenseProvider>
+            <BrowserRouter>
+              <div className="flex min-h-screen w-full overflow-x-hidden">
+                <AppSidebar />
+                <div className="flex-1 flex flex-col overflow-x-hidden">
+                  <div className="hidden md:block">
+                    <SidebarTrigger />
+                  </div>
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/dashboard" element={<Dashboard />} />
@@ -48,13 +48,13 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                </BrowserRouter>
-                <Toaster />
-              </ExpenseProvider>
-            </POSProvider>
-          </AuthProvider>
-        </div>
-      </div>
+                </div>
+              </div>
+              <Toaster />
+            </BrowserRouter>
+          </ExpenseProvider>
+        </POSProvider>
+      </AuthProvider>
     </SidebarProvider>
   );
 }
