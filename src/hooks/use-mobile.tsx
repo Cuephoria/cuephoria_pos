@@ -35,38 +35,16 @@ export function useIsMobile() {
 export function useResponsiveLayout() {
   const isMobile = useIsMobile()
   const [columnCount, setColumnCount] = React.useState(3)
-  const [containerWidth, setContainerWidth] = React.useState("100%")
   
   React.useEffect(() => {
-    const updateLayout = () => {
-      const width = window.innerWidth
-      if (width < 640) { // sm breakpoint
-        setColumnCount(1)
-        setContainerWidth("100%")
-      } else if (width < 1024) { // lg breakpoint
-        setColumnCount(2)
-        setContainerWidth("95%")
-      } else {
-        setColumnCount(3)
-        setContainerWidth("90%")
-      }
-    }
-    
-    updateLayout()
-    
-    // Add event listener with debounce
-    let timeoutId: NodeJS.Timeout
-    const handleResize = () => {
-      clearTimeout(timeoutId)
-      timeoutId = setTimeout(updateLayout, 100)
-    }
-    
-    window.addEventListener('resize', handleResize)
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      clearTimeout(timeoutId)
+    if (isMobile) {
+      setColumnCount(1)
+    } else if (window.innerWidth < 1024) {
+      setColumnCount(2)
+    } else {
+      setColumnCount(3)
     }
   }, [isMobile])
   
-  return { columnCount, containerWidth, isMobile }
+  return { columnCount, isMobile }
 }

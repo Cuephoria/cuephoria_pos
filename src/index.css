@@ -343,21 +343,6 @@
   }
 }
 
-/* Custom animations for action buttons */
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(155, 135, 245, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(155, 135, 245, 0.8);
-  }
-}
-
-.action-button-glow:hover {
-  animation: pulse-glow 2s infinite;
-  transform: translateY(-2px);
-}
-
 /* --- Hide scrollbar elegantly for the product tags filter --- */
 .cuephoria-scrollbar-hide {
   overflow-x: auto;
