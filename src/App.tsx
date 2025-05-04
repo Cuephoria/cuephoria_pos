@@ -5,7 +5,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/AuthContext';
 import { POSProvider } from '@/context/POSContext';
 import { ExpenseProvider } from '@/context/ExpenseContext';
-import { SidebarProvider } from '@/components/ui/sidebar';
+
+// Import components
+import AppSidebar from '@/components/AppSidebar';
 
 // Import all pages
 import Dashboard from '@/pages/Dashboard';
@@ -24,12 +26,13 @@ import '@/App.css';
 
 function App() {
   return (
-    <SidebarProvider>
-      <AuthProvider>
-        <POSProvider>
-          <ExpenseProvider>
-            <BrowserRouter>
-              <div className="flex min-h-screen w-full overflow-x-hidden">
+    <AuthProvider>
+      <POSProvider>
+        <ExpenseProvider>
+          <BrowserRouter>
+            <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+              <AppSidebar />
+              <div className="flex-1">
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
@@ -42,13 +45,13 @@ function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <Toaster />
               </div>
-            </BrowserRouter>
-          </ExpenseProvider>
-        </POSProvider>
-      </AuthProvider>
-    </SidebarProvider>
+              <Toaster />
+            </div>
+          </BrowserRouter>
+        </ExpenseProvider>
+      </POSProvider>
+    </AuthProvider>
   );
 }
 

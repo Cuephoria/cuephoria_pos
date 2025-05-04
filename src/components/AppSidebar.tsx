@@ -11,8 +11,8 @@ const AppSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const hideOnPaths = ['/login', '/', '/receipt'];
-  const shouldHide = hideOnPaths.some(path => location.pathname.includes(path));
+  const hideOnPaths = ['/login', '/'];
+  const shouldHide = hideOnPaths.some(path => location.pathname === path);
   const isMobile = useIsMobile();
   
   const isAdmin = user?.isAdmin || false;
@@ -112,7 +112,7 @@ const AppSidebar: React.FC = () => {
 
   // Desktop version
   return (
-    <div className="w-[230px] bg-[#1A1F2C] text-white h-screen flex flex-col border-r-0 fixed left-0 top-0">
+    <div className="w-[230px] bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0">
       <div className="p-4 flex items-center gap-3">
         <div className="h-12 w-12 rounded-full flex items-center justify-center bg-[#9b87f5] shadow-lg">
           <Joystick className="h-7 w-7 text-white" />
