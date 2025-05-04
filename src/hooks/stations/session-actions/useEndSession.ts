@@ -1,3 +1,4 @@
+
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -55,7 +56,7 @@ export const useEndSession = ({
       
       const durationMinutes = Math.max(1, Math.round(actualDurationMs / (1000 * 60)));
       
-      console.log(`Session duration calculation: ${actualDurationMs}ms = ${durationMinutes} minutes`);
+      console.log(`Session duration calculation: ${actualDurationMs}ms = ${durationMinutes} minutes (${station.type} station)`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -132,7 +133,7 @@ export const useEndSession = ({
       if (!customer) {
         console.warn("Customer not found for session", session.customerId);
       } else {
-        console.log("Found customer for session:", customer.name);
+        console.log("Found customer for session:", customer.name, "ID:", customer.id);
       }
       
       // Generate cart item for the session
@@ -176,19 +177,21 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time - FIXED: Apply for both PS5 and 8ball stations
+      // Update customer's total play time - CRITICAL FIX: This is a key part that needs fixing
       if (customer) {
         // Ensure totalPlayTime is a number
         const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
         
-        // Add duration minutes to the total play time regardless of station type
+        // Add duration minutes to the total play time
         const newPlayTime = currentPlayTime + durationMinutes;
         
         console.log(`Updating customer ${customer.name} play time:`, {
+          customer_id: customer.id,
           currentPlayTime,
           minutesToAdd: durationMinutes,
           stationType: station.type,
-          newPlayTime
+          newPlayTime,
+          timeBefore: currentPlayTime 
         });
         
         const updatedCustomer = {
@@ -202,15 +205,18 @@ export const useEndSession = ({
         // Also update in Supabase if possible
         try {
           console.log(`Updating customer ${customer.id} in Supabase with total play time: ${newPlayTime}`);
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('customers')
             .update({ 
               total_play_time: newPlayTime
             })
-            .eq('id', customer.id);
+            .eq('id', customer.id)
+            .select();
             
           if (error) {
             console.error('Error updating customer play time in Supabase:', error);
+          } else {
+            console.log('Updated customer in Supabase successfully:', data);
           }
         } catch (error) {
           console.error('Error updating customer in Supabase:', error);
