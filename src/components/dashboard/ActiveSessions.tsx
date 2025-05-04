@@ -10,19 +10,31 @@ const ActiveSessions = () => {
   // Get occupied stations with sessions
   const activeStations = stations.filter(station => station.isOccupied && station.currentSession);
   
-  // Calculate session duration in minutes
-  const getSessionDuration = (startTime: Date) => {
+  // Calculate session duration in minutes, accounting for pauses
+  const getSessionDuration = (session: any) => {
+    if (!session) return 0;
+    
     // Ensure we're working with Date objects
-    const start = new Date(startTime);
+    const start = new Date(session.startTime);
     const now = new Date();
     
-    // Convert to milliseconds (numbers) before arithmetic
-    const startMs = start.getTime();
-    const nowMs = now.getTime();
-    const durationMs = nowMs - startMs;
+    // Calculate base duration
+    let durationMs = now.getTime() - start.getTime();
     
-    // Convert milliseconds to minutes
-    return Math.floor(durationMs / (1000 * 60));
+    // Subtract total paused time if it exists
+    if (session.totalPausedTime) {
+      durationMs -= session.totalPausedTime;
+    }
+    
+    // If currently paused, subtract the time since the pause started
+    if (session.isPaused && session.pausedAt) {
+      const pausedAt = new Date(session.pausedAt);
+      const pauseDurationMs = now.getTime() - pausedAt.getTime();
+      durationMs -= pauseDurationMs;
+    }
+    
+    // Convert milliseconds to minutes (ensure minimum of 1 minute)
+    return Math.max(1, Math.floor(durationMs / (1000 * 60)));
   };
   
   return (
@@ -45,7 +57,7 @@ const ActiveSessions = () => {
             if (!session) return null;
             
             const customer = customers.find(c => c.id === session.customerId);
-            const duration = getSessionDuration(session.startTime);
+            const duration = getSessionDuration(session);
             const hours = Math.floor(duration / 60);
             const minutes = duration % 60;
             const durationText = `${hours > 0 ? `${hours}h ` : ''}${minutes}m`;
@@ -62,7 +74,14 @@ const ActiveSessions = () => {
                   </div>
                 </div>
                 <div className="text-white font-semibold">
-                  {durationText}
+                  {session.isPaused ? (
+                    <span className="flex items-center">
+                      <span className="mr-1">{durationText}</span>
+                      <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse ml-1"></span>
+                    </span>
+                  ) : (
+                    durationText
+                  )}
                 </div>
               </div>
             );

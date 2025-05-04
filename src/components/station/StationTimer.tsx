@@ -30,6 +30,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     lastCost: number; // Store the last calculated cost for display when paused
   } | null>(null);
 
+  // Force refresh of time display
+  const forceRefresh = useRef<number>(0);
+
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
       setHours(0);
@@ -49,7 +52,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
 
     // Store the session data in ref to maintain persistence across renders
     if (station.currentSession) {
-      sessionDataRef.current = {
+      const currentSessionData = {
         sessionId: station.currentSession.id,
         startTime: new Date(station.currentSession.startTime),
         stationId: station.id,
@@ -58,16 +61,21 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         isPaused: station.currentSession.isPaused || false,
         totalPausedTime: station.currentSession.totalPausedTime || 0,
         pausedAt: station.currentSession.pausedAt,
-        lastCost: 0 // Initialize last cost
+        lastCost: sessionDataRef.current?.lastCost || 0 // Preserve last cost if exists
       };
+
+      sessionDataRef.current = currentSessionData;
+      
+      // Immediately force an update with the new session data
+      updateTimerDisplay();
     }
 
     // Find the customer to check if they are a member
     const customer = customers.find(c => c.id === station.currentSession?.customerId);
     const isMember = customer?.isMember || false;
 
-    // Initial calculation based on local session data
-    const updateTimerFromLocalData = () => {
+    // Function to update timer display based on current session data
+    function updateTimerDisplay() {
       if (!sessionDataRef.current) return;
       
       const { startTime, isPaused, totalPausedTime, pausedAt } = sessionDataRef.current;
@@ -77,7 +85,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       let elapsedMs = now.getTime() - startTime.getTime();
       
       // Subtract total paused time
-      elapsedMs -= totalPausedTime;
+      if (totalPausedTime) {
+        elapsedMs -= totalPausedTime;
+      }
       
       // If currently paused, subtract the time since pause started
       if (isPaused && pausedAt) {
@@ -88,6 +98,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       // Don't allow negative time
       elapsedMs = Math.max(0, elapsedMs);
       
+      // Calculate hours, minutes, seconds
       const secondsTotal = Math.floor(elapsedMs / 1000);
       const minutesTotal = Math.floor(secondsTotal / 60);
       const hoursTotal = Math.floor(minutesTotal / 60);
@@ -96,11 +107,11 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(minutesTotal % 60);
       setHours(hoursTotal);
       
-      // Calculate cost based on hourly rate
+      // Calculate cost based on hourly rate and actual elapsed time
       const hoursElapsed = elapsedMs / (1000 * 60 * 60);
       let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
       
-      // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
+      // Apply 50% discount for members
       if (isMember) {
         calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
       }
@@ -120,32 +131,14 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       }
       
       setCost(calculatedCost);
-      
-      console.log("Timer update:", {
-        sessionId: sessionDataRef.current.sessionId,
-        startTime: startTime.toISOString(),
-        elapsedMs,
-        isPaused,
-        totalPausedTime,
-        pausedAt: pausedAt?.toISOString(),
-        secondsTotal,
-        minutesTotal,
-        hoursTotal,
-        hourlyRate: station.hourlyRate,
-        isMember,
-        discountApplied: isMember,
-        calculatedCost,
-        pausedDisplayCost: isPaused ? sessionDataRef.current.lastCost : null
-      });
-    };
+    }
 
-    // Try to get session data from Supabase
-    const fetchSessionData = async () => {
+    // Fetch latest session data from Supabase
+    const fetchLatestSessionData = async () => {
       try {
         if (!station.currentSession) return;
         
         const sessionId = station.currentSession.id;
-        console.log("Fetching session data for ID:", sessionId);
         
         const { data, error } = await supabase
           .from('sessions')
@@ -155,92 +148,60 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           
         if (error) {
           console.error("Error fetching session data:", error);
-          // Fallback to local data
-          updateTimerFromLocalData();
           return;
         }
         
         if (data) {
-          // Use type assertion since we know this data should exist
           const sessionData = data as any;
           
           if (sessionData && sessionData.start_time) {
-            const startTime = new Date(sessionData.start_time);
-            const isPaused = sessionData.is_paused || false;
-            const totalPausedTime = sessionData.total_paused_time || 0;
-            const pausedAt = sessionData.paused_at ? new Date(sessionData.paused_at) : undefined;
-            
-            console.log("Session data from Supabase:", {
-              startTime,
-              isPaused,
-              totalPausedTime,
-              pausedAt
-            });
-            
-            // Update the sessionDataRef with data from Supabase
+            // Update session data with latest from database
             if (sessionDataRef.current) {
-              sessionDataRef.current.startTime = startTime;
-              sessionDataRef.current.isPaused = isPaused;
-              sessionDataRef.current.totalPausedTime = totalPausedTime;
-              sessionDataRef.current.pausedAt = pausedAt;
-            } else {
               sessionDataRef.current = {
-                sessionId,
-                startTime,
-                stationId: station.id,
-                customerId: station.currentSession.customerId,
-                hourlyRate: station.hourlyRate,
-                isPaused,
-                totalPausedTime,
-                pausedAt,
-                lastCost: 0
+                ...sessionDataRef.current,
+                startTime: new Date(sessionData.start_time),
+                isPaused: sessionData.is_paused || false,
+                totalPausedTime: sessionData.total_paused_time || 0,
+                pausedAt: sessionData.paused_at ? new Date(sessionData.paused_at) : undefined
               };
             }
             
-            updateTimerFromLocalData();
-          } else {
-            // Fallback to local data
-            updateTimerFromLocalData();
+            // Force immediate timer update with fresh data
+            updateTimerDisplay();
           }
-        } else {
-          // Fallback to local data
-          updateTimerFromLocalData();
         }
       } catch (error) {
-        console.error("Error in fetchSessionData:", error);
-        // Fallback to local data
-        updateTimerFromLocalData();
+        console.error("Error in fetchLatestSessionData:", error);
       }
     };
     
     // Fetch data initially
-    fetchSessionData();
-    
-    // Set up interval for regular updates that persists
-    if (timerRef.current === null) {
-      timerRef.current = window.setInterval(() => {
-        updateTimerFromLocalData();
-      }, 1000);
-    }
-    
-    // Clean up on unmount
-    return () => {
-      // Don't clear the interval - let the timer continue running
-      // This is intentional to keep the session running in the background
-      // even if component unmounts
-    };
-  }, [station, customers]);
+    fetchLatestSessionData();
 
-  // Add a cleanup function for component unmount
+    // Set up regular refresh interval
+    const refreshInterval = setInterval(() => {
+      forceRefresh.current += 1;
+      updateTimerDisplay();
+    }, 1000);
+    
+    timerRef.current = refreshInterval;
+    
+    // Clean up
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [station, station.currentSession, station.currentSession?.isPaused, station.currentSession?.totalPausedTime, customers]);
+
+  // Clean up on unmount
   useEffect(() => {
     return () => {
-      // This will only run when the component is truly unmounted (not page change)
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
   }, []);
 
+  // Format time for display
   const formatTimeDisplay = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
@@ -254,7 +215,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
       <div className="text-center relative">
-        {/* Move the pause icon next to occupied status instead of timer */}
         <div className="flex items-center justify-center gap-3">
           <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block ${isPaused ? 'opacity-60' : ''}`}>
             {formatTimeDisplay()}
