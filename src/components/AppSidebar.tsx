@@ -135,23 +135,23 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
       }`}
     >
       <div className="p-4 flex flex-col items-center">
-        <div className="flex items-center justify-center gap-3 mb-2 w-full">
+        <div className={`flex items-center justify-center ${collapsed ? 'flex-col' : 'w-full gap-3'}`}>
           <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5] to-[#7661d7] shadow-lg animate-pulse-soft">
             <Gamepad2 className="h-7 w-7 text-white animate-scale-in" />
           </div>
-          <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : 'animate-fade-in flex-1'}`}>
+          <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-all duration-300 ${collapsed ? 'opacity-0 h-0 absolute' : 'opacity-100 animate-fade-in ml-3'}`}>
             Cuephoria
           </span>
         </div>
         
-        {/* Center aligned collapse button below logo */}
+        {/* Properly centered collapse button */}
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={toggleSidebar} 
-          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md mt-2"
+          className="rounded-full bg-[#252A37] border border-gray-700 h-8 w-8 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] hover:shadow-[0_0_15px_rgba(155,135,245,0.5)] transition-all duration-300 mt-4 transform hover:scale-110"
         >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </Button>
       </div>
       
@@ -163,11 +163,32 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
             <Link 
               key={item.path}
               to={item.path} 
-              className={`flex items-center py-2.5 px-3 rounded-lg ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
+              className={`flex items-center py-2.5 px-3 rounded-lg transition-all duration-300 
+                ${location.pathname === item.path 
+                  ? 'bg-[#252A37] text-[#9b87f5] shadow-[0_0_15px_rgba(155,135,245,0.2)]' 
+                  : 'text-white hover:bg-[#252A37]/50 hover:shadow-[0_0_10px_rgba(155,135,245,0.15)]'
+                }
+                ${collapsed ? 'justify-center' : ''}
+                group
+                hover:scale-105 
+              `}
               title={collapsed ? item.label : ""}
             >
-              <item.icon className={`h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''} ${collapsed ? 'mx-auto' : 'mr-3'}`} />
-              <span className={`whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : ''}`}>{item.label}</span>
+              <item.icon 
+                className={`
+                  ${location.pathname === item.path ? 'text-[#9b87f5]' : ''} 
+                  ${collapsed ? 'mx-auto' : 'mr-3'}
+                  h-5 w-5 transition-all duration-300 
+                  group-hover:text-[#9b87f5]
+                  ${location.pathname === item.path ? 'animate-pulse-soft' : ''}
+                `} 
+              />
+              <span className={`whitespace-nowrap transition-all duration-300 ${collapsed ? 'opacity-0 w-0 absolute' : 'opacity-100'}`}>
+                {item.label}
+              </span>
+              {location.pathname === item.path && !collapsed && (
+                <span className="absolute h-full w-1 bg-[#9b87f5] right-0 rounded-l-md"></span>
+              )}
             </Link>
           ))}
         </div>
@@ -186,13 +207,13 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
             </div>
             <Button 
               onClick={handleLogout}
-              className="w-full text-xs h-7 bg-[#252A37] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300"
+              className="w-full text-xs h-7 bg-[#252A37] hover:bg-[#9b87f5] hover:shadow-[0_0_15px_rgba(155,135,245,0.5)] text-white rounded-lg transition-all duration-300"
             >
               Out
             </Button>
           </div>
         ) : (
-          <div className="bg-[#252A37] rounded-lg p-3 shadow-md">
+          <div className="bg-[#252A37] rounded-lg p-3 shadow-md hover:shadow-[0_0_15px_rgba(155,135,245,0.3)] transition-all duration-300">
             <div className="flex items-center gap-2 mb-2">
               {isAdmin ? (
                 <Shield className="h-5 w-5 text-[#9b87f5]" />
@@ -205,7 +226,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
             </div>
             <Button 
               onClick={handleLogout}
-              className="w-full text-xs bg-[#1A1F2C] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300"
+              className="w-full text-xs bg-[#1A1F2C] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300 hover:shadow-[0_0_10px_rgba(155,135,245,0.4)]"
             >
               Logout
             </Button>
