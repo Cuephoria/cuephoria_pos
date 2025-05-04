@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -27,7 +26,7 @@ export interface Customer {
   membershipDuration?: 'weekly' | 'monthly';
   loyaltyPoints: number;
   totalSpent: number;
-  totalPlayTime: number;
+  totalPlayTime: number; // Ensure this is always a number, not undefined
   createdAt: Date;
 }
 

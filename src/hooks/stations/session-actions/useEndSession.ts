@@ -1,7 +1,8 @@
+
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
-import { SessionActionsProps } from '../session-actions/types';
+import { SessionActionsProps } from './types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
 
@@ -65,6 +66,7 @@ export const useEndSession = ({
         // Ensure we keep track of any paused information
         isPaused: false, // Reset pause state when ending
         totalPausedTime: session.totalPausedTime || 0,
+        status: 'completed'
       };
       
       console.log("Updated session with end time and duration:", updatedSession);
@@ -177,21 +179,36 @@ export const useEndSession = ({
       
       // Update customer's total play time
       if (customer) {
-        // Ensure we add the session time regardless of station type (PS5 or 8ball)
+        // Convert totalPlayTime to number if it's not already
+        const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
+        
+        // Explicitly convert durationMinutes to number for safety
+        const minutesToAdd = Number(durationMinutes);
+        
+        // Fix: Calculate new play time with explicit number conversion
+        const newPlayTime = currentPlayTime + minutesToAdd;
+        
+        console.log(`Updating customer ${customer.name} play time:`, {
+          currentPlayTime,
+          minutesToAdd,
+          newPlayTime
+        });
+        
         const updatedCustomer = {
           ...customer,
-          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+          totalPlayTime: newPlayTime
         };
         
-        console.log(`Updating customer total play time: ${customer.totalPlayTime} + ${durationMinutes} = ${updatedCustomer.totalPlayTime}`);
+        // Update both local state and Supabase
         updateCustomer(updatedCustomer);
         
         // Also update in Supabase if possible
         try {
+          console.log(`Updating customer ${customer.id} in Supabase with total play time: ${newPlayTime}`);
           const { error } = await supabase
             .from('customers')
             .update({ 
-              total_play_time: updatedCustomer.totalPlayTime 
+              total_play_time: newPlayTime
             })
             .eq('id', customer.id);
             

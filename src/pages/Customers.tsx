@@ -67,7 +67,14 @@ const Customers = () => {
   useEffect(() => {
     if (posContext && customers) {
       console.log('Setting customer data:', customers);
-      setCustomersData(customers);
+      
+      // Ensure all customer data has proper totalPlayTime values
+      const processedCustomers = customers.map(customer => ({
+        ...customer,
+        totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
+      }));
+      
+      setCustomersData(processedCustomers);
       setIsContextLoaded(true);
     }
   }, [posContext, customers]);
@@ -373,7 +380,18 @@ const Customers = () => {
       
       {/* Customer list */}
       {filteredCustomers.length > 0 ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredCustomers.map(customer => <CustomerCard key={customer.id} customer={customer} onEdit={handleEditCustomer} onDelete={handleDeleteCustomer} />)}
+          {filteredCustomers.map(customer => {
+            console.log(`Rendering customer card for ${customer.name}, playTime: ${customer.totalPlayTime}`);
+            return <CustomerCard 
+              key={customer.id} 
+              customer={{
+                ...customer,
+                totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
+              }} 
+              onEdit={handleEditCustomer} 
+              onDelete={handleDeleteCustomer}
+            />;
+          })}
         </div> : <div className="flex flex-col items-center justify-center h-64">
           <User className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-xl font-medium">No Customers Found</h3>

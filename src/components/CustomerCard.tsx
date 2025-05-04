@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,10 +29,19 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return new Date(date).toLocaleDateString('en-IN');
   };
 
+  // Improved time formatting to ensure it works with any number of minutes
   const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+    // Ensure minutes is treated as a number
+    const mins = Number(minutes);
+    if (isNaN(mins) || mins === 0) return '0h 0m';
+    
+    const hours = Math.floor(mins / 60);
+    const remainingMins = Math.floor(mins % 60);
+    
+    // Add debug logging to see the actual values
+    console.log(`Formatting time: ${mins} minutes = ${hours}h ${remainingMins}m`);
+    
+    return `${hours}h ${remainingMins}m`;
   };
 
   return (
@@ -116,7 +126,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <span className="flex items-center">
               <Clock className="h-4 w-4 mr-1" /> Play Time:
             </span>
-            <span>{formatTime(customer.totalPlayTime)}</span>
+            <span className="text-emerald-500 font-medium">{formatTime(customer.totalPlayTime || 0)}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Joined:</span>
