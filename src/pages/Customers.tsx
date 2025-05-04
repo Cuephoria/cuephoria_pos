@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, User, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -389,7 +388,7 @@ const Customers = () => {
       {filteredCustomers.length > 0 ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredCustomers.map(customer => {
             // Log each customer's play time for debugging
-            console.log(`Rendering customer card for ${customer.name}, totalPlayTime: ${customer.totalPlayTime}`);
+            console.log(`Customers page rendering card for ${customer.name}, totalPlayTime: ${customer.totalPlayTime}`);
             return <CustomerCard 
               key={customer.id} 
               customer={{

@@ -42,39 +42,24 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes - ensure minimum 1 minute
+      // Simple duration calculation in minutes - ensure minimum 1 minute
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
-      
-      // Check for paused time and adjust duration if needed
-      let actualDurationMs = durationMs;
-      
-      // If there's a pause time, subtract it
-      if (session.isPaused && session.pausedAt) {
-        const pausedDuration = session.totalPausedTime || 0;
-        actualDurationMs -= pausedDuration;
-        console.log(`Adjustment for paused time: ${pausedDuration}ms subtracted from total duration`);
-      }
-      
-      const durationMinutes = Math.max(1, Math.round(actualDurationMs / (1000 * 60)));
+      const durationMinutes = Math.max(1, Math.round(durationMs / (1000 * 60)));
       
       console.log(`Session duration calculation for ${station.name} (${station.type}) station:`, {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
-        rawDurationMs: durationMs,
-        adjustedDurationMs: actualDurationMs,
-        durationMinutes,
+        durationMs: durationMs,
+        durationMinutes: durationMinutes,
         stationType: station.type,
       });
       
-      // Create updated session object
+      // Create updated session object with simplified fields
       const updatedSession: Session = {
         ...session,
         endTime,
         duration: durationMinutes,
-        // Ensure we keep track of any paused information
-        isPaused: false, // Reset pause state when ending
-        totalPausedTime: session.totalPausedTime || 0,
         status: 'completed'
       };
       
@@ -98,8 +83,6 @@ export const useEndSession = ({
           .update({
             end_time: endTime.toISOString(),
             duration: durationMinutes,
-            is_paused: false,
-            total_paused_time: session.totalPausedTime || 0,
             status: 'completed'
           })
           .eq('id', session.id);
@@ -153,9 +136,9 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost using hourly rate and accurate time calculation
+      // Calculate session cost using hourly rate
       const stationRate = station.hourlyRate;
-      const hoursPlayed = actualDurationMs / (1000 * 60 * 60); // Convert ms to hours for billing
+      const hoursPlayed = durationMinutes / 60; // Convert minutes to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Apply 50% discount for members
@@ -190,7 +173,7 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time - CRITICAL FIX for 8-ball stations
+      // Update customer's total play time - SIMPLIFIED APPROACH
       if (customer) {
         // Ensure totalPlayTime is always treated as a number
         const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
@@ -220,9 +203,7 @@ export const useEndSession = ({
           console.log(`Directly updating customer ${customer.id} in Supabase with total play time: ${newPlayTime}`);
           const { data, error } = await supabase
             .from('customers')
-            .update({ 
-              total_play_time: newPlayTime
-            })
+            .update({ total_play_time: newPlayTime })
             .eq('id', customer.id)
             .select();
             

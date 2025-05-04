@@ -320,9 +320,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         totalPlayTime: safePlayTime
       };
       
-      console.log(`Updating customer in database:`, { 
-        id: customer.id,
-        name: customer.name,
+      console.log(`useCustomers.updateCustomer: Updating customer ${updatedCustomer.name} in database:`, { 
+        id: updatedCustomer.id,
         totalPlayTime: {
           original: customer.totalPlayTime,
           type: typeof customer.totalPlayTime,
@@ -331,7 +330,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       });
       
       // Ensure we're sending the correct data to Supabase
-      console.log("Full update payload to Supabase:", {
+      const supabaseUpdateData = {
         name: updatedCustomer.name,
         phone: updatedCustomer.phone,
         email: updatedCustomer.email,
@@ -343,25 +342,14 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         membership_duration: updatedCustomer.membershipDuration,
         loyalty_points: updatedCustomer.loyaltyPoints,
         total_spent: updatedCustomer.totalSpent,
-        total_play_time: safePlayTime
-      });
+        total_play_time: safePlayTime  // Using the safe value here
+      };
+      
+      console.log("Full update payload to Supabase:", supabaseUpdateData);
       
       const { error, data } = await supabase
         .from('customers')
-        .update({
-          name: updatedCustomer.name,
-          phone: updatedCustomer.phone,
-          email: updatedCustomer.email,
-          is_member: updatedCustomer.isMember,
-          membership_expiry_date: updatedCustomer.membershipExpiryDate?.toISOString(),
-          membership_start_date: updatedCustomer.membershipStartDate?.toISOString(),
-          membership_plan: updatedCustomer.membershipPlan,
-          membership_hours_left: updatedCustomer.membershipHoursLeft,
-          membership_duration: updatedCustomer.membershipDuration,
-          loyalty_points: updatedCustomer.loyaltyPoints,
-          total_spent: updatedCustomer.totalSpent,
-          total_play_time: safePlayTime
-        })
+        .update(supabaseUpdateData)
         .eq('id', updatedCustomer.id)
         .select();
         

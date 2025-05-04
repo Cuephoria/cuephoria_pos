@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 import { Session, SessionResult, Customer } from '@/types/pos.types';
-import { isMembershipActive } from '@/utils/membership.utils';
 
 export const useSessionActions = (props: SessionActionsProps) => {
   const { stations, setStations, sessions, setSessions, updateCustomer } = props;
