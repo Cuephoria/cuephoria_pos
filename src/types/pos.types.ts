@@ -47,6 +47,10 @@ export interface Session {
   startTime: Date;
   endTime?: Date;
   duration?: number; // in minutes
+  isPaused?: boolean;
+  pausedAt?: Date;
+  totalPausedTime?: number; // in milliseconds
+  status?: 'active' | 'paused' | 'completed';
 }
 
 export interface CartItem {

@@ -1,4 +1,3 @@
-
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -40,16 +39,32 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes
+      // Calculate duration in minutes - ensure minimum 1 minute
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+      
+      // Check for paused time and adjust duration if needed
+      let actualDurationMs = durationMs;
+      
+      // If there's a pause time, subtract it
+      if (session.isPaused && session.pausedAt) {
+        const pausedDuration = session.totalPausedTime || 0;
+        actualDurationMs -= pausedDuration;
+        console.log(`Adjustment for paused time: ${pausedDuration}ms subtracted from total duration`);
+      }
+      
+      const durationMinutes = Math.max(1, Math.round(actualDurationMs / (1000 * 60)));
+      
+      console.log(`Session duration calculation: ${actualDurationMs}ms = ${durationMinutes} minutes`);
       
       // Create updated session object
       const updatedSession: Session = {
         ...session,
         endTime,
-        duration: durationMinutes
+        duration: durationMinutes,
+        // Ensure we keep track of any paused information
+        isPaused: false, // Reset pause state when ending
+        totalPausedTime: session.totalPausedTime || 0,
       };
       
       console.log("Updated session with end time and duration:", updatedSession);
@@ -71,7 +86,10 @@ export const useEndSession = ({
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes
+            duration: durationMinutes,
+            is_paused: false,
+            total_paused_time: session.totalPausedTime || 0,
+            status: 'completed'
           })
           .eq('id', session.id);
           
@@ -120,9 +138,9 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost
+      // Calculate session cost using hourly rate and accurate time calculation
       const stationRate = station.hourlyRate;
-      const hoursPlayed = durationMs / (1000 * 60 * 60);
+      const hoursPlayed = actualDurationMs / (1000 * 60 * 60); // Convert ms to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
@@ -138,6 +156,7 @@ export const useEndSession = ({
       console.log("Session cost calculation:", { 
         stationRate, 
         durationMinutes,
+        stationType: station.type,
         hoursPlayed,
         isMember,
         discountApplied,
@@ -158,11 +177,30 @@ export const useEndSession = ({
       
       // Update customer's total play time
       if (customer) {
+        // Ensure we add the session time regardless of station type (PS5 or 8ball)
         const updatedCustomer = {
           ...customer,
           totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
         };
+        
+        console.log(`Updating customer total play time: ${customer.totalPlayTime} + ${durationMinutes} = ${updatedCustomer.totalPlayTime}`);
         updateCustomer(updatedCustomer);
+        
+        // Also update in Supabase if possible
+        try {
+          const { error } = await supabase
+            .from('customers')
+            .update({ 
+              total_play_time: updatedCustomer.totalPlayTime 
+            })
+            .eq('id', customer.id);
+            
+          if (error) {
+            console.error('Error updating customer play time in Supabase:', error);
+          }
+        } catch (error) {
+          console.error('Error updating customer in Supabase:', error);
+        }
       }
       
       toast({
