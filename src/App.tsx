@@ -38,7 +38,7 @@ function App() {
         <ExpenseProvider>
           <TooltipProvider>
             <BrowserRouter>
-              <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+              <div className="flex min-h-screen w-full bg-[#1A1F2C] overflow-x-hidden">
                 <AppSidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
                 <div 
                   className="flex-1 transition-all duration-300"

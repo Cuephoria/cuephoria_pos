@@ -143,21 +143,21 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
         </span>
       </div>
       
-      {/* Fixed position collapse button */}
-      <div className="absolute -right-3 top-10" style={{ transform: 'translateX(0)' }}>
+      {/* Repositioned collapse button to be fully visible */}
+      <div className="absolute -right-4 top-10" style={{ zIndex: 60 }}>
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={toggleSidebar} 
-          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
+          className="rounded-full bg-[#252A37] border border-gray-700 h-8 w-8 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
         >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </Button>
       </div>
       
       <div className="mx-4 h-px bg-gray-700" />
       
-      <div className="flex-1 overflow-auto py-4">
+      <div className="flex-1 overflow-auto py-4 no-scrollbar">
         <div className="space-y-1 px-3">
           {menuItems.map((item) => (
             <Link 
@@ -173,26 +173,44 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
         </div>
       </div>
       
+      {/* Improved logout section */}
       <div className="p-4">
-        <div className={`flex items-center justify-between bg-[#252A37] rounded-lg p-3 shadow-md ${collapsed ? 'flex-col' : ''}`}>
-          <div className="flex items-center">
-            {isAdmin ? (
-              <Shield className={`h-6 w-6 text-[#9b87f5] ${collapsed ? 'mx-auto' : ''}`} />
-            ) : (
-              <Users className={`h-6 w-6 text-blue-400 ${collapsed ? 'mx-auto' : ''}`} />
-            )}
-            <span className={`text-sm font-medium transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 h-0 overflow-hidden' : 'ml-2'}`}>
-              {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
-            </span>
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-9 w-9 rounded-full flex items-center justify-center bg-[#252A37] shadow-md mb-1">
+              {isAdmin ? (
+                <Shield className="h-5 w-5 text-[#9b87f5]" />
+              ) : (
+                <Users className="h-5 w-5 text-blue-400" />
+              )}
+            </div>
+            <Button 
+              onClick={handleLogout}
+              className="w-full text-xs h-7 bg-[#252A37] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300"
+            >
+              Out
+            </Button>
           </div>
-          <button 
-            onClick={handleLogout}
-            className={`text-xs bg-[#1A1F2C] px-3 py-1 rounded-lg hover:bg-[#9b87f5] transition-all duration-300 text-white ${collapsed ? 'mt-2 w-full' : ''}`}
-            title={collapsed ? "Logout" : ""}
-          >
-            {collapsed ? "Out" : "Logout"}
-          </button>
-        </div>
+        ) : (
+          <div className="bg-[#252A37] rounded-lg p-3 shadow-md">
+            <div className="flex items-center gap-2 mb-2">
+              {isAdmin ? (
+                <Shield className="h-5 w-5 text-[#9b87f5]" />
+              ) : (
+                <Users className="h-5 w-5 text-blue-400" />
+              )}
+              <span className="text-sm font-medium text-white overflow-hidden text-ellipsis">
+                {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
+              </span>
+            </div>
+            <Button 
+              onClick={handleLogout}
+              className="w-full text-xs bg-[#1A1F2C] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300"
+            >
+              Logout
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

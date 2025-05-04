@@ -5,6 +5,7 @@
   width: 100%;
   text-align: left;
   background-color: #1A1F2C;
+  overflow-x: hidden; /* Prevent horizontal scrollbar */
 }
 
 /* Global rounded corners for cards and buttons */
@@ -32,6 +33,17 @@ input, textarea, select {
   background-color: #8a76e4 !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(155, 135, 245, 0.3);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 /* Logo animations */
