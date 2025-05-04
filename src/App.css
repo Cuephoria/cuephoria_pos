@@ -8,11 +8,16 @@
 }
 
 /* Global rounded corners for cards and buttons */
-.card, .rounded-lg {
+.card, .rounded-lg, button, .btn {
   border-radius: 12px !important;
 }
 
 .rounded-md {
+  border-radius: 8px !important;
+}
+
+/* Make all input fields rounded */
+input, textarea, select {
   border-radius: 8px !important;
 }
 
@@ -39,12 +44,126 @@
   }
 }
 
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(155, 135, 245, 0.7));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(155, 135, 245, 0.9));
+  }
+}
+
 .logo-pulse {
   animation: pulse-soft 3s infinite ease-in-out;
 }
 
-/* Indian Rupee styling */
+.logo-float {
+  animation: float 5s infinite ease-in-out;
+}
+
+.logo-glow {
+  animation: glow 3s infinite ease-in-out;
+}
+
+/* Premium card effects */
+.premium-card {
+  background: rgba(26, 31, 44, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(155, 135, 245, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.premium-card:hover {
+  box-shadow: 0 10px 40px rgba(155, 135, 245, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Glassmorphism effect */
+.glass-effect {
+  background: rgba(26, 31, 44, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Premium gradients */
+.premium-gradient {
+  background: linear-gradient(135deg, rgba(155, 135, 245, 0.8), rgba(214, 188, 250, 0.8));
+}
+
+.premium-text {
+  background: linear-gradient(135deg, #9b87f5, #D6BCFA);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Premium shadow effects */
+.premium-shadow {
+  box-shadow: 0 8px 32px rgba(155, 135, 245, 0.15);
+}
+
+/* Premium glow effect */
+.premium-glow {
+  filter: drop-shadow(0 0 10px rgba(155, 135, 245, 0.3));
+}
+
+/* Indian Rupee styling - modified to avoid duplication */
 .indian-rupee::before {
   content: "₹";
   margin-right: 1px;
 }
+
+/* Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Enhanced hover effects for cards and buttons */
+.hover-scale {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation classes */
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered animations for lists */
+.staggered-item:nth-child(1) { animation-delay: 0.1s; }
+.staggered-item:nth-child(2) { animation-delay: 0.2s; }
+.staggered-item:nth-child(3) { animation-delay: 0.3s; }
+.staggered-item:nth-child(4) { animation-delay: 0.4s; }
+.staggered-item:nth-child(5) { animation-delay: 0.5s; }

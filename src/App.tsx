@@ -40,7 +40,13 @@ function App() {
             <BrowserRouter>
               <div className="flex min-h-screen w-full bg-[#1A1F2C]">
                 <AppSidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-                <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-[70px]' : 'ml-[230px]'}`}>
+                <div 
+                  className="flex-1 transition-all duration-300"
+                  style={{ 
+                    marginLeft: sidebarCollapsed ? '70px' : '230px',
+                    width: `calc(100% - ${sidebarCollapsed ? '70px' : '230px'})` 
+                  }}
+                >
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />

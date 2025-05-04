@@ -26,7 +26,7 @@ export const usePauseSession = () => {
 
       const now = new Date().toISOString();
       
-      // Update session with pause information
+      // Store the pause timestamp
       const { data: updatedSessionData, error: updateError } = await supabase
         .from('sessions')
         .update({
@@ -53,7 +53,7 @@ export const usePauseSession = () => {
         duration: updatedSessionData.duration,
         isPaused: updatedSessionData.is_paused,
         pausedAt: updatedSessionData.paused_at ? new Date(updatedSessionData.paused_at) : undefined,
-        totalPausedTime: updatedSessionData.total_paused_time
+        totalPausedTime: updatedSessionData.total_paused_time || 0
       };
 
       toast.success('Session paused successfully');
@@ -122,7 +122,7 @@ export const usePauseSession = () => {
         duration: updatedSessionData.duration,
         isPaused: updatedSessionData.is_paused,
         pausedAt: updatedSessionData.paused_at ? new Date(updatedSessionData.paused_at) : undefined,
-        totalPausedTime: updatedSessionData.total_paused_time
+        totalPausedTime: updatedSessionData.total_paused_time || 0
       };
 
       toast.success('Session resumed successfully');

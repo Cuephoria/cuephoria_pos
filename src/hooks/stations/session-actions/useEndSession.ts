@@ -40,9 +40,22 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes
+      // Calculate duration in minutes, accounting for pauses
       const startTime = new Date(session.startTime);
-      const durationMs = endTime.getTime() - startTime.getTime();
+      let durationMs = endTime.getTime() - startTime.getTime();
+      
+      // Subtract total paused time if it exists
+      if (session.totalPausedTime) {
+        durationMs -= session.totalPausedTime;
+      }
+      
+      // If currently paused, subtract the time since the pause started
+      if (session.isPaused && session.pausedAt) {
+        const pauseDurationMs = endTime.getTime() - session.pausedAt.getTime();
+        durationMs -= pauseDurationMs;
+      }
+      
+      // Convert to minutes and round up
       const durationMinutes = Math.ceil(durationMs / (1000 * 60));
       
       // Create updated session object
@@ -71,7 +84,9 @@ export const useEndSession = ({
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes
+            duration: durationMinutes,
+            is_paused: false, // Always set to false when ending
+            paused_at: null   // Clear the pause time
           })
           .eq('id', session.id);
           
@@ -120,7 +135,7 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost
+      // Calculate session cost based on actual duration (already adjusted for pauses)
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMs / (1000 * 60 * 60);
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
@@ -141,7 +156,10 @@ export const useEndSession = ({
         hoursPlayed,
         isMember,
         discountApplied,
-        sessionCost 
+        sessionCost,
+        totalPausedTime: session.totalPausedTime,
+        isPaused: session.isPaused,
+        pausedAt: session.pausedAt
       });
       
       // Create cart item for the session with discount info in the name if applicable

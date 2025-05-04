@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -28,6 +27,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     isPaused: boolean;
     totalPausedTime: number;
     pausedAt?: Date;
+    lastCost: number; // Store the last calculated cost for display when paused
   } | null>(null);
 
   useEffect(() => {
@@ -57,7 +57,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         hourlyRate: station.hourlyRate,
         isPaused: station.currentSession.isPaused || false,
         totalPausedTime: station.currentSession.totalPausedTime || 0,
-        pausedAt: station.currentSession.pausedAt
+        pausedAt: station.currentSession.pausedAt,
+        lastCost: 0 // Initialize last cost
       };
     }
 
@@ -104,6 +105,20 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
       }
       
+      // If paused, keep showing the last calculated cost
+      if (isPaused) {
+        if (sessionDataRef.current.lastCost === 0) {
+          // If we just paused, store the current cost
+          sessionDataRef.current.lastCost = calculatedCost;
+        }
+        calculatedCost = sessionDataRef.current.lastCost;
+      } else {
+        // Update the last cost when not paused
+        if (sessionDataRef.current) {
+          sessionDataRef.current.lastCost = calculatedCost;
+        }
+      }
+      
       setCost(calculatedCost);
       
       console.log("Timer update:", {
@@ -119,7 +134,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         hourlyRate: station.hourlyRate,
         isMember,
         discountApplied: isMember,
-        calculatedCost
+        calculatedCost,
+        pausedDisplayCost: isPaused ? sessionDataRef.current.lastCost : null
       });
     };
 
@@ -176,7 +192,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
                 hourlyRate: station.hourlyRate,
                 isPaused,
                 totalPausedTime,
-                pausedAt
+                pausedAt,
+                lastCost: 0
               };
             }
             
@@ -237,18 +254,20 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
       <div className="text-center relative">
-        {/* Show pause icon next to the timer */}
+        {/* Move the pause icon next to occupied status instead of timer */}
         <div className="flex items-center justify-center gap-3">
           <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block ${isPaused ? 'opacity-60' : ''}`}>
             {formatTimeDisplay()}
           </span>
-          {isPaused && (
-            <CirclePause className="h-8 w-8 text-cuephoria-orange animate-pulse" />
-          )}
         </div>
       </div>
       <div className="flex justify-between items-center">
-        <span className="text-white">Current Cost:</span>
+        <div className="flex items-center gap-2">
+          <span className="text-white">Current Cost:</span>
+          {isPaused && (
+            <CirclePause className="h-5 w-5 text-cuephoria-orange animate-pulse ml-1" />
+          )}
+        </div>
         <span className={`text-cuephoria-orange font-bold text-lg ${isPaused ? 'opacity-60' : ''}`}>
           ₹{Math.round(cost).toLocaleString('en-IN')}
         </span>

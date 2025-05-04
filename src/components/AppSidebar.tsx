@@ -127,7 +127,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
     );
   }
 
-  // Desktop version with collapsible sidebar
+  // Desktop version with collapsible sidebar - fixed position button
   return (
     <div 
       className={`bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0 z-50 transition-all duration-300 overflow-hidden ${
@@ -135,7 +135,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
       }`}
     >
       <div className="p-4 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-[#9b87f5] shadow-lg animate-pulse-soft">
+        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5] to-[#7661d7] shadow-lg animate-pulse-soft">
           <Gamepad2 className="h-7 w-7 text-white animate-scale-in" />
         </div>
         <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0' : 'animate-fade-in'}`}>
@@ -143,14 +143,15 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
         </span>
       </div>
       
-      <div className="absolute right-[-14px] top-10">
+      {/* Fixed position collapse button */}
+      <div className="absolute -right-3 top-10" style={{ transform: 'translateX(0)' }}>
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={toggleSidebar} 
-          className="rounded-full bg-[#252A37] border border-gray-700 h-8 w-8 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
+          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
         >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </Button>
       </div>
       
@@ -180,7 +181,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
             ) : (
               <Users className={`h-6 w-6 text-blue-400 ${collapsed ? 'mx-auto' : ''}`} />
             )}
-            <span className={`text-sm font-medium transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 h-0' : 'ml-2'}`}>
+            <span className={`text-sm font-medium transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0 h-0 overflow-hidden' : 'ml-2'}`}>
               {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
             </span>
           </div>
