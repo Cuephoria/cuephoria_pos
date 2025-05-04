@@ -50,9 +50,21 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply overflow-x-hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-quicksand;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Content wrapper for all main areas */
+  #root {
+    @apply overflow-x-hidden;
+    width: 100%;
   }
 }
 

@@ -60,9 +60,9 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full overflow-x-hidden">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-x-hidden">
           <div className="hidden md:block">
             <SidebarTrigger />
           </div>
