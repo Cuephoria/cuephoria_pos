@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -26,7 +27,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
   onDownload 
 }) => {
   const { expenses, businessSummary } = useExpenses();
-  const { bills, products } = usePOS();
+  const { bills, products, customers } = usePOS();
   
   // Current date for display
   const currentDate = new Date();
@@ -83,6 +84,9 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       return { category, total };
     }).sort((a, b) => b.total - a.total);
     
+    // Calculate total expenses
+    const totalExpenses = categoryTotals.reduce((sum, category) => sum + category.total, 0);
+    
     // Calculate ONLY game station sales (PS5, Pool and Metashot challenges)
     let ps5Sales = 0;
     let poolSales = 0;
@@ -134,11 +138,28 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       });
     });
     
+    // Calculate business health metrics
+    const totalRevenue = ps5Sales + poolSales + metashotSales + foodSales + beverageSales + tobaccoSales;
+    const netProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    
     const totalCanteenSales = foodSales + beverageSales + tobaccoSales;
     const totalGameSales = ps5Sales + poolSales + metashotSales;
     
+    // Calculate customer metrics for deeper insights
+    const activeCustomers = customers.filter(c => {
+      const hasRecentBill = filteredBills.some(bill => bill.customerId === c.id);
+      return hasRecentBill;
+    });
+    
+    // Calculate loyalty program efficiency
+    const totalLoyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
+    const totalLoyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
+    const loyaltyRedemptionRate = totalLoyaltyPointsEarned > 0 ? (totalLoyaltyPointsUsed / totalLoyaltyPointsEarned) * 100 : 0;
+    
     return {
       categoryTotals,
+      totalExpenses,
       gameSales: {
         ps5Sales,
         poolSales,
@@ -150,9 +171,18 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
         beverageSales,
         tobaccoSales,
         totalCanteenSales
+      },
+      businessHealth: {
+        totalRevenue,
+        netProfit,
+        profitMargin
+      },
+      customerInsights: {
+        activeCustomerCount: activeCustomers.length,
+        loyaltyRedemptionRate
       }
     };
-  }, [expenses, bills, products, startDate, endDate]);
+  }, [expenses, bills, products, customers, startDate, endDate]);
 
   // Format category name
   const formatCategory = (category: string) => {
@@ -187,19 +217,34 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Gross Income</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={businessSummary.grossIncome} />
+              <CurrencyDisplay amount={reportData.businessHealth.totalRevenue} />
+            </p>
+            <p className="text-xs text-gray-500">
+              {reportData.businessHealth.totalRevenue > 0
+                ? `${reportData.gameSales.totalGameSales / reportData.businessHealth.totalRevenue * 100 < 100
+                    ? `${(reportData.gameSales.totalGameSales / reportData.businessHealth.totalRevenue * 100).toFixed(0)}% from gaming`
+                    : '100% from gaming'}`
+                : ''}
             </p>
           </div>
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Total Expenses</h3>
             <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={businessSummary.totalExpenses} />
+              <CurrencyDisplay amount={reportData.totalExpenses} />
+            </p>
+            <p className="text-xs text-gray-500">
+              {reportData.categoryTotals.length > 0
+                ? `Largest: ${formatCategory(reportData.categoryTotals[0].category)}`
+                : 'No expenses recorded'}
             </p>
           </div>
           <div className="space-y-1.5">
             <h3 className="font-medium text-sm">Net Profit</h3>
-            <p className="text-2xl font-bold">
-              <CurrencyDisplay amount={businessSummary.netProfit} />
+            <p className={`text-2xl font-bold ${reportData.businessHealth.netProfit < 0 ? 'text-red-500' : ''}`}>
+              <CurrencyDisplay amount={reportData.businessHealth.netProfit} />
+            </p>
+            <p className="text-xs text-gray-500">
+              {reportData.businessHealth.profitMargin.toFixed(1)}% profit margin
             </p>
           </div>
         </div>
@@ -224,8 +269,8 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                         <CurrencyDisplay amount={total} />
                       </TableCell>
                       <TableCell>
-                        {businessSummary.totalExpenses 
-                          ? ((total / businessSummary.totalExpenses) * 100).toFixed(1) 
+                        {reportData.totalExpenses 
+                          ? ((total / reportData.totalExpenses) * 100).toFixed(1) 
                           : '0.0'}%
                       </TableCell>
                     </TableRow>
@@ -370,6 +415,76 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
               )}
             </TableBody>
           </Table>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <h3 className="font-semibold text-base mb-2">Revenue Distribution</h3>
+            <div className="bg-gray-900 rounded-lg p-4 h-48 flex items-center justify-center">
+              {reportData.businessHealth.totalRevenue > 0 ? (
+                <div className="w-full">
+                  <div className="w-full bg-gray-800 rounded-full h-6 overflow-hidden">
+                    <div 
+                      className="bg-blue-600 h-full" 
+                      style={{ 
+                        width: `${(reportData.gameSales.totalGameSales / reportData.businessHealth.totalRevenue) * 100}%` 
+                      }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between mt-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-blue-600 mr-2"></div>
+                        <span className="text-sm">Gaming Revenue</span>
+                      </div>
+                      <p className="font-medium">
+                        <CurrencyDisplay amount={reportData.gameSales.totalGameSales} /> 
+                        ({((reportData.gameSales.totalGameSales / reportData.businessHealth.totalRevenue) * 100).toFixed(1)}%)
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-gray-600 mr-2"></div>
+                        <span className="text-sm">Canteen Revenue</span>
+                      </div>
+                      <p className="font-medium">
+                        <CurrencyDisplay amount={reportData.canteenSales.totalCanteenSales} />
+                        ({((reportData.canteenSales.totalCanteenSales / reportData.businessHealth.totalRevenue) * 100).toFixed(1)}%)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">No revenue data available</p>
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="font-semibold text-base mb-2">Customer Insights</h3>
+            <div className="bg-gray-900 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                <span className="text-gray-400">Active Customers</span>
+                <span className="font-semibold">{reportData.customerInsights.activeCustomerCount}</span>
+              </div>
+              
+              <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                <span className="text-gray-400">Loyalty Redemption Rate</span>
+                <span className="font-semibold">{reportData.customerInsights.loyaltyRedemptionRate.toFixed(1)}%</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Avg Revenue per Customer</span>
+                <span className="font-semibold">
+                  <CurrencyDisplay 
+                    amount={reportData.customerInsights.activeCustomerCount > 0 ? 
+                      reportData.businessHealth.totalRevenue / reportData.customerInsights.activeCustomerCount : 0
+                    } 
+                  />
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

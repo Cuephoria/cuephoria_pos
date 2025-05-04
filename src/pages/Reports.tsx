@@ -236,14 +236,31 @@ const ReportsPage: React.FC = () => {
     }
   }, [deleteSession]);
   
-  // Calculate business summary metrics function
+  // Calculate business summary metrics function with enhanced metrics
   function calculateSummaryMetrics() {
     const { filteredBills } = filteredData;
     
-    // Financial metrics
+    // Financial metrics - Enhanced with more insights
     const totalRevenue = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
     const averageBillValue = filteredBills.length > 0 ? totalRevenue / filteredBills.length : 0;
     const totalDiscounts = filteredBills.reduce((sum, bill) => sum + (bill.discountValue || 0), 0);
+    const grossProfit = totalRevenue - (businessSummary?.totalExpenses || 0);
+    const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    
+    // Day with highest revenue
+    const revenueByDay: Record<string, number> = {};
+    let highestRevenue = 0;
+    let highestRevenueDay = '';
+    
+    filteredBills.forEach(bill => {
+      const day = format(new Date(bill.createdAt), 'yyyy-MM-dd');
+      revenueByDay[day] = (revenueByDay[day] || 0) + bill.total;
+      
+      if (revenueByDay[day] > highestRevenue) {
+        highestRevenue = revenueByDay[day];
+        highestRevenueDay = day;
+      }
+    });
     
     // Payment method breakdown
     const cashSales = filteredBills
@@ -254,38 +271,90 @@ const ReportsPage: React.FC = () => {
       .filter(bill => bill.paymentMethod === 'upi')
       .reduce((sum, bill) => sum + bill.total, 0);
     
-    // Operational metrics
+    const cashPercentage = totalRevenue > 0 ? (cashSales / totalRevenue) * 100 : 0;
+    const upiPercentage = totalRevenue > 0 ? (upiSales / totalRevenue) * 100 : 0;
+    
+    // Operational metrics - Enhanced with more insights
     const totalTransactions = filteredBills.length;
     const activeSessions = sessions.filter(s => s.endTime === null).length;
     const completedSessions = filteredData.filteredSessions.filter(s => s.endTime !== null).length;
     
-    // Find most popular product - reduce complexity by doing a single loop
+    // Calculate average session duration
+    let totalSessionDuration = 0;
+    let sessionsWithDuration = 0;
+    
+    filteredData.filteredSessions.forEach(session => {
+      if (session.endTime) {
+        const startMs = new Date(session.startTime).getTime();
+        const endMs = new Date(session.endTime).getTime();
+        const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+        totalSessionDuration += durationMinutes;
+        sessionsWithDuration++;
+      } else if (session.duration) {
+        totalSessionDuration += session.duration;
+        sessionsWithDuration++;
+      }
+    });
+    
+    const avgSessionDuration = sessionsWithDuration > 0 ? 
+      Math.round(totalSessionDuration / sessionsWithDuration) : 0;
+    
+    // Calculate peak hours (hour with most session starts)
+    const sessionsByHour: Record<number, number> = {};
+    let peakHour = 0;
+    let peakHourCount = 0;
+    
+    filteredData.filteredSessions.forEach(session => {
+      const hour = new Date(session.startTime).getHours();
+      sessionsByHour[hour] = (sessionsByHour[hour] || 0) + 1;
+      
+      if (sessionsByHour[hour] > peakHourCount) {
+        peakHourCount = sessionsByHour[hour];
+        peakHour = hour;
+      }
+    });
+    
+    // Format peak hour for display
+    const formattedPeakHour = peakHour < 12 ? 
+      `${peakHour}:00 AM` : 
+      `${peakHour === 12 ? 12 : peakHour - 12}:00 PM`;
+    
+    // Calculate days since last restock (rough estimate from expenses)
+    const restockExpenses = expenses
+      .filter(e => e.category.toLowerCase() === 'restock')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    const daysSinceRestock = restockExpenses.length > 0 ? 
+      Math.floor((new Date().getTime() - new Date(restockExpenses[0].date).getTime()) / (1000 * 3600 * 24)) : 
+      null;
+    
+    // Find most popular product
     const productFrequency: Record<string, number> = {};
     let mostPopularProductId = '';
     let maxFrequency = 0;
     
     filteredBills.forEach(bill => {
       bill.items.forEach(item => {
-        const newFreq = (productFrequency[item.id] || 0) + item.quantity;
-        productFrequency[item.id] = newFreq;
-        
-        if (newFreq > maxFrequency) {
-          mostPopularProductId = item.id;
-          maxFrequency = newFreq;
+        if (item.type === 'product') {
+          const newFreq = (productFrequency[item.id] || 0) + item.quantity;
+          productFrequency[item.id] = newFreq;
+          
+          if (newFreq > maxFrequency) {
+            mostPopularProductId = item.id;
+            maxFrequency = newFreq;
+          }
         }
       });
     });
     
     const mostPopularProduct = products.find(p => p.id === mostPopularProductId)?.name || 'None';
     
-    // Customer metrics
-    const totalCustomers = filteredData.filteredCustomers.length;
-    const memberCount = filteredData.filteredCustomers.filter(c => c.isMember).length;
-    const nonMemberCount = filteredData.filteredCustomers.filter(c => !c.isMember).length;
-    
-    // Loyalty metrics
-    const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
-    const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
+    // Calculate total units sold
+    const totalUnitsSold = filteredBills.reduce((sum, bill) => {
+      return sum + bill.items.reduce((itemSum, item) => {
+        return item.type === 'product' ? itemSum + item.quantity : itemSum;
+      }, 0);
+    }, 0);
     
     // Gaming metrics - calculate PS5 vs Pool vs Metashot revenue taking discounts into account
     let ps5Sales = 0;
@@ -300,8 +369,8 @@ const ReportsPage: React.FC = () => {
         // Apply proportional discount to each item
         const discountedItemTotal = item.total * discountRatio;
         
-        // Include PS5 and Pool sessions in gaming revenue
         if (item.type === 'session') {
+          // Include PS5 and Pool sessions in gaming revenue
           const itemName = item.name.toLowerCase();
           if (itemName.includes('ps5') || itemName.includes('playstation')) {
             ps5Sales += discountedItemTotal;
@@ -325,26 +394,111 @@ const ReportsPage: React.FC = () => {
       });
     });
     
+    // Calculate usage rates for PS5 stations
+    const ps5Sessions = filteredData.filteredSessions.filter(s => {
+      const station = stations?.find(st => st.id === s.stationId);
+      return station?.type?.toLowerCase()?.includes('ps5') || 
+             station?.name?.toLowerCase()?.includes('ps5') ||
+             station?.name?.toLowerCase()?.includes('playstation');
+    });
+    
+    const ps5UsageRate = ps5Sessions.length > 0 ? 
+      Math.round((ps5Sessions.filter(s => s.endTime).length / ps5Sessions.length) * 100) : 0;
+    
+    // Customer metrics - Enhanced with more insights
+    const totalCustomers = filteredData.filteredCustomers.length;
+    const memberCount = filteredData.filteredCustomers.filter(c => c.isMember).length;
+    const nonMemberCount = filteredData.filteredCustomers.filter(c => !c.isMember).length;
+    const membershipRate = totalCustomers > 0 ? (memberCount / totalCustomers) * 100 : 0;
+    
+    // Calculate average spend per customer
+    const avgSpendPerCustomer = totalCustomers > 0 ? totalRevenue / totalCustomers : 0;
+    
+    // Find top customer
+    const customerSpending: Record<string, number> = {};
+    let topCustomerId = '';
+    let topCustomerSpend = 0;
+    
+    filteredBills.forEach(bill => {
+      if (bill.customerId) {
+        customerSpending[bill.customerId] = (customerSpending[bill.customerId] || 0) + bill.total;
+        
+        if (customerSpending[bill.customerId] > topCustomerSpend) {
+          topCustomerId = bill.customerId;
+          topCustomerSpend = customerSpending[bill.customerId];
+        }
+      }
+    });
+    
+    const topCustomer = customers.find(c => c.id === topCustomerId)?.name || 'None';
+    
+    // Calculate customer retention (rough estimate - returning customers)
+    const customersWithMultipleBills: Record<string, boolean> = {};
+    const customerBillCounts: Record<string, number> = {};
+    
+    filteredBills.forEach(bill => {
+      if (bill.customerId) {
+        customerBillCounts[bill.customerId] = (customerBillCounts[bill.customerId] || 0) + 1;
+        if (customerBillCounts[bill.customerId] > 1) {
+          customersWithMultipleBills[bill.customerId] = true;
+        }
+      }
+    });
+    
+    const returningCustomers = Object.keys(customersWithMultipleBills).length;
+    const retentionRate = totalCustomers > 0 ? 
+      (returningCustomers / totalCustomers) * 100 : 0;
+      
+    // Loyalty metrics
+    const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
+    const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
+    const loyaltyUsageRate = loyaltyPointsEarned > 0 ?
+      (loyaltyPointsUsed / loyaltyPointsEarned) * 100 : 0;
+    
+    // Calculate loyalty points per rupee spent
+    const loyaltyPointsPerRupee = totalRevenue > 0 ? 
+      loyaltyPointsEarned / totalRevenue : 0;
+    
     return {
       financial: {
         totalRevenue,
         averageBillValue,
         totalDiscounts,
         cashSales,
-        upiSales
+        upiSales,
+        cashPercentage,
+        upiPercentage,
+        grossProfit,
+        profitMargin,
+        highestRevenueDay: highestRevenueDay ? format(new Date(highestRevenueDay), 'dd MMM yyyy') : 'None',
+        highestRevenue
       },
       operational: {
         totalTransactions,
         activeSessions,
         completedSessions,
-        mostPopularProduct
+        avgSessionDuration,
+        peakHour: formattedPeakHour,
+        peakHourCount,
+        mostPopularProduct,
+        daysSinceRestock,
+        totalUnitsSold,
+        ps5UsageRate
       },
       customer: {
         totalCustomers,
         memberCount,
         nonMemberCount,
+        membershipRate,
+        avgSpendPerCustomer,
+        topCustomer,
+        topCustomerSpend,
+        returningCustomers,
+        retentionRate,
         loyaltyPointsUsed,
-        loyaltyPointsEarned
+        loyaltyPointsEarned,
+        loyaltyUsageRate,
+        loyaltyPointsPerRupee
       },
       gaming: {
         ps5Sales,
@@ -810,7 +964,7 @@ const ReportsPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Financial Metrics */}
+            {/* Financial Metrics - Enhanced */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">Financial Metrics</h3>
               
@@ -849,10 +1003,45 @@ const ReportsPage: React.FC = () => {
                     <CurrencyDisplay amount={summaryMetrics.financial.upiSales} />
                   </span>
                 </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Cash Payment %</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.financial.cashPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">UPI Payment %</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.financial.upiPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Gross Profit</span>
+                  <span className="font-semibold text-white">
+                    <CurrencyDisplay amount={summaryMetrics.financial.grossProfit} />
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Profit Margin</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.financial.profitMargin.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Best Revenue Day</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.financial.highestRevenueDay}
+                  </span>
+                </div>
               </div>
             </div>
             
-            {/* Operational Metrics */}
+            {/* Operational Metrics - Enhanced */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">Operational Metrics</h3>
               
@@ -873,8 +1062,37 @@ const ReportsPage: React.FC = () => {
                 </div>
                 
                 <div className="flex justify-between">
+                  <span className="text-gray-400">Avg. Session Duration</span>
+                  <span className="font-semibold text-white">
+                    {Math.floor(summaryMetrics.operational.avgSessionDuration / 60)}h {summaryMetrics.operational.avgSessionDuration % 60}m
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Peak Business Hour</span>
+                  <span className="font-semibold text-white">{summaryMetrics.operational.peakHour}</span>
+                </div>
+                
+                <div className="flex justify-between">
                   <span className="text-gray-400">Most Popular Product</span>
                   <span className="font-semibold text-white">{summaryMetrics.operational.mostPopularProduct}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total Units Sold</span>
+                  <span className="font-semibold text-white">{summaryMetrics.operational.totalUnitsSold}</span>
+                </div>
+                
+                {summaryMetrics.operational.daysSinceRestock !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Days Since Restock</span>
+                    <span className="font-semibold text-white">{summaryMetrics.operational.daysSinceRestock}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">PS5 Usage Rate</span>
+                  <span className="font-semibold text-white">{summaryMetrics.operational.ps5UsageRate}%</span>
                 </div>
                 
                 <div className="flex justify-between">
@@ -907,7 +1125,7 @@ const ReportsPage: React.FC = () => {
               </div>
             </div>
             
-            {/* Customer Metrics */}
+            {/* Customer Metrics - Enhanced */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">Customer Metrics</h3>
               
@@ -928,6 +1146,44 @@ const ReportsPage: React.FC = () => {
                 </div>
                 
                 <div className="flex justify-between">
+                  <span className="text-gray-400">Membership Rate</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.customer.membershipRate.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Avg. Spend per Customer</span>
+                  <span className="font-semibold text-white">
+                    <CurrencyDisplay amount={summaryMetrics.customer.avgSpendPerCustomer} />
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Top Customer</span>
+                  <span className="font-semibold text-white">{summaryMetrics.customer.topCustomer}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Top Customer Spend</span>
+                  <span className="font-semibold text-white">
+                    <CurrencyDisplay amount={summaryMetrics.customer.topCustomerSpend} />
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Returning Customers</span>
+                  <span className="font-semibold text-white">{summaryMetrics.customer.returningCustomers}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Customer Retention</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.customer.retentionRate.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
                   <span className="text-gray-400">Loyalty Points Used</span>
                   <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsUsed}</span>
                 </div>
@@ -935,6 +1191,13 @@ const ReportsPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-400">Loyalty Points Earned</span>
                   <span className="font-semibold text-white">{summaryMetrics.customer.loyaltyPointsEarned}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Loyalty Usage Rate</span>
+                  <span className="font-semibold text-white">
+                    {summaryMetrics.customer.loyaltyUsageRate.toFixed(1)}%
+                  </span>
                 </div>
               </div>
             </div>
