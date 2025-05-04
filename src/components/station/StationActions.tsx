@@ -145,7 +145,7 @@ const StationActions: React.FC<StationActionsProps> = ({
       <div className="space-y-3 w-full">
         <Button 
           variant="secondary" 
-          className={`w-full text-white font-bold py-3 ${isPaused 
+          className={`w-full text-white font-bold py-3 rounded-lg ${isPaused 
             ? 'bg-green-600 hover:bg-green-700' 
             : 'bg-amber-500 hover:bg-amber-600'}`}
           onClick={handlePauseResumeSession}
@@ -162,7 +162,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         
         <Button 
           variant="destructive" 
-          className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
+          className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity rounded-lg"
           onClick={handleEndSession}
           disabled={isLoading}
         >
@@ -180,7 +180,7 @@ const StationActions: React.FC<StationActionsProps> = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between mb-3"
+            className="w-full justify-between mb-3 rounded-lg"
             disabled={customers.length === 0}
           >
             {selectedCustomerId ? (
@@ -191,9 +191,9 @@ const StationActions: React.FC<StationActionsProps> = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
+        <PopoverContent className="w-full p-0 rounded-lg">
           <Command>
-            <CommandInput placeholder="Search customers..." />
+            <CommandInput placeholder="Search customers..." className="rounded-t-lg" />
             <CommandEmpty>No customer found.</CommandEmpty>
             <CommandGroup>
               <CommandList>
@@ -205,6 +205,7 @@ const StationActions: React.FC<StationActionsProps> = ({
                       setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
                       setOpen(false);
                     }}
+                    className="rounded-md"
                   >
                     <Check
                       className={cn(
@@ -229,7 +230,7 @@ const StationActions: React.FC<StationActionsProps> = ({
 
       <Button 
         variant="default" 
-        className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
+        className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity rounded-lg"
         disabled={!selectedCustomerId || isLoading || customers.length === 0} 
         onClick={handleStartSession}
       >

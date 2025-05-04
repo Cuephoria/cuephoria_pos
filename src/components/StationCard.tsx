@@ -52,7 +52,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
     <>
       <Card 
         className={`
-          relative overflow-hidden card-hover animate-scale-in h-full
+          relative overflow-hidden card-hover animate-scale-in h-full rounded-xl
           ${station.isOccupied 
             ? customer?.isMember 
               ? 'border-green-500 bg-black/80' 
@@ -61,7 +61,6 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
               ? 'border-green-500 bg-gradient-to-b from-green-900/30 to-green-950/40' 
               : 'border-cuephoria-purple bg-gradient-to-b from-cuephoria-purple/20 to-black/50'
           }
-          ${isPoolTable ? 'rounded-xl' : 'rounded-lg'}
         `}
       >
         {/* Visual elements to enhance the appearance */}
@@ -101,7 +100,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                 variant="ghost" 
                 size="icon" 
                 className={`
-                  h-8 w-8 shrink-0 
+                  h-8 w-8 shrink-0 rounded-lg
                   ${isPoolTable 
                     ? 'text-green-300 hover:text-blue-500 hover:bg-green-950/50' 
                     : 'text-cuephoria-lightpurple hover:text-blue-500 hover:bg-cuephoria-purple/20'
@@ -118,7 +117,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                     variant="ghost" 
                     size="icon" 
                     className={`
-                      h-8 w-8 shrink-0 
+                      h-8 w-8 shrink-0 rounded-lg
                       ${isPoolTable 
                         ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
                         : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
@@ -129,7 +128,7 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className={isPoolTable ? 'border-green-500' : 'border-cuephoria-purple'}>
+                <AlertDialogContent className={isPoolTable ? 'border-green-500 rounded-xl' : 'border-cuephoria-purple rounded-xl'}>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete Station</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -137,10 +136,10 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
                     <AlertDialogAction 
                       onClick={handleDeleteStation}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg"
                     >
                       Delete
                     </AlertDialogAction>

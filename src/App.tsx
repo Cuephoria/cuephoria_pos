@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/AuthContext';
@@ -26,6 +26,12 @@ import Index from '@/pages/Index';
 import '@/App.css';
 
 function App() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   return (
     <AuthProvider>
       <POSProvider>
@@ -33,8 +39,8 @@ function App() {
           <TooltipProvider>
             <BrowserRouter>
               <div className="flex min-h-screen w-full bg-[#1A1F2C]">
-                <AppSidebar />
-                <div className="flex-1 ml-[230px]">
+                <AppSidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+                <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-[70px]' : 'ml-[230px]'}`}>
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />

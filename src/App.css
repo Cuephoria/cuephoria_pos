@@ -6,3 +6,45 @@
   text-align: left;
   background-color: #1A1F2C;
 }
+
+/* Global rounded corners for cards and buttons */
+.card, .rounded-lg {
+  border-radius: 12px !important;
+}
+
+.rounded-md {
+  border-radius: 8px !important;
+}
+
+/* Button styles */
+.btn-theme {
+  background-color: #9b87f5 !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.btn-theme:hover {
+  background-color: #8a76e4 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(155, 135, 245, 0.3);
+}
+
+/* Logo animations */
+@keyframes pulse-soft {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.logo-pulse {
+  animation: pulse-soft 3s infinite ease-in-out;
+}
+
+/* Indian Rupee styling */
+.indian-rupee::before {
+  content: "₹";
+  margin-right: 1px;
+}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
     };
     
     return categoryColorMap[category] || 'bg-gray-500';
+  };
+
+  const getButtonStyle = (category: string) => {
+    const categoryStyleMap: Record<string, string> = {
+      'food': 'bg-cuephoria-orange hover:bg-cuephoria-orange/90',
+      'drinks': 'bg-cuephoria-blue hover:bg-cuephoria-blue/90',
+      'tobacco': 'bg-red-500 hover:bg-red-600',
+      'challenges': 'bg-green-500 hover:bg-green-600',
+      'membership': 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700',
+    };
+    
+    return categoryStyleMap[category] || 'bg-[#9b87f5] hover:bg-[#9b87f5]/90';
   };
 
   const handleAddToCart = () => {
@@ -101,7 +114,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const nameTooLong = product.name.length > 18;
 
   return (
-    <Card className={`flex flex-col h-full card-hover transition-all ${className} shadow-md`}>
+    <Card className={`flex flex-col h-full card-hover transition-all ${className} shadow-md rounded-lg`}>
       <CardHeader className="pb-2 space-y-1">
         <div className="flex justify-between items-center">
           <Tooltip>
@@ -200,7 +213,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex-1 justify-center"
+              className="flex-1 justify-center rounded-lg"
               onClick={() => onEdit && onEdit(product)}
             >
               <Edit className="h-4 w-4 mr-2" /> Edit
@@ -208,7 +221,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button 
               variant="destructive" 
               size="sm" 
-              className="flex-1 justify-center"
+              className="flex-1 justify-center rounded-lg"
               onClick={() => onDelete && onDelete(product.id)}
             >
               <Trash className="h-4 w-4 mr-2" /> Delete
@@ -217,7 +230,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         ) : (
           <Button 
             variant="default" 
-            className={`w-full ${product.category === 'membership' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700' : ''}`}
+            className={`w-full rounded-lg ${getButtonStyle(product.category)}`}
             disabled={isOutOfStock}
             onClick={handleAddToCart}
           >

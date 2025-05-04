@@ -237,18 +237,21 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
       <div className="text-center relative">
-        <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full ${isPaused ? 'opacity-60' : ''}`}>
-          {formatTimeDisplay()}
-        </span>
-        {isPaused && (
-          <div className="absolute inset-0 flex items-center justify-center">
+        {/* Show pause icon next to the timer */}
+        <div className="flex items-center justify-center gap-3">
+          <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block ${isPaused ? 'opacity-60' : ''}`}>
+            {formatTimeDisplay()}
+          </span>
+          {isPaused && (
             <CirclePause className="h-8 w-8 text-cuephoria-orange animate-pulse" />
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <div className="flex justify-between items-center">
         <span className="text-white">Current Cost:</span>
-        <CurrencyDisplay amount={cost} className={`text-cuephoria-orange font-bold text-lg ${isPaused ? 'opacity-60' : ''}`} />
+        <span className={`text-cuephoria-orange font-bold text-lg ${isPaused ? 'opacity-60' : ''}`}>
+          ₹{Math.round(cost).toLocaleString('en-IN')}
+        </span>
       </div>
     </div>
   );

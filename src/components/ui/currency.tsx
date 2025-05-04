@@ -15,9 +15,7 @@ export const formatCurrency = (amount: number, showDecimals: boolean = false): s
 };
 
 export function CurrencyDisplay({ amount, className, showDecimals = false }: CurrencyDisplayProps) {
-  const formattedAmount = showDecimals 
-    ? amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : Math.round(amount).toLocaleString('en-IN');
+  const formattedAmount = formatCurrency(amount, showDecimals);
     
   return (
     <span className={cn("indian-rupee", className)}>
