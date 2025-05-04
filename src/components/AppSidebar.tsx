@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -127,7 +126,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
     );
   }
 
-  // Desktop version with collapsible sidebar - fixed position button
+  // Desktop version with collapsible sidebar
   return (
     <div 
       className={`bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0 z-50 transition-all duration-300 overflow-hidden ${
@@ -144,14 +143,14 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
       </div>
       
       {/* Repositioned collapse button to be fully visible */}
-      <div className="absolute -right-4 top-10" style={{ zIndex: 60 }}>
+      <div className="absolute right-0 top-10 flex justify-center items-center">
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={toggleSidebar} 
-          className="rounded-full bg-[#252A37] border border-gray-700 h-8 w-8 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
+          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
         >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </Button>
       </div>
       
