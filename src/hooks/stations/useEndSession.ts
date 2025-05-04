@@ -2,7 +2,7 @@
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
-import { SessionActionsProps } from '../session-actions/types';
+import { SessionActionsProps } from './session-actions/types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
 
@@ -40,10 +40,12 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes
+      // Calculate duration in minutes - ensure minimum 1 minute
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+      const durationMinutes = Math.max(1, Math.round(durationMs / (1000 * 60)));
+      
+      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -120,9 +122,9 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost
+      // Calculate session cost using hourly rate and accurate time calculation
       const stationRate = station.hourlyRate;
-      const hoursPlayed = durationMs / (1000 * 60 * 60);
+      const hoursPlayed = durationMinutes / 60; // Convert minutes to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts

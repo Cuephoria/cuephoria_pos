@@ -27,7 +27,7 @@ export interface Customer {
   membershipDuration?: 'weekly' | 'monthly';
   loyaltyPoints: number;
   totalSpent: number;
-  totalPlayTime: number; // Ensure this is always a number, not undefined
+  totalPlayTime: number;
   createdAt: Date;
 }
 
@@ -47,10 +47,6 @@ export interface Session {
   startTime: Date;
   endTime?: Date;
   duration?: number; // in minutes
-  isPaused?: boolean;
-  pausedAt?: Date;
-  totalPausedTime?: number; // in milliseconds
-  status?: 'active' | 'paused' | 'completed';
 }
 
 export interface CartItem {

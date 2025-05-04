@@ -19,8 +19,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
             ...customer,
             createdAt: new Date(customer.createdAt),
             membershipStartDate: customer.membershipStartDate ? new Date(customer.membershipStartDate) : undefined,
-            membershipExpiryDate: customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate) : undefined,
-            totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0 // Ensure totalPlayTime is a number
+            membershipExpiryDate: customer.membershipExpiryDate ? new Date(customer.membershipExpiryDate) : undefined
           }));
           
           setCustomers(customersWithDates);
@@ -39,7 +38,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
                 membership_duration: customer.membershipDuration,
                 loyalty_points: customer.loyaltyPoints,
                 total_spent: customer.totalSpent,
-                total_play_time: customer.totalPlayTime, // Ensure this is a number
+                total_play_time: customer.totalPlayTime,
                 created_at: customer.createdAt.toISOString()
               }, 
               { onConflict: 'id' }
@@ -65,27 +64,22 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
         
         if (data && data.length > 0) {
-          const transformedCustomers = data.map(item => {
-            // Log each customer's play time as we load it
-            console.log(`Loading customer ${item.name}, database totalPlayTime:`, item.total_play_time);
-            
-            return {
-              id: item.id,
-              name: item.name,
-              phone: item.phone,
-              email: item.email || undefined,
-              isMember: item.is_member,
-              membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
-              membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
-              membershipPlan: item.membership_plan || undefined,
-              membershipHoursLeft: item.membership_hours_left || undefined,
-              membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
-              loyaltyPoints: item.loyalty_points,
-              totalSpent: item.total_spent,
-              totalPlayTime: typeof item.total_play_time === 'number' ? item.total_play_time : 0, // Ensure this is always a number
-              createdAt: new Date(item.created_at)
-            };
-          });
+          const transformedCustomers = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            phone: item.phone,
+            email: item.email || undefined,
+            isMember: item.is_member,
+            membershipExpiryDate: item.membership_expiry_date ? new Date(item.membership_expiry_date) : undefined,
+            membershipStartDate: item.membership_start_date ? new Date(item.membership_start_date) : undefined,
+            membershipPlan: item.membership_plan || undefined,
+            membershipHoursLeft: item.membership_hours_left || undefined,
+            membershipDuration: item.membership_duration as 'weekly' | 'monthly' | undefined,
+            loyaltyPoints: item.loyalty_points,
+            totalSpent: item.total_spent,
+            totalPlayTime: item.total_play_time,
+            createdAt: new Date(item.created_at)
+          }));
           
           setCustomers(transformedCustomers);
         } else {
@@ -311,47 +305,23 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
-      // Ensure totalPlayTime is always a number and log it for debugging
-      const safePlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
-      
-      // Create an updated customer with safe values
-      const updatedCustomer = {
-        ...customer,
-        totalPlayTime: safePlayTime
-      };
-      
-      console.log(`useCustomers.updateCustomer: Updating customer ${updatedCustomer.name} in database:`, { 
-        id: updatedCustomer.id,
-        totalPlayTime: {
-          original: customer.totalPlayTime,
-          type: typeof customer.totalPlayTime,
-          safeValue: safePlayTime
-        }
-      });
-      
-      // Ensure we're sending the correct data to Supabase
-      const supabaseUpdateData = {
-        name: updatedCustomer.name,
-        phone: updatedCustomer.phone,
-        email: updatedCustomer.email,
-        is_member: updatedCustomer.isMember,
-        membership_expiry_date: updatedCustomer.membershipExpiryDate?.toISOString(),
-        membership_start_date: updatedCustomer.membershipStartDate?.toISOString(),
-        membership_plan: updatedCustomer.membershipPlan,
-        membership_hours_left: updatedCustomer.membershipHoursLeft,
-        membership_duration: updatedCustomer.membershipDuration,
-        loyalty_points: updatedCustomer.loyaltyPoints,
-        total_spent: updatedCustomer.totalSpent,
-        total_play_time: safePlayTime  // Using the safe value here
-      };
-      
-      console.log("Full update payload to Supabase:", supabaseUpdateData);
-      
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('customers')
-        .update(supabaseUpdateData)
-        .eq('id', updatedCustomer.id)
-        .select();
+        .update({
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          is_member: customer.isMember,
+          membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
+          membership_start_date: customer.membershipStartDate?.toISOString(),
+          membership_plan: customer.membershipPlan,
+          membership_hours_left: customer.membershipHoursLeft,
+          membership_duration: customer.membershipDuration,
+          loyalty_points: customer.loyaltyPoints,
+          total_spent: customer.totalSpent,
+          total_play_time: customer.totalPlayTime
+        })
+        .eq('id', customer.id);
         
       if (error) {
         console.error('Error updating customer:', error);
@@ -363,25 +333,18 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return null;
       }
       
-      console.log("Supabase update response:", data);
+      setCustomers(customers.map(c => c.id === customer.id ? customer : c));
       
-      // Update local state after successful database update
-      setCustomers(customers.map(c => 
-        c.id === updatedCustomer.id ? updatedCustomer : c
-      ));
-      
-      if (selectedCustomer && selectedCustomer.id === updatedCustomer.id) {
-        setSelectedCustomer(updatedCustomer);
+      if (selectedCustomer && selectedCustomer.id === customer.id) {
+        setSelectedCustomer(customer);
       }
-      
-      console.log(`Successfully updated customer ${updatedCustomer.name}, totalPlayTime: ${updatedCustomer.totalPlayTime}`);
       
       toast({
         title: 'Success',
         description: 'Customer updated successfully',
       });
       
-      return updatedCustomer;
+      return customer;
     } catch (error) {
       console.error('Error in updateCustomer:', error);
       toast({

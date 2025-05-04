@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,26 +28,11 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return new Date(date).toLocaleDateString('en-IN');
   };
 
-  // Simple time formatting that works with any number of minutes
   const formatTime = (minutes: number) => {
-    // Ensure minutes is treated as a number
-    const mins = Number(minutes);
-    
-    if (isNaN(mins) || mins === 0) return '0h 0m';
-    
-    const hours = Math.floor(mins / 60);
-    const remainingMins = Math.floor(mins % 60);
-    
-    console.log(`Formatting time for ${customer.name}: ${mins} minutes = ${hours}h ${remainingMins}m (raw totalPlayTime: ${customer.totalPlayTime}, type: ${typeof customer.totalPlayTime})`);
-    
-    return `${hours}h ${remainingMins}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
-
-  // Ensure totalPlayTime is always a number before formatting
-  const safePlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
-  const playTimeDisplay = formatTime(safePlayTime);
-  
-  console.log(`CustomerCard: ${customer.name} has totalPlayTime: ${customer.totalPlayTime} (${typeof customer.totalPlayTime}), using safe value: ${safePlayTime}, displaying as: ${playTimeDisplay}`);
 
   return (
     <Card>
@@ -132,7 +116,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <span className="flex items-center">
               <Clock className="h-4 w-4 mr-1" /> Play Time:
             </span>
-            <span className="text-emerald-500 font-medium">{playTimeDisplay}</span>
+            <span>{formatTime(customer.totalPlayTime)}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Joined:</span>
