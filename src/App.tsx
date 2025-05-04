@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/AuthContext';
 import { POSProvider } from '@/context/POSContext';
@@ -24,26 +24,6 @@ import Index from '@/pages/Index';
 
 // Import CSS
 import '@/App.css';
-
-// PageTransition wrapper component
-const PageTransition = ({ children }: { children: React.ReactNode }) => {
-  const location = useLocation();
-  
-  // Apply different animation classes based on the path
-  const getAnimationClass = (path: string) => {
-    if (path.includes('/products')) return 'animate-fade-in-up';
-    if (path.includes('/customers')) return 'animate-fade-in-up';
-    if (path.includes('/reports')) return 'animate-fade-in-up';
-    if (path.includes('/settings')) return 'animate-fade-in-up';
-    return 'animate-fade-in';
-  };
-
-  return (
-    <div key={location.pathname} className={`h-full w-full ${getAnimationClass(location.pathname)}`}>
-      {children}
-    </div>
-  );
-};
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -70,41 +50,13 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
-                    <Route path="/dashboard" element={
-                      <PageTransition>
-                        <Dashboard />
-                      </PageTransition>
-                    } />
-                    <Route path="/pos" element={
-                      <PageTransition>
-                        <POS />
-                      </PageTransition>
-                    } />
-                    <Route path="/products" element={
-                      <PageTransition>
-                        <Products />
-                      </PageTransition>
-                    } />
-                    <Route path="/customers" element={
-                      <PageTransition>
-                        <Customers />
-                      </PageTransition>
-                    } />
-                    <Route path="/stations" element={
-                      <PageTransition>
-                        <Stations />
-                      </PageTransition>
-                    } />
-                    <Route path="/reports" element={
-                      <PageTransition>
-                        <Products />
-                      </PageTransition>
-                    } />
-                    <Route path="/settings" element={
-                      <PageTransition>
-                        <Settings />
-                      </PageTransition>
-                    } />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/pos" element={<POS />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/customers" element={<Customers />} />
+                    <Route path="/stations" element={<Stations />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </div>
