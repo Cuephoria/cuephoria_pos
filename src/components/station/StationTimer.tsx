@@ -5,6 +5,7 @@ import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
+import { CirclePause } from 'lucide-react';
 
 interface StationTimerProps {
   station: Station;
@@ -24,6 +25,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     stationId: string;
     customerId: string;
     hourlyRate: number;
+    isPaused: boolean;
+    totalPausedTime: number;
+    pausedAt?: Date;
   } | null>(null);
 
   useEffect(() => {
@@ -44,13 +48,16 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     }
 
     // Store the session data in ref to maintain persistence across renders
-    if (station.currentSession && !sessionDataRef.current) {
+    if (station.currentSession) {
       sessionDataRef.current = {
         sessionId: station.currentSession.id,
         startTime: new Date(station.currentSession.startTime),
         stationId: station.id,
         customerId: station.currentSession.customerId,
-        hourlyRate: station.hourlyRate
+        hourlyRate: station.hourlyRate,
+        isPaused: station.currentSession.isPaused || false,
+        totalPausedTime: station.currentSession.totalPausedTime || 0,
+        pausedAt: station.currentSession.pausedAt
       };
     }
 
@@ -62,9 +69,23 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     const updateTimerFromLocalData = () => {
       if (!sessionDataRef.current) return;
       
-      const startTime = sessionDataRef.current.startTime;
+      const { startTime, isPaused, totalPausedTime, pausedAt } = sessionDataRef.current;
       const now = new Date();
-      const elapsedMs = now.getTime() - startTime.getTime();
+      
+      // Calculate elapsed time accounting for pauses
+      let elapsedMs = now.getTime() - startTime.getTime();
+      
+      // Subtract total paused time
+      elapsedMs -= totalPausedTime;
+      
+      // If currently paused, subtract the time since pause started
+      if (isPaused && pausedAt) {
+        const currentPauseMs = now.getTime() - pausedAt.getTime();
+        elapsedMs -= currentPauseMs;
+      }
+      
+      // Don't allow negative time
+      elapsedMs = Math.max(0, elapsedMs);
       
       const secondsTotal = Math.floor(elapsedMs / 1000);
       const minutesTotal = Math.floor(secondsTotal / 60);
@@ -89,6 +110,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         sessionId: sessionDataRef.current.sessionId,
         startTime: startTime.toISOString(),
         elapsedMs,
+        isPaused,
+        totalPausedTime,
+        pausedAt: pausedAt?.toISOString(),
         secondsTotal,
         minutesTotal,
         hoursTotal,
@@ -126,18 +150,33 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           
           if (sessionData && sessionData.start_time) {
             const startTime = new Date(sessionData.start_time);
-            console.log("Session start time from Supabase:", startTime);
+            const isPaused = sessionData.is_paused || false;
+            const totalPausedTime = sessionData.total_paused_time || 0;
+            const pausedAt = sessionData.paused_at ? new Date(sessionData.paused_at) : undefined;
+            
+            console.log("Session data from Supabase:", {
+              startTime,
+              isPaused,
+              totalPausedTime,
+              pausedAt
+            });
             
             // Update the sessionDataRef with data from Supabase
             if (sessionDataRef.current) {
               sessionDataRef.current.startTime = startTime;
+              sessionDataRef.current.isPaused = isPaused;
+              sessionDataRef.current.totalPausedTime = totalPausedTime;
+              sessionDataRef.current.pausedAt = pausedAt;
             } else {
               sessionDataRef.current = {
                 sessionId,
                 startTime,
                 stationId: station.id,
                 customerId: station.currentSession.customerId,
-                hourlyRate: station.hourlyRate
+                hourlyRate: station.hourlyRate,
+                isPaused,
+                totalPausedTime,
+                pausedAt
               };
             }
             
@@ -193,16 +232,23 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     return null;
   }
 
+  const isPaused = station.currentSession.isPaused || false;
+
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
-      <div className="text-center">
-        <span className="font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full">
+      <div className="text-center relative">
+        <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full ${isPaused ? 'opacity-60' : ''}`}>
           {formatTimeDisplay()}
         </span>
+        {isPaused && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <CirclePause className="h-8 w-8 text-cuephoria-orange animate-pulse" />
+          </div>
+        )}
       </div>
       <div className="flex justify-between items-center">
         <span className="text-white">Current Cost:</span>
-        <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
+        <CurrencyDisplay amount={cost} className={`text-cuephoria-orange font-bold text-lg ${isPaused ? 'opacity-60' : ''}`} />
       </div>
     </div>
   );

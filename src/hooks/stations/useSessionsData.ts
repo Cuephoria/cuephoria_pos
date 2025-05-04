@@ -36,7 +36,7 @@ export const useSessionsData = () => {
       
       // Transform data to match our Session type
       if (data && data.length > 0) {
-        // Use type assertion to handle the TypeScript issues
+        // Use type assertion since we know this data should exist
         const sessionsData = data as any[];
         
         const transformedSessions = sessionsData.map(item => ({
@@ -45,7 +45,10 @@ export const useSessionsData = () => {
           customerId: item.customer_id,
           startTime: new Date(item.start_time),
           endTime: item.end_time ? new Date(item.end_time) : undefined,
-          duration: item.duration
+          duration: item.duration,
+          isPaused: item.is_paused || false,
+          pausedAt: item.paused_at ? new Date(item.paused_at) : undefined,
+          totalPausedTime: item.total_paused_time || 0
         }));
         
         console.log(`Loaded ${transformedSessions.length} total sessions from Supabase`);
@@ -54,7 +57,12 @@ export const useSessionsData = () => {
         // Log active sessions (those without end_time)
         const activeSessions = transformedSessions.filter(s => !s.endTime);
         console.log(`Found ${activeSessions.length} active sessions in loaded data`);
-        activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
+        activeSessions.forEach(s => {
+          console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}, Paused: ${s.isPaused}`);
+          if (s.isPaused) {
+            console.log(`  Paused at: ${s.pausedAt}, Total paused time: ${s.totalPausedTime}ms`);
+          }
+        });
       } else {
         console.log("No sessions found in Supabase");
         // Clear sessions if no data is returned to prevent stale data

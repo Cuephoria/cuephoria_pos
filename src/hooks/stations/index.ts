@@ -67,6 +67,8 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
   const {
     startSession,
     endSession,
+    pauseSession,
+    resumeSession,
     isLoading
   } = useSessionActions({
     stations,
@@ -83,6 +85,8 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setSessions,
     startSession,
     endSession,
+    pauseSession,
+    resumeSession,
     deleteStation,
     updateStation,
     stationsLoading,

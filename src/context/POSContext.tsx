@@ -16,6 +16,61 @@ import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
 
+export interface POSContextType {
+  products: Product[];
+  productsLoading: boolean;
+  productsError: null;
+  stations: Station[];
+  customers: Customer[];
+  sessions: Session[];
+  bills: Bill[];
+  cart: CartItem[];
+  selectedCustomer: Customer | null;
+  discount: number;
+  discountType: 'percentage' | 'fixed';
+  loyaltyPointsUsed: number;
+  isStudentDiscount: boolean;
+  categories: string[];
+  setIsStudentDiscount: (isStudentDiscount: boolean) => void;
+  setStations: (stations: Station[]) => void;
+  addProduct: (product: Product) => void;
+  updateProduct: (product: Product) => void;
+  deleteProduct: (productId: string) => void;
+  addCategory: (category: string) => void;
+  updateCategory: (oldCategory: string, newCategory: string) => void;
+  deleteCategory: (category: string) => void;
+  startSession: (stationId: string, customerId: string) => Promise<void>;
+  endSession: (stationId: string) => Promise<void>;
+  deleteStation: (stationId: string) => Promise<boolean>;
+  updateStation: (stationId: string, name: string, hourlyRate: number) => Promise<boolean>;
+  pauseSession: (stationId: string) => Promise<boolean>;
+  resumeSession: (stationId: string) => Promise<boolean>;
+  addCustomer: (customer: Customer) => void;
+  updateCustomer: (customer: Customer) => void;
+  updateCustomerMembership: (customerId: string, membershipData: {
+    membershipPlan?: string;
+    membershipDuration?: 'weekly' | 'monthly';
+    membershipHoursLeft?: number;
+  }) => Customer | null;
+  deleteCustomer: (customerId: string) => void;
+  selectCustomer: (customerId: string) => void;
+  checkMembershipValidity: (customerId: string) => boolean;
+  deductMembershipHours: (customerId: string) => boolean;
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (itemId: string) => void;
+  updateCartItem: (itemId: string, quantity: number) => void;
+  clearCart: () => void;
+  setDiscount: (discount: number) => void;
+  setLoyaltyPointsUsed: (loyaltyPointsUsed: number) => void;
+  calculateTotal: () => number;
+  completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
+  deleteBill: (billId: string, customerId: string) => Promise<boolean>;
+  exportBills: () => void;
+  exportCustomers: () => void;
+  resetToSampleData: (options?: ResetOptions) => Promise<boolean>;
+  addSampleIndianData: () => void;
+}
+
 const POSContext = createContext<POSContextType>({
   products: [],
   productsLoading: false,
@@ -107,10 +162,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStations, 
     sessions, 
     setSessions, 
-    startSession: startSessionBase, 
-    endSession: endSessionBase,
+    startSession: startNewSession, 
+    endSession: endActiveSession,
+    pauseSession: pauseActiveSession,
+    resumeSession: resumeActiveSession,
     deleteStation,
-    updateStation
+    updateStation,
+    refreshStations
   } = useStations([], updateCustomer);
   
   const { 
@@ -203,7 +261,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Wrapper functions that combine functionality from multiple hooks
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
-    await startSessionBase(stationId, customerId);
+    await startNewSession(stationId, customerId);
   };
   
   // Make endSession return a Promise<void> to match type definition
@@ -220,7 +278,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const customerId = station.currentSession.customerId;
       
       // Call the base endSession function
-      const result = await endSessionBase(stationId, customers);
+      const result = await endActiveSession(stationId, customers);
       
       if (result) {
         const { sessionCartItem, customer } = result;
@@ -453,56 +511,60 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   console.log('POSProvider rendering with context value'); // Debug log
   
+  const contextValue: POSContextType = {
+    products,
+    productsLoading,
+    productsError,
+    stations,
+    customers,
+    sessions,
+    bills,
+    cart,
+    selectedCustomer,
+    discount,
+    discountType,
+    loyaltyPointsUsed,
+    isStudentDiscount,
+    categories,
+    setIsStudentDiscount,
+    setStations,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    startSession,
+    endSession,
+    pauseSession,
+    resumeSession,
+    deleteStation,
+    updateStation,
+    addCustomer,
+    updateCustomer,
+    updateCustomerMembership: updateCustomerMembershipWrapper,
+    deleteCustomer,
+    selectCustomer,
+    checkMembershipValidity,
+    deductMembershipHours,
+    addToCart,
+    removeFromCart,
+    updateCartItem,
+    clearCart,
+    setDiscount,
+    setLoyaltyPointsUsed,
+    calculateTotal,
+    completeSale,
+    deleteBill,
+    exportBills,
+    exportCustomers,
+    resetToSampleData: handleResetToSampleData,
+    addSampleIndianData: handleAddSampleIndianData
+  };
+  
   return (
     <POSContext.Provider
-      value={{
-        products,
-        productsLoading,
-        productsError,
-        stations,
-        customers,
-        sessions,
-        bills,
-        cart,
-        selectedCustomer,
-        discount,
-        discountType,
-        loyaltyPointsUsed,
-        isStudentDiscount,
-        categories,
-        setIsStudentDiscount,
-        setStations,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        addCategory,
-        updateCategory,
-        deleteCategory,
-        startSession,
-        endSession,
-        deleteStation,
-        updateStation,
-        addCustomer,
-        updateCustomer,
-        updateCustomerMembership: updateCustomerMembershipWrapper,
-        deleteCustomer,
-        selectCustomer,
-        checkMembershipValidity,
-        deductMembershipHours,
-        addToCart,
-        removeFromCart,
-        updateCartItem,
-        clearCart,
-        setDiscount,
-        setLoyaltyPointsUsed,
-        calculateTotal,
-        completeSale,
-        deleteBill,
-        exportBills,
-        exportCustomers,
-        resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData
-      }}
+      value={contextValue}
     >
       {children}
     </POSContext.Provider>

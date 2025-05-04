@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -47,6 +46,9 @@ export interface Session {
   startTime: Date;
   endTime?: Date;
   duration?: number; // in minutes
+  isPaused?: boolean;
+  pausedAt?: Date;
+  totalPausedTime?: number; // in milliseconds, to track cumulative paused time
 }
 
 export interface CartItem {
@@ -122,6 +124,10 @@ export interface POSContextType {
   endSession: (stationId: string) => Promise<void>;
   deleteStation: (stationId: string) => Promise<boolean>;
   updateStation: (stationId: string, name: string, hourlyRate: number) => Promise<boolean>;
+  
+  // Add pause session functions
+  pauseSession: (stationId: string) => Promise<boolean>;
+  resumeSession: (stationId: string) => Promise<boolean>;
   
   // Customer functions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
