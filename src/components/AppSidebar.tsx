@@ -127,51 +127,47 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
     );
   }
 
-  // Desktop version with collapsible sidebar - Updated to match screenshot
+  // Desktop version with collapsible sidebar
   return (
     <div 
       className={`bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0 z-50 transition-all duration-300 overflow-hidden ${
         collapsed ? 'w-[70px]' : 'w-[230px]'
       }`}
     >
-      {/* Logo section */}
-      <div className="flex justify-center items-center mt-8 mb-4">
-        <div className={`flex flex-col items-center ${collapsed ? 'px-2' : 'px-6'}`}>
-          <div className="h-14 w-14 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5]/80 to-[#9b87f5]/50 shadow-lg animate-pulse-soft mb-2">
-            <Gamepad2 className="h-8 w-8 text-white" />
+      <div className="p-4 flex flex-col items-center">
+        <div className="flex items-center justify-center gap-3 mb-2 w-full">
+          <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5] to-[#7661d7] shadow-lg animate-pulse-soft">
+            <Gamepad2 className="h-7 w-7 text-white animate-scale-in" />
           </div>
-          {!collapsed && (
-            <span className="text-xl font-bold text-[#9b87f5] mt-2 whitespace-nowrap transition-opacity duration-300">
-              Cuephoria
-            </span>
-          )}
-          
-          {/* Collapse button positioned directly below the logo */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={toggleSidebar} 
-            className="mt-4 rounded-full bg-[#252A37] border border-gray-700 h-8 w-8 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </Button>
+          <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : 'animate-fade-in flex-1'}`}>
+            Cuephoria
+          </span>
         </div>
+        
+        {/* Center aligned collapse button below logo */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={toggleSidebar} 
+          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md mt-2"
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </Button>
       </div>
       
-      <div className="mx-4 h-px bg-gray-700 mt-4" />
+      <div className="mx-4 h-px bg-gray-700 mt-2" />
       
-      {/* Navigation menu - Updated alignment */}
-      <div className="flex-1 overflow-auto py-4 no-scrollbar mt-4">
-        <div className="space-y-2 px-3">
+      <div className="flex-1 overflow-auto py-4 no-scrollbar">
+        <div className="space-y-1 px-3">
           {menuItems.map((item) => (
             <Link 
               key={item.path}
               to={item.path} 
-              className={`flex items-center justify-start py-2.5 px-3 rounded-lg ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
+              className={`flex items-center py-2.5 px-3 rounded-lg ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
               title={collapsed ? item.label : ""}
             >
-              <item.icon className={`h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''} ${collapsed ? '' : 'mr-4'}`} />
-              <span className={`whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'hidden' : ''}`}>{item.label}</span>
+              <item.icon className={`h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''} ${collapsed ? 'mx-auto' : 'mr-3'}`} />
+              <span className={`whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : ''}`}>{item.label}</span>
             </Link>
           ))}
         </div>
