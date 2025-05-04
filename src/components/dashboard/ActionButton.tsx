@@ -48,12 +48,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       group relative"
     >
       <Icon className={`h-6 w-6 ${iconColor} shrink-0 group-hover:scale-110 transition-transform`} />
-      <div className="flex flex-col">
-        <span className="text-sm sm:text-base font-medium truncate w-full group-hover:text-white">{label}</span>
-        {description && !isMobile && (
-          <span className="text-xs text-muted-foreground truncate hidden sm:block">{description}</span>
-        )}
-      </div>
+      <span className="text-sm sm:text-base font-medium truncate w-full group-hover:text-white">{label}</span>
     </Button>
   );
 };

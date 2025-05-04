@@ -14,7 +14,6 @@ const ActionButtonSection: React.FC = () => {
         label={isMobile ? "Gaming" : "Gaming Sessions"}
         path="/stations"
         iconColor="text-[#0EA5E9]"
-        description="View and create new gaming sessions"
       />
       
       <ActionButton
