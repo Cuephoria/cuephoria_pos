@@ -1,4 +1,3 @@
-
 import { Session, Station } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -9,12 +8,8 @@ import { generateId } from '@/utils/pos.utils';
 /**
  * Hook to provide session start functionality
  */
-export const useStartSession = ({
-  stations,
-  setStations,
-  sessions,
-  setSessions
-}: SessionActionsProps) => {
+export const useStartSession = (props: SessionActionsProps) => {
+  const { stations, setStations, sessions, setSessions } = props;
   const { toast } = useToast();
   
   /**

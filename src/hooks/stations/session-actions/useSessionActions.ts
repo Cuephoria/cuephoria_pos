@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useStartSession } from './useStartSession';
 import { useEndSession } from './useEndSession';
@@ -16,7 +15,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Get the functionality from existing hooks
-  const startSessionHook = useStartSession();
+  const startSessionHook = useStartSession(props); // Fix: Pass props here
   const endSessionHook = useEndSession({...props, updateCustomer});
   const pauseSessionHook = usePauseSession();
   
