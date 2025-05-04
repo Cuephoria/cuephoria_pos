@@ -288,6 +288,7 @@ const ReportsPage: React.FC = () => {
     const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
     
     // Gaming metrics - calculate PS5 vs Pool revenue taking discounts into account
+    // ONLY include session items, not product items (like Metashot challenges)
     let ps5Sales = 0;
     let poolSales = 0;
     
@@ -299,6 +300,7 @@ const ReportsPage: React.FC = () => {
         // Apply proportional discount to each item
         const discountedItemTotal = item.total * discountRatio;
         
+        // Only include actual gaming session items, not products
         if (item.type === 'session') {
           const itemName = item.name.toLowerCase();
           if (itemName.includes('ps5') || itemName.includes('playstation')) {
@@ -306,7 +308,9 @@ const ReportsPage: React.FC = () => {
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
             poolSales += discountedItemTotal;
           }
+          // Explicitly ignore other session types (e.g., challenges)
         }
+        // Do not include products in gaming revenue calculation
       });
     });
     

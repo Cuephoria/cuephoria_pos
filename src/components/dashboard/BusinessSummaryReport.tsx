@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -84,11 +83,11 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       return { category, total };
     }).sort((a, b) => b.total - a.total);
     
-    // Calculate game sales (PS5 and Pool) - CORRECTED to use actual bill totals after discounts
+    // Calculate ONLY game station sales (PS5 and Pool) - Ensure we only count session items
     let ps5Sales = 0;
     let poolSales = 0;
     
-    // Calculate canteen sales
+    // Calculate canteen sales - But keep these separate from gaming metrics
     let foodSales = 0;
     let beverageSales = 0;
     let tobaccoSales = 0;
@@ -102,7 +101,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
         // Apply proportional discount to each item to reflect actual revenue
         const discountedItemTotal = item.total * discountRatio;
         
-        // Check if the item is a session
+        // ONLY include session items in gaming revenue, NOT product items
         if (item.type === 'session') {
           // Look for PS5 or Pool in the name (case insensitive)
           const itemName = item.name.toLowerCase();
@@ -111,8 +110,9 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
             poolSales += discountedItemTotal;
           }
+          // Explicitly ignore any other session types (e.g., challenges like Metashot)
         } 
-        // Check if the item is a product
+        // Keep tracking product sales for the canteen section, but don't include in gaming revenue
         else if (item.type === 'product') {
           // Find the product to check its category
           const product = products.find(p => p.id === item.id);
