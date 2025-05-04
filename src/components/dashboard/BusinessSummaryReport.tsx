@@ -84,7 +84,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       return { category, total };
     }).sort((a, b) => b.total - a.total);
     
-    // Calculate game sales (PS5 and Pool)
+    // Calculate game sales (PS5 and Pool) - CORRECTED to use actual bill totals after discounts
     let ps5Sales = 0;
     let poolSales = 0;
     
@@ -95,15 +95,21 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     
     // Process all bills at once to improve performance
     filteredBills.forEach(bill => {
+      // Calculate effective discount rate for proportional application
+      const discountRatio = bill.total / bill.subtotal;
+      
       bill.items.forEach(item => {
+        // Apply proportional discount to each item to reflect actual revenue
+        const discountedItemTotal = item.total * discountRatio;
+        
         // Check if the item is a session
         if (item.type === 'session') {
           // Look for PS5 or Pool in the name (case insensitive)
           const itemName = item.name.toLowerCase();
           if (itemName.includes('ps5') || itemName.includes('playstation')) {
-            ps5Sales += item.total;
+            ps5Sales += discountedItemTotal;
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
-            poolSales += item.total;
+            poolSales += discountedItemTotal;
           }
         } 
         // Check if the item is a product
@@ -113,11 +119,11 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           if (product) {
             const category = product.category.toLowerCase();
             if (category === 'food' || category === 'snacks') {
-              foodSales += item.total;
+              foodSales += discountedItemTotal;
             } else if (category === 'beverage' || category === 'drinks') {
-              beverageSales += item.total;
+              beverageSales += discountedItemTotal;
             } else if (category === 'tobacco') {
-              tobaccoSales += item.total;
+              tobaccoSales += discountedItemTotal;
             }
           }
         }

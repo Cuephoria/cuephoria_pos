@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -288,18 +287,24 @@ const ReportsPage: React.FC = () => {
     const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
     const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
     
-    // Gaming metrics - calculate PS5 vs Pool revenue in one loop
+    // Gaming metrics - calculate PS5 vs Pool revenue taking discounts into account
     let ps5Sales = 0;
     let poolSales = 0;
     
     filteredBills.forEach(bill => {
+      // Calculate the effective discount ratio for this bill
+      const discountRatio = bill.total / bill.subtotal;
+      
       bill.items.forEach(item => {
+        // Apply proportional discount to each item
+        const discountedItemTotal = item.total * discountRatio;
+        
         if (item.type === 'session') {
           const itemName = item.name.toLowerCase();
           if (itemName.includes('ps5') || itemName.includes('playstation')) {
-            ps5Sales += item.total;
+            ps5Sales += discountedItemTotal;
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
-            poolSales += item.total;
+            poolSales += discountedItemTotal;
           }
         }
       });
@@ -974,7 +979,7 @@ const ReportsPage: React.FC = () => {
           variant={activeTab === 'customers' ? 'default' : 'ghost'} 
           className={`gap-2 ${activeTab === 'customers' ? 'bg-gray-700' : 'text-gray-400'}`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 1 0 7.75"/></svg>
           Customers
         </Button>
         <Button 
