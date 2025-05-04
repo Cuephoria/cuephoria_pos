@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -312,15 +311,23 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
-      // Ensure totalPlayTime is always a number
+      // Ensure totalPlayTime is always a number and log it for debugging
+      const safePlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
+      
+      // Create an updated customer with safe values
       const updatedCustomer = {
         ...customer,
-        totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
+        totalPlayTime: safePlayTime
       };
       
-      console.log(`Updating customer in Supabase:`, { 
+      console.log(`Updating customer in database:`, { 
         id: customer.id,
-        totalPlayTime: updatedCustomer.totalPlayTime
+        name: customer.name,
+        totalPlayTime: {
+          original: customer.totalPlayTime,
+          type: typeof customer.totalPlayTime,
+          safeValue: safePlayTime
+        }
       });
       
       const { error } = await supabase
@@ -337,7 +344,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           membership_duration: updatedCustomer.membershipDuration,
           loyalty_points: updatedCustomer.loyaltyPoints,
           total_spent: updatedCustomer.totalSpent,
-          total_play_time: updatedCustomer.totalPlayTime
+          total_play_time: safePlayTime
         })
         .eq('id', updatedCustomer.id);
         

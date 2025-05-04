@@ -56,7 +56,14 @@ export const useEndSession = ({
       
       const durationMinutes = Math.max(1, Math.round(actualDurationMs / (1000 * 60)));
       
-      console.log(`Session duration calculation: ${actualDurationMs}ms = ${durationMinutes} minutes (${station.type} station)`);
+      console.log(`Session duration calculation for ${station.type} station:`, {
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        rawDurationMs: durationMs,
+        adjustedDurationMs: actualDurationMs,
+        durationMinutes,
+        stationType: station.type,
+      });
       
       // Create updated session object
       const updatedSession: Session = {
@@ -177,9 +184,9 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time - CRITICAL FIX: This is a key part that needs fixing
+      // Update customer's total play time - CRITICAL FIX: This is the key part that needs proper handling
       if (customer) {
-        // Ensure totalPlayTime is a number
+        // Ensure totalPlayTime is always treated as a number
         const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
         
         // Add duration minutes to the total play time
@@ -187,11 +194,10 @@ export const useEndSession = ({
         
         console.log(`Updating customer ${customer.name} play time:`, {
           customer_id: customer.id,
-          currentPlayTime,
-          minutesToAdd: durationMinutes,
+          previousPlayTime: currentPlayTime,
+          sessionMinutes: durationMinutes, 
           stationType: station.type,
-          newPlayTime,
-          timeBefore: currentPlayTime 
+          newTotalPlayTime: newPlayTime
         });
         
         const updatedCustomer = {
@@ -202,9 +208,9 @@ export const useEndSession = ({
         // Update both local state and Supabase
         updateCustomer(updatedCustomer);
         
-        // Also update in Supabase if possible
+        // Also update in Supabase directly to ensure persistence
         try {
-          console.log(`Updating customer ${customer.id} in Supabase with total play time: ${newPlayTime}`);
+          console.log(`Directly updating customer ${customer.id} in Supabase with total play time: ${newPlayTime}`);
           const { data, error } = await supabase
             .from('customers')
             .update({ 
@@ -214,7 +220,7 @@ export const useEndSession = ({
             .select();
             
           if (error) {
-            console.error('Error updating customer play time in Supabase:', error);
+            console.error('Error directly updating customer play time in Supabase:', error);
           } else {
             console.log('Updated customer in Supabase successfully:', data);
           }

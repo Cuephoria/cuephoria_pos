@@ -29,7 +29,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return new Date(date).toLocaleDateString('en-IN');
   };
 
-  // Improved time formatting to ensure it works with any number of minutes
+  // Enhanced time formatting to ensure it works with any number of minutes
   const formatTime = (minutes: number) => {
     // Ensure minutes is treated as a number
     const mins = Number(minutes);
@@ -45,9 +45,11 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return `${hours}h ${remainingMins}m`;
   };
 
-  // Ensure totalPlayTime is a number before formatting
-  const playTimeDisplay = formatTime(customer.totalPlayTime || 0);
-  console.log(`Customer ${customer.name} has totalPlayTime: ${customer.totalPlayTime}, displaying as: ${playTimeDisplay}`);
+  // Ensure totalPlayTime is always a number before formatting
+  const safePlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
+  const playTimeDisplay = formatTime(safePlayTime);
+  
+  console.log(`Customer ${customer.name} has totalPlayTime: ${customer.totalPlayTime} (${typeof customer.totalPlayTime}), using safe value: ${safePlayTime}, displaying as: ${playTimeDisplay}`);
 
   return (
     <Card>
