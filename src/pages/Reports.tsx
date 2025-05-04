@@ -287,10 +287,10 @@ const ReportsPage: React.FC = () => {
     const loyaltyPointsUsed = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsUsed || 0), 0);
     const loyaltyPointsEarned = filteredBills.reduce((sum, bill) => sum + (bill.loyaltyPointsEarned || 0), 0);
     
-    // Gaming metrics - calculate PS5 vs Pool revenue taking discounts into account
-    // ONLY include session items, not product items (like Metashot challenges)
+    // Gaming metrics - calculate PS5 vs Pool vs Metashot revenue taking discounts into account
     let ps5Sales = 0;
     let poolSales = 0;
+    let metashotSales = 0;
     
     filteredBills.forEach(bill => {
       // Calculate the effective discount ratio for this bill
@@ -300,7 +300,7 @@ const ReportsPage: React.FC = () => {
         // Apply proportional discount to each item
         const discountedItemTotal = item.total * discountRatio;
         
-        // Only include actual gaming session items, not products
+        // Include PS5 and Pool sessions in gaming revenue
         if (item.type === 'session') {
           const itemName = item.name.toLowerCase();
           if (itemName.includes('ps5') || itemName.includes('playstation')) {
@@ -308,9 +308,20 @@ const ReportsPage: React.FC = () => {
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
             poolSales += discountedItemTotal;
           }
-          // Explicitly ignore other session types (e.g., challenges)
+        } 
+        // Include Metashot challenges in gaming revenue
+        else if (item.type === 'product') {
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+            const category = product.category.toLowerCase();
+            const name = product.name.toLowerCase();
+            
+            if (name.includes('metashot') || name.includes('meta shot') || 
+                category === 'challenges' || category === 'challenge') {
+              metashotSales += discountedItemTotal;
+            }
+          }
         }
-        // Do not include products in gaming revenue calculation
       });
     });
     
@@ -337,7 +348,9 @@ const ReportsPage: React.FC = () => {
       },
       gaming: {
         ps5Sales,
-        poolSales
+        poolSales,
+        metashotSales,
+        totalGamingSales: ps5Sales + poolSales + metashotSales
       }
     };
   }
@@ -875,6 +888,20 @@ const ReportsPage: React.FC = () => {
                   <span className="text-gray-400">8-Ball Revenue</span>
                   <span className="font-semibold text-white">
                     <CurrencyDisplay amount={summaryMetrics.gaming.poolSales} />
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Metashot Revenue</span>
+                  <span className="font-semibold text-white">
+                    <CurrencyDisplay amount={summaryMetrics.gaming.metashotSales} />
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total Gaming Revenue</span>
+                  <span className="font-semibold text-white">
+                    <CurrencyDisplay amount={summaryMetrics.gaming.totalGamingSales} />
                   </span>
                 </div>
               </div>

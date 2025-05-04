@@ -83,9 +83,10 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       return { category, total };
     }).sort((a, b) => b.total - a.total);
     
-    // Calculate ONLY game station sales (PS5 and Pool) - Ensure we only count session items
+    // Calculate ONLY game station sales (PS5, Pool and Metashot challenges)
     let ps5Sales = 0;
     let poolSales = 0;
+    let metashotSales = 0;
     
     // Calculate canteen sales - But keep these separate from gaming metrics
     let foodSales = 0;
@@ -101,7 +102,6 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
         // Apply proportional discount to each item to reflect actual revenue
         const discountedItemTotal = item.total * discountRatio;
         
-        // ONLY include session items in gaming revenue, NOT product items
         if (item.type === 'session') {
           // Look for PS5 or Pool in the name (case insensitive)
           const itemName = item.name.toLowerCase();
@@ -110,15 +110,19 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
           } else if (itemName.includes('pool') || itemName.includes('8-ball') || itemName.includes('8 ball')) {
             poolSales += discountedItemTotal;
           }
-          // Explicitly ignore any other session types (e.g., challenges like Metashot)
         } 
-        // Keep tracking product sales for the canteen section, but don't include in gaming revenue
+        // Handle Metashot challenge items - these are products, but should count towards gaming revenue
         else if (item.type === 'product') {
           // Find the product to check its category
           const product = products.find(p => p.id === item.id);
           if (product) {
             const category = product.category.toLowerCase();
-            if (category === 'food' || category === 'snacks') {
+            const name = product.name.toLowerCase();
+            
+            if (name.includes('metashot') || name.includes('meta shot') || 
+                category === 'challenges' || category === 'challenge') {
+              metashotSales += discountedItemTotal;
+            } else if (category === 'food' || category === 'snacks') {
               foodSales += discountedItemTotal;
             } else if (category === 'beverage' || category === 'drinks') {
               beverageSales += discountedItemTotal;
@@ -131,13 +135,15 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     });
     
     const totalCanteenSales = foodSales + beverageSales + tobaccoSales;
+    const totalGameSales = ps5Sales + poolSales + metashotSales;
     
     return {
       categoryTotals,
       gameSales: {
         ps5Sales,
         poolSales,
-        totalGameSales: ps5Sales + poolSales
+        metashotSales,
+        totalGameSales
       },
       canteenSales: {
         foodSales,
@@ -246,7 +252,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reportData.gameSales.ps5Sales > 0 || reportData.gameSales.poolSales > 0 ? (
+                {reportData.gameSales.totalGameSales > 0 ? (
                   <>
                     <TableRow>
                       <TableCell>PS5 Stations</TableCell>
@@ -267,6 +273,17 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                       <TableCell>
                         {reportData.gameSales.totalGameSales > 0 
                           ? ((reportData.gameSales.poolSales / reportData.gameSales.totalGameSales) * 100).toFixed(1) 
+                          : '0.0'}%
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Metashot Challenges</TableCell>
+                      <TableCell>
+                        <CurrencyDisplay amount={reportData.gameSales.metashotSales} />
+                      </TableCell>
+                      <TableCell>
+                        {reportData.gameSales.totalGameSales > 0 
+                          ? ((reportData.gameSales.metashotSales / reportData.gameSales.totalGameSales) * 100).toFixed(1) 
                           : '0.0'}%
                       </TableCell>
                     </TableRow>
