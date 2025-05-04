@@ -1,22 +1,7 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Menu, Shield } from 'lucide-react';
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarFooter, 
-  SidebarGroup, 
-  SidebarGroupContent, 
-  SidebarHeader, 
-  SidebarMenu, 
-  SidebarMenuButton, 
-  SidebarMenuItem,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar
-} from '@/components/ui/sidebar';
-import Logo from './Logo';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Shield } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -24,11 +9,11 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const AppSidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const hideOnPaths = ['/receipt'];
+  const hideOnPaths = ['/login', '/', '/receipt'];
   const shouldHide = hideOnPaths.some(path => location.pathname.includes(path));
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
   
   const isAdmin = user?.isAdmin || false;
 
@@ -54,6 +39,11 @@ const AppSidebar: React.FC = () => {
     [...baseMenuItems, ...adminOnlyMenuItems] : 
     baseMenuItems;
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   // Mobile version with sheet
   if (isMobile) {
     return (
@@ -63,47 +53,47 @@ const AppSidebar: React.FC = () => {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white">
-                  <Menu className="h-5 w-5" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-[80%] max-w-[280px] bg-[#1A1F2C] border-r-0">
                 <div className="h-full flex flex-col">
                   <div className="p-4 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow relative">
-                      <Joystick className="h-6 w-6 text-white absolute animate-bounce" />
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-[#9b87f5] shadow-lg">
+                      <Joystick className="h-6 w-6 text-white" />
                     </div>
-                    <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
+                    <span className="text-xl font-bold text-[#9b87f5]">Cuephoria</span>
                   </div>
-                  <div className="mx-4 h-px bg-cuephoria-purple/30" />
+                  <div className="mx-4 h-px bg-gray-700" />
                   <div className="flex-1 overflow-auto py-2">
                     <div className="px-2">
-                      {menuItems.map((item, index) => (
+                      {menuItems.map((item) => (
                         <Link 
                           key={item.path}
                           to={item.path} 
-                          className={`flex items-center py-3 px-3 rounded-md my-1 ${location.pathname === item.path ? 'bg-cuephoria-dark text-cuephoria-lightpurple' : 'text-white hover:bg-cuephoria-dark/50'}`}
+                          className={`flex items-center py-3 px-3 rounded-md my-1 ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
                         >
-                          <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
-                          <span className="font-quicksand text-base">{item.label}</span>
+                          <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''}`} />
+                          <span className="text-base">{item.label}</span>
                         </Link>
                       ))}
                     </div>
                   </div>
                   <div className="p-4">
-                    <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 shadow-md">
+                    <div className="flex items-center justify-between bg-[#252A37] rounded-lg p-3 shadow-md">
                       <div className="flex items-center">
                         {isAdmin ? (
-                          <Shield className="h-5 w-5 text-cuephoria-lightpurple" />
+                          <Shield className="h-5 w-5 text-[#9b87f5]" />
                         ) : (
-                          <User className="h-5 w-5 text-cuephoria-blue" />
+                          <User className="h-5 w-5 text-blue-400" />
                         )}
-                        <span className="ml-2 text-sm font-medium font-quicksand text-white">
+                        <span className="ml-2 text-sm font-medium text-white">
                           {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
                         </span>
                       </div>
                       <button 
-                        onClick={logout}
-                        className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading text-white"
+                        onClick={handleLogout}
+                        className="text-xs bg-[#1A1F2C] px-3 py-1 rounded-md hover:bg-[#9b87f5] transition-all duration-300 text-white"
                       >
                         Logout
                       </button>
@@ -112,7 +102,7 @@ const AppSidebar: React.FC = () => {
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
+            <span className="text-xl font-bold text-[#9b87f5]">Cuephoria</span>
           </div>
         </div>
         <div className="pt-16"></div> {/* Space for the fixed header */}
@@ -120,55 +110,54 @@ const AppSidebar: React.FC = () => {
     );
   }
 
-  // Desktop version with Sidebar
+  // Desktop version
   return (
-    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white w-[250px]">
-      <SidebarHeader className="p-4 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow relative">
-          <Joystick className="h-7 w-7 text-white absolute animate-bounce" />
+    <div className="w-[230px] bg-[#1A1F2C] text-white h-screen flex flex-col border-r-0 fixed left-0 top-0">
+      <div className="p-4 flex items-center gap-3">
+        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-[#9b87f5] shadow-lg">
+          <Joystick className="h-7 w-7 text-white" />
         </div>
-        <span className="text-2xl font-bold gradient-text font-heading">Cuephoria</span>
-      </SidebarHeader>
-      <SidebarSeparator className="mx-4 bg-cuephoria-purple/30" />
-      <SidebarContent className="mt-2">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {menuItems.map((item, index) => (
-                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100} text-base`}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.path}>
-                    <Link to={item.path} className="flex items-center menu-item py-2.5">
-                      <item.icon className={`mr-3 h-6 w-6 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
-                      <span className="font-quicksand">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter className="p-4">
-        <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 animate-scale-in shadow-md">
+        <span className="text-2xl font-bold text-[#9b87f5]">Cuephoria</span>
+      </div>
+      
+      <div className="mx-4 h-px bg-gray-700" />
+      
+      <div className="flex-1 overflow-auto py-4">
+        <div className="space-y-1 px-3">
+          {menuItems.map((item) => (
+            <Link 
+              key={item.path}
+              to={item.path} 
+              className={`flex items-center py-2.5 px-3 rounded-md ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
+            >
+              <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''}`} />
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <div className="flex items-center justify-between bg-[#252A37] rounded-lg p-3 shadow-md">
           <div className="flex items-center">
             {isAdmin ? (
-              <Shield className="h-6 w-6 text-cuephoria-lightpurple" />
+              <Shield className="h-6 w-6 text-[#9b87f5]" />
             ) : (
-              <User className="h-6 w-6 text-cuephoria-blue" />
+              <User className="h-6 w-6 text-blue-400" />
             )}
-            <span className="ml-2 text-sm font-medium font-quicksand">
+            <span className="ml-2 text-sm font-medium">
               {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
             </span>
           </div>
           <button 
-            onClick={logout}
-            className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading"
+            onClick={handleLogout}
+            className="text-xs bg-[#1A1F2C] px-3 py-1 rounded-md hover:bg-[#9b87f5] transition-all duration-300"
           >
             Logout
           </button>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </div>
   );
 };
 
