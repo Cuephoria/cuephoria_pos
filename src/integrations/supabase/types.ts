@@ -509,11 +509,14 @@ export type Database = {
           duration: number | null
           end_time: string | null
           id: string
+          is_paused: boolean | null
           notes: string | null
+          paused_at: string | null
           price: number | null
           start_time: string
           station_id: string
           status: string | null
+          total_paused_time: number | null
         }
         Insert: {
           created_at?: string
@@ -521,11 +524,14 @@ export type Database = {
           duration?: number | null
           end_time?: string | null
           id?: string
+          is_paused?: boolean | null
           notes?: string | null
+          paused_at?: string | null
           price?: number | null
           start_time?: string
           station_id: string
           status?: string | null
+          total_paused_time?: number | null
         }
         Update: {
           created_at?: string
@@ -533,11 +539,14 @@ export type Database = {
           duration?: number | null
           end_time?: string | null
           id?: string
+          is_paused?: boolean | null
           notes?: string | null
+          paused_at?: string | null
           price?: number | null
           start_time?: string
           station_id?: string
           status?: string | null
+          total_paused_time?: number | null
         }
         Relationships: [
           {

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { 
-  POSContextType, 
+  POSContextType as POSContextTypeBase, 
   ResetOptions, 
   Customer, 
   CartItem, 
@@ -16,59 +16,10 @@ import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
 
-export interface POSContextType {
-  products: Product[];
-  productsLoading: boolean;
-  productsError: null;
-  stations: Station[];
-  customers: Customer[];
-  sessions: Session[];
-  bills: Bill[];
-  cart: CartItem[];
-  selectedCustomer: Customer | null;
-  discount: number;
-  discountType: 'percentage' | 'fixed';
-  loyaltyPointsUsed: number;
-  isStudentDiscount: boolean;
-  categories: string[];
-  setIsStudentDiscount: (isStudentDiscount: boolean) => void;
-  setStations: (stations: Station[]) => void;
-  addProduct: (product: Product) => void;
-  updateProduct: (product: Product) => void;
-  deleteProduct: (productId: string) => void;
-  addCategory: (category: string) => void;
-  updateCategory: (oldCategory: string, newCategory: string) => void;
-  deleteCategory: (category: string) => void;
-  startSession: (stationId: string, customerId: string) => Promise<void>;
-  endSession: (stationId: string) => Promise<void>;
-  deleteStation: (stationId: string) => Promise<boolean>;
-  updateStation: (stationId: string, name: string, hourlyRate: number) => Promise<boolean>;
+// Extend the POSContextType to include pause session functionality
+interface POSContextType extends POSContextTypeBase {
   pauseSession: (stationId: string) => Promise<boolean>;
   resumeSession: (stationId: string) => Promise<boolean>;
-  addCustomer: (customer: Customer) => void;
-  updateCustomer: (customer: Customer) => void;
-  updateCustomerMembership: (customerId: string, membershipData: {
-    membershipPlan?: string;
-    membershipDuration?: 'weekly' | 'monthly';
-    membershipHoursLeft?: number;
-  }) => Customer | null;
-  deleteCustomer: (customerId: string) => void;
-  selectCustomer: (customerId: string) => void;
-  checkMembershipValidity: (customerId: string) => boolean;
-  deductMembershipHours: (customerId: string) => boolean;
-  addToCart: (item: CartItem) => void;
-  removeFromCart: (itemId: string) => void;
-  updateCartItem: (itemId: string, quantity: number) => void;
-  clearCart: () => void;
-  setDiscount: (discount: number) => void;
-  setLoyaltyPointsUsed: (loyaltyPointsUsed: number) => void;
-  calculateTotal: () => number;
-  completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
-  deleteBill: (billId: string, customerId: string) => Promise<boolean>;
-  exportBills: () => void;
-  exportCustomers: () => void;
-  resetToSampleData: (options?: ResetOptions) => Promise<boolean>;
-  addSampleIndianData: () => void;
 }
 
 const POSContext = createContext<POSContextType>({
@@ -96,6 +47,8 @@ const POSContext = createContext<POSContextType>({
   deleteCategory: () => {},
   startSession: async () => {},
   endSession: async () => {},
+  pauseSession: async () => false,
+  resumeSession: async () => false,
   deleteStation: async () => false,
   updateStation: async () => false,  // Add default implementation
   addCustomer: () => ({}),
@@ -590,6 +543,8 @@ export type {
   Session,
   CartItem,
   Bill,
-  ResetOptions,
-  POSContextType
+  ResetOptions
 } from '@/types/pos.types';
+
+// Export the context type
+export type { POSContextType };
