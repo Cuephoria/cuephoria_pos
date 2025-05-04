@@ -1,4 +1,3 @@
-
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -40,23 +39,33 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes, accounting for pauses
+      // Calculate duration in milliseconds, accounting for pauses
       const startTime = new Date(session.startTime);
       let durationMs = endTime.getTime() - startTime.getTime();
       
       // Subtract total paused time if it exists
       if (session.totalPausedTime) {
         durationMs -= session.totalPausedTime;
+        console.log(`Subtracting total paused time: ${session.totalPausedTime}ms`);
       }
       
       // If currently paused, subtract the time since the pause started
       if (session.isPaused && session.pausedAt) {
-        const pauseDurationMs = endTime.getTime() - session.pausedAt.getTime();
+        const pauseDurationMs = endTime.getTime() - new Date(session.pausedAt).getTime();
         durationMs -= pauseDurationMs;
+        console.log(`Session is currently paused. Subtracting additional pause time: ${pauseDurationMs}ms`);
       }
       
-      // Convert to minutes and round up
-      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
+      // Ensure we don't have negative duration (minimum 0 seconds)
+      durationMs = Math.max(0, durationMs);
+      
+      // Convert to minutes - but use Math.round instead of Math.ceil to get accurate time
+      const durationMinutes = Math.round(durationMs / (1000 * 60));
+      
+      // Also keep track of the duration in seconds for more accurate play time tracking
+      const durationSeconds = Math.round(durationMs / 1000);
+      
+      console.log(`Final duration calculation: ${durationMs}ms = ${durationSeconds}s = ${durationMinutes}m`);
       
       // Create updated session object
       const updatedSession: Session = {
@@ -157,6 +166,7 @@ export const useEndSession = ({
         isMember,
         discountApplied,
         sessionCost,
+        durationSeconds,
         totalPausedTime: session.totalPausedTime,
         isPaused: session.isPaused,
         pausedAt: session.pausedAt
@@ -174,11 +184,13 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time
+      // Update customer's total play time using seconds for more accuracy
       if (customer) {
         const updatedCustomer = {
           ...customer,
-          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+          // Add the exact seconds to the existing total play time (which is in minutes)
+          // Convert the seconds to minutes for storage in the customer record
+          totalPlayTime: (customer.totalPlayTime || 0) + (durationSeconds / 60)
         };
         updateCustomer(updatedCustomer);
       }

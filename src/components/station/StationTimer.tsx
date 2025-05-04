@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Station } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -17,7 +18,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [cost, setCost] = useState<number>(0);
   const { toast } = useToast();
   const { customers } = usePOS();
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const sessionDataRef = useRef<{
     sessionId: string;
     startTime: Date;
@@ -77,11 +78,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       let elapsedMs = now.getTime() - startTime.getTime();
       
       // Subtract total paused time
-      elapsedMs -= totalPausedTime;
+      if (totalPausedTime) {
+        elapsedMs -= totalPausedTime;
+      }
       
       // If currently paused, subtract the time since pause started
       if (isPaused && pausedAt) {
-        const currentPauseMs = now.getTime() - pausedAt.getTime();
+        const currentPauseMs = now.getTime() - new Date(pausedAt).getTime();
         elapsedMs -= currentPauseMs;
       }
       
@@ -218,7 +221,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     
     // Set up interval for regular updates that persists
     if (timerRef.current === null) {
-      timerRef.current = window.setInterval(() => {
+      timerRef.current = setInterval(() => {
         updateTimerFromLocalData();
       }, 1000);
     }
