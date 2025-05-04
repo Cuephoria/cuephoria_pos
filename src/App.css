@@ -74,6 +74,34 @@ input, textarea, select {
   }
 }
 
+/* Enhanced futuristic animations */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px #9b87f5, 0 0 10px #9b87f5, 0 0 15px #9b87f5;
+  }
+  50% {
+    box-shadow: 0 0 10px #9b87f5, 0 0 20px #9b87f5, 0 0 30px #9b87f5;
+  }
+}
+
+@keyframes cyber-scan {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes matrix-code {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
 .logo-pulse {
   animation: pulse-soft 3s infinite ease-in-out;
 }
@@ -84,6 +112,23 @@ input, textarea, select {
 
 .logo-glow {
   animation: glow 3s infinite ease-in-out;
+}
+
+/* Futuristic glowing elements */
+.neon-glow {
+  animation: neon-pulse 2s infinite ease-in-out;
+}
+
+.cyber-gradient {
+  background: linear-gradient(135deg, rgba(155, 135, 245, 0.2), rgba(155, 135, 245, 0));
+  background-size: 400% 400%;
+  animation: cyber-scan 8s infinite linear;
+}
+
+.matrix-effect {
+  background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(155, 135, 245, 0.1) 50%, rgba(0,0,0,0) 100%);
+  background-size: 100% 50px;
+  animation: matrix-code 3s infinite linear;
 }
 
 /* Premium card effects */
@@ -173,9 +218,80 @@ input, textarea, select {
   }
 }
 
+/* Futuristic scan line effect */
+.scan-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-line::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: rgba(155, 135, 245, 0.6);
+  top: -50%;
+  left: 0;
+  box-shadow: 0 0 10px 2px rgba(155, 135, 245, 0.8);
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  0% {
+    top: -5%;
+  }
+  100% {
+    top: 105%;
+  }
+}
+
+/* Futuristic typing animation */
+.typing-effect {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing 3.5s steps(40, end);
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
 /* Staggered animations for lists */
 .staggered-item:nth-child(1) { animation-delay: 0.1s; }
 .staggered-item:nth-child(2) { animation-delay: 0.2s; }
 .staggered-item:nth-child(3) { animation-delay: 0.3s; }
 .staggered-item:nth-child(4) { animation-delay: 0.4s; }
 .staggered-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* Futuristic button effects */
+.btn-futuristic {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #9b87f5 0%, #7661d7 100%);
+  border: 1px solid rgba(255,255,255,0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-futuristic:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(155, 135, 245, 0.6);
+}
+
+.btn-futuristic::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.5s, opacity 0.5s;
+}
+
+.btn-futuristic:hover::before {
+  transform: scale(1);
+  opacity: 1;
+}
