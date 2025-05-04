@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import {
   Dialog,
   DialogContent,
@@ -352,37 +353,44 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#1A1F2C] overflow-hidden relative px-4 w-full">
-      {/* Enhanced background with more futuristic elements */}
+    <div className="min-h-screen flex flex-col items-center justify-center overflow-hidden relative px-4 w-full">
+      {/* Enhanced background with deep blue gradient and gaming icons */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
+        {/* Deep blue gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1a2035] via-[#232a45] to-[#1a2035]"></div>
         
-        {/* Enhanced animated glow effects */}
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-[#9b87f5]/20 blur-3xl animate-pulse-soft"></div>
-        <div className="absolute bottom-1/4 right-1/3 w-40 h-40 rounded-full bg-[#33C3F0]/20 blur-3xl animate-pulse-soft delay-200"></div>
-        
-        {/* Matrix-like grid background */}
-        <div className="absolute inset-0 opacity-10" 
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-5" 
              style={{ 
-               backgroundImage: 'radial-gradient(circle, rgba(155,135,245,0.1) 1px, transparent 1px)', 
-               backgroundSize: '30px 30px' 
+               backgroundImage: 'linear-gradient(rgba(155,135,245,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(155,135,245,0.1) 1px, transparent 1px)', 
+               backgroundSize: '20px 20px' 
              }}
         ></div>
         
-        {/* Futuristic scan line */}
-        <div className="absolute inset-0 scan-line pointer-events-none"></div>
+        {/* Subtle gaming icons scattered in the background */}
+        <div className="absolute top-[10%] left-[10%] text-[#9b87f5]/10 animate-pulse-soft">
+          <Joystick size={40} />
+        </div>
+        <div className="absolute top-[20%] right-[15%] text-[#33C3F0]/10 animate-pulse-soft" style={{animationDelay: '0.5s'}}>
+          <Gamepad size={35} />
+        </div>
+        <div className="absolute bottom-[30%] left-[20%] text-[#9b87f5]/10 animate-pulse-soft" style={{animationDelay: '1s'}}>
+          <Dice1 size={30} />
+        </div>
+        <div className="absolute bottom-[15%] right-[25%] text-[#33C3F0]/10 animate-pulse-soft" style={{animationDelay: '1.5s'}}>
+          <Dice5 size={25} />
+        </div>
+        <div className="absolute top-[50%] left-[30%] text-[#9b87f5]/10 animate-pulse-soft" style={{animationDelay: '2s'}}>
+          <Trophy size={28} />
+        </div>
         
-        {/* Animated cyber elements */}
-        <div className="absolute -bottom-20 left-0 right-0 h-40 cyber-gradient opacity-30"></div>
-        <div className="absolute inset-0 matrix-effect pointer-events-none"></div>
+        {/* Soft glowing orbs */}
+        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full bg-[#9b87f5]/5 blur-3xl animate-pulse-soft"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-40 h-40 rounded-full bg-[#33C3F0]/5 blur-3xl animate-pulse-soft delay-200"></div>
         
-        {/* Floating particles */}
-        <div className="absolute top-20 left-1/5 w-2 h-2 rounded-full bg-[#9b87f5] opacity-70 animate-float" style={{animationDelay: '0s'}}></div>
-        <div className="absolute top-40 right-1/4 w-1 h-1 rounded-full bg-[#33C3F0] opacity-70 animate-float" style={{animationDelay: '0.5s'}}></div>
-        <div className="absolute bottom-32 left-1/3 w-1.5 h-1.5 rounded-full bg-[#D6BCFA] opacity-70 animate-float" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/2 right-1/3 w-2 h-2 rounded-full bg-[#9b87f5] opacity-70 animate-float" style={{animationDelay: '1.5s'}}></div>
-        <div className="absolute bottom-40 right-1/5 w-1 h-1 rounded-full bg-[#33C3F0] opacity-70 animate-float" style={{animationDelay: '2s'}}></div>
+        {/* Horizontal light beams */}
+        <div className="absolute top-[30%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#9b87f5]/20 to-transparent"></div>
+        <div className="absolute top-[70%] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#33C3F0]/20 to-transparent"></div>
       </div>
       
       <div className={`w-full max-w-md z-10 ${animationClass}`}>
@@ -398,12 +406,12 @@ const Login = () => {
           <h1 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight animate-fade-in text-transparent bg-clip-text bg-gradient-to-r from-[#9b87f5] via-[#D6BCFA] to-[#9b87f5]">
             CUEPHORIA
           </h1>
-          <p className="mt-2 text-muted-foreground tracking-wider animate-fade-in bg-gradient-to-r from-[#9b87f5]/80 to-[#9b87f5]/80 bg-clip-text text-transparent text-sm sm:text-base typing-effect">
+          <p className="mt-2 text-[#33C3F0] tracking-wider animate-fade-in typing-effect uppercase text-sm sm:text-base">
             ADMINISTRATOR PORTAL
           </p>
         </div>
         
-        <Card className="bg-[#1A1F2C]/80 border border-[#9b87f5]/30 shadow-xl shadow-[#9b87f5]/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden neon-glow">
+        <Card className="bg-[#1E2538]/90 border border-[#9b87f5]/30 shadow-xl shadow-[#9b87f5]/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden neon-glow">
           <CardHeader className="text-center relative z-10 p-4 sm:p-6 pb-0 sm:pb-0">
             <CardTitle className="text-xl sm:text-2xl text-[#9b87f5] font-bold">Game Master Login</CardTitle>
             <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the control panel</CardDescription>
@@ -484,15 +492,12 @@ const Login = () => {
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
               <Button 
                 type="submit" 
-                className="w-full btn-futuristic font-medium text-sm sm:text-base rounded-lg hover:scale-[1.02]" 
+                className="w-full bg-gradient-to-r from-[#6366f1] to-[#9b87f5] text-white font-medium text-sm sm:text-base rounded-lg hover:brightness-110 transition-all" 
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <LoadingSpinner size="sm" variant="futuristic" className="mr-2" />
                     Accessing...
                   </>
                 ) : (
@@ -506,17 +511,17 @@ const Login = () => {
           </form>
         </Card>
 
-        {/* Futuristic footer text */}
+        {/* Footer text - replaced as requested */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 opacity-70">
-            <span className="block mb-1 text-[#9b87f5]/60">Secure Neural Interface v3.7.2</span>
+            <span className="block mb-1 text-[#9b87f5]/60">Designed and Developed by RK</span>
             <span className="block">© 2025 Cuephoria Gaming Systems</span>
           </p>
         </div>
       </div>
 
       <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-[#1A1F2C]/90 border-[#9b87f5]/40 rounded-xl backdrop-blur-lg neon-glow">
+        <DialogContent className="sm:max-w-md bg-[#1E2538]/90 border-[#9b87f5]/40 rounded-xl backdrop-blur-lg neon-glow">
           {renderForgotPasswordContent()}
         </DialogContent>
       </Dialog>

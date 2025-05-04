@@ -102,6 +102,29 @@ input, textarea, select {
   }
 }
 
+@keyframes grid-fade {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes beam-slide {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
 .logo-pulse {
   animation: pulse-soft 3s infinite ease-in-out;
 }
@@ -129,6 +152,28 @@ input, textarea, select {
   background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(155, 135, 245, 0.1) 50%, rgba(0,0,0,0) 100%);
   background-size: 100% 50px;
   animation: matrix-code 3s infinite linear;
+}
+
+/* Grid animation */
+.grid-animate {
+  animation: grid-fade 4s infinite ease-in-out;
+}
+
+/* Horizontal beam effect */
+.beam-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.beam-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -100%;
+  width: 200%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(155, 135, 245, 0.8), transparent);
+  animation: beam-slide 4s infinite;
 }
 
 /* Premium card effects */
@@ -294,4 +339,33 @@ input, textarea, select {
 .btn-futuristic:hover::before {
   transform: scale(1);
   opacity: 1;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Deep blue gaming theme specific styles */
+.deep-blue-bg {
+  background: linear-gradient(to bottom, #1a2035, #232a45, #1a2035);
+}
+
+.grid-overlay {
+  background-image: linear-gradient(rgba(155,135,245,0.1) 1px, transparent 1px), 
+                    linear-gradient(90deg, rgba(155,135,245,0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.1;
+}
+
+.horizontal-light-beam {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(155, 135, 245, 0.4), transparent);
 }
