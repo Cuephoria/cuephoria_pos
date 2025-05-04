@@ -42,7 +42,7 @@ import { useSessionsData } from '@/hooks/stations/useSessionsData';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
-  const { customers, bills, products, exportBills, exportCustomers } = usePOS();
+  const { customers, bills, products, exportBills, exportCustomers, stations } = usePOS();
   const { sessions, sessionsLoading, deleteSession } = useSessionsData();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
@@ -396,7 +396,8 @@ const ReportsPage: React.FC = () => {
     
     // Calculate usage rates for PS5 stations
     const ps5Sessions = filteredData.filteredSessions.filter(s => {
-      const station = stations?.find(st => st.id === s.stationId);
+      if (!stations) return false;
+      const station = stations.find(st => st.id === s.stationId);
       return station?.type?.toLowerCase()?.includes('ps5') || 
              station?.name?.toLowerCase()?.includes('ps5') ||
              station?.name?.toLowerCase()?.includes('playstation');
