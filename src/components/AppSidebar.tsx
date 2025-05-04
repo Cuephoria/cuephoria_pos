@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -133,28 +134,28 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
         collapsed ? 'w-[70px]' : 'w-[230px]'
       }`}
     >
-      <div className="p-4 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5] to-[#7661d7] shadow-lg animate-pulse-soft">
-          <Gamepad2 className="h-7 w-7 text-white animate-scale-in" />
+      <div className="p-4 flex flex-col items-center">
+        <div className="flex items-center justify-center gap-3 mb-2 w-full">
+          <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5] to-[#7661d7] shadow-lg animate-pulse-soft">
+            <Gamepad2 className="h-7 w-7 text-white animate-scale-in" />
+          </div>
+          <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : 'animate-fade-in flex-1'}`}>
+            Cuephoria
+          </span>
         </div>
-        <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0' : 'animate-fade-in'}`}>
-          Cuephoria
-        </span>
-      </div>
-      
-      {/* Repositioned collapse button to be fully visible */}
-      <div className="absolute right-0 top-10 flex justify-center items-center">
+        
+        {/* Center aligned collapse button below logo */}
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={toggleSidebar} 
-          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md"
+          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md mt-2"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </Button>
       </div>
       
-      <div className="mx-4 h-px bg-gray-700" />
+      <div className="mx-4 h-px bg-gray-700 mt-2" />
       
       <div className="flex-1 overflow-auto py-4 no-scrollbar">
         <div className="space-y-1 px-3">

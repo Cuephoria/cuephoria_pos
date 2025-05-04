@@ -38,10 +38,10 @@ function App() {
         <ExpenseProvider>
           <TooltipProvider>
             <BrowserRouter>
-              <div className="flex min-h-screen w-full bg-[#1A1F2C] overflow-hidden">
+              <div className="flex min-h-screen w-full bg-[#1A1F2C] overflow-x-hidden">
                 <AppSidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
                 <div 
-                  className="flex-1 transition-all duration-300"
+                  className="flex-1 transition-all duration-300 overflow-x-hidden"
                   style={{ 
                     marginLeft: sidebarCollapsed ? '70px' : '230px',
                     width: `calc(100% - ${sidebarCollapsed ? '70px' : '230px'})` 
