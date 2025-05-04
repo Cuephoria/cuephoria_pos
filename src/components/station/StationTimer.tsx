@@ -5,7 +5,6 @@ import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
-import { CirclePause } from 'lucide-react';
 
 interface StationTimerProps {
   station: Station;
@@ -18,17 +17,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [cost, setCost] = useState<number>(0);
   const { toast } = useToast();
   const { customers } = usePOS();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
   const sessionDataRef = useRef<{
     sessionId: string;
     startTime: Date;
     stationId: string;
     customerId: string;
     hourlyRate: number;
-    isPaused: boolean;
-    totalPausedTime: number;
-    pausedAt?: Date;
-    lastCost: number; // Store the last calculated cost for display when paused
   } | null>(null);
 
   useEffect(() => {
@@ -49,17 +44,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     }
 
     // Store the session data in ref to maintain persistence across renders
-    if (station.currentSession) {
+    if (station.currentSession && !sessionDataRef.current) {
       sessionDataRef.current = {
         sessionId: station.currentSession.id,
         startTime: new Date(station.currentSession.startTime),
         stationId: station.id,
         customerId: station.currentSession.customerId,
-        hourlyRate: station.hourlyRate,
-        isPaused: station.currentSession.isPaused || false,
-        totalPausedTime: station.currentSession.totalPausedTime || 0,
-        pausedAt: station.currentSession.pausedAt,
-        lastCost: 0 // Initialize last cost
+        hourlyRate: station.hourlyRate
       };
     }
 
@@ -71,25 +62,9 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     const updateTimerFromLocalData = () => {
       if (!sessionDataRef.current) return;
       
-      const { startTime, isPaused, totalPausedTime, pausedAt } = sessionDataRef.current;
+      const startTime = sessionDataRef.current.startTime;
       const now = new Date();
-      
-      // Calculate elapsed time accounting for pauses
-      let elapsedMs = now.getTime() - startTime.getTime();
-      
-      // Subtract total paused time
-      if (totalPausedTime) {
-        elapsedMs -= totalPausedTime;
-      }
-      
-      // If currently paused, subtract the time since pause started
-      if (isPaused && pausedAt) {
-        const currentPauseMs = now.getTime() - new Date(pausedAt).getTime();
-        elapsedMs -= currentPauseMs;
-      }
-      
-      // Don't allow negative time
-      elapsedMs = Math.max(0, elapsedMs);
+      const elapsedMs = now.getTime() - startTime.getTime();
       
       const secondsTotal = Math.floor(elapsedMs / 1000);
       const minutesTotal = Math.floor(secondsTotal / 60);
@@ -108,37 +83,19 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
       }
       
-      // If paused, keep showing the last calculated cost
-      if (isPaused) {
-        if (sessionDataRef.current.lastCost === 0) {
-          // If we just paused, store the current cost
-          sessionDataRef.current.lastCost = calculatedCost;
-        }
-        calculatedCost = sessionDataRef.current.lastCost;
-      } else {
-        // Update the last cost when not paused
-        if (sessionDataRef.current) {
-          sessionDataRef.current.lastCost = calculatedCost;
-        }
-      }
-      
       setCost(calculatedCost);
       
       console.log("Timer update:", {
         sessionId: sessionDataRef.current.sessionId,
         startTime: startTime.toISOString(),
         elapsedMs,
-        isPaused,
-        totalPausedTime,
-        pausedAt: pausedAt?.toISOString(),
         secondsTotal,
         minutesTotal,
         hoursTotal,
         hourlyRate: station.hourlyRate,
         isMember,
         discountApplied: isMember,
-        calculatedCost,
-        pausedDisplayCost: isPaused ? sessionDataRef.current.lastCost : null
+        calculatedCost
       });
     };
 
@@ -169,34 +126,18 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           
           if (sessionData && sessionData.start_time) {
             const startTime = new Date(sessionData.start_time);
-            const isPaused = sessionData.is_paused || false;
-            const totalPausedTime = sessionData.total_paused_time || 0;
-            const pausedAt = sessionData.paused_at ? new Date(sessionData.paused_at) : undefined;
-            
-            console.log("Session data from Supabase:", {
-              startTime,
-              isPaused,
-              totalPausedTime,
-              pausedAt
-            });
+            console.log("Session start time from Supabase:", startTime);
             
             // Update the sessionDataRef with data from Supabase
             if (sessionDataRef.current) {
               sessionDataRef.current.startTime = startTime;
-              sessionDataRef.current.isPaused = isPaused;
-              sessionDataRef.current.totalPausedTime = totalPausedTime;
-              sessionDataRef.current.pausedAt = pausedAt;
             } else {
               sessionDataRef.current = {
                 sessionId,
                 startTime,
                 stationId: station.id,
                 customerId: station.currentSession.customerId,
-                hourlyRate: station.hourlyRate,
-                isPaused,
-                totalPausedTime,
-                pausedAt,
-                lastCost: 0
+                hourlyRate: station.hourlyRate
               };
             }
             
@@ -221,7 +162,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     
     // Set up interval for regular updates that persists
     if (timerRef.current === null) {
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         updateTimerFromLocalData();
       }, 1000);
     }
@@ -252,28 +193,16 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     return null;
   }
 
-  const isPaused = station.currentSession.isPaused || false;
-
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
-      <div className="text-center relative">
-        {/* Move the pause icon next to occupied status instead of timer */}
-        <div className="flex items-center justify-center gap-3">
-          <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block ${isPaused ? 'opacity-60' : ''}`}>
-            {formatTimeDisplay()}
-          </span>
-        </div>
+      <div className="text-center">
+        <span className="font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full">
+          {formatTimeDisplay()}
+        </span>
       </div>
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span className="text-white">Current Cost:</span>
-          {isPaused && (
-            <CirclePause className="h-5 w-5 text-cuephoria-orange animate-pulse ml-1" />
-          )}
-        </div>
-        <span className={`text-cuephoria-orange font-bold text-lg ${isPaused ? 'opacity-60' : ''}`}>
-          ₹{Math.round(cost).toLocaleString('en-IN')}
-        </span>
+        <span className="text-white">Current Cost:</span>
+        <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
     </div>
   );

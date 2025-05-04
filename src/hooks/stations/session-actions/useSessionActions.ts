@@ -1,7 +1,7 @@
+
 import { useState } from 'react';
 import { useStartSession } from './useStartSession';
 import { useEndSession } from './useEndSession';
-import { usePauseSession } from './usePauseSession';
 import { SessionActionsProps } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -15,9 +15,8 @@ export const useSessionActions = (props: SessionActionsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Get the functionality from existing hooks
-  const startSessionHook = useStartSession(props); // Fix: Pass props here
+  const startSessionHook = useStartSession(props);
   const endSessionHook = useEndSession({...props, updateCustomer});
-  const pauseSessionHook = usePauseSession();
   
   // Start a new session
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
@@ -45,8 +44,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
         stationId: stationId,
         customerId: customerId,
         startTime: now,
-        isPaused: false,
-        totalPausedTime: 0
         // No endTime or duration, will be set when explicitly ended
       };
       
@@ -70,8 +67,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
             station_id: dbStationId, // Use a valid UUID for database
             customer_id: newSession.customerId,
             start_time: newSession.startTime.toISOString(),
-            is_paused: false,
-            total_paused_time: 0
             // No end_time or duration, making it persist until explicitly ended
           } as any)
           .select();
@@ -172,106 +167,10 @@ export const useSessionActions = (props: SessionActionsProps) => {
       setIsLoading(false);
     }
   };
-
-  // Pause an active session
-  const pauseSession = async (stationId: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      
-      // Find the station and the session
-      const station = stations.find(s => s.id === stationId);
-      if (!station || !station.currentSession) {
-        console.error('No station or session found:', stationId);
-        return false;
-      }
-      
-      // Get the session ID
-      const sessionId = station.currentSession.id;
-      
-      // Call the hook to pause the session
-      const result = await pauseSessionHook.pauseSession(sessionId);
-      
-      if (result.success && result.session) {
-        // Update local state
-        const updatedStation = {
-          ...station,
-          currentSession: result.session
-        };
-        
-        setStations(stations.map(s => s.id === stationId ? updatedStation : s));
-        
-        // Update sessions array
-        setSessions(prevSessions => 
-          prevSessions.map(s => s.id === sessionId ? result.session! : s)
-        );
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Error in pauseSession:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to pause session',
-        variant: 'destructive'
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Resume a paused session
-  const resumeSession = async (stationId: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      
-      // Find the station and the session
-      const station = stations.find(s => s.id === stationId);
-      if (!station || !station.currentSession) {
-        console.error('No station or session found:', stationId);
-        return false;
-      }
-      
-      // Get the session ID
-      const sessionId = station.currentSession.id;
-      
-      // Call the hook to resume the session
-      const result = await pauseSessionHook.resumeSession(sessionId);
-      
-      if (result.success && result.session) {
-        // Update local state
-        const updatedStation = {
-          ...station,
-          currentSession: result.session
-        };
-        
-        setStations(stations.map(s => s.id === stationId ? updatedStation : s));
-        
-        // Update sessions array
-        setSessions(prevSessions => 
-          prevSessions.map(s => s.id === sessionId ? result.session! : s)
-        );
-      }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Error in resumeSession:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to resume session',
-        variant: 'destructive'
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   return {
     startSession,
     endSession,
-    pauseSession,
-    resumeSession,
     isLoading
   };
 };

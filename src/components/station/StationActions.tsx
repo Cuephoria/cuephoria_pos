@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, User, Pause, CirclePause } from "lucide-react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StationActionsProps {
@@ -27,7 +27,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const { toast } = useToast();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const { selectCustomer, pauseSession, resumeSession } = usePOS();
+  const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
 
   const handleStartSession = async () => {
@@ -100,75 +100,16 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
-  const handlePauseResumeSession = async () => {
-    if (!station.isOccupied || !station.currentSession) return;
-
-    try {
-      setIsLoading(true);
-      const isPaused = station.currentSession.isPaused || false;
-
-      if (isPaused) {
-        // Resume session
-        const success = await resumeSession(station.id);
-        if (success) {
-          toast({
-            title: "Session Resumed",
-            description: `Session for ${station.name} has been resumed`,
-          });
-        }
-      } else {
-        // Pause session
-        const success = await pauseSession(station.id);
-        if (success) {
-          toast({
-            title: "Session Paused",
-            description: `Session for ${station.name} has been paused`,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error toggling pause state:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update session state. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (station.isOccupied && station.currentSession) {
-    const isPaused = station.currentSession.isPaused || false;
-    
+  if (station.isOccupied) {
     return (
-      <div className="space-y-3 w-full">
-        <Button 
-          variant="secondary" 
-          className={`w-full text-white font-bold py-3 rounded-lg ${isPaused 
-            ? 'bg-green-600 hover:bg-green-700' 
-            : 'bg-amber-500 hover:bg-amber-600'}`}
-          onClick={handlePauseResumeSession}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            "Processing..."
-          ) : isPaused ? (
-            <>Resume Session <Pause className="ml-2 h-4 w-4" /></>
-          ) : (
-            <>Pause Session <Pause className="ml-2 h-4 w-4" /></>
-          )}
-        </Button>
-        
-        <Button 
-          variant="destructive" 
-          className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity rounded-lg"
-          onClick={handleEndSession}
-          disabled={isLoading}
-        >
-          {isLoading ? "Processing..." : "End Session"}
-        </Button>
-      </div>
+      <Button 
+        variant="destructive" 
+        className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
+        onClick={handleEndSession}
+        disabled={isLoading}
+      >
+        {isLoading ? "Processing..." : "End Session"}
+      </Button>
     );
   }
 
@@ -180,7 +121,7 @@ const StationActions: React.FC<StationActionsProps> = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between mb-3 rounded-lg"
+            className="w-full justify-between mb-3"
             disabled={customers.length === 0}
           >
             {selectedCustomerId ? (
@@ -191,9 +132,9 @@ const StationActions: React.FC<StationActionsProps> = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 rounded-lg">
+        <PopoverContent className="w-full p-0">
           <Command>
-            <CommandInput placeholder="Search customers..." className="rounded-t-lg" />
+            <CommandInput placeholder="Search customers..." />
             <CommandEmpty>No customer found.</CommandEmpty>
             <CommandGroup>
               <CommandList>
@@ -205,7 +146,6 @@ const StationActions: React.FC<StationActionsProps> = ({
                       setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
                       setOpen(false);
                     }}
-                    className="rounded-md"
                   >
                     <Check
                       className={cn(
@@ -230,7 +170,7 @@ const StationActions: React.FC<StationActionsProps> = ({
 
       <Button 
         variant="default" 
-        className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity rounded-lg"
+        className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
         disabled={!selectedCustomerId || isLoading || customers.length === 0} 
         onClick={handleStartSession}
       >

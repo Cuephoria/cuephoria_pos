@@ -1,36 +1,34 @@
 
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Menu, Shield } from 'lucide-react';
 import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Gamepad2, 
-  Package, 
-  Users, 
-  BarChart2, 
-  Settings, 
-  Shield,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
+  Sidebar, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar
+} from '@/components/ui/sidebar';
+import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import Logo from '@/components/Logo';
 
-interface AppSidebarProps {
-  collapsed: boolean;
-  toggleSidebar: () => void;
-}
-
-const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => {
+const AppSidebar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const hideOnPaths = ['/login', '/'];
-  const shouldHide = hideOnPaths.some(path => location.pathname === path);
+  const hideOnPaths = ['/receipt'];
+  const shouldHide = hideOnPaths.some(path => location.pathname.includes(path));
   const isMobile = useIsMobile();
+  const { toggleSidebar } = useSidebar();
   
   const isAdmin = user?.isAdmin || false;
 
@@ -38,9 +36,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
 
   // Base menu items that both admin and staff can see
   const baseMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: ShoppingCart, label: 'POS', path: '/pos' },
-    { icon: Gamepad2, label: 'Gaming Stations', path: '/stations' },
+    { icon: Clock, label: 'Gaming Stations', path: '/stations' },
     { icon: Package, label: 'Products', path: '/products' },
     { icon: Users, label: 'Customers', path: '/customers' },
   ];
@@ -56,11 +54,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
     [...baseMenuItems, ...adminOnlyMenuItems] : 
     baseMenuItems;
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   // Mobile version with sheet
   if (isMobile) {
     return (
@@ -70,47 +63,47 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-[80%] max-w-[280px] bg-[#1A1F2C] border-r-0">
                 <div className="h-full flex flex-col">
                   <div className="p-4 flex items-center gap-3">
-                    <div className="flex items-center animate-fade-in">
-                      <Logo size="sm" />
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow relative">
+                      <Joystick className="h-6 w-6 text-white absolute animate-bounce" />
                     </div>
-                    <span className="text-xl font-bold text-[#9b87f5] animate-pulse-soft">Cuephoria</span>
+                    <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
                   </div>
-                  <div className="mx-4 h-px bg-gray-700" />
+                  <div className="mx-4 h-px bg-cuephoria-purple/30" />
                   <div className="flex-1 overflow-auto py-2">
                     <div className="px-2">
-                      {menuItems.map((item) => (
+                      {menuItems.map((item, index) => (
                         <Link 
                           key={item.path}
                           to={item.path} 
-                          className={`flex items-center py-3 px-3 rounded-lg my-1 ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
+                          className={`flex items-center py-3 px-3 rounded-md my-1 ${location.pathname === item.path ? 'bg-cuephoria-dark text-cuephoria-lightpurple' : 'text-white hover:bg-cuephoria-dark/50'}`}
                         >
-                          <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''}`} />
-                          <span className="text-base">{item.label}</span>
+                          <item.icon className={`mr-3 h-5 w-5 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
+                          <span className="font-quicksand text-base">{item.label}</span>
                         </Link>
                       ))}
                     </div>
                   </div>
                   <div className="p-4">
-                    <div className="flex items-center justify-between bg-[#252A37] rounded-lg p-3 shadow-md">
+                    <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 shadow-md">
                       <div className="flex items-center">
                         {isAdmin ? (
-                          <Shield className="h-5 w-5 text-[#9b87f5]" />
+                          <Shield className="h-5 w-5 text-cuephoria-lightpurple" />
                         ) : (
-                          <Users className="h-5 w-5 text-blue-400" />
+                          <User className="h-5 w-5 text-cuephoria-blue" />
                         )}
-                        <span className="ml-2 text-sm font-medium text-white">
+                        <span className="ml-2 text-sm font-medium font-quicksand text-white">
                           {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
                         </span>
                       </div>
                       <button 
-                        onClick={handleLogout}
-                        className="text-xs bg-[#1A1F2C] px-3 py-1 rounded-md hover:bg-[#9b87f5] transition-all duration-300 text-white"
+                        onClick={logout}
+                        className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading text-white"
                       >
                         Logout
                       </button>
@@ -119,7 +112,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="text-xl font-bold text-[#9b87f5] animate-pulse-soft">Cuephoria</span>
+            <span className="text-xl font-bold gradient-text font-heading">Cuephoria</span>
           </div>
         </div>
         <div className="pt-16"></div> {/* Space for the fixed header */}
@@ -127,92 +120,55 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, toggleSidebar }) => 
     );
   }
 
-  // Desktop version with collapsible sidebar
+  // Desktop version with Sidebar
   return (
-    <div 
-      className={`bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0 z-50 transition-all duration-300 overflow-hidden ${
-        collapsed ? 'w-[70px]' : 'w-[230px]'
-      }`}
-    >
-      <div className="p-4 flex flex-col items-center">
-        <div className="flex items-center justify-center gap-3 mb-2 w-full">
-          <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-br from-[#9b87f5] to-[#7661d7] shadow-lg animate-pulse-soft">
-            <Gamepad2 className="h-7 w-7 text-white animate-scale-in" />
-          </div>
-          <span className={`text-2xl font-bold text-[#9b87f5] whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : 'animate-fade-in flex-1'}`}>
-            Cuephoria
-          </span>
+    <Sidebar className="border-r-0 bg-[#1A1F2C] text-white w-[250px]">
+      <SidebarHeader className="p-4 flex items-center gap-3">
+        <div className="h-12 w-12 rounded-full flex items-center justify-center bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple shadow-lg animate-pulse-glow relative">
+          <Joystick className="h-7 w-7 text-white absolute animate-bounce" />
         </div>
-        
-        {/* Center aligned collapse button below logo */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={toggleSidebar} 
-          className="rounded-full bg-[#252A37] border border-gray-700 h-7 w-7 p-0 flex justify-center items-center text-white hover:bg-[#9b87f5] shadow-md mt-2"
-        >
-          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </Button>
-      </div>
-      
-      <div className="mx-4 h-px bg-gray-700 mt-2" />
-      
-      <div className="flex-1 overflow-auto py-4 no-scrollbar">
-        <div className="space-y-1 px-3">
-          {menuItems.map((item) => (
-            <Link 
-              key={item.path}
-              to={item.path} 
-              className={`flex items-center py-2.5 px-3 rounded-lg ${location.pathname === item.path ? 'bg-[#252A37] text-[#9b87f5]' : 'text-white hover:bg-[#252A37]/50'}`}
-              title={collapsed ? item.label : ""}
-            >
-              <item.icon className={`h-5 w-5 ${location.pathname === item.path ? 'text-[#9b87f5]' : ''} ${collapsed ? 'mx-auto' : 'mr-3'}`} />
-              <span className={`whitespace-nowrap transition-opacity duration-300 ${collapsed ? 'opacity-0 w-0' : ''}`}>{item.label}</span>
-            </Link>
-          ))}
+        <span className="text-2xl font-bold gradient-text font-heading">Cuephoria</span>
+      </SidebarHeader>
+      <SidebarSeparator className="mx-4 bg-cuephoria-purple/30" />
+      <SidebarContent className="mt-2">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {menuItems.map((item, index) => (
+                <SidebarMenuItem key={item.path} className={`animate-fade-in delay-${index * 100} text-base`}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.path}>
+                    <Link to={item.path} className="flex items-center menu-item py-2.5">
+                      <item.icon className={`mr-3 h-6 w-6 ${location.pathname === item.path ? 'text-cuephoria-lightpurple animate-pulse-soft' : ''}`} />
+                      <span className="font-quicksand">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="p-4">
+        <div className="flex items-center justify-between bg-cuephoria-dark rounded-lg p-3 animate-scale-in shadow-md">
+          <div className="flex items-center">
+            {isAdmin ? (
+              <Shield className="h-6 w-6 text-cuephoria-lightpurple" />
+            ) : (
+              <User className="h-6 w-6 text-cuephoria-blue" />
+            )}
+            <span className="ml-2 text-sm font-medium font-quicksand">
+              {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
+            </span>
+          </div>
+          <button 
+            onClick={logout}
+            className="text-xs bg-cuephoria-darker px-3 py-1 rounded-md hover:bg-cuephoria-purple transition-all duration-300 font-heading"
+          >
+            Logout
+          </button>
         </div>
-      </div>
-      
-      {/* Improved logout section */}
-      <div className="p-4">
-        {collapsed ? (
-          <div className="flex flex-col items-center gap-2">
-            <div className="h-9 w-9 rounded-full flex items-center justify-center bg-[#252A37] shadow-md mb-1">
-              {isAdmin ? (
-                <Shield className="h-5 w-5 text-[#9b87f5]" />
-              ) : (
-                <Users className="h-5 w-5 text-blue-400" />
-              )}
-            </div>
-            <Button 
-              onClick={handleLogout}
-              className="w-full text-xs h-7 bg-[#252A37] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300"
-            >
-              Out
-            </Button>
-          </div>
-        ) : (
-          <div className="bg-[#252A37] rounded-lg p-3 shadow-md">
-            <div className="flex items-center gap-2 mb-2">
-              {isAdmin ? (
-                <Shield className="h-5 w-5 text-[#9b87f5]" />
-              ) : (
-                <Users className="h-5 w-5 text-blue-400" />
-              )}
-              <span className="text-sm font-medium text-white overflow-hidden text-ellipsis">
-                {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
-              </span>
-            </div>
-            <Button 
-              onClick={handleLogout}
-              className="w-full text-xs bg-[#1A1F2C] hover:bg-[#9b87f5] text-white rounded-lg transition-all duration-300"
-            >
-              Logout
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { 
-  POSContextType as POSContextTypeBase, 
+  POSContextType, 
   ResetOptions, 
   Customer, 
   CartItem, 
@@ -15,12 +15,6 @@ import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
-
-// Extend the POSContextType to include pause session functionality
-interface POSContextType extends POSContextTypeBase {
-  pauseSession: (stationId: string) => Promise<boolean>;
-  resumeSession: (stationId: string) => Promise<boolean>;
-}
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -47,8 +41,6 @@ const POSContext = createContext<POSContextType>({
   deleteCategory: () => {},
   startSession: async () => {},
   endSession: async () => {},
-  pauseSession: async () => false,
-  resumeSession: async () => false,
   deleteStation: async () => false,
   updateStation: async () => false,  // Add default implementation
   addCustomer: () => ({}),
@@ -115,13 +107,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStations, 
     sessions, 
     setSessions, 
-    startSession: startNewSession, 
-    endSession: endActiveSession,
-    pauseSession: pauseActiveSession,
-    resumeSession: resumeActiveSession,
+    startSession: startSessionBase, 
+    endSession: endSessionBase,
     deleteStation,
-    updateStation,
-    refreshStations
+    updateStation
   } = useStations([], updateCustomer);
   
   const { 
@@ -214,7 +203,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // Wrapper functions that combine functionality from multiple hooks
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
-    await startNewSession(stationId, customerId);
+    await startSessionBase(stationId, customerId);
   };
   
   // Make endSession return a Promise<void> to match type definition
@@ -231,7 +220,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const customerId = station.currentSession.customerId;
       
       // Call the base endSession function
-      const result = await endActiveSession(stationId, customers);
+      const result = await endSessionBase(stationId, customers);
       
       if (result) {
         const { sessionCartItem, customer } = result;
@@ -254,26 +243,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.error('Error in endSession:', error);
       throw error;
-    }
-  };
-  
-  // Pause session function from the useStations hook
-  const pauseSession = async (stationId: string): Promise<boolean> => {
-    try {
-      return await pauseActiveSession(stationId);
-    } catch (error) {
-      console.error("Error in pauseSession wrapper:", error);
-      return false;
-    }
-  };
-  
-  // Resume session function from the useStations hook
-  const resumeSession = async (stationId: string): Promise<boolean> => {
-    try {
-      return await resumeActiveSession(stationId);
-    } catch (error) {
-      console.error("Error in resumeSession wrapper:", error);
-      return false;
     }
   };
   
@@ -484,60 +453,56 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   console.log('POSProvider rendering with context value'); // Debug log
   
-  const contextValue: POSContextType = {
-    products,
-    productsLoading,
-    productsError,
-    stations,
-    customers,
-    sessions,
-    bills,
-    cart,
-    selectedCustomer,
-    discount,
-    discountType,
-    loyaltyPointsUsed,
-    isStudentDiscount,
-    categories,
-    setIsStudentDiscount,
-    setStations,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    startSession,
-    endSession,
-    pauseSession,
-    resumeSession,
-    deleteStation,
-    updateStation,
-    addCustomer,
-    updateCustomer,
-    updateCustomerMembership: updateCustomerMembershipWrapper,
-    deleteCustomer,
-    selectCustomer,
-    checkMembershipValidity,
-    deductMembershipHours,
-    addToCart,
-    removeFromCart,
-    updateCartItem,
-    clearCart,
-    setDiscount,
-    setLoyaltyPointsUsed,
-    calculateTotal,
-    completeSale,
-    deleteBill,
-    exportBills,
-    exportCustomers,
-    resetToSampleData: handleResetToSampleData,
-    addSampleIndianData: handleAddSampleIndianData
-  };
-  
   return (
     <POSContext.Provider
-      value={contextValue}
+      value={{
+        products,
+        productsLoading,
+        productsError,
+        stations,
+        customers,
+        sessions,
+        bills,
+        cart,
+        selectedCustomer,
+        discount,
+        discountType,
+        loyaltyPointsUsed,
+        isStudentDiscount,
+        categories,
+        setIsStudentDiscount,
+        setStations,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        startSession,
+        endSession,
+        deleteStation,
+        updateStation,
+        addCustomer,
+        updateCustomer,
+        updateCustomerMembership: updateCustomerMembershipWrapper,
+        deleteCustomer,
+        selectCustomer,
+        checkMembershipValidity,
+        deductMembershipHours,
+        addToCart,
+        removeFromCart,
+        updateCartItem,
+        clearCart,
+        setDiscount,
+        setLoyaltyPointsUsed,
+        calculateTotal,
+        completeSale,
+        deleteBill,
+        exportBills,
+        exportCustomers,
+        resetToSampleData: handleResetToSampleData,
+        addSampleIndianData: handleAddSampleIndianData
+      }}
     >
       {children}
     </POSContext.Provider>
@@ -563,8 +528,6 @@ export type {
   Session,
   CartItem,
   Bill,
-  ResetOptions
+  ResetOptions,
+  POSContextType
 } from '@/types/pos.types';
-
-// Export the context type
-export type { POSContextType };

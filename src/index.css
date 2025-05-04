@@ -1,273 +1,241 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
+
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 258 63% 73%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    
-    --sidebar-background: 222.2 47.4% 11.2%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    --background: 225 20% 13%;
+    --foreground: 0 0% 100%;
 
-    --cuephoria-purple: 258 63% 73%;
-    --cuephoria-lightpurple: 267 100% 81%;
-    --cuephoria-orange: 27 98% 54%;
-    --cuephoria-blue: 210 100% 56%;
+    --card: 225 20% 13%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 225 20% 13%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 260 48% 80%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 25 95% 53%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 225 20% 20%;
+    --muted-foreground: 225 10% 70%;
+
+    --accent: 199 90% 48%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 225 20% 25%;
+    --input: 225 20% 25%;
+    --ring: 260 33% 50%;
 
     --radius: 0.75rem;
+
+    --sidebar-background: 225 20% 13%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 260 48% 80%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 225 20% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 225 20% 25%;
+    --sidebar-ring: 260 33% 50%;
   }
 
-  .light {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 258 63% 73%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-  }
-}
- 
-@layer base {
   * {
     @apply border-border;
   }
+
+  html, body {
+    @apply overflow-x-hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
   body {
-    @apply bg-[#1A1F2C] text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    min-height: 100vh;
-    margin: 0;
-    overflow-x: hidden; /* Prevent horizontal scrolling */
+    @apply bg-background text-foreground font-quicksand;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Content wrapper for all main areas */
+  #root {
+    @apply overflow-x-hidden;
+    width: 100%;
+  }
+}
+
+/* Custom styles for Cuephoria */
+.indian-rupee::before {
+  content: "₹";
+  display: inline-block;
+  margin-right: 2px;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Better outlines for focus */
+:focus-visible {
+  outline: 2px solid #9b87f5;
+  outline-offset: 2px;
+}
+
+/* Gradient text for headings */
+.gradient-text {
+  @apply bg-gradient-to-r from-[#9b87f5] to-[#0EA5E9] bg-clip-text text-transparent;
+}
+
+/* Cards hover effects */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:shadow-[#9b87f5]/20 hover:translate-y-[-4px];
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .card {
+    @apply p-3 !important;
   }
   
-  html, #root {
-    background-color: #1A1F2C;
+  h1, h2, h3 {
+    @apply text-center;
   }
-
-  /* Premium UI styles */
-  button, .btn, .button {
-    @apply rounded-lg shadow-sm transition-all duration-300;
+  
+  .table-container {
+    @apply overflow-x-auto -mx-4 px-4;
   }
-
+  
+  /* Fix for tables on mobile */
+  table {
+    @apply min-w-full;
+  }
+  
+  /* Improved touch targets */
+  button, a, [role="button"] {
+    @apply min-h-10 min-w-10;
+  }
+  
+  /* Forms on mobile */
   input, select, textarea {
-    @apply rounded-lg border-gray-800 bg-gray-900/50 focus:border-[#9b87f5] focus:ring-[#9b87f5]/20;
-  }
-
-  .dialog-content, .popover-content, .sheet-content, .card {
-    @apply rounded-xl border-gray-800 shadow-lg;
-  }
-
-  /* Custom scrollbar for premium look */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    @apply text-base;
   }
   
-  ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: rgba(155, 135, 245, 0.5);
-    border-radius: 4px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(155, 135, 245, 0.8);
+  /* Grid adjustments */
+  .grid {
+    @apply grid-cols-1;
   }
 }
 
-html, body {
-  overflow-x: hidden; /* Prevent horizontal scrolling */
-  background-color: #1A1F2C;
-}
-
-@layer components {
-  .gradient-text {
-    @apply text-transparent bg-clip-text bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple;
-  }
-  
-  .input-group {
-    @apply relative flex items-center rounded-lg;
-  }
-
-  .input-addon {
-    @apply absolute left-3 text-muted-foreground;
-  }
-
-  .input-with-addon {
-    @apply pl-10;
-  }
-
-  /* Theme colors for easy use */
-  .bg-cuephoria-purple {
-    @apply bg-[#9b87f5];
-  }
-  
-  .bg-cuephoria-lightpurple {
-    @apply bg-[#D6BCFA];
-  }
-  
-  .bg-cuephoria-orange {
-    @apply bg-[#F97316];
-  }
-  
-  .bg-cuephoria-blue {
-    @apply bg-[#33C3F0];
-  }
-
-  .text-cuephoria-purple {
-    @apply text-[#9b87f5];
-  }
-  
-  .text-cuephoria-lightpurple {
-    @apply text-[#D6BCFA];
-  }
-  
-  .text-cuephoria-orange {
-    @apply text-[#F97316];
-  }
-  
-  .text-cuephoria-blue {
-    @apply text-[#33C3F0];
-  }
-
-  .border-cuephoria-purple {
-    @apply border-[#9b87f5];
-  }
-
-  .border-cuephoria-orange {
-    @apply border-[#F97316];
-  }
-
-  /* Premium buttons */
-  .btn-premium {
-    @apply bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple text-white rounded-lg 
-           shadow-lg hover:shadow-xl hover:opacity-90 transition-all duration-300;
-  }
-}
-
-@layer utilities {
-  .animate-slide-up {
-    animation: slide-up 0.5s ease-out forwards;
-  }
-  
-  .animate-slide-down {
-    animation: slide-down 0.5s ease-out forwards;
-  }
-  
-  .animate-fade-in {
-    animation: fade-in 0.5s ease-out forwards;
-  }
-  
-  .animate-scale-in {
-    animation: scale-in 0.3s ease-out forwards;
-  }
-  
-  .animate-pulse-soft {
-    animation: pulse-soft 2s infinite;
-  }
-}
-
-@keyframes slide-up {
-  0% {
+/* Animations */
+@keyframes slideUp {
+  from {
     transform: translateY(20px);
     opacity: 0;
   }
-  100% {
+  to {
     transform: translateY(0);
     opacity: 1;
   }
 }
 
-@keyframes slide-down {
-  0% {
+@keyframes slideDown {
+  from {
     transform: translateY(-20px);
     opacity: 0;
   }
-  100% {
+  to {
     transform: translateY(0);
     opacity: 1;
   }
 }
 
-@keyframes fade-in {
-  0% {
+@keyframes fadeIn {
+  from {
     opacity: 0;
   }
-  100% {
+  to {
     opacity: 1;
   }
 }
 
-@keyframes scale-in {
-  0% {
+@keyframes scaleIn {
+  from {
     transform: scale(0.9);
     opacity: 0;
   }
-  100% {
+  to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(155, 135, 245, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(155, 135, 245, 0.6);
   }
 }
 
 @keyframes pulse-soft {
-  0%, 100% {
-    opacity: 0.6;
-    transform: scale(1);
+  0% {
+    opacity: 0.5;
   }
   50% {
     opacity: 1;
-    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.5;
   }
 }
 
+/* Animation classes */
+.animate-slide-up {
+  animation: slideUp 0.5s ease forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s infinite ease-in-out;
+}
+
+/* Animation delays */
 .delay-100 {
   animation-delay: 100ms;
 }
@@ -278,4 +246,201 @@ html, body {
 
 .delay-300 {
   animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Menu animation */
+.menu-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-item:hover {
+  transform: translateX(4px);
+}
+
+/* Badge animations */
+.badge-pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Button animations */
+.btn-hover-effect {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hover-effect:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.btn-hover-effect:hover:after {
+  transform: translateX(0);
+}
+
+/* Receipt styling */
+.receipt {
+  font-family: 'Courier New', monospace;
+  background: white;
+  color: #222;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+
+.receipt-total {
+  border-top: 1px dashed #ccc;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  font-weight: bold;
+}
+
+/* Mobile fixes for common components */
+@media (max-width: 768px) {
+  /* Card adjustments */
+  .card-title {
+    @apply text-lg;
+  }
+  
+  /* Button size adjustments */
+  .btn-mobile {
+    @apply px-2 py-1 text-sm;
+  }
+  
+  /* Fix for forms */
+  .form-group {
+    @apply mb-3;
+  }
+  
+  /* Dashboard stats cards */
+  .stats-card {
+    @apply mx-auto max-w-[320px];
+  }
+}
+
+/* Custom animations for action buttons */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(155, 135, 245, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(155, 135, 245, 0.8);
+  }
+}
+
+.action-button-glow:hover {
+  animation: pulse-glow 2s infinite;
+  transform: translateY(-2px);
+}
+
+/* --- Hide scrollbar elegantly for the product tags filter --- */
+.cuephoria-scrollbar-hide {
+  overflow-x: auto;
+  -ms-overflow-style: none;        /* IE and Edge */
+  scrollbar-width: none;           /* Firefox */
+}
+.cuephoria-scrollbar-hide::-webkit-scrollbar {
+  display: none !important;        /* Chrome, Safari, Opera */
+}
+
+/* --- Product Filter Tag Custom Styling --- */
+.cuephoria-filter-tag {
+  background: transparent;
+  border: none;
+  outline: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: #dad8e7;
+  transition: background 0.18s, color 0.18s;
+  min-width: 80px;
+  margin-right: 6px;
+  margin-left: 0;
+  margin-bottom: 0;
+  margin-top: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cuephoria-filter-tag:last-child {
+  margin-right: 0;
+}
+
+.cuephoria-filter-tag:hover:not([data-state="active"]) {
+  background: rgba(155,135,245,0.08);
+  color: #9b87f5;
+}
+
+.cuephoria-filter-tag[data-state="active"] {
+  background: #9b87f5;
+  color: #fff;
+  box-shadow: 0 2px 10px 0 rgba(155, 135, 245, 0.10);
+}
+
+.cuephoria-filter-tag[data-state="active"]::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #9b87f5 60%, #0EA5E9 100%);
+  opacity: 0.9;
+}
+
+.cuephoria-filter-tag:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #9b87f5bb;
+}
+
+@media (max-width: 600px) {
+  .cuephoria-filter-tag {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.98rem;
+    min-width: 68px;
+  }
 }

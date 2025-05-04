@@ -9,9 +9,3 @@ export interface SessionActionsProps {
   setSessions: React.Dispatch<React.SetStateAction<Session[]>>;
   updateCustomer: (customer: Customer) => void;
 }
-
-export interface PauseSessionResult {
-  success: boolean;
-  session?: Session;
-  error?: string;
-}

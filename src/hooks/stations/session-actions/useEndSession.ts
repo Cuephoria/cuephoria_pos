@@ -1,3 +1,4 @@
+
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -39,33 +40,10 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in milliseconds, accounting for pauses
+      // Calculate duration in minutes
       const startTime = new Date(session.startTime);
-      let durationMs = endTime.getTime() - startTime.getTime();
-      
-      // Subtract total paused time if it exists
-      if (session.totalPausedTime) {
-        durationMs -= session.totalPausedTime;
-        console.log(`Subtracting total paused time: ${session.totalPausedTime}ms`);
-      }
-      
-      // If currently paused, subtract the time since the pause started
-      if (session.isPaused && session.pausedAt) {
-        const pauseDurationMs = endTime.getTime() - new Date(session.pausedAt).getTime();
-        durationMs -= pauseDurationMs;
-        console.log(`Session is currently paused. Subtracting additional pause time: ${pauseDurationMs}ms`);
-      }
-      
-      // Ensure we don't have negative duration (minimum 0 seconds)
-      durationMs = Math.max(0, durationMs);
-      
-      // Convert to minutes - but use Math.round instead of Math.ceil to get accurate time
-      const durationMinutes = Math.round(durationMs / (1000 * 60));
-      
-      // Also keep track of the duration in seconds for more accurate play time tracking
-      const durationSeconds = Math.round(durationMs / 1000);
-      
-      console.log(`Final duration calculation: ${durationMs}ms = ${durationSeconds}s = ${durationMinutes}m`);
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
       
       // Create updated session object
       const updatedSession: Session = {
@@ -93,9 +71,7 @@ export const useEndSession = ({
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes,
-            is_paused: false, // Always set to false when ending
-            paused_at: null   // Clear the pause time
+            duration: durationMinutes
           })
           .eq('id', session.id);
           
@@ -144,7 +120,7 @@ export const useEndSession = ({
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost based on actual duration (already adjusted for pauses)
+      // Calculate session cost
       const stationRate = station.hourlyRate;
       const hoursPlayed = durationMs / (1000 * 60 * 60);
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
@@ -165,11 +141,7 @@ export const useEndSession = ({
         hoursPlayed,
         isMember,
         discountApplied,
-        sessionCost,
-        durationSeconds,
-        totalPausedTime: session.totalPausedTime,
-        isPaused: session.isPaused,
-        pausedAt: session.pausedAt
+        sessionCost 
       });
       
       // Create cart item for the session with discount info in the name if applicable
@@ -184,13 +156,11 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time using seconds for more accuracy
+      // Update customer's total play time
       if (customer) {
         const updatedCustomer = {
           ...customer,
-          // Add the exact seconds to the existing total play time (which is in minutes)
-          // Convert the seconds to minutes for storage in the customer record
-          totalPlayTime: (customer.totalPlayTime || 0) + (durationSeconds / 60)
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
         };
         updateCustomer(updatedCustomer);
       }
