@@ -33,16 +33,21 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   const formatTime = (minutes: number) => {
     // Ensure minutes is treated as a number
     const mins = Number(minutes);
+    
     if (isNaN(mins) || mins === 0) return '0h 0m';
     
     const hours = Math.floor(mins / 60);
     const remainingMins = Math.floor(mins % 60);
     
-    // Add debug logging to see the actual values
-    console.log(`Formatting time: ${mins} minutes = ${hours}h ${remainingMins}m`);
+    // Add debug logging to verify the calculation
+    console.log(`Formatting time for ${customer.name}: ${mins} minutes = ${hours}h ${remainingMins}m`);
     
     return `${hours}h ${remainingMins}m`;
   };
+
+  // Ensure totalPlayTime is a number before formatting
+  const playTimeDisplay = formatTime(customer.totalPlayTime || 0);
+  console.log(`Customer ${customer.name} has totalPlayTime: ${customer.totalPlayTime}, displaying as: ${playTimeDisplay}`);
 
   return (
     <Card>
@@ -126,7 +131,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <span className="flex items-center">
               <Clock className="h-4 w-4 mr-1" /> Play Time:
             </span>
-            <span className="text-emerald-500 font-medium">{formatTime(customer.totalPlayTime || 0)}</span>
+            <span className="text-emerald-500 font-medium">{playTimeDisplay}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Joined:</span>

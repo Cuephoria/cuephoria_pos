@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;

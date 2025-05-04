@@ -69,10 +69,14 @@ const Customers = () => {
       console.log('Setting customer data:', customers);
       
       // Ensure all customer data has proper totalPlayTime values
-      const processedCustomers = customers.map(customer => ({
-        ...customer,
-        totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
-      }));
+      const processedCustomers = customers.map(customer => {
+        console.log(`Processing customer ${customer.name}, raw totalPlayTime:`, customer.totalPlayTime);
+        return {
+          ...customer,
+          // Always ensure totalPlayTime is a number (not undefined or null)
+          totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
+        };
+      });
       
       setCustomersData(processedCustomers);
       setIsContextLoaded(true);
@@ -381,11 +385,13 @@ const Customers = () => {
       {/* Customer list */}
       {filteredCustomers.length > 0 ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredCustomers.map(customer => {
-            console.log(`Rendering customer card for ${customer.name}, playTime: ${customer.totalPlayTime}`);
+            // Log each customer's play time for debugging
+            console.log(`Rendering customer card for ${customer.name}, totalPlayTime: ${customer.totalPlayTime}`);
             return <CustomerCard 
               key={customer.id} 
               customer={{
                 ...customer,
+                // Always ensure totalPlayTime is a number
                 totalPlayTime: typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0
               }} 
               onEdit={handleEditCustomer} 

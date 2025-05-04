@@ -1,4 +1,3 @@
-
 import { Session, Station, Customer, CartItem, SessionResult } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -177,20 +176,18 @@ export const useEndSession = ({
       
       console.log("Created cart item for ended session:", sessionCartItem);
       
-      // Update customer's total play time
+      // Update customer's total play time - FIXED: Apply for both PS5 and 8ball stations
       if (customer) {
-        // Convert totalPlayTime to number if it's not already
+        // Ensure totalPlayTime is a number
         const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
         
-        // Explicitly convert durationMinutes to number for safety
-        const minutesToAdd = Number(durationMinutes);
-        
-        // Fix: Calculate new play time with explicit number conversion
-        const newPlayTime = currentPlayTime + minutesToAdd;
+        // Add duration minutes to the total play time regardless of station type
+        const newPlayTime = currentPlayTime + durationMinutes;
         
         console.log(`Updating customer ${customer.name} play time:`, {
           currentPlayTime,
-          minutesToAdd,
+          minutesToAdd: durationMinutes,
+          stationType: station.type,
           newPlayTime
         });
         
