@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/AuthContext';
 import { POSProvider } from '@/context/POSContext';
 import { ExpenseProvider } from '@/context/ExpenseContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Import components
 import AppSidebar from '@/components/AppSidebar';
@@ -29,26 +30,28 @@ function App() {
     <AuthProvider>
       <POSProvider>
         <ExpenseProvider>
-          <BrowserRouter>
-            <div className="flex min-h-screen w-full bg-[#1A1F2C]">
-              <AppSidebar />
-              <div className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/pos" element={<POS />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/stations" element={<Stations />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+          <TooltipProvider>
+            <BrowserRouter>
+              <div className="flex min-h-screen w-full bg-[#1A1F2C]">
+                <AppSidebar />
+                <div className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/pos" element={<POS />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/customers" element={<Customers />} />
+                    <Route path="/stations" element={<Stations />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+                <Toaster />
               </div>
-              <Toaster />
-            </div>
-          </BrowserRouter>
+            </BrowserRouter>
+          </TooltipProvider>
         </ExpenseProvider>
       </POSProvider>
     </AuthProvider>
