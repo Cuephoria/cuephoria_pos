@@ -257,6 +257,26 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
+  // Pause session function from the useStations hook
+  const pauseSession = async (stationId: string): Promise<boolean> => {
+    try {
+      return await pauseActiveSession(stationId);
+    } catch (error) {
+      console.error("Error in pauseSession wrapper:", error);
+      return false;
+    }
+  };
+  
+  // Resume session function from the useStations hook
+  const resumeSession = async (stationId: string): Promise<boolean> => {
+    try {
+      return await resumeActiveSession(stationId);
+    } catch (error) {
+      console.error("Error in resumeSession wrapper:", error);
+      return false;
+    }
+  };
+  
   // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
   const updateCustomerMembershipWrapper = (
     customerId: string, 
