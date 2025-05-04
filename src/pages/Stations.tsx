@@ -20,7 +20,7 @@ const Stations = () => {
   const activeBall = ballStations.filter(s => s.isOccupied).length;
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6 ml-[230px]">
+    <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between animate-slide-down">
         <h2 className="text-3xl font-bold tracking-tight text-[#9b87f5] font-heading">Gaming Stations</h2>
         <div className="flex space-x-2">

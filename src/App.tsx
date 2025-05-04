@@ -34,7 +34,7 @@ function App() {
             <BrowserRouter>
               <div className="flex min-h-screen w-full bg-[#1A1F2C]">
                 <AppSidebar />
-                <div className="flex-1">
+                <div className="flex-1 ml-[230px]">
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />

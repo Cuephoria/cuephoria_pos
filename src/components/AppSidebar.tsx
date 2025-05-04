@@ -1,7 +1,16 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ShoppingCart, User, BarChart2, Settings, Package, Clock, Users, Joystick, Shield } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Gamepad2, 
+  Package, 
+  Users, 
+  BarChart2, 
+  Settings, 
+  Shield
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -21,9 +30,9 @@ const AppSidebar: React.FC = () => {
 
   // Base menu items that both admin and staff can see
   const baseMenuItems = [
-    { icon: Home, label: 'Dashboard', path: '/dashboard' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: ShoppingCart, label: 'POS', path: '/pos' },
-    { icon: Clock, label: 'Gaming Stations', path: '/stations' },
+    { icon: Gamepad2, label: 'Gaming Stations', path: '/stations' },
     { icon: Package, label: 'Products', path: '/products' },
     { icon: Users, label: 'Customers', path: '/customers' },
   ];
@@ -60,7 +69,7 @@ const AppSidebar: React.FC = () => {
                 <div className="h-full flex flex-col">
                   <div className="p-4 flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full flex items-center justify-center bg-[#9b87f5] shadow-lg">
-                      <Joystick className="h-6 w-6 text-white" />
+                      <Gamepad2 className="h-6 w-6 text-white" />
                     </div>
                     <span className="text-xl font-bold text-[#9b87f5]">Cuephoria</span>
                   </div>
@@ -85,7 +94,7 @@ const AppSidebar: React.FC = () => {
                         {isAdmin ? (
                           <Shield className="h-5 w-5 text-[#9b87f5]" />
                         ) : (
-                          <User className="h-5 w-5 text-blue-400" />
+                          <Users className="h-5 w-5 text-blue-400" />
                         )}
                         <span className="ml-2 text-sm font-medium text-white">
                           {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
@@ -112,10 +121,10 @@ const AppSidebar: React.FC = () => {
 
   // Desktop version
   return (
-    <div className="w-[230px] bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0">
+    <div className="w-[230px] bg-[#1A1F2C] text-white h-screen flex flex-col border-r border-gray-800 fixed left-0 top-0 z-50">
       <div className="p-4 flex items-center gap-3">
         <div className="h-12 w-12 rounded-full flex items-center justify-center bg-[#9b87f5] shadow-lg">
-          <Joystick className="h-7 w-7 text-white" />
+          <Gamepad2 className="h-7 w-7 text-white" />
         </div>
         <span className="text-2xl font-bold text-[#9b87f5]">Cuephoria</span>
       </div>
@@ -143,7 +152,7 @@ const AppSidebar: React.FC = () => {
             {isAdmin ? (
               <Shield className="h-6 w-6 text-[#9b87f5]" />
             ) : (
-              <User className="h-6 w-6 text-blue-400" />
+              <Users className="h-6 w-6 text-blue-400" />
             )}
             <span className="ml-2 text-sm font-medium">
               {user.username} {isAdmin ? '(Admin)' : '(Staff)'}
