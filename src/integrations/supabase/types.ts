@@ -669,7 +669,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      save_bill_edit_audit: {
+        Args: { p_bill_id: string; p_editor_name: string; p_changes: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

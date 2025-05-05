@@ -159,11 +159,18 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         }
       }
       
-      // Save edit history using a custom RPC call instead of direct table access
-      // This is a workaround until the Supabase types are updated
+      // Save edit history using the RPC function
       try {
+        // Use type assertion to tell TypeScript that this RPC function exists
+        // This bypasses the type checking for the RPC call
+        interface SaveBillEditAuditParams {
+          p_bill_id: string;
+          p_editor_name: string;
+          p_changes: string;
+        }
+        
         const { error: auditError } = await supabase
-          .rpc('save_bill_edit_audit', {
+          .rpc<void, SaveBillEditAuditParams>('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
             p_changes: 'Bill edited: ' + new Date().toISOString()
@@ -171,9 +178,10 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           
         if (auditError) {
           // Fallback method if RPC doesn't exist
-          // Use raw query approach with any type to bypass TypeScript checking
-          const { error: fallbackError } = await (supabase as any)
-            .from('bill_edit_audit')
+          console.error('RPC error:', auditError);
+          
+          // Use a direct SQL query as a fallback
+          const { error: fallbackError } = await supabase.from('bill_edit_audit' as any)
             .insert({
               bill_id: bill.id,
               editor_name: editorName,
