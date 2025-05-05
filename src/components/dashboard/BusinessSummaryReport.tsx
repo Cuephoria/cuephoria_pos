@@ -14,16 +14,6 @@ import {
 import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
 import { usePOS } from '@/context/POSContext';
-import { useAuth } from '@/context/AuthContext';
-import { Bill } from '@/context/POSContext';
-import { Edit, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 interface BusinessSummaryReportProps {
   startDate?: Date;
@@ -38,8 +28,6 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
 }) => {
   const { expenses, businessSummary } = useExpenses();
   const { bills, products, customers } = usePOS();
-  const { updateBill } = usePOS();
-  const { user } = useAuth();
   
   // Current date for display
   const currentDate = new Date();
@@ -207,15 +195,6 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     };
     
     return categoryMap[category] || category;
-  };
-  
-  // New function to handle bill updates
-  const handleUpdateBill = async (updatedBill: Bill): Promise<boolean> => {
-    if (!user?.isAdmin) {
-      return false;
-    }
-    
-    return await updateBill(updatedBill);
   };
   
   return (

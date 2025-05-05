@@ -475,76 +475,6 @@ export const useBills = (
     }
   };
   
-  const updateBill = async (updatedBill: Bill): Promise<boolean> => {
-    try {
-      // Calculate discount value based on discount type
-      let discountValue = 0;
-      if (updatedBill.discountType === 'percentage') {
-        discountValue = updatedBill.subtotal * (updatedBill.discount / 100);
-      } else {
-        discountValue = updatedBill.discount;
-      }
-      
-      // Calculate new total
-      const newTotal = updatedBill.subtotal - discountValue - updatedBill.loyaltyPointsUsed;
-      
-      // Prepare the updated bill with calculated values
-      const billToUpdate = {
-        ...updatedBill,
-        discountValue,
-        total: newTotal > 0 ? newTotal : 0
-      };
-      
-      // Update the bill in Supabase
-      const { error: billError } = await supabase
-        .from('bills')
-        .update({
-          subtotal: billToUpdate.subtotal,
-          discount: billToUpdate.discount,
-          discount_value: billToUpdate.discountValue,
-          discount_type: billToUpdate.discountType,
-          loyalty_points_used: billToUpdate.loyaltyPointsUsed,
-          total: billToUpdate.total,
-          payment_method: billToUpdate.paymentMethod
-        })
-        .eq('id', billToUpdate.id);
-        
-      if (billError) {
-        console.error('Error updating bill:', billError);
-        toast({
-          title: 'Error',
-          description: 'Failed to update bill: ' + billError.message,
-          variant: 'destructive'
-        });
-        return false;
-      }
-      
-      // Update the bill in state
-      setBills(prevBills => prevBills.map(bill => {
-        if (bill.id === billToUpdate.id) {
-          return billToUpdate;
-        }
-        return bill;
-      }));
-      
-      toast({
-        title: 'Success',
-        description: 'Bill updated successfully',
-        variant: 'default'
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error in updateBill:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update bill',
-        variant: 'destructive'
-      });
-      return false;
-    }
-  };
-  
   const exportBills = (customers: Customer[]) => {
     if (bills.length === 0) {
       console.log("No bills to export.");
@@ -624,7 +554,6 @@ export const useBills = (
     setBills,
     completeSale,
     deleteBill,
-    updateBill,
     exportBills,
     exportCustomers
   };

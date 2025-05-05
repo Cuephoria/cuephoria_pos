@@ -63,8 +63,7 @@ const POSContext = createContext<POSContextType>({
   exportBills: () => {},
   exportCustomers: () => {},
   resetToSampleData: () => {},
-  addSampleIndianData: () => {},
-  updateBill: async () => false
+  addSampleIndianData: () => {}
 });
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -138,7 +137,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBills, 
     completeSale: completeSaleBase, 
     deleteBill: deleteBillBase,
-    updateBill: updateBillBase,
     exportBills: exportBillsBase, 
     exportCustomers: exportCustomersBase 
   } = useBills(updateCustomer, updateProduct);
@@ -725,8 +723,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportBills,
         exportCustomers,
         resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData,
-        updateBill: updateBillBase
+        addSampleIndianData: handleAddSampleIndianData
       }}
     >
       {children}

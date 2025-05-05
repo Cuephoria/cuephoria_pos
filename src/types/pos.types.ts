@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;
@@ -159,7 +160,4 @@ export interface POSContextType {
   
   // Delete bill function
   deleteBill: (billId: string, customerId: string) => Promise<boolean>;
-  
-  // Update bill function
-  updateBill: (updatedBill: Bill) => Promise<boolean>;
 }
