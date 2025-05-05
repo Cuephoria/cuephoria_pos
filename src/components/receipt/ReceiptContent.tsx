@@ -9,7 +9,7 @@ import ReceiptFooter from './ReceiptFooter';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Edit, Info, Save } from 'lucide-react';
+import { Edit, Info, Save, Trash2 } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -22,17 +22,20 @@ interface ReceiptContentProps {
   customer: Customer;
   receiptRef: RefObject<HTMLDivElement>;
   onUpdateBill?: (updatedBill: Bill) => Promise<boolean>;
+  onDeleteBill?: (billId: string, customerId: string) => Promise<boolean>;
 }
 
 const ReceiptContent: React.FC<ReceiptContentProps> = ({ 
   bill, 
   customer, 
   receiptRef,
-  onUpdateBill 
+  onUpdateBill,
+  onDeleteBill
 }) => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedBill, setEditedBill] = useState<Bill>({ ...bill });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check if bill is valid
   if (!bill || !bill.id) {
@@ -58,6 +61,15 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       setIsEditing(false);
     }
   };
+  
+  const handleDelete = async () => {
+    if (isDeleting && onDeleteBill) {
+      await onDeleteBill(bill.id, bill.customerId);
+      setIsDeleting(false);
+    } else {
+      setIsDeleting(true);
+    }
+  };
 
   const handleInputChange = (field: keyof Bill, value: any) => {
     setEditedBill(prev => ({
@@ -73,9 +85,18 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       
       <ReceiptItems bill={bill} showTooltips={true} />
       
-      {user?.isAdmin && onUpdateBill && (
-        <div className="flex justify-end mb-2">
-          {isEditing ? (
+      {user?.isAdmin && (onUpdateBill || onDeleteBill) && (
+        <div className="flex justify-end mb-2 space-x-2">
+          {isDeleting ? (
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={() => setIsDeleting(false)} size="sm">
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} size="sm">
+                Confirm Delete
+              </Button>
+            </div>
+          ) : isEditing ? (
             <div className="flex space-x-2">
               <Button variant="outline" onClick={handleEditToggle} size="sm">
                 Cancel
@@ -86,10 +107,20 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
               </Button>
             </div>
           ) : (
-            <Button variant="outline" onClick={handleEditToggle} size="sm">
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
+            <div className="flex space-x-2">
+              {onUpdateBill && (
+                <Button variant="outline" onClick={handleEditToggle} size="sm">
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+              {onDeleteBill && (
+                <Button variant="outline" onClick={handleDelete} size="sm" className="text-red-500 hover:bg-red-950 hover:text-red-400">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
       )}
