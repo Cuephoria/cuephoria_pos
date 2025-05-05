@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -81,26 +80,6 @@ const RecentTransactions: React.FC = () => {
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
   
-  // State to check if user is admin
-  const [isAdmin, setIsAdmin] = useState<boolean>(true); // Default to true for testing
-
-  // Check user role from supabase
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // For demo purposes, we'll use user metadata to check admin status
-        // In production, you would query a proper roles table
-        const isUserAdmin = session.user?.user_metadata?.is_admin === true;
-        setIsAdmin(isUserAdmin !== undefined ? isUserAdmin : false);
-      } else {
-        setIsAdmin(false);
-      }
-    };
-    
-    checkUserRole();
-  }, []);
-  
   // Filtered products based on search query
   const filteredProducts = products.filter(product => {
     if (!productSearchQuery.trim()) return true;
@@ -173,15 +152,6 @@ const RecentTransactions: React.FC = () => {
   };
   
   const handleDeleteClick = (bill: Bill) => {
-    if (!isAdmin) {
-      toast({
-        title: "Permission Denied",
-        description: "Only administrators can delete transactions",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setBillToDelete(bill);
     setIsConfirmOpen(true);
   };
@@ -207,15 +177,6 @@ const RecentTransactions: React.FC = () => {
   
   // Function to open edit dialog
   const handleEditClick = (bill: Bill) => {
-    if (!isAdmin) {
-      toast({
-        title: "Permission Denied",
-        description: "Only administrators can edit transactions",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setSelectedBill(bill);
     setEditedItems([...bill.items]);
     setEditedDiscount(bill.discount);
@@ -499,18 +460,16 @@ const RecentTransactions: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={`transition-colors ${isAdmin ? 'text-gray-400 hover:text-blue-500' : 'text-gray-600 cursor-not-allowed'}`}
+                            className="text-gray-400 hover:text-blue-500"
                             onClick={() => handleEditClick(bill)}
-                            disabled={!isAdmin}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={`transition-colors ${isAdmin ? 'text-gray-400 hover:text-red-500' : 'text-gray-600 cursor-not-allowed'}`}
+                            className="text-gray-400 hover:text-red-500"
                             onClick={() => handleDeleteClick(bill)}
-                            disabled={!isAdmin}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
