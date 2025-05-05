@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -305,6 +306,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         bill={bill}
         onUpdateBill={handleBillUpdate}
         editable={isEditing}
+        availableLoyaltyPoints={customer.loyaltyPoints + initialBill.loyaltyPointsUsed}
       />
       <BillEditAudit 
         edits={editHistory}

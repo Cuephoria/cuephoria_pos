@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -355,25 +356,39 @@ const RecentTransactions: React.FC = () => {
         description: "Bill items have been updated successfully",
       });
       
-      // Update the bill in context
-      const updatedBill = {
-        ...selectedBill,
-        items: editedItems,
-        subtotal,
-        discount: editedDiscount,
-        discountType: editedDiscountType,
-        discountValue,
-        loyaltyPointsUsed: editedLoyaltyPointsUsed,
-        paymentMethod: editedPaymentMethod,
-        total
-      };
+      // Update the bill in context without page refresh
+      const customer = customers.find(c => c.id === selectedBill.customerId);
+      if (customer) {
+        // Update customer loyalty points if necessary
+        const pointsDelta = selectedBill.loyaltyPointsUsed - editedLoyaltyPointsUsed;
+        if (pointsDelta !== 0) {
+          const { error: customerError } = await supabase
+            .from('customers')
+            .update({
+              loyalty_points: customer.loyaltyPoints + pointsDelta
+            })
+            .eq('id', customer.id);
+            
+          if (customerError) {
+            console.error('Error updating customer loyalty points:', customerError);
+          }
+        }
+      }
       
       // Close dialog and reset state
       setIsEditDialogOpen(false);
       setSelectedBill(null);
       
-      // Refresh page to see updated data
-      window.location.reload();
+      // Fetch updated bills without page refresh
+      const { data: updatedBills } = await supabase
+        .from('bills')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (updatedBills) {
+        // Update the bills locally if needed
+        console.log('Fetched updated bills:', updatedBills.length);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -397,11 +412,14 @@ const RecentTransactions: React.FC = () => {
     const customer = customers.find(c => c.id === selectedBill.customerId);
     if (!customer) return;
     
+    // Calculate available points (current points + points used in the original bill)
+    const availablePoints = customer.loyaltyPoints + selectedBill.loyaltyPointsUsed;
+    
     // Don't allow more points than available
-    if (value > customer.loyaltyPoints) {
+    if (value > availablePoints) {
       toast({
         title: "Invalid Points",
-        description: `Cannot use more than ${customer.loyaltyPoints} available points`,
+        description: `Cannot use more than ${availablePoints} available points`,
         variant: "destructive"
       });
       return;
@@ -654,8 +672,9 @@ const RecentTransactions: React.FC = () => {
                 <div className="space-y-3">
                   {(() => {
                     const customer = customers.find(c => c.id === selectedBill.customerId);
-                    const availablePoints = customer?.loyaltyPoints || 0;
-                    const isExceeded = isLoyaltyPointsExceeded(editedLoyaltyPointsUsed, customer);
+                    // Calculate available points (current + points already used in this bill)
+                    const availablePoints = customer ? (customer.loyaltyPoints + selectedBill.loyaltyPointsUsed) : 0;
+                    const isExceeded = editedLoyaltyPointsUsed > availablePoints;
                     
                     return (
                       <>
@@ -747,7 +766,8 @@ const RecentTransactions: React.FC = () => {
               disabled={isSaving || (() => {
                 if (!selectedBill) return true;
                 const customer = customers.find(c => c.id === selectedBill.customerId);
-                return isLoyaltyPointsExceeded(editedLoyaltyPointsUsed, customer);
+                const availablePoints = customer ? (customer.loyaltyPoints + selectedBill.loyaltyPointsUsed) : 0;
+                return editedLoyaltyPointsUsed > availablePoints;
               })()}
             >
               {isSaving ? (
