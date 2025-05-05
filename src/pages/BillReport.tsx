@@ -4,7 +4,7 @@ import { usePOS } from '@/context/POSContext';
 import { format } from 'date-fns';
 import { Bill } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { Search, Edit, Trash2 } from 'lucide-react';
+import { Search, Edit, Trash2, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import ReceiptContent from '@/components/receipt/ReceiptContent';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -109,35 +110,56 @@ const BillReport = () => {
   };
   
   return (
-    <div className="p-6">
+    <div className="p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Bill Reports</h1>
+        <h1 className="text-3xl font-bold">Reports</h1>
+      </div>
+      
+      <div className="mb-6 bg-gray-100 rounded-lg p-1 flex gap-2 w-fit">
+        <Button variant="default" className="bg-[#9b87f5] hover:bg-[#7E69AB]">
+          Bills
+        </Button>
+        <Button variant="ghost" className="text-gray-600">
+          Customers
+        </Button>
+        <Button variant="ghost" className="text-gray-600">
+          Sessions
+        </Button>
+        <Button variant="ghost" className="text-gray-600">
+          Summary
+        </Button>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-xl font-medium mb-2">
+          Showing {filteredBills.length} transactions
+        </h2>
         
-        <div className="relative w-full max-w-sm">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
           <Input 
             placeholder="Search by customer name, phone or email" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-gray-50 border-gray-200"
           />
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Bill ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Subtotal</TableHead>
-              <TableHead>Discount</TableHead>
-              <TableHead>Points Used</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Payment</TableHead>
-              {user?.isAdmin && <TableHead>Actions</TableHead>}
+              <TableHead className="text-gray-600 font-medium">Date & Time</TableHead>
+              <TableHead className="text-gray-600 font-medium">Bill ID</TableHead>
+              <TableHead className="text-gray-600 font-medium">Customer</TableHead>
+              <TableHead className="text-gray-600 font-medium">Items</TableHead>
+              <TableHead className="text-gray-600 font-medium">Subtotal</TableHead>
+              <TableHead className="text-gray-600 font-medium">Discount</TableHead>
+              <TableHead className="text-gray-600 font-medium">Points Used</TableHead>
+              <TableHead className="text-gray-600 font-medium">Total</TableHead>
+              <TableHead className="text-gray-600 font-medium">Payment</TableHead>
+              {user?.isAdmin && <TableHead className="text-gray-600 font-medium">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -148,7 +170,7 @@ const BillReport = () => {
               const itemCount = bill.items.length;
               
               return (
-                <TableRow key={bill.id}>
+                <TableRow key={bill.id} className="hover:bg-gray-50">
                   <TableCell>
                     <div>{format(billDate, 'd MMM yyyy')}</div>
                     <div className="text-gray-500">{format(billDate, 'HH:mm')}</div>
@@ -156,10 +178,34 @@ const BillReport = () => {
                   <TableCell className="font-mono text-xs">{bill.id.substring(0, 8)}...</TableCell>
                   <TableCell>{customer?.name || 'Unknown'}</TableCell>
                   <TableCell>
-                    <div>{itemCount} item{itemCount !== 1 ? 's' : ''}</div>
-                    {bill.items.length > 0 && (
-                      <div className="text-gray-500 text-xs">{firstItemName}</div>
-                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 cursor-help">
+                            <span>{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                            {bill.items.length > 0 && (
+                              <span className="text-gray-500 text-xs max-w-[120px] truncate">
+                                {firstItemName}
+                              </span>
+                            )}
+                            <Info className="h-3.5 w-3.5 text-gray-400 ml-1" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="w-60 p-2">
+                          <div className="font-semibold mb-1">All Items:</div>
+                          <ul className="text-sm space-y-1">
+                            {bill.items.map((item, index) => (
+                              <li key={`${bill.id}-item-${index}`} className="flex justify-between">
+                                <span className="mr-2">{item.name}</span>
+                                <span className="text-gray-600">
+                                  {item.quantity} x <CurrencyDisplay amount={item.price} />
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell>
                     <CurrencyDisplay amount={bill.subtotal} />
@@ -172,7 +218,7 @@ const BillReport = () => {
                     <CurrencyDisplay amount={bill.total} />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={
+                    <Badge className={
                       bill.paymentMethod === 'upi'
                         ? "bg-blue-100 text-blue-800 border-blue-300"
                         : "bg-green-100 text-green-800 border-green-300"
