@@ -40,13 +40,10 @@ export const useEndSession = ({
       const session = station.currentSession;
       const endTime = new Date();
       
-      // Calculate duration in minutes - ensure minimum 1 minute
+      // Calculate duration in minutes
       const startTime = new Date(session.startTime);
       const durationMs = endTime.getTime() - startTime.getTime();
-      const durationMinutes = Math.max(1, Math.round(durationMs / (1000 * 60)));
-      
-      console.log(`Session duration calculation: ${durationMs}ms = ${durationMinutes} minutes`);
-      console.log(`Station type: ${station.type}`);
+      const durationMinutes = Math.ceil(durationMs / (1000 * 60));
       
       // Create updated session object
       const updatedSession: Session = {
@@ -117,29 +114,15 @@ export const useEndSession = ({
         console.warn("Customer not found for session", session.customerId);
       } else {
         console.log("Found customer for session:", customer.name);
-        
-        // IMPORTANT: Update customer's total play time
-        // Convert totalPlayTime to number if it's not already
-        const currentPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
-        const updatedPlayTime = currentPlayTime + durationMinutes;
-        
-        console.log(`Updating customer playtime: ${currentPlayTime} + ${durationMinutes} = ${updatedPlayTime}`);
-        
-        const updatedCustomer = {
-          ...customer,
-          totalPlayTime: updatedPlayTime
-        };
-        
-        updateCustomer(updatedCustomer);
       }
       
       // Generate cart item for the session
       const cartItemId = generateId();
       console.log("Generated cart item ID:", cartItemId);
       
-      // Calculate session cost using hourly rate and accurate time calculation
+      // Calculate session cost
       const stationRate = station.hourlyRate;
-      const hoursPlayed = durationMinutes / 60; // Convert minutes to hours for billing
+      const hoursPlayed = durationMs / (1000 * 60 * 60);
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
       // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
@@ -172,6 +155,15 @@ export const useEndSession = ({
       };
       
       console.log("Created cart item for ended session:", sessionCartItem);
+      
+      // Update customer's total play time
+      if (customer) {
+        const updatedCustomer = {
+          ...customer,
+          totalPlayTime: (customer.totalPlayTime || 0) + durationMinutes
+        };
+        updateCustomer(updatedCustomer);
+      }
       
       toast({
         title: 'Success',

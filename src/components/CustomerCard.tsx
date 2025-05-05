@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,15 +28,11 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     return new Date(date).toLocaleDateString('en-IN');
   };
 
-  const formatTime = (minutes: number | undefined) => {
-    // Ensure minutes is a number and default to 0 if undefined
-    const mins = typeof minutes === 'number' ? minutes : 0;
-    const hours = Math.floor(mins / 60);
-    const remainingMins = mins % 60;
-    return `${hours}h ${remainingMins}m`;
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
-
-  const totalPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
 
   return (
     <Card>
@@ -121,7 +116,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <span className="flex items-center">
               <Clock className="h-4 w-4 mr-1" /> Play Time:
             </span>
-            <span>{formatTime(totalPlayTime)}</span>
+            <span>{formatTime(customer.totalPlayTime)}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Joined:</span>

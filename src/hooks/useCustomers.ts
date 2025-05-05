@@ -277,7 +277,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   
   const updateCustomer = async (customer: Customer) => {
     try {
-      console.log("Updating customer:", customer);
       const existingCustomer = customers.find(c => c.id === customer.id);
       
       if (existingCustomer) {
@@ -306,32 +305,23 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
-      // Ensure totalPlayTime is a number
-      const totalPlayTime = typeof customer.totalPlayTime === 'number' ? customer.totalPlayTime : 0;
-      
-      // Create the update payload
-      const updatePayload = {
-        name: customer.name,
-        phone: customer.phone,
-        email: customer.email,
-        is_member: customer.isMember,
-        membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
-        membership_start_date: customer.membershipStartDate?.toISOString(),
-        membership_plan: customer.membershipPlan,
-        membership_hours_left: customer.membershipHoursLeft,
-        membership_duration: customer.membershipDuration,
-        loyalty_points: customer.loyaltyPoints,
-        total_spent: customer.totalSpent,
-        total_play_time: totalPlayTime
-      };
-      
-      console.log("Sending customer update to Supabase:", updatePayload);
-      
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('customers')
-        .update(updatePayload)
-        .eq('id', customer.id)
-        .select();
+        .update({
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          is_member: customer.isMember,
+          membership_expiry_date: customer.membershipExpiryDate?.toISOString(),
+          membership_start_date: customer.membershipStartDate?.toISOString(),
+          membership_plan: customer.membershipPlan,
+          membership_hours_left: customer.membershipHoursLeft,
+          membership_duration: customer.membershipDuration,
+          loyalty_points: customer.loyaltyPoints,
+          total_spent: customer.totalSpent,
+          total_play_time: customer.totalPlayTime
+        })
+        .eq('id', customer.id);
         
       if (error) {
         console.error('Error updating customer:', error);
@@ -341,11 +331,8 @@ export const useCustomers = (initialCustomers: Customer[]) => {
           variant: 'destructive'
         });
         return null;
-      } else {
-        console.log("Supabase customer update successful:", data);
       }
       
-      // Update local state
       setCustomers(customers.map(c => c.id === customer.id ? customer : c));
       
       if (selectedCustomer && selectedCustomer.id === customer.id) {

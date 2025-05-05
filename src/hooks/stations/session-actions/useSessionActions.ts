@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useStartSession } from './useStartSession';
 import { useEndSession } from './useEndSession';
@@ -151,12 +152,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
       // Call the original hook implementation to handle session ending
       const result = await endSessionHook.endSession(stationId, customersList);
       console.log("Session ended successfully, result:", result);
-      
-      // Additional debug to verify the customer and totalPlayTime values
-      if (result && result.customer) {
-        console.log("Customer after session end:", result.customer);
-        console.log("Total play time after session end:", result.customer.totalPlayTime);
-      }
       
       return result;
       
