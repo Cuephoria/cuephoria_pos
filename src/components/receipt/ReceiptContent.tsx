@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -37,7 +38,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [editHistory, setEditHistory] = useState<BillEditInfo[]>([]);
   const [editorName, setEditorName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { updateCustomer } = usePOS();
+  const { updateCustomer, customers, setBills, bills } = usePOS();
   const { toast } = useToast();
   
   // Check if bill is valid
@@ -242,7 +243,22 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
       
       setCustomer(updatedCustomer);
-      updateCustomer(updatedCustomer);
+      
+      // Update customer in the POSContext customers list
+      // This ensures the CustomerCard component gets the updated data
+      const updatedCustomers = customers.map(c => 
+        c.id === customer.id ? updatedCustomer : c
+      );
+      
+      // Call updateCustomer to update both local state and database
+      const result = updateCustomer(updatedCustomer);
+      console.log('Update customer result:', result);
+      
+      // Update the bills in the POSContext to reflect changes
+      const updatedBills = bills.map(b => 
+        b.id === bill.id ? bill : b
+      );
+      setBills(updatedBills);
       
       const { error: customerError } = await supabase
         .from('customers')
