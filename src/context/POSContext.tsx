@@ -15,7 +15,7 @@ import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, handleSupabaseError } from '@/integrations/supabase/client';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -154,42 +154,50 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (error) {
           console.error('Error fetching categories:', error);
-          // Try to get categories from localStorage as fallback
-          const storedCategories = localStorage.getItem('cuephoriaCategories');
-          if (storedCategories) {
-            setCategories(JSON.parse(storedCategories));
-          }
           return;
         }
 
-        // If no categories in DB, create default ones and sync to DB
-        if (!data || data.length === 0) {
-          const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+        if (data && data.length > 0) {
+          // Use categories from DB
+          const dbCategories = data.map(item => item.name.toLowerCase());
           
-          // Create default categories in DB
-          await Promise.all(
-            defaultCategories.map(async (category) => {
+          // Ensure "uncategorized" exists
+          if (!dbCategories.includes('uncategorized')) {
+            try {
+              await supabase
+                .from('categories')
+                .insert({ name: 'uncategorized' });
+                
+              dbCategories.push('uncategorized');
+            } catch (err) {
+              console.error('Error creating uncategorized category:', err);
+            }
+          }
+          
+          setCategories(dbCategories);
+          localStorage.setItem('cuephoriaCategories', JSON.stringify(dbCategories));
+          console.log('Categories loaded from database:', dbCategories);
+        } else {
+          // If no categories in DB, create default ones
+          const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership', 'uncategorized'];
+          
+          // Insert all default categories
+          for (const category of defaultCategories) {
+            try {
               await supabase
                 .from('categories')
                 .insert({ name: category.toLowerCase() });
-            })
-          );
-
+            } catch (err) {
+              console.error(`Error creating category ${category}:`, err);
+            }
+          }
+          
           setCategories(defaultCategories);
           localStorage.setItem('cuephoriaCategories', JSON.stringify(defaultCategories));
-        } else {
-          // Use categories from DB
-          const dbCategories = data.map(item => item.name.toLowerCase());
-          setCategories(dbCategories);
-          localStorage.setItem('cuephoriaCategories', JSON.stringify(dbCategories));
+          console.log('Default categories created:', defaultCategories);
         }
       } catch (error) {
         console.error('Error in fetchCategories:', error);
-        
-        // Fallback to default categories
-        const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-        setCategories(defaultCategories);
-        localStorage.setItem('cuephoriaCategories', JSON.stringify(defaultCategories));
       }
     };
 
@@ -224,7 +232,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Error adding category to Supabase:', error);
         toast({
           title: 'Error',
-          description: `Failed to add category "${trimmedCategory}" to database`,
+          description: `Failed to add category "${trimmedCategory}" to database: ${handleSupabaseError(error, 'insert')}`,
           variant: 'destructive',
         });
         return;
@@ -253,6 +261,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateCategory = async (oldCategory: string, newCategory: string) => {
     try {
+      // Don't allow changing the uncategorized category
+      if (oldCategory.toLowerCase() === 'uncategorized') {
+        toast({
+          title: 'Error',
+          description: `The "uncategorized" category cannot be renamed`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       const trimmedNewCategory = newCategory.trim().toLowerCase();
       
       if (oldCategory === newCategory || !trimmedNewCategory) {
@@ -279,7 +297,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Error updating category in Supabase:', error);
         toast({
           title: 'Error',
-          description: `Failed to update category from "${oldCategory}" to "${trimmedNewCategory}"`,
+          description: `Failed to update category from "${oldCategory}" to "${trimmedNewCategory}": ${handleSupabaseError(error, 'update')}`,
           variant: 'destructive',
         });
         return;
@@ -293,6 +311,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             : product
         )
       );
+      
+      // Also update products in database
+      const { error: updateProductsError } = await supabase
+        .from('products')
+        .update({ category: trimmedNewCategory })
+        .eq('category', oldCategory);
+        
+      if (updateProductsError) {
+        console.error('Error updating products category in Supabase:', updateProductsError);
+      }
       
       // Update category list
       setCategories(prev => {
@@ -321,6 +349,16 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const lowerCategory = category.toLowerCase();
       
+      // Don't allow deleting the uncategorized category
+      if (lowerCategory === 'uncategorized') {
+        toast({
+          title: 'Error',
+          description: `The "uncategorized" category cannot be deleted`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       // Check if products use this category
       const productsWithCategory = products.filter(
         p => p.category.toLowerCase() === lowerCategory
@@ -336,7 +374,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Error deleting category from Supabase:', error);
         toast({
           title: 'Error',
-          description: `Failed to delete category "${category}" from database`,
+          description: `Failed to delete category "${category}" from database: ${handleSupabaseError(error, 'delete')}`,
           variant: 'destructive',
         });
         return;
@@ -344,32 +382,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Update products with this category to 'uncategorized'
       if (productsWithCategory.length > 0) {
-        // Check if 'uncategorized' exists, if not add it
-        const hasUncategorized = categories.some(
-          cat => cat.toLowerCase() === 'uncategorized'
-        );
-        
-        if (!hasUncategorized) {
-          // Add 'uncategorized' to database
-          await supabase
-            .from('categories')
-            .insert({ name: 'uncategorized' });
-            
-          // Add to local categories
-          setCategories(prev => {
-            const updated = [...prev.filter(cat => cat.toLowerCase() !== lowerCategory), 'uncategorized'];
-            localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
-            return updated;
-          });
-        } else {
-          // Just remove the deleted category
-          setCategories(prev => {
-            const updated = prev.filter(cat => cat.toLowerCase() !== lowerCategory);
-            localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
-            return updated;
-          });
-        }
-        
         // Update products
         setProducts(prev =>
           prev.map(product => 
@@ -380,20 +392,22 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
         
         // Update products in database
-        for (const product of productsWithCategory) {
-          await supabase
-            .from('products')
-            .update({ category: 'uncategorized' })
-            .eq('id', product.id);
+        const { error: updateProductsError } = await supabase
+          .from('products')
+          .update({ category: 'uncategorized' })
+          .eq('category', lowerCategory);
+          
+        if (updateProductsError) {
+          console.error('Error updating products category in Supabase:', updateProductsError);
         }
-      } else {
-        // No products with this category, just remove from list
-        setCategories(prev => {
-          const updated = prev.filter(cat => cat.toLowerCase() !== lowerCategory);
-          localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
-          return updated;
-        });
       }
+      
+      // Remove from local categories list
+      setCategories(prev => {
+        const updated = prev.filter(cat => cat.toLowerCase() !== lowerCategory);
+        localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
+        return updated;
+      });
       
       toast({
         title: 'Success',

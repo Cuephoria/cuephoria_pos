@@ -84,6 +84,9 @@ const CategoryManagement: React.FC = () => {
     }
   };
 
+  // Helper to determine if a category is the protected "uncategorized" category
+  const isUncategorized = (category: string) => category.toLowerCase() === 'uncategorized';
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -103,7 +106,7 @@ const CategoryManagement: React.FC = () => {
             <div key={category} className="flex items-center">
               <Badge 
                 variant="default"
-                className="px-3 py-1 text-sm"
+                className={`px-3 py-1 text-sm ${isUncategorized(category) ? 'bg-gray-400' : ''}`}
               >
                 {category}
               </Badge>
@@ -113,6 +116,7 @@ const CategoryManagement: React.FC = () => {
                   size="sm" 
                   className="h-6 w-6 p-0" 
                   onClick={() => openEditDialog(category)}
+                  disabled={isUncategorized(category)}
                 >
                   <Edit2 className="h-3 w-3" />
                 </Button>
@@ -121,6 +125,7 @@ const CategoryManagement: React.FC = () => {
                   size="sm" 
                   className="h-6 w-6 p-0" 
                   onClick={() => openDeleteDialog(category)}
+                  disabled={isUncategorized(category)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
