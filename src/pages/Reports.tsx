@@ -694,7 +694,11 @@ const Reports: React.FC = () => {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-4">Business Summary</h2>
-        <BusinessSummaryReport dateRange={date} />
+        <BusinessSummaryReport 
+          startDate={date?.from} 
+          endDate={date?.to}
+          onDownload={() => exportBills()} 
+        />
       </div>
     );
   };
