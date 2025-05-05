@@ -388,6 +388,31 @@ const RecentTransactions: React.FC = () => {
     }
   };
   
+  // Check if loyalty points exceed available
+  const isLoyaltyPointsExceeded = (pointsUsed: number, customer: any) => {
+    return pointsUsed > (customer?.loyaltyPoints || 0);
+  };
+  
+  // Handle loyalty points change with validation
+  const handleLoyaltyPointsChange = (value: number) => {
+    if (!selectedBill) return;
+    
+    const customer = customers.find(c => c.id === selectedBill.customerId);
+    if (!customer) return;
+    
+    // Don't allow more points than available
+    if (value > customer.loyaltyPoints) {
+      toast({
+        title: "Invalid Points",
+        description: `Cannot use more than ${customer.loyaltyPoints} available points`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setEditedLoyaltyPointsUsed(value);
+  };
+  
   return (
     <>
       <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
@@ -626,14 +651,40 @@ const RecentTransactions: React.FC = () => {
                 </div>
                 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300">Loyalty Points Used</h3>
-                  <Input 
-                    type="number" 
-                    value={editedLoyaltyPointsUsed} 
-                    onChange={(e) => setEditedLoyaltyPointsUsed(parseInt(e.target.value))}
-                    className="bg-gray-700 border-gray-600 text-white"
-                    min="0"
-                  />
+                  {(() => {
+                    const customer = customers.find(c => c.id === selectedBill.customerId);
+                    const availablePoints = customer?.loyaltyPoints || 0;
+                    const isExceeded = isLoyaltyPointsExceeded(editedLoyaltyPointsUsed, customer);
+                    
+                    return (
+                      <>
+                        <h3 className="text-sm font-medium text-gray-300">
+                          Loyalty Points Used 
+                          <span className="text-xs ml-2 text-gray-400">
+                            (Available: {availablePoints})
+                          </span>
+                        </h3>
+                        <Input 
+                          type="number" 
+                          value={editedLoyaltyPointsUsed} 
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (!isNaN(value) && value >= 0) {
+                              handleLoyaltyPointsChange(value);
+                            }
+                          }}
+                          className={`bg-gray-700 border-gray-600 text-white ${isExceeded ? 'border-red-500' : ''}`}
+                          min="0"
+                          max={availablePoints}
+                        />
+                        {isExceeded && (
+                          <p className="text-xs text-red-500">
+                            Cannot exceed available points
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 
                 <div className="space-y-3">
@@ -692,11 +743,15 @@ const RecentTransactions: React.FC = () => {
             <Button 
               className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
               onClick={handleSaveChanges}
-              disabled={isSaving}
+              disabled={isSaving || (() => {
+                if (!selectedBill) return true;
+                const customer = customers.find(c => c.id === selectedBill.customerId);
+                return isLoyaltyPointsExceeded(editedLoyaltyPointsUsed, customer);
+              })()}
             >
               {isSaving ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
