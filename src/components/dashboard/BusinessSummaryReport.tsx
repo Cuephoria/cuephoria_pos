@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -14,6 +13,8 @@ import {
 import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
 import { usePOS } from '@/context/POSContext';
+import { useAuth } from '@/context/AuthContext';
+import { Bill } from '@/context/POSContext';
 
 interface BusinessSummaryReportProps {
   startDate?: Date;
@@ -28,6 +29,8 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
 }) => {
   const { expenses, businessSummary } = useExpenses();
   const { bills, products, customers } = usePOS();
+  const { updateBill } = usePOS();
+  const { user } = useAuth();
   
   // Current date for display
   const currentDate = new Date();
@@ -195,6 +198,15 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     };
     
     return categoryMap[category] || category;
+  };
+  
+  // New function to handle bill updates
+  const handleUpdateBill = async (updatedBill: Bill): Promise<boolean> => {
+    if (!user?.isAdmin) {
+      return false;
+    }
+    
+    return await updateBill(updatedBill);
   };
   
   return (
