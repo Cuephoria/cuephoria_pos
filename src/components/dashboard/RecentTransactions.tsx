@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
@@ -12,7 +13,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,7 +49,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill, products, updateProduct } = usePOS();
@@ -80,50 +79,7 @@ const RecentTransactions: React.FC = () => {
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
   
-  // Filtered products based on search query
-  const filteredProducts = products.filter(product => {
-    if (!productSearchQuery.trim()) return true;
-    
-    const query = productSearchQuery.toLowerCase().trim();
-    return (
-      product.name.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query)
-    );
-  }).filter(product => product.stock > 0);
-  
-  // Filter bills based on search query (bill ID, customer name, phone or email)
-  const filteredBills = bills.filter(bill => {
-    if (!searchQuery.trim()) return true;
-    
-    const query = searchQuery.toLowerCase().trim();
-    
-    // Match by bill ID
-    if (bill.id.toLowerCase().includes(query)) return true;
-    
-    // Match by customer name, phone or email
-    const customer = customers.find(c => c.id === bill.customerId);
-    if (customer) {
-      const customerName = customer.name.toLowerCase();
-      const customerPhone = customer.phone.toLowerCase();
-      const customerEmail = customer.email?.toLowerCase() || '';
-      
-      return customerName.includes(query) || 
-             customerPhone.includes(query) || 
-             customerEmail.includes(query);
-    }
-    
-    return false;
-  });
-  
-  // Sort bills by date (newest first)
-  const sortedBills = [...filteredBills].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  
-  // Get the 5 most recent transactions
-  const recentBills = sortedBills.slice(0, 5);
-  
-  // Add this new state for controlling dropdown visibility
+  // State for controlling dropdown visibility
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   // State to hold selected product name for display
@@ -149,6 +105,7 @@ const RecentTransactions: React.FC = () => {
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
       setSelectedProductName(selectedProduct.name);
+      setProductSearchQuery(selectedProduct.name); // Set the search query to the selected product name
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -298,9 +255,38 @@ const RecentTransactions: React.FC = () => {
     return { subtotal, discountValue, total };
   };
   
+  // Get customer's available loyalty points for selected bill
+  const getCustomerLoyaltyPoints = () => {
+    if (!selectedBill) return 0;
+    
+    const customer = customers.find(c => c.id === selectedBill.customerId);
+    return customer ? customer.loyaltyPoints : 0;
+  };
+  
+  // Function to validate loyalty points
+  const validateLoyaltyPoints = (points: number) => {
+    const availablePoints = getCustomerLoyaltyPoints();
+    
+    if (points > availablePoints) {
+      toast({
+        title: "Invalid Points",
+        description: `Cannot use more than available ${availablePoints} loyalty points`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    return true;
+  };
+  
   // Function to save changes to bill
   const handleSaveChanges = async () => {
     if (!selectedBill) return;
+    
+    // Validate loyalty points
+    if (!validateLoyaltyPoints(editedLoyaltyPointsUsed)) {
+      return;
+    }
     
     setIsSaving(true);
     try {
@@ -386,6 +372,54 @@ const RecentTransactions: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+  
+  // Filtered products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!productSearchQuery.trim()) return true;
+    
+    const query = productSearchQuery.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  }).filter(product => product.stock > 0);
+  
+  // Filter bills based on search query (bill ID, customer name, phone or email)
+  const filteredBills = bills.filter(bill => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Match by bill ID
+    if (bill.id.toLowerCase().includes(query)) return true;
+    
+    // Match by customer name, phone or email
+    const customer = customers.find(c => c.id === bill.customerId);
+    if (customer) {
+      const customerName = customer.name.toLowerCase();
+      const customerPhone = customer.phone.toLowerCase();
+      const customerEmail = customer.email?.toLowerCase() || '';
+      
+      return customerName.includes(query) || 
+             customerPhone.includes(query) || 
+             customerEmail.includes(query);
+    }
+    
+    return false;
+  });
+  
+  // Sort bills by date (newest first)
+  const sortedBills = [...filteredBills].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  
+  // Get the 5 most recent transactions
+  const recentBills = sortedBills.slice(0, 5);
+  
+  // Get customer information
+  const getCustomerInfo = (customerId: string) => {
+    return customers.find(c => c.id === customerId) || null;
   };
   
   return (
@@ -505,7 +539,7 @@ const RecentTransactions: React.FC = () => {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400">Customer</h3>
                   <p className="text-white">
-                    {customers.find(c => c.id === selectedBill.customerId)?.name || 'Unknown Customer'}
+                    {getCustomerInfo(selectedBill.customerId)?.name || 'Unknown Customer'}
                   </p>
                 </div>
                 <div>
@@ -626,14 +660,27 @@ const RecentTransactions: React.FC = () => {
                 </div>
                 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300">Loyalty Points Used</h3>
+                  <h3 className="text-sm font-medium text-gray-300 flex justify-between">
+                    <span>Loyalty Points Used</span>
+                    <span className="text-sm text-gray-400">
+                      Available: {getCustomerLoyaltyPoints()}
+                    </span>
+                  </h3>
                   <Input 
                     type="number" 
                     value={editedLoyaltyPointsUsed} 
                     onChange={(e) => setEditedLoyaltyPointsUsed(parseInt(e.target.value))}
-                    className="bg-gray-700 border-gray-600 text-white"
+                    className={`bg-gray-700 border-gray-600 text-white ${
+                      editedLoyaltyPointsUsed > getCustomerLoyaltyPoints() ? 'border-red-500' : ''
+                    }`}
                     min="0"
+                    max={getCustomerLoyaltyPoints()}
                   />
+                  {editedLoyaltyPointsUsed > getCustomerLoyaltyPoints() && (
+                    <div className="text-xs text-red-400">
+                      Cannot exceed available points
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-3">
@@ -674,6 +721,9 @@ const RecentTransactions: React.FC = () => {
                   </p>
                   <p className="text-gray-400 text-sm">
                     Points Used: <span className="text-white">{editedLoyaltyPointsUsed}</span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Available: {getCustomerLoyaltyPoints()})
+                    </span>
                   </p>
                 </div>
                 <div>
@@ -692,7 +742,7 @@ const RecentTransactions: React.FC = () => {
             <Button 
               className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
               onClick={handleSaveChanges}
-              disabled={isSaving}
+              disabled={isSaving || (editedLoyaltyPointsUsed > getCustomerLoyaltyPoints())}
             >
               {isSaving ? (
                 <>
@@ -714,12 +764,15 @@ const RecentTransactions: React.FC = () => {
       </Dialog>
       
       {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
-        setIsAddItemDialogOpen(open);
-        if (!open) {
-          setIsDropdownOpen(false); // Ensure dropdown closes when dialog closes
-        }
-      }}>
+      <Dialog 
+        open={isAddItemDialogOpen} 
+        onOpenChange={(open) => {
+          setIsAddItemDialogOpen(open);
+          if (!open) {
+            setIsDropdownOpen(false); // Ensure dropdown closes when dialog closes
+          }
+        }}
+      >
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
@@ -740,32 +793,34 @@ const RecentTransactions: React.FC = () => {
                     className="text-white"
                     onFocus={() => setIsDropdownOpen(true)}
                   />
-                  <CommandList open={isDropdownOpen} className="text-white">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                      No products match your search
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-72 w-full" type="always">
-                        {filteredProducts.map(product => (
-                          <CommandItem 
-                            key={product.id} 
-                            value={product.id}
-                            onSelect={() => handleProductSelect(product.id)}
-                            className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                          >
-                            <div className="flex flex-col">
-                              <span>{product.name}</span>
-                              <span className="text-xs text-gray-400">
-                                Price: <CurrencyDisplay amount={product.price} /> | 
-                                Category: {product.category} | 
-                                Stock: {product.stock}
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
+                  {isDropdownOpen && (
+                    <CommandList className="text-white absolute w-full z-50 max-h-64 overflow-auto bg-gray-800 border border-gray-700 rounded-b-md">
+                      <CommandEmpty className="py-6 text-center text-sm text-gray-400">
+                        No products match your search
+                      </CommandEmpty>
+                      <CommandGroup>
+                        <ScrollArea className="h-72 w-full" type="always">
+                          {filteredProducts.map(product => (
+                            <CommandItem 
+                              key={product.id} 
+                              value={product.id}
+                              onSelect={() => handleProductSelect(product.id)}
+                              className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
+                            >
+                              <div className="flex flex-col">
+                                <span>{product.name}</span>
+                                <span className="text-xs text-gray-400">
+                                  Price: <CurrencyDisplay amount={product.price} /> | 
+                                  Category: {product.category} | 
+                                  Stock: {product.stock}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </ScrollArea>
+                      </CommandGroup>
+                    </CommandList>
+                  )}
                 </Command>
               </div>
               {selectedProductName && (
