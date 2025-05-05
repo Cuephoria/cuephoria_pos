@@ -4,7 +4,7 @@ import { usePOS } from '@/context/POSContext';
 import { format } from 'date-fns';
 import { Bill } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
-import { Search, Edit, Trash2, Info } from 'lucide-react';
+import { Search, Edit, Trash2, Info, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 const BillReport = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { bills, customers, updateBill, deleteBill } = usePOS();
+  const { bills, customers, products, updateBill, deleteBill } = usePOS();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
   
@@ -110,7 +110,7 @@ const BillReport = () => {
   };
   
   return (
-    <div className="p-6 bg-white">
+    <div className="p-6 bg-gray-50">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Reports</h1>
       </div>
@@ -135,31 +135,31 @@ const BillReport = () => {
           Showing {filteredBills.length} transactions
         </h2>
         
-        <div className="relative w-full">
+        <div className="relative w-full mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
           <Input 
             placeholder="Search by customer name, phone or email" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-50 border-gray-200"
+            className="pl-10 bg-white border border-gray-200"
           />
         </div>
       </div>
       
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50">
-            <TableRow>
-              <TableHead className="text-gray-600 font-medium">Date & Time</TableHead>
-              <TableHead className="text-gray-600 font-medium">Bill ID</TableHead>
-              <TableHead className="text-gray-600 font-medium">Customer</TableHead>
-              <TableHead className="text-gray-600 font-medium">Items</TableHead>
-              <TableHead className="text-gray-600 font-medium">Subtotal</TableHead>
-              <TableHead className="text-gray-600 font-medium">Discount</TableHead>
-              <TableHead className="text-gray-600 font-medium">Points Used</TableHead>
-              <TableHead className="text-gray-600 font-medium">Total</TableHead>
-              <TableHead className="text-gray-600 font-medium">Payment</TableHead>
-              {user?.isAdmin && <TableHead className="text-gray-600 font-medium">Actions</TableHead>}
+          <TableHeader className="bg-gray-100">
+            <TableRow className="border-b border-gray-300">
+              <TableHead className="text-gray-700 font-semibold py-3">Date & Time</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Bill ID</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Customer</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Items</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Subtotal</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Discount</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Points Used</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Total</TableHead>
+              <TableHead className="text-gray-700 font-semibold py-3">Payment</TableHead>
+              {user?.isAdmin && <TableHead className="text-gray-700 font-semibold py-3">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -170,8 +170,8 @@ const BillReport = () => {
               const itemCount = bill.items.length;
               
               return (
-                <TableRow key={bill.id} className="hover:bg-gray-50">
-                  <TableCell>
+                <TableRow key={bill.id} className="hover:bg-gray-50 border-b border-gray-200">
+                  <TableCell className="py-4">
                     <div>{format(billDate, 'd MMM yyyy')}</div>
                     <div className="text-gray-500">{format(billDate, 'HH:mm')}</div>
                   </TableCell>
@@ -191,9 +191,9 @@ const BillReport = () => {
                             <Info className="h-3.5 w-3.5 text-gray-400 ml-1" />
                           </div>
                         </TooltipTrigger>
-                        <TooltipContent className="w-60 p-2">
-                          <div className="font-semibold mb-1">All Items:</div>
-                          <ul className="text-sm space-y-1">
+                        <TooltipContent className="w-72 p-3">
+                          <div className="font-semibold mb-2">All Items:</div>
+                          <ul className="text-sm space-y-1.5">
                             {bill.items.map((item, index) => (
                               <li key={`${bill.id}-item-${index}`} className="flex justify-between">
                                 <span className="mr-2">{item.name}</span>
@@ -228,7 +228,7 @@ const BillReport = () => {
                   </TableCell>
                   {user?.isAdmin && (
                     <TableCell>
-                      <div className="flex space-x-1">
+                      <div className="flex space-x-2">
                         <Dialog 
                           open={selectedBillId === bill.id} 
                           onOpenChange={(open) => {
@@ -238,9 +238,9 @@ const BillReport = () => {
                         >
                           <DialogTrigger asChild>
                             <Button 
-                              variant="ghost" 
+                              variant="outline" 
                               size="sm"
-                              className="h-8 w-8 p-0 text-blue-600"
+                              className="h-8 w-8 p-0 text-blue-600 border-blue-200 hover:bg-blue-50"
                               onClick={() => console.log("Edit button clicked for bill:", bill.id)}
                             >
                               <Edit className="h-4 w-4" />
@@ -258,6 +258,8 @@ const BillReport = () => {
                                 receiptRef={React.createRef()}
                                 onUpdateBill={handleUpdateBill}
                                 onDeleteBill={handleDeleteBill}
+                                products={products}
+                                allowAddProducts={true}
                               />
                             )}
                           </DialogContent>
@@ -266,9 +268,9 @@ const BillReport = () => {
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              className="h-8 w-8 p-0 text-red-600"
+                              className="h-8 w-8 p-0 text-red-600 border-red-200 hover:bg-red-50"
                               onClick={() => console.log("Delete button clicked for bill:", bill.id)}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -285,7 +287,7 @@ const BillReport = () => {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction 
-                                className="bg-red-600" 
+                                className="bg-red-600 hover:bg-red-700" 
                                 onClick={() => bill.id && handleDeleteBill(bill.id, bill.customerId)}
                               >
                                 Delete
