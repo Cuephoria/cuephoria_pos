@@ -397,7 +397,7 @@ const RecentTransactions: React.FC = () => {
           price: item.price,
           quantity: item.quantity,
           total: item.total,
-          category: item.category || ''
+          category: item.category || '' // Make the category property optional with a default empty string
         }));
         
         transformedBills.push({
