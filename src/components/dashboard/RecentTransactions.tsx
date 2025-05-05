@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -51,7 +52,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill, products, updateProduct, updateCustomer } = usePOS();
+  const { bills, customers, deleteBill, products, updateProduct, updateCustomer, setBills } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -352,6 +353,77 @@ const RecentTransactions: React.FC = () => {
     return { subtotal, discountValue, total, loyaltyPointsDelta };
   };
   
+  // Helper function to refresh bills data
+  const refreshBillsData = async () => {
+    try {
+      const { data: refreshedBills, error } = await supabase
+        .from('bills')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('Error refreshing bills data:', error);
+        return;
+      }
+      
+      if (!refreshedBills) {
+        console.log('No bills found during refresh');
+        return;
+      }
+      
+      // Transform the bills data to the expected format
+      const transformedBills: Bill[] = [];
+      
+      for (const billData of refreshedBills) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('bill_items')
+          .select('*')
+          .eq('bill_id', billData.id);
+          
+        if (itemsError) {
+          console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
+          continue;
+        }
+        
+        if (!itemsData) {
+          console.log(`No items found for bill ${billData.id}`);
+          continue;
+        }
+        
+        const items: CartItem[] = itemsData.map(item => ({
+          id: item.item_id,
+          type: item.item_type as 'product' | 'session',
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.total,
+          category: item.category || ''
+        }));
+        
+        transformedBills.push({
+          id: billData.id,
+          customerId: billData.customer_id,
+          items,
+          subtotal: billData.subtotal,
+          discount: billData.discount,
+          discountValue: billData.discount_value,
+          discountType: billData.discount_type as 'percentage' | 'fixed',
+          loyaltyPointsUsed: billData.loyalty_points_used,
+          loyaltyPointsEarned: billData.loyalty_points_earned,
+          total: billData.total,
+          paymentMethod: billData.payment_method as 'cash' | 'upi',
+          createdAt: new Date(billData.created_at)
+        });
+      }
+      
+      // Update bills in context
+      setBills(transformedBills);
+      console.log('Bills data refreshed successfully:', transformedBills.length);
+    } catch (refreshError) {
+      console.error('Error in refreshBillsData:', refreshError);
+    }
+  };
+  
   // Function to save changes to bill
   const handleSaveChanges = async () => {
     if (!selectedBill) return;
@@ -467,21 +539,9 @@ const RecentTransactions: React.FC = () => {
       setIsEditDialogOpen(false);
       setSelectedBill(null);
       
-      // Refresh data WITHOUT reloading the page
-      try {
-        // Fetch bills again
-        const { data: updatedBillsData } = await supabase
-          .from('bills')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (updatedBillsData) {
-          // Update bills in state or context as needed
-          console.log('Bills refreshed:', updatedBillsData.length);
-        }
-      } catch (refreshError) {
-        console.error('Error refreshing data:', refreshError);
-      }
+      // Refresh bills data seamlessly without causing a full page reload
+      await refreshBillsData();
+      
     } catch (error) {
       toast({
         title: "Error",
