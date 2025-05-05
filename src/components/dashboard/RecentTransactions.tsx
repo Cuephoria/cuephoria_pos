@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -49,7 +50,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill, products, updateProduct } = usePOS();
@@ -79,17 +79,23 @@ const RecentTransactions: React.FC = () => {
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // State to hold selected product name for display
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
   
   // Filtered products based on search query
   const filteredProducts = products.filter(product => {
-    if (!productSearchQuery.trim()) return true;
+    if (!productSearchQuery.trim()) return product.stock > 0;
     
     const query = productSearchQuery.toLowerCase().trim();
     return (
-      product.name.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query)
+      product.stock > 0 && (
+        product.name.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query)
+      )
     );
-  }).filter(product => product.stock > 0);
+  });
   
   // Filter bills based on search query (bill ID, customer name, phone or email)
   const filteredBills = bills.filter(bill => {
@@ -122,12 +128,6 @@ const RecentTransactions: React.FC = () => {
   
   // Get the 5 most recent transactions
   const recentBills = sortedBills.slice(0, 5);
-  
-  // Add this new state for controlling dropdown visibility
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
-  // State to hold selected product name for display
-  const [selectedProductName, setSelectedProductName] = useState<string>('');
   
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
@@ -740,7 +740,7 @@ const RecentTransactions: React.FC = () => {
                     className="text-white"
                     onFocus={() => setIsDropdownOpen(true)}
                   />
-                  <CommandList open={isDropdownOpen} className="text-white">
+                  <CommandList className="absolute z-10 w-full bg-gray-700 border border-gray-600 rounded-b-lg text-white">
                     <CommandEmpty className="py-6 text-center text-sm text-gray-400">
                       No products match your search
                     </CommandEmpty>
