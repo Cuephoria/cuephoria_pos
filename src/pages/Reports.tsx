@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -13,7 +14,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Download, Edit, Search, Trash2 } from 'lucide-react';
+import { CalendarIcon, Download, Edit, Info, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Popover,
@@ -29,9 +30,9 @@ import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport'
 import { useSessionsData } from '@/hooks/stations/useSessionsData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import ReceiptContent from '@/components/receipt/ReceiptContent';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const Reports: React.FC = () => {
   const { toast } = useToast();
@@ -249,7 +250,7 @@ const Reports: React.FC = () => {
   
   // Render bills tab
   const renderBillsTab = () => (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-background rounded-lg shadow overflow-hidden">
       <div className="p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
@@ -262,12 +263,6 @@ const Reports: React.FC = () => {
               }
             </p>
           </div>
-          
-          <Link to="/bill-report">
-            <Button className="bg-purple-600 hover:bg-purple-700">
-              View Enhanced Bill Report
-            </Button>
-          </Link>
         </div>
         
         {/* Search bar for bills */}
@@ -320,10 +315,34 @@ const Reports: React.FC = () => {
                 <TableCell className="font-mono text-xs">{bill.id.substring(0, 8)}...</TableCell>
                 <TableCell>{customer?.name || 'Unknown'}</TableCell>
                 <TableCell>
-                  <div>{itemCount} item{itemCount !== 1 ? 's' : ''}</div>
-                  {bill.items.length > 0 && (
-                    <div className="text-gray-500 text-xs">{firstItemName}</div>
-                  )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 cursor-help">
+                          <span>{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                          {bill.items.length > 0 && (
+                            <span className="text-gray-500 text-xs max-w-[120px] truncate">
+                              {firstItemName}
+                            </span>
+                          )}
+                          <Info className="h-3.5 w-3.5 text-gray-400 ml-1" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="w-60 p-2">
+                        <div className="font-semibold mb-1">All Items:</div>
+                        <ul className="text-sm space-y-1">
+                          {bill.items.map((item, index) => (
+                            <li key={`${bill.id}-item-${index}`} className="flex justify-between">
+                              <span className="mr-2">{item.name}</span>
+                              <span className="text-gray-600">
+                                {item.quantity} x <CurrencyDisplay amount={item.price} />
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell>
                   <CurrencyDisplay amount={bill.subtotal} />
