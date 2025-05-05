@@ -1,10 +1,19 @@
 
-import React, { useState } from 'react';
-import { Bill, CartItem } from '@/types/pos.types';
+import React, { useState, useEffect } from 'react';
+import { Bill, CartItem, Product } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash, Plus, Save, X } from 'lucide-react';
+import { usePOS } from '@/context/POSContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from '@/components/ui/input';
 
 interface ReceiptItemsProps {
   bill: Bill;
@@ -13,17 +22,14 @@ interface ReceiptItemsProps {
 }
 
 const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editable = false }) => {
+  const { products } = usePOS();
   const [items, setItems] = useState<CartItem[]>(bill.items);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newItem, setNewItem] = useState<Partial<CartItem>>({
-    name: '',
-    price: 0,
-    quantity: 1,
-    type: 'product',
-  });
-
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
+  
   const handleEditItem = (index: number) => {
     setEditingItemIndex(index);
     setEditingItem({ ...items[index] });
@@ -64,31 +70,45 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   };
 
   const handleAddItem = () => {
-    if (newItem.name && newItem.price && newItem.quantity) {
+    if (!selectedProductId) {
+      return;
+    }
+    
+    const selectedProduct = products.find(p => p.id === selectedProductId);
+    
+    if (selectedProduct && newItemQuantity > 0) {
       const itemToAdd: CartItem = {
-        id: `manual-${Date.now()}`,
-        name: newItem.name || '',
-        price: newItem.price || 0,
-        quantity: newItem.quantity || 1,
-        total: (newItem.price || 0) * (newItem.quantity || 1),
-        type: newItem.type || 'product',
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        quantity: newItemQuantity,
+        total: selectedProduct.price * newItemQuantity,
+        type: 'product',
+        category: selectedProduct.category
       };
       
       const updatedItems = [...items, itemToAdd];
       setItems(updatedItems);
       
       // Reset form
-      setNewItem({
-        name: '',
-        price: 0,
-        quantity: 1,
-        type: 'product',
-      });
+      setSelectedProductId('');
+      setNewItemQuantity(1);
       setShowAddForm(false);
       
       if (onUpdateItems) {
         onUpdateItems(updatedItems);
       }
+    }
+  };
+
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
+    
+    // Auto-fill product information
+    const selectedProduct = products.find(p => p.id === productId);
+    if (selectedProduct) {
+      // Price is automatically set when adding the item
+      // No need to set it here as it's derived from the product
     }
   };
 
@@ -129,51 +149,68 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
 
       {showAddForm && (
         <div className="bg-gray-800/30 p-3 rounded-md mb-2 border border-gray-700">
-          <h4 className="text-sm font-medium mb-2">Add New Item</h4>
+          <h4 className="text-sm font-medium mb-2">Add Product</h4>
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-gray-400">Item Name</label>
-                <input
-                  type="text"
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-                  value={newItem.name || ''}
-                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400">Type</label>
-                <select
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-                  value={newItem.type || 'product'}
-                  onChange={(e) => setNewItem({...newItem, type: e.target.value as 'product' | 'session'})}
-                >
-                  <option value="product">Product</option>
-                  <option value="session">Session</option>
-                </select>
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs text-gray-400">Select Product</label>
+              <Select 
+                value={selectedProductId} 
+                onValueChange={handleProductSelect}
+              >
+                <SelectTrigger className="w-full bg-gray-700 border border-gray-600 rounded">
+                  <SelectValue placeholder="Choose a product" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600 text-white max-h-60">
+                  {products
+                    .filter(p => p.category !== 'membership')
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(product => (
+                      <SelectItem key={product.id} value={product.id} className="py-2">
+                        <div className="flex flex-col">
+                          <span>{product.name}</span>
+                          <span className="text-xs text-gray-400">
+                            Price: <CurrencyDisplay amount={product.price} /> | 
+                            Category: {product.category}
+                            {product.stock !== undefined && ` | Stock: ${product.stock}`}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-gray-400">Price</label>
-                <input
-                  type="number"
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-                  value={newItem.price || 0}
-                  onChange={(e) => setNewItem({...newItem, price: parseFloat(e.target.value)})}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400">Quantity</label>
-                <input
-                  type="number"
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-                  value={newItem.quantity || 1}
-                  min="1"
-                  onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value)})}
-                />
-              </div>
+            
+            <div>
+              <label className="text-xs text-gray-400">Quantity</label>
+              <Input
+                type="number"
+                className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
+                value={newItemQuantity}
+                min="1"
+                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+              />
             </div>
+            
+            {selectedProductId && (
+              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
+                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
+                {(() => {
+                  const product = products.find(p => p.id === selectedProductId);
+                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
+                  
+                  return (
+                    <div className="space-y-1 text-xs">
+                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
+                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
+                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
+                      {product.stock !== undefined && <p><span className="text-gray-400">Stock:</span> {product.stock}</p>}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+            
             <div className="flex justify-end space-x-2 mt-2">
               <Button 
                 variant="ghost" 
@@ -188,6 +225,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                 size="sm" 
                 className="h-7 px-2 text-xs bg-cuephoria-purple hover:bg-cuephoria-purple/80" 
                 onClick={handleAddItem}
+                disabled={!selectedProductId || newItemQuantity < 1}
               >
                 Add Item
               </Button>
@@ -213,7 +251,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                 // Editing mode
                 <>
                   <TableCell>
-                    <input
+                    <Input
                       type="text"
                       className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                       value={editingItem?.name || ''}
@@ -221,7 +259,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <input
+                    <Input
                       type="number"
                       className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
                       value={editingItem?.price || 0}
@@ -229,7 +267,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <input
+                    <Input
                       type="number"
                       className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
                       value={editingItem?.quantity || 1}
