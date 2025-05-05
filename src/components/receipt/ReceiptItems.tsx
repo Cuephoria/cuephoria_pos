@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReceiptItemsProps {
   bill: Bill;
@@ -22,13 +23,15 @@ interface ReceiptItemsProps {
 }
 
 const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editable = false }) => {
-  const { products } = usePOS();
+  const { products, updateProduct } = usePOS();
+  const { toast } = useToast();
   const [items, setItems] = useState<CartItem[]>(bill.items);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
+  const [availableStock, setAvailableStock] = useState<number>(0);
   
   const handleEditItem = (index: number) => {
     setEditingItemIndex(index);
@@ -61,43 +64,25 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
 
   const handleRemoveItem = (index: number) => {
     const updatedItems = [...items];
+    const removedItem = updatedItems[index];
+    
+    // If this is a product with stock, we need to restore the stock
+    if (removedItem.type === 'product') {
+      const product = products.find(p => p.id === removedItem.id);
+      if (product) {
+        // Update the product stock (increase it back)
+        updateProduct({
+          ...product,
+          stock: product.stock + removedItem.quantity
+        });
+      }
+    }
+    
     updatedItems.splice(index, 1);
     setItems(updatedItems);
     
     if (onUpdateItems) {
       onUpdateItems(updatedItems);
-    }
-  };
-
-  const handleAddItem = () => {
-    if (!selectedProductId) {
-      return;
-    }
-    
-    const selectedProduct = products.find(p => p.id === selectedProductId);
-    
-    if (selectedProduct && newItemQuantity > 0) {
-      const itemToAdd: CartItem = {
-        id: selectedProduct.id,
-        name: selectedProduct.name,
-        price: selectedProduct.price,
-        quantity: newItemQuantity,
-        total: selectedProduct.price * newItemQuantity,
-        type: 'product',
-        category: selectedProduct.category
-      };
-      
-      const updatedItems = [...items, itemToAdd];
-      setItems(updatedItems);
-      
-      // Reset form
-      setSelectedProductId('');
-      setNewItemQuantity(1);
-      setShowAddForm(false);
-      
-      if (onUpdateItems) {
-        onUpdateItems(updatedItems);
-      }
     }
   };
 
@@ -107,8 +92,77 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     // Auto-fill product information
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
-      // Price is automatically set when adding the item
-      // No need to set it here as it's derived from the product
+      setAvailableStock(selectedProduct.stock || 0);
+      // Reset quantity to 1 when a new product is selected
+      setNewItemQuantity(1);
+    }
+  };
+  
+  const handleAddItem = () => {
+    if (!selectedProductId) {
+      toast({
+        title: "Selection Required",
+        description: "Please select a product from the list",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const selectedProduct = products.find(p => p.id === selectedProductId);
+    
+    if (!selectedProduct) {
+      toast({
+        title: "Product Not Found",
+        description: "The selected product could not be found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newItemQuantity <= 0) {
+      toast({
+        title: "Invalid Quantity",
+        description: "Quantity must be greater than zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newItemQuantity > selectedProduct.stock) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${selectedProduct.stock} items available in stock`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const itemToAdd: CartItem = {
+      id: selectedProduct.id,
+      name: selectedProduct.name,
+      price: selectedProduct.price,
+      quantity: newItemQuantity,
+      total: selectedProduct.price * newItemQuantity,
+      type: 'product',
+      category: selectedProduct.category
+    };
+    
+    const updatedItems = [...items, itemToAdd];
+    setItems(updatedItems);
+    
+    // Update product stock
+    updateProduct({
+      ...selectedProduct,
+      stock: selectedProduct.stock - newItemQuantity
+    });
+    
+    // Reset form
+    setSelectedProductId('');
+    setNewItemQuantity(1);
+    setShowAddForm(false);
+    
+    if (onUpdateItems) {
+      onUpdateItems(updatedItems);
     }
   };
 
@@ -162,7 +216,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-600 text-white max-h-60">
                   {products
-                    .filter(p => p.category !== 'membership')
+                    .filter(p => p.category !== 'membership' && p.stock > 0)
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map(product => (
                       <SelectItem key={product.id} value={product.id} className="py-2">
@@ -170,8 +224,8 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                           <span>{product.name}</span>
                           <span className="text-xs text-gray-400">
                             Price: <CurrencyDisplay amount={product.price} /> | 
-                            Category: {product.category}
-                            {product.stock !== undefined && ` | Stock: ${product.stock}`}
+                            Category: {product.category} | 
+                            Stock: {product.stock}
                           </span>
                         </div>
                       </SelectItem>
@@ -188,8 +242,14 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                 className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                 value={newItemQuantity}
                 min="1"
+                max={availableStock}
                 onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
               />
+              {selectedProductId && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Available stock: {availableStock}
+                </p>
+              )}
             </div>
             
             {selectedProductId && (
@@ -204,7 +264,8 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                       <p><span className="text-gray-400">Name:</span> {product.name}</p>
                       <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
                       <p><span className="text-gray-400">Category:</span> {product.category}</p>
-                      {product.stock !== undefined && <p><span className="text-gray-400">Stock:</span> {product.stock}</p>}
+                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
+                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
                     </div>
                   );
                 })()}
@@ -225,7 +286,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                 size="sm" 
                 className="h-7 px-2 text-xs bg-cuephoria-purple hover:bg-cuephoria-purple/80" 
                 onClick={handleAddItem}
-                disabled={!selectedProductId || newItemQuantity < 1}
+                disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
               >
                 Add Item
               </Button>
@@ -248,23 +309,14 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
           {items.map((item, index) => (
             <TableRow key={index} className="hover:bg-gray-700/50">
               {editingItemIndex === index ? (
-                // Editing mode
+                // Editing mode - only quantity can be edited
                 <>
                   <TableCell>
-                    <Input
-                      type="text"
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-                      value={editingItem?.name || ''}
-                      onChange={(e) => setEditingItem({...editingItem!, name: e.target.value})}
-                    />
+                    <div className="font-medium">{editingItem?.name}</div>
+                    <div className="text-xs text-gray-400">{editingItem?.category}</div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
-                      value={editingItem?.price || 0}
-                      onChange={(e) => setEditingItem({...editingItem!, price: parseFloat(e.target.value)})}
-                    />
+                    <CurrencyDisplay amount={editingItem?.price || 0} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Input
@@ -272,7 +324,26 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                       className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
                       value={editingItem?.quantity || 1}
                       min="1"
-                      onChange={(e) => setEditingItem({...editingItem!, quantity: parseInt(e.target.value)})}
+                      onChange={(e) => {
+                        if (!editingItem) return;
+                        const newQuantity = parseInt(e.target.value) || 1;
+                        const product = products.find(p => p.id === editingItem.id);
+                        
+                        // Calculate max available quantity (current stock + current quantity in item)
+                        const currentQuantityInItem = items[editingItemIndex].quantity;
+                        const maxAvailable = (product?.stock || 0) + currentQuantityInItem;
+                        
+                        if (newQuantity > maxAvailable) {
+                          toast({
+                            title: "Insufficient Stock",
+                            description: `Only ${maxAvailable} items available in stock`,
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        
+                        setEditingItem({...editingItem, quantity: newQuantity});
+                      }}
                     />
                   </TableCell>
                   <TableCell className="text-right">
@@ -293,7 +364,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{item.name}</span>
-                      <span className="text-xs text-gray-400">{item.type}</span>
+                      <span className="text-xs text-gray-400">{item.category}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right"><CurrencyDisplay amount={item.price} /></TableCell>
