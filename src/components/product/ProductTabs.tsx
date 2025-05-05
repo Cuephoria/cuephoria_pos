@@ -32,15 +32,15 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
   
   const filteredProducts = activeTab === 'all' 
     ? products 
-    : products.filter(product => product.category === activeTab);
+    : products.filter(product => product.category.toLowerCase() === activeTab.toLowerCase());
 
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="mb-4 flex flex-wrap gap-1 justify-start sm:justify-center">
         <TabsTrigger value="all">All ({categoryCounts.all || 0})</TabsTrigger>
         {categories.map(category => (
-          <TabsTrigger key={category} value={category}>
-            {category.charAt(0).toUpperCase() + category.slice(1)} ({categoryCounts[category] || 0})
+          <TabsTrigger key={category} value={category.toLowerCase()}>
+            {category.charAt(0).toUpperCase() + category.slice(1)} ({categoryCounts[category.toLowerCase()] || 0})
           </TabsTrigger>
         ))}
       </TabsList>

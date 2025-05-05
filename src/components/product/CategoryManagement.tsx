@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,23 +40,9 @@ const CategoryManagement: React.FC = () => {
       return;
     }
 
-    if (categories.includes(newCategory.trim())) {
-      toast({
-        title: 'Error',
-        description: `Category "${newCategory}" already exists`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
     addCategory(newCategory.trim());
     setNewCategory('');
     setIsAddDialogOpen(false);
-
-    toast({
-      title: 'Success',
-      description: `Category "${newCategory}" has been added`,
-    });
   };
 
   const handleEditCategory = () => {
@@ -69,35 +55,16 @@ const CategoryManagement: React.FC = () => {
       return;
     }
 
-    if (categories.includes(editedCategory.trim()) && editedCategory.trim() !== selectedCategory) {
-      toast({
-        title: 'Error',
-        description: `Category "${editedCategory}" already exists`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
     updateCategory(selectedCategory, editedCategory.trim());
     setEditedCategory('');
     setSelectedCategory('');
     setIsEditDialogOpen(false);
-
-    toast({
-      title: 'Success',
-      description: `Category has been updated to "${editedCategory}"`,
-    });
   };
 
   const handleDeleteCategory = () => {
     deleteCategory(selectedCategory);
     setSelectedCategory('');
     setIsDeleteDialogOpen(false);
-
-    toast({
-      title: 'Success',
-      description: `Category "${selectedCategory}" has been deleted`,
-    });
   };
 
   const openEditDialog = (category: string) => {
@@ -111,8 +78,11 @@ const CategoryManagement: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-  const isDefaultCategory = (category: string) => defaultCategories.includes(category.toLowerCase());
+  const handleKeyPress = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter') {
+      action();
+    }
+  };
 
   return (
     <Card>
@@ -132,31 +102,29 @@ const CategoryManagement: React.FC = () => {
           {categories.map((category) => (
             <div key={category} className="flex items-center">
               <Badge 
-                variant={isDefaultCategory(category) ? "secondary" : "default"}
+                variant="default"
                 className="px-3 py-1 text-sm"
               >
                 {category}
               </Badge>
-              {!isDefaultCategory(category) && (
-                <div className="flex ml-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0" 
-                    onClick={() => openEditDialog(category)}
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0" 
-                    onClick={() => openDeleteDialog(category)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex ml-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0" 
+                  onClick={() => openEditDialog(category)}
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0" 
+                  onClick={() => openDeleteDialog(category)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -173,6 +141,8 @@ const CategoryManagement: React.FC = () => {
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               placeholder="Enter category name"
+              autoFocus
+              onKeyDown={(e) => handleKeyPress(e, handleAddCategory)}
             />
           </div>
           <DialogFooter>
@@ -194,6 +164,7 @@ const CategoryManagement: React.FC = () => {
               onChange={(e) => setEditedCategory(e.target.value)}
               placeholder="Enter new category name"
               autoFocus
+              onKeyDown={(e) => handleKeyPress(e, handleEditCategory)}
             />
           </div>
           <DialogFooter>

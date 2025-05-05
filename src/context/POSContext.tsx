@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   POSContextType, 
   ResetOptions, 
@@ -15,6 +15,7 @@ import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -140,64 +141,271 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomers: exportCustomersBase 
   } = useBills(updateCustomer, updateProduct);
 
+  const { toast } = useToast();
+
+  // Fetch categories from Supabase on initial load
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        // Get categories from Supabase
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name');
+        
+        if (error) {
+          console.error('Error fetching categories:', error);
+          // Try to get categories from localStorage as fallback
+          const storedCategories = localStorage.getItem('cuephoriaCategories');
+          if (storedCategories) {
+            setCategories(JSON.parse(storedCategories));
+          }
+          return;
+        }
+
+        // If no categories in DB, create default ones and sync to DB
+        if (!data || data.length === 0) {
+          const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+          
+          // Create default categories in DB
+          await Promise.all(
+            defaultCategories.map(async (category) => {
+              await supabase
+                .from('categories')
+                .insert({ name: category.toLowerCase() });
+            })
+          );
+
+          setCategories(defaultCategories);
+          localStorage.setItem('cuephoriaCategories', JSON.stringify(defaultCategories));
+        } else {
+          // Use categories from DB
+          const dbCategories = data.map(item => item.name.toLowerCase());
+          setCategories(dbCategories);
+          localStorage.setItem('cuephoriaCategories', JSON.stringify(dbCategories));
+        }
+      } catch (error) {
+        console.error('Error in fetchCategories:', error);
+        
+        // Fallback to default categories
+        const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+        setCategories(defaultCategories);
+        localStorage.setItem('cuephoriaCategories', JSON.stringify(defaultCategories));
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // Category management functions
-  const addCategory = (category: string) => {
-    const trimmedCategory = category.trim().toLowerCase();
-    if (!categories.includes(trimmedCategory) && trimmedCategory) {
-      setCategories(prev => [...prev, trimmedCategory]);
+  const addCategory = async (category: string) => {
+    try {
+      const trimmedCategory = category.trim().toLowerCase();
+      
+      if (!trimmedCategory) {
+        return; // Empty category
+      }
+      
+      // Check if category already exists (case insensitive)
+      if (categories.some(cat => cat.toLowerCase() === trimmedCategory)) {
+        toast({
+          title: 'Error',
+          description: `Category "${trimmedCategory}" already exists`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // First, add to Supabase
+      const { error } = await supabase
+        .from('categories')
+        .insert({ name: trimmedCategory });
+        
+      if (error) {
+        console.error('Error adding category to Supabase:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to add category "${trimmedCategory}" to database`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Update local state if database operation was successful
+      setCategories(prev => {
+        const updated = [...prev, trimmedCategory];
+        localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
+        return updated;
+      });
+      
+      toast({
+        title: 'Success',
+        description: `Category "${trimmedCategory}" has been added`,
+      });
+    } catch (error) {
+      console.error('Error in addCategory:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add category. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
-  const updateCategory = (oldCategory: string, newCategory: string) => {
-    const trimmedNewCategory = newCategory.trim().toLowerCase();
-    
-    if (oldCategory === newCategory || !trimmedNewCategory) {
-      return; // No change or empty category
+  const updateCategory = async (oldCategory: string, newCategory: string) => {
+    try {
+      const trimmedNewCategory = newCategory.trim().toLowerCase();
+      
+      if (oldCategory === newCategory || !trimmedNewCategory) {
+        return; // No change or empty category
+      }
+      
+      // Check if new name already exists (case insensitive)
+      if (categories.some(cat => cat.toLowerCase() === trimmedNewCategory && cat.toLowerCase() !== oldCategory.toLowerCase())) {
+        toast({
+          title: 'Error',
+          description: `Category "${trimmedNewCategory}" already exists`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // First update in Supabase
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: trimmedNewCategory })
+        .eq('name', oldCategory.toLowerCase());
+        
+      if (error) {
+        console.error('Error updating category in Supabase:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to update category from "${oldCategory}" to "${trimmedNewCategory}"`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Update products with this category
+      setProducts(prev =>
+        prev.map(product => 
+          product.category.toLowerCase() === oldCategory.toLowerCase() 
+            ? { ...product, category: trimmedNewCategory } 
+            : product
+        )
+      );
+      
+      // Update category list
+      setCategories(prev => {
+        const updated = prev.map(cat => 
+          cat.toLowerCase() === oldCategory.toLowerCase() ? trimmedNewCategory : cat
+        );
+        localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
+        return updated;
+      });
+      
+      toast({
+        title: 'Success',
+        description: `Category updated from "${oldCategory}" to "${trimmedNewCategory}"`,
+      });
+    } catch (error) {
+      console.error('Error in updateCategory:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update category. Please try again.',
+        variant: 'destructive',
+      });
     }
-    
-    // Don't allow updating default categories
-    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-    if (defaultCategories.includes(oldCategory)) {
-      return;
-    }
-    
-    // Update categories list
-    setCategories(prev => 
-      prev.map(cat => cat === oldCategory ? trimmedNewCategory : cat)
-    );
-    
-    // Update products with this category
-    setProducts(prev =>
-      prev.map(product => 
-        product.category === oldCategory 
-          ? { ...product, category: trimmedNewCategory } 
-          : product
-      )
-    );
   };
 
-  const deleteCategory = (category: string) => {
-    // Don't allow deleting default categories
-    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-    if (defaultCategories.includes(category)) {
-      return;
-    }
-    
-    // Remove from categories list
-    setCategories(prev => prev.filter(cat => cat !== category));
-    
-    // Update products with this category to 'uncategorized'
-    setProducts(prev =>
-      prev.map(product => 
-        product.category === category 
-          ? { ...product, category: 'uncategorized' } 
-          : product
-      )
-    );
-    
-    // Add 'uncategorized' if it doesn't exist yet
-    if (!categories.includes('uncategorized')) {
-      setCategories(prev => [...prev, 'uncategorized']);
+  const deleteCategory = async (category: string) => {
+    try {
+      const lowerCategory = category.toLowerCase();
+      
+      // Check if products use this category
+      const productsWithCategory = products.filter(
+        p => p.category.toLowerCase() === lowerCategory
+      );
+      
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('name', lowerCategory);
+        
+      if (error) {
+        console.error('Error deleting category from Supabase:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to delete category "${category}" from database`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Update products with this category to 'uncategorized'
+      if (productsWithCategory.length > 0) {
+        // Check if 'uncategorized' exists, if not add it
+        const hasUncategorized = categories.some(
+          cat => cat.toLowerCase() === 'uncategorized'
+        );
+        
+        if (!hasUncategorized) {
+          // Add 'uncategorized' to database
+          await supabase
+            .from('categories')
+            .insert({ name: 'uncategorized' });
+            
+          // Add to local categories
+          setCategories(prev => {
+            const updated = [...prev.filter(cat => cat.toLowerCase() !== lowerCategory), 'uncategorized'];
+            localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
+            return updated;
+          });
+        } else {
+          // Just remove the deleted category
+          setCategories(prev => {
+            const updated = prev.filter(cat => cat.toLowerCase() !== lowerCategory);
+            localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
+            return updated;
+          });
+        }
+        
+        // Update products
+        setProducts(prev =>
+          prev.map(product => 
+            product.category.toLowerCase() === lowerCategory
+              ? { ...product, category: 'uncategorized' } 
+              : product
+          )
+        );
+        
+        // Update products in database
+        for (const product of productsWithCategory) {
+          await supabase
+            .from('products')
+            .update({ category: 'uncategorized' })
+            .eq('id', product.id);
+        }
+      } else {
+        // No products with this category, just remove from list
+        setCategories(prev => {
+          const updated = prev.filter(cat => cat.toLowerCase() !== lowerCategory);
+          localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
+          return updated;
+        });
+      }
+      
+      toast({
+        title: 'Success',
+        description: `Category "${category}" has been deleted`,
+      });
+    } catch (error) {
+      console.error('Error in deleteCategory:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete category. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
   
