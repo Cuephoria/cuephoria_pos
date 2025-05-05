@@ -155,12 +155,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return; // No change or empty category
     }
     
-    // Don't allow updating default categories
-    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-    if (defaultCategories.includes(oldCategory)) {
-      return;
-    }
-    
     // Update categories list
     setCategories(prev => 
       prev.map(cat => cat === oldCategory ? trimmedNewCategory : cat)
@@ -177,12 +171,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCategory = (category: string) => {
-    // Don't allow deleting default categories
-    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-    if (defaultCategories.includes(category)) {
-      return;
-    }
-    
     // Remove from categories list
     setCategories(prev => prev.filter(cat => cat !== category));
     

@@ -40,7 +40,7 @@ const CategoryManagement: React.FC = () => {
       return;
     }
 
-    if (categories.includes(newCategory.trim())) {
+    if (categories.includes(newCategory.trim().toLowerCase())) {
       toast({
         title: 'Error',
         description: `Category "${newCategory}" already exists`,
@@ -69,7 +69,8 @@ const CategoryManagement: React.FC = () => {
       return;
     }
 
-    if (categories.includes(editedCategory.trim()) && editedCategory.trim() !== selectedCategory) {
+    if (categories.includes(editedCategory.trim().toLowerCase()) && 
+        editedCategory.trim().toLowerCase() !== selectedCategory.toLowerCase()) {
       toast({
         title: 'Error',
         description: `Category "${editedCategory}" already exists`,
@@ -111,8 +112,13 @@ const CategoryManagement: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-  const isDefaultCategory = (category: string) => defaultCategories.includes(category.toLowerCase());
+  // Handle key press events for dialogs
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>, action: () => void) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      action();
+    }
+  };
 
   return (
     <Card>
@@ -132,31 +138,29 @@ const CategoryManagement: React.FC = () => {
           {categories.map((category) => (
             <div key={category} className="flex items-center">
               <Badge 
-                variant={isDefaultCategory(category) ? "secondary" : "default"}
+                variant="default"
                 className="px-3 py-1 text-sm"
               >
                 {category}
               </Badge>
-              {!isDefaultCategory(category) && (
-                <div className="flex ml-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0" 
-                    onClick={() => openEditDialog(category)}
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0" 
-                    onClick={() => openDeleteDialog(category)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex ml-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0" 
+                  onClick={() => openEditDialog(category)}
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0" 
+                  onClick={() => openDeleteDialog(category)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -173,6 +177,8 @@ const CategoryManagement: React.FC = () => {
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               placeholder="Enter category name"
+              autoFocus
+              onKeyDown={(e) => handleKeyPress(e, handleAddCategory)}
             />
           </div>
           <DialogFooter>
@@ -194,6 +200,7 @@ const CategoryManagement: React.FC = () => {
               onChange={(e) => setEditedCategory(e.target.value)}
               placeholder="Enter new category name"
               autoFocus
+              onKeyDown={(e) => handleKeyPress(e, handleEditCategory)}
             />
           </div>
           <DialogFooter>
