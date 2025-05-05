@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
@@ -77,6 +78,17 @@ const RecentTransactions: React.FC = () => {
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
+  
+  // Filtered products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!productSearchQuery.trim()) return true;
+    
+    const query = productSearchQuery.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  }).filter(product => product.stock > 0);
   
   // Filter bills based on search query (bill ID, customer name, phone or email)
   const filteredBills = bills.filter(bill => {
@@ -724,7 +736,7 @@ const RecentTransactions: React.FC = () => {
                     <SelectValue placeholder="Choose a product" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                    <ScrollArea className="h-72 w-full">
+                    <ScrollArea className="h-72 w-full" type="always">
                       {filteredProducts.length > 0 ? (
                         filteredProducts.map(product => (
                           <SelectItem key={product.id} value={product.id} className="py-2">
