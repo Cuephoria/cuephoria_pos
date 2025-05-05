@@ -32,7 +32,7 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
   
   const filteredProducts = activeTab === 'all' 
     ? products 
-    : products.filter(product => product.category.toLowerCase() === activeTab.toLowerCase());
+    : products.filter(product => product.category === activeTab);
 
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange} className="w-full">
@@ -52,9 +52,9 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
               <div key={product.id} className="flex h-full">
                 <ProductCard
                   product={product}
-                  isAdmin={isAdmin}
+                  isAdmin={isAdmin} // Pass the user's admin status
                   onEdit={onEdit}
-                  onDelete={isAdmin ? onDelete : undefined}
+                  onDelete={isAdmin ? onDelete : undefined} // Only allow delete for admins
                   className="w-full"
                 />
               </div>

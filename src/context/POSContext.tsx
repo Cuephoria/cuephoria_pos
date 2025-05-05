@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { 
   POSContextType, 
   ResetOptions, 
@@ -15,7 +15,6 @@ import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -31,7 +30,7 @@ const POSContext = createContext<POSContextType>({
   discountType: 'percentage',
   loyaltyPointsUsed: 0,
   isStudentDiscount: false,
-  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership', 'uncategorized'], // Default categories
+  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
   setIsStudentDiscount: () => {},
   setStations: () => {},
   addProduct: () => ({}),
@@ -74,25 +73,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // State for categories
   const [categories, setCategories] = useState<string[]>([
-    'food', 'drinks', 'tobacco', 'challenges', 'membership', 'uncategorized'
+    'food', 'drinks', 'tobacco', 'challenges', 'membership'
   ]);
-
-  // Load categories from localStorage on initialization
-  useEffect(() => {
-    const storedCategories = localStorage.getItem('cuephoriaCategories');
-    if (storedCategories) {
-      try {
-        const parsedCategories = JSON.parse(storedCategories);
-        // Ensure 'uncategorized' is included but not duplicated
-        if (!parsedCategories.includes('uncategorized')) {
-          parsedCategories.push('uncategorized');
-        }
-        setCategories(parsedCategories);
-      } catch (error) {
-        console.error('Error parsing stored categories:', error);
-      }
-    }
-  }, []);
   
   // Initialize all hooks
   const { 
@@ -158,46 +140,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomers: exportCustomersBase 
   } = useBills(updateCustomer, updateProduct);
 
-  // Save categories to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('cuephoriaCategories', JSON.stringify(categories));
-  }, [categories]);
-
-  // Update product categories when categories change
-  useEffect(() => {
-    // This function will be called when we need to sync product categories with Supabase
-    const syncProductCategories = async () => {
-      try {
-        // For each product, check if its category still exists
-        for (const product of products) {
-          if (!categories.includes(product.category)) {
-            // If category doesn't exist anymore, move to 'uncategorized'
-            const updatedProduct = { 
-              ...product, 
-              category: 'uncategorized' 
-            };
-            
-            // Update in local state
-            updateProduct(updatedProduct);
-          }
-        }
-      } catch (error) {
-        console.error('Error syncing product categories:', error);
-      }
-    };
-
-    // Sync product categories when categories change
-    if (products.length > 0) {
-      syncProductCategories();
-    }
-  }, [categories, products]);
-
   // Category management functions
   const addCategory = (category: string) => {
     const trimmedCategory = category.trim().toLowerCase();
     if (!categories.includes(trimmedCategory) && trimmedCategory) {
       setCategories(prev => [...prev, trimmedCategory]);
-      console.log(`Category added: ${trimmedCategory}`);
     }
   };
 
@@ -208,8 +155,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return; // No change or empty category
     }
     
-    // Don't allow changing to 'uncategorized' if it's a different category
-    if (trimmedNewCategory === 'uncategorized' && oldCategory !== 'uncategorized') {
+    // Don't allow updating default categories
+    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+    if (defaultCategories.includes(oldCategory)) {
       return;
     }
     
@@ -226,44 +174,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           : product
       )
     );
-
-    // Update products in Supabase
-    const updateProductsInSupabase = async () => {
-      try {
-        const { data: productsToUpdate, error: fetchError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('category', oldCategory);
-
-        if (fetchError) {
-          console.error('Error fetching products for category update:', fetchError);
-          return;
-        }
-
-        if (productsToUpdate && productsToUpdate.length > 0) {
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ category: trimmedNewCategory })
-            .eq('category', oldCategory);
-
-          if (updateError) {
-            console.error('Error updating product categories in database:', updateError);
-          } else {
-            console.log(`Updated ${productsToUpdate.length} products from category "${oldCategory}" to "${trimmedNewCategory}" in database`);
-          }
-        }
-      } catch (error) {
-        console.error('Error in updateProductsInSupabase:', error);
-      }
-    };
-
-    updateProductsInSupabase();
-    console.log(`Category updated: ${oldCategory} -> ${trimmedNewCategory}`);
   };
 
   const deleteCategory = (category: string) => {
-    // Don't allow deleting 'uncategorized' category
-    if (category === 'uncategorized') {
+    // Don't allow deleting default categories
+    const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
+    if (defaultCategories.includes(category)) {
       return;
     }
     
@@ -278,39 +194,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           : product
       )
     );
-
-    // Update products in Supabase
-    const updateProductsInSupabase = async () => {
-      try {
-        const { data: productsToUpdate, error: fetchError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('category', category);
-
-        if (fetchError) {
-          console.error('Error fetching products for category deletion:', fetchError);
-          return;
-        }
-
-        if (productsToUpdate && productsToUpdate.length > 0) {
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ category: 'uncategorized' })
-            .eq('category', category);
-
-          if (updateError) {
-            console.error('Error updating product categories in database:', updateError);
-          } else {
-            console.log(`Updated ${productsToUpdate.length} products from deleted category "${category}" to "uncategorized" in database`);
-          }
-        }
-      } catch (error) {
-        console.error('Error in updateProductsInSupabase:', error);
-      }
-    };
-
-    updateProductsInSupabase();
-    console.log(`Category deleted: ${category}`);
+    
+    // Add 'uncategorized' if it doesn't exist yet
+    if (!categories.includes('uncategorized')) {
+      setCategories(prev => [...prev, 'uncategorized']);
+    }
   };
   
   // Wrapper functions that combine functionality from multiple hooks
