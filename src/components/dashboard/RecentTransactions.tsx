@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -390,15 +389,19 @@ const RecentTransactions: React.FC = () => {
           continue;
         }
         
-        const items: CartItem[] = itemsData.map(item => ({
-          id: item.item_id,
-          type: item.item_type as 'product' | 'session',
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          total: item.total,
-          category: item.category || '' // Make the category property optional with a default empty string
-        }));
+        const items: CartItem[] = itemsData.map(item => {
+          // Ensure all required properties are present
+          return {
+            id: item.item_id,
+            type: item.item_type as 'product' | 'session',
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total,
+            // Safely handle the category - use empty string if not present
+            category: (item as any).category || ''
+          };
+        });
         
         transformedBills.push({
           id: billData.id,
