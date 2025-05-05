@@ -31,6 +31,9 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   useEffect(() => {
     const updatedCustomer = customers.find(c => c.id === customer.id);
     if (updatedCustomer) {
+      console.log(`Customer card updating ${customer.name}:`, 
+        `Old total spent: ${customer.totalSpent}`, 
+        `New total spent: ${updatedCustomer.totalSpent}`);
       setCustomer(updatedCustomer);
     }
   }, [customers, customer.id]);

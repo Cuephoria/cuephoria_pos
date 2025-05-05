@@ -1,22 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bill } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Button } from '@/components/ui/button';
 import { Pencil, Save, X } from 'lucide-react';
+import { usePOS } from '@/context/POSContext';
 
 interface ReceiptSummaryProps {
   bill: Bill;
   onUpdateBill?: (updatedBill: Partial<Bill>) => void;
   editable?: boolean;
-  availableLoyaltyPoints?: number;
 }
 
 const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ 
   bill, 
   onUpdateBill,
-  editable = false,
-  availableLoyaltyPoints = 0
+  editable = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
@@ -26,6 +25,17 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     loyaltyPointsUsed: bill.loyaltyPointsUsed,
     paymentMethod: bill.paymentMethod
   });
+  const { selectedCustomer } = usePOS();
+  const [availableLoyaltyPoints, setAvailableLoyaltyPoints] = useState(0);
+
+  useEffect(() => {
+    // Calculate available loyalty points (current points + points used in this bill)
+    if (selectedCustomer) {
+      setAvailableLoyaltyPoints(selectedCustomer.loyaltyPoints + bill.loyaltyPointsUsed);
+    } else {
+      setAvailableLoyaltyPoints(bill.loyaltyPointsUsed);
+    }
+  }, [selectedCustomer, bill.loyaltyPointsUsed]);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);

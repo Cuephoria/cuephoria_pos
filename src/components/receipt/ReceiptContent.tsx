@@ -138,12 +138,16 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     setIsSaving(true);
     
     try {
-      // Calculate what changed for loyalty points
+      // Calculate what changed for loyalty points and total spent
       const loyaltyPointsDelta = bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
+      
+      // Calculate the exact difference in total spent, not just the new bill total
       const totalSpentDelta = bill.total - initialBill.total;
       
       console.log('Loyalty points delta:', loyaltyPointsDelta);
       console.log('Total spent delta:', totalSpentDelta);
+      console.log('Initial bill total:', initialBill.total);
+      console.log('Updated bill total:', bill.total);
       
       // Update bill in database
       const { error: billError } = await supabase
@@ -231,16 +235,36 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       }
       
       // Update customer loyalty points and total spent
-      const updatedCustomer = {
+      // Get the latest customer data to ensure we have the most up-to-date values
+      const { data: latestCustomerData, error: customerFetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customer.id)
+        .single();
+        
+      if (customerFetchError) {
+        console.error('Error fetching latest customer data:', customerFetchError);
+      }
+      
+      const latestCustomer = latestCustomerData ? {
         ...customer,
-        loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
-        totalSpent: customer.totalSpent + totalSpentDelta
+        loyaltyPoints: latestCustomerData.loyalty_points,
+        totalSpent: latestCustomerData.total_spent
+      } : customer;
+      
+      const updatedCustomer = {
+        ...latestCustomer,
+        loyaltyPoints: latestCustomer.loyaltyPoints + loyaltyPointsDelta,
+        totalSpent: latestCustomer.totalSpent + totalSpentDelta
       };
       
       console.log('Updating customer:', customer.name);
-      console.log('Current loyalty points:', customer.loyaltyPoints);
+      console.log('Current loyalty points:', latestCustomer.loyaltyPoints);
       console.log('Adding loyalty points delta:', loyaltyPointsDelta);
       console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
+      console.log('Current total spent:', latestCustomer.totalSpent);
+      console.log('Adding total spent delta:', totalSpentDelta);
+      console.log('New total spent:', updatedCustomer.totalSpent);
       
       setCustomer(updatedCustomer);
       
