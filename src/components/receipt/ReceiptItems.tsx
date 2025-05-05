@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Bill, CartItem, Product } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -43,6 +42,11 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
   const [availableStock, setAvailableStock] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Update local items state when bill items change
+  useEffect(() => {
+    setItems(bill.items);
+  }, [bill.items]);
   
   // Filter products based on search query
   const filteredProducts = products

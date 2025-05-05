@@ -1,4 +1,3 @@
-
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -82,6 +81,15 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     console.log('Old total:', oldTotal, 'New total:', total);
     console.log('Old loyalty points earned:', bill.loyaltyPointsEarned, 'New loyalty points earned:', newLoyaltyPointsEarned);
     console.log('Loyalty points delta:', loyaltyPointsDelta);
+    console.log('Discount value:', discountValue, 'Loyalty points used:', bill.loyaltyPointsUsed);
+    
+    // Calculate removed items to update stock if needed
+    const removedItems = oldItems.filter(oldItem => 
+      !updatedItems.some(newItem => newItem.id === oldItem.id && newItem.type === oldItem.type)
+    );
+    
+    // Log removed items
+    console.log('Removed items:', removedItems);
     
     setBill({
       ...bill,
@@ -227,6 +235,11 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
         totalSpent: customer.totalSpent + totalSpentDelta
       };
+      
+      console.log('Updating customer:', customer.name);
+      console.log('Current loyalty points:', customer.loyaltyPoints);
+      console.log('Adding loyalty points delta:', loyaltyPointsDelta);
+      console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
       
       setCustomer(updatedCustomer);
       updateCustomer(updatedCustomer);

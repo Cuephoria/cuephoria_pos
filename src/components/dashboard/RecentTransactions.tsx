@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bill, CartItem } from '@/types/pos.types';
+import { Bill, CartItem, Customer } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Dialog, 
@@ -49,7 +50,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill, products, updateProduct } = usePOS();
@@ -205,6 +205,40 @@ const RecentTransactions: React.FC = () => {
   // Function to remove item from edited items
   const handleRemoveItem = (index: number) => {
     const updatedItems = [...editedItems];
+    const removedItem = updatedItems[index];
+    
+    // If this is a product, we need to restore the stock
+    if (removedItem.type === 'product') {
+      const product = products.find(p => p.id === removedItem.id);
+      if (product) {
+        // Find the original item in the bill (if it exists in the original bill)
+        const originalBill = bills.find(b => b.id === selectedBill?.id);
+        const originalItem = originalBill?.items.find(item => 
+          item.id === removedItem.id && item.type === removedItem.type
+        );
+        
+        // Calculate how much stock to restore
+        // If it was in the original bill, only restore the difference
+        // If it's a new item added during editing, restore the full quantity
+        const stockToRestore = originalItem 
+          ? removedItem.quantity 
+          : removedItem.quantity;
+        
+        console.log(`Restoring stock for ${product.name}: current ${product.stock} + ${stockToRestore}`);
+        
+        // Update product stock
+        updateProduct({
+          ...product,
+          stock: product.stock + stockToRestore
+        });
+        
+        toast({
+          title: "Stock Updated",
+          description: `Added ${stockToRestore} units back to ${product.name} stock`,
+        });
+      }
+    }
+    
     updatedItems.splice(index, 1);
     setEditedItems(updatedItems);
   };
@@ -276,7 +310,7 @@ const RecentTransactions: React.FC = () => {
   
   // Calculate updated bill values
   const calculateUpdatedBill = () => {
-    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0 };
+    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0, loyaltyPointsDelta: 0 };
     
     // Calculate new subtotal
     const subtotal = editedItems.reduce((sum, item) => sum + item.total, 0);
@@ -292,7 +326,31 @@ const RecentTransactions: React.FC = () => {
     // Calculate new total
     const total = Math.max(0, subtotal - discountValue - editedLoyaltyPointsUsed);
     
-    return { subtotal, discountValue, total };
+    // Calculate loyalty points difference based on the changed total
+    // Get the rate based on customer membership status (5 points per 100 for members, 2 for non)
+    const customer = customers.find(c => c.id === selectedBill.customerId);
+    const pointsRate = customer?.isMember ? 5 : 2;
+    
+    // Calculate new points earned based on updated total
+    const newLoyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+    
+    // Original points earned from the bill
+    const originalPointsEarned = selectedBill.loyaltyPointsEarned || 0;
+    
+    // Calculate the delta (may be positive or negative)
+    const loyaltyPointsDelta = newLoyaltyPointsEarned - originalPointsEarned;
+    
+    // Debugging logs
+    console.log('Original Bill:', selectedBill);
+    console.log('Updated items:', editedItems);
+    console.log('New subtotal:', subtotal);
+    console.log('New discount value:', discountValue);
+    console.log('New total:', total);
+    console.log('Original loyalty points earned:', originalPointsEarned);
+    console.log('New loyalty points earned:', newLoyaltyPointsEarned);
+    console.log('Loyalty points delta:', loyaltyPointsDelta);
+    
+    return { subtotal, discountValue, total, loyaltyPointsDelta };
   };
   
   // Function to save changes to bill
@@ -301,7 +359,16 @@ const RecentTransactions: React.FC = () => {
     
     setIsSaving(true);
     try {
-      const { subtotal, discountValue, total } = calculateUpdatedBill();
+      const { subtotal, discountValue, total, loyaltyPointsDelta } = calculateUpdatedBill();
+      
+      // Points customer will earn from this updated transaction
+      const newLoyaltyPointsEarned = selectedBill.loyaltyPointsEarned + loyaltyPointsDelta;
+      
+      // Calculate total price change for customer total spent tracking
+      const totalPriceDelta = total - selectedBill.total;
+      
+      console.log('Total price delta:', totalPriceDelta);
+      console.log('New loyalty points earned:', newLoyaltyPointsEarned);
       
       // Update bill in database
       const { error: billError } = await supabase
@@ -312,6 +379,7 @@ const RecentTransactions: React.FC = () => {
           discount_type: editedDiscountType,
           discount_value: discountValue,
           loyalty_points_used: editedLoyaltyPointsUsed,
+          loyalty_points_earned: newLoyaltyPointsEarned,
           payment_method: editedPaymentMethod,
           total
         })
@@ -319,6 +387,47 @@ const RecentTransactions: React.FC = () => {
         
       if (billError) {
         throw new Error(`Failed to update bill: ${billError.message}`);
+      }
+      
+      // Find the customer to update loyalty points and total spent
+      const customer = customers.find(c => c.id === selectedBill.customerId);
+      if (customer) {
+        // Update customer loyalty points and total spent
+        const updatedCustomer: Customer = {
+          ...customer,
+          loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
+          totalSpent: customer.totalSpent + totalPriceDelta
+        };
+        
+        console.log('Updating customer:', customer.name);
+        console.log('Current loyalty points:', customer.loyaltyPoints);
+        console.log('Adding loyalty points delta:', loyaltyPointsDelta);
+        console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
+        console.log('Current total spent:', customer.totalSpent);
+        console.log('Adding total spent delta:', totalPriceDelta);
+        console.log('New total spent:', updatedCustomer.totalSpent);
+        
+        // Update customer in database
+        const { error: customerError } = await supabase
+          .from('customers')
+          .update({
+            loyalty_points: updatedCustomer.loyaltyPoints,
+            total_spent: updatedCustomer.totalSpent
+          })
+          .eq('id', customer.id);
+          
+        if (customerError) {
+          console.error('Error updating customer:', customerError);
+          toast({
+            title: "Warning",
+            description: `Updated bill but failed to update customer data: ${customerError.message}`,
+            variant: "destructive"
+          });
+        } else {
+          console.log('Customer updated successfully');
+          // Update the customer in context
+          updateCustomer(updatedCustomer);
+        }
       }
       
       // Delete existing bill items
@@ -352,28 +461,28 @@ const RecentTransactions: React.FC = () => {
       
       toast({
         title: "Changes Saved",
-        description: "Bill items have been updated successfully",
+        description: "Transaction updated successfully",
       });
-      
-      // Update the bill in context
-      const updatedBill = {
-        ...selectedBill,
-        items: editedItems,
-        subtotal,
-        discount: editedDiscount,
-        discountType: editedDiscountType,
-        discountValue,
-        loyaltyPointsUsed: editedLoyaltyPointsUsed,
-        paymentMethod: editedPaymentMethod,
-        total
-      };
       
       // Close dialog and reset state
       setIsEditDialogOpen(false);
       setSelectedBill(null);
       
-      // Refresh page to see updated data
-      window.location.reload();
+      // Refresh data WITHOUT reloading the page
+      try {
+        // Fetch bills again
+        const { data: updatedBillsData } = await supabase
+          .from('bills')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (updatedBillsData) {
+          // Update bills in state or context as needed
+          console.log('Bills refreshed:', updatedBillsData.length);
+        }
+      } catch (refreshError) {
+        console.error('Error refreshing data:', refreshError);
+      }
     } catch (error) {
       toast({
         title: "Error",
