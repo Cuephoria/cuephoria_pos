@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -50,6 +49,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill, products, updateProduct } = usePOS();
@@ -79,23 +79,17 @@ const RecentTransactions: React.FC = () => {
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
-  // State to hold selected product name for display
-  const [selectedProductName, setSelectedProductName] = useState<string>('');
   
   // Filtered products based on search query
   const filteredProducts = products.filter(product => {
-    if (!productSearchQuery.trim()) return product.stock > 0;
+    if (!productSearchQuery.trim()) return true;
     
     const query = productSearchQuery.toLowerCase().trim();
     return (
-      product.stock > 0 && (
-        product.name.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query)
-      )
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
     );
-  });
+  }).filter(product => product.stock > 0);
   
   // Filter bills based on search query (bill ID, customer name, phone or email)
   const filteredBills = bills.filter(bill => {
@@ -132,23 +126,19 @@ const RecentTransactions: React.FC = () => {
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
     setSelectedProductId('');
-    setSelectedProductName('');
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
-    setIsDropdownOpen(false);
     setIsAddItemDialogOpen(true);
   };
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
-    setIsDropdownOpen(false);
     
-    // Auto-fill product information and set the selected product name
+    // Auto-fill product information
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
-      setSelectedProductName(selectedProduct.name);
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -714,12 +704,7 @@ const RecentTransactions: React.FC = () => {
       </Dialog>
       
       {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
-        setIsAddItemDialogOpen(open);
-        if (!open) {
-          setIsDropdownOpen(false); // Ensure dropdown closes when dialog closes
-        }
-      }}>
+      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
@@ -734,13 +719,12 @@ const RecentTransactions: React.FC = () => {
               <div className="relative">
                 <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
                   <CommandInput 
-                    placeholder={selectedProductName || "Search products..."}
+                    placeholder="Search products..." 
                     value={productSearchQuery}
                     onValueChange={setProductSearchQuery}
                     className="text-white"
-                    onFocus={() => setIsDropdownOpen(true)}
                   />
-                  <CommandList className="absolute z-10 w-full bg-gray-700 border border-gray-600 rounded-b-lg text-white">
+                  <CommandList className="text-white">
                     <CommandEmpty className="py-6 text-center text-sm text-gray-400">
                       No products match your search
                     </CommandEmpty>
@@ -768,11 +752,6 @@ const RecentTransactions: React.FC = () => {
                   </CommandList>
                 </Command>
               </div>
-              {selectedProductName && (
-                <p className="text-xs text-green-400 mt-1">
-                  Selected: {selectedProductName}
-                </p>
-              )}
             </div>
             
             <div className="space-y-2">
@@ -815,10 +794,7 @@ const RecentTransactions: React.FC = () => {
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => {
-              setIsAddItemDialogOpen(false);
-              setIsDropdownOpen(false);
-            }} className="bg-gray-700 text-white hover:bg-gray-600">
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
               Cancel
             </Button>
             <Button 
