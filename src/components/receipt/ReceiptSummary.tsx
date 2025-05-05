@@ -1,25 +1,21 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Bill } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Button } from '@/components/ui/button';
-import { Pencil, Save, X, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Pencil, Save, X } from 'lucide-react';
 
 interface ReceiptSummaryProps {
   bill: Bill;
   onUpdateBill?: (updatedBill: Partial<Bill>) => void;
   editable?: boolean;
-  availableLoyaltyPoints?: number;
 }
 
 const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ 
   bill, 
   onUpdateBill,
-  editable = false,
-  availableLoyaltyPoints = 0
+  editable = false 
 }) => {
-  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
     subtotal: bill.subtotal,
@@ -28,18 +24,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     loyaltyPointsUsed: bill.loyaltyPointsUsed,
     paymentMethod: bill.paymentMethod
   });
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Update edit values when bill changes
-    setEditValues({
-      subtotal: bill.subtotal,
-      discount: bill.discount,
-      discountType: bill.discountType,
-      loyaltyPointsUsed: bill.loyaltyPointsUsed,
-      paymentMethod: bill.paymentMethod
-    });
-  }, [bill]);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -51,22 +35,10 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         loyaltyPointsUsed: bill.loyaltyPointsUsed,
         paymentMethod: bill.paymentMethod
       });
-      setError(null);
     }
   };
 
   const handleSaveChanges = () => {
-    // Validate loyalty points
-    if (editValues.loyaltyPointsUsed > availableLoyaltyPoints) {
-      setError(`Cannot use more than available ${availableLoyaltyPoints} loyalty points`);
-      toast({
-        title: "Invalid Points",
-        description: `Cannot use more than available ${availableLoyaltyPoints} loyalty points`,
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Calculate the new discount value based on type
     let discountValue = 0;
     if (editValues.discountType === 'percentage') {
@@ -91,7 +63,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     }
 
     setIsEditing(false);
-    setError(null);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -99,16 +70,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
       ...prev,
       [field]: value
     }));
-    
-    // Clear error when user modifies loyalty points
-    if (field === 'loyaltyPointsUsed') {
-      const pointsValue = Number(value);
-      if (pointsValue <= availableLoyaltyPoints) {
-        setError(null);
-      } else {
-        setError(`Cannot use more than available ${availableLoyaltyPoints} loyalty points`);
-      }
-    }
   };
 
   // Read-only view
@@ -219,23 +180,13 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         </div>
         
         <div>
-          <label className="text-xs text-gray-400 mb-1 flex items-center justify-between">
-            <span>Loyalty Points Used</span>
-            <span className="text-gray-300">Available: {availableLoyaltyPoints}</span>
-          </label>
+          <label className="text-xs text-gray-400 mb-1 block">Loyalty Points Used</label>
           <input
             type="number"
-            className={`w-full ${error ? 'border-red-500' : 'border-gray-600'} bg-gray-700 rounded px-2 py-1 text-sm`}
+            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
             value={editValues.loyaltyPointsUsed}
             onChange={(e) => handleInputChange('loyaltyPointsUsed', parseInt(e.target.value))}
-            max={availableLoyaltyPoints}
           />
-          {error && (
-            <div className="flex items-center mt-1 text-xs text-red-400">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {error}
-            </div>
-          )}
         </div>
         
         <div>
