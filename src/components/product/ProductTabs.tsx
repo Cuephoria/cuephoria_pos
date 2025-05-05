@@ -34,17 +34,11 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
     ? products 
     : products.filter(product => product.category.toLowerCase() === activeTab.toLowerCase());
 
-  // Ensure we have uncategorized tab available
-  const displayCategories = [...categories];
-  if (!displayCategories.includes('uncategorized')) {
-    displayCategories.push('uncategorized');
-  }
-
   return (
     <Tabs defaultValue="all" value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="mb-4 flex flex-wrap gap-1 justify-start sm:justify-center">
         <TabsTrigger value="all">All ({categoryCounts.all || 0})</TabsTrigger>
-        {displayCategories.map(category => (
+        {categories.map(category => (
           <TabsTrigger key={category} value={category}>
             {category.charAt(0).toUpperCase() + category.slice(1)} ({categoryCounts[category] || 0})
           </TabsTrigger>
@@ -58,9 +52,9 @@ const ProductTabs: React.FC<ProductTabsProps> = ({
               <div key={product.id} className="flex h-full">
                 <ProductCard
                   product={product}
-                  isAdmin={isAdmin} // Pass the user's admin status
+                  isAdmin={isAdmin}
                   onEdit={onEdit}
-                  onDelete={isAdmin ? onDelete : undefined} // Only allow delete for admins
+                  onDelete={isAdmin ? onDelete : undefined}
                   className="w-full"
                 />
               </div>

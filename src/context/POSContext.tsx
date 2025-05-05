@@ -31,7 +31,7 @@ const POSContext = createContext<POSContextType>({
   discountType: 'percentage',
   loyaltyPointsUsed: 0,
   isStudentDiscount: false,
-  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
+  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership', 'uncategorized'], // Default categories
   setIsStudentDiscount: () => {},
   setStations: () => {},
   addProduct: () => ({}),
@@ -74,7 +74,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // State for categories
   const [categories, setCategories] = useState<string[]>([
-    'food', 'drinks', 'tobacco', 'challenges', 'membership'
+    'food', 'drinks', 'tobacco', 'challenges', 'membership', 'uncategorized'
   ]);
 
   // Load categories from localStorage on initialization
@@ -82,7 +82,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const storedCategories = localStorage.getItem('cuephoriaCategories');
     if (storedCategories) {
       try {
-        setCategories(JSON.parse(storedCategories));
+        const parsedCategories = JSON.parse(storedCategories);
+        // Ensure 'uncategorized' is included but not duplicated
+        if (!parsedCategories.includes('uncategorized')) {
+          parsedCategories.push('uncategorized');
+        }
+        setCategories(parsedCategories);
       } catch (error) {
         console.error('Error parsing stored categories:', error);
       }
@@ -165,7 +170,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         // For each product, check if its category still exists
         for (const product of products) {
-          if (!categories.includes(product.category) && product.category !== 'uncategorized') {
+          if (!categories.includes(product.category)) {
             // If category doesn't exist anymore, move to 'uncategorized'
             const updatedProduct = { 
               ...product, 
@@ -180,11 +185,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Error syncing product categories:', error);
       }
     };
-
-    // Add 'uncategorized' if it doesn't exist yet
-    if (!categories.includes('uncategorized')) {
-      setCategories(prev => [...prev, 'uncategorized']);
-    }
 
     // Sync product categories when categories change
     if (products.length > 0) {
@@ -206,6 +206,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     if (oldCategory === newCategory || !trimmedNewCategory) {
       return; // No change or empty category
+    }
+    
+    // Don't allow changing to 'uncategorized' if it's a different category
+    if (trimmedNewCategory === 'uncategorized' && oldCategory !== 'uncategorized') {
+      return;
     }
     
     // Update categories list
@@ -257,6 +262,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCategory = (category: string) => {
+    // Don't allow deleting 'uncategorized' category
+    if (category === 'uncategorized') {
+      return;
+    }
+    
     // Remove from categories list
     setCategories(prev => prev.filter(cat => cat !== category));
     
@@ -300,12 +310,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     updateProductsInSupabase();
-    
-    // Add 'uncategorized' if it doesn't exist yet
-    if (!categories.includes('uncategorized')) {
-      setCategories(prev => [...prev, 'uncategorized']);
-    }
-
     console.log(`Category deleted: ${category}`);
   };
   
