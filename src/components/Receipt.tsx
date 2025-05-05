@@ -75,7 +75,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   return (
     <ReceiptContainer>
       {showSuccessMsg && <SuccessMessage onClose={handleCloseSuccessMsg} />}
-      <ReceiptTitle onClose={onClose} />
+      <ReceiptTitle onClose={onClose} date={bill.createdAt} />
       <ReceiptContent 
         bill={bill} 
         customer={customer} 
