@@ -20,9 +20,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import ReceiptContent from '@/components/receipt/ReceiptContent';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const BillReport = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { bills, customers, updateBill, deleteBill } = usePOS();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
@@ -47,11 +49,25 @@ const BillReport = () => {
   // Handle bill update
   const handleUpdateBill = async (updatedBill: Bill) => {
     if (updateBill) {
-      const success = await updateBill(updatedBill);
-      if (success) {
-        setSelectedBillId(null);
+      try {
+        const success = await updateBill(updatedBill);
+        if (success) {
+          setSelectedBillId(null);
+          toast({
+            title: "Success",
+            description: "Bill updated successfully",
+          });
+        }
+        return success;
+      } catch (error) {
+        console.error("Error updating bill:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update bill",
+          variant: "destructive"
+        });
+        return false;
       }
-      return success;
     }
     return false;
   };
@@ -59,14 +75,34 @@ const BillReport = () => {
   // Handle bill deletion
   const handleDeleteBill = async (billId: string, customerId: string) => {
     if (deleteBill) {
-      const success = await deleteBill(billId, customerId);
-      if (success) {
-        setSelectedBillId(null);
+      try {
+        const success = await deleteBill(billId, customerId);
+        if (success) {
+          setSelectedBillId(null);
+          toast({
+            title: "Success",
+            description: "Bill deleted successfully",
+          });
+        }
+        return success;
+      } catch (error) {
+        console.error("Error deleting bill:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete bill",
+          variant: "destructive"
+        });
+        return false;
       }
-      return success;
     }
     return false;
   };
+  
+  useEffect(() => {
+    // Log to verify user admin status
+    console.log("Current user:", user);
+    console.log("Is admin:", user?.isAdmin);
+  }, [user]);
   
   return (
     <div className="p-6">
@@ -97,7 +133,7 @@ const BillReport = () => {
               <TableHead>Points Used</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Payment</TableHead>
-              <TableHead>Actions</TableHead>
+              {user?.isAdmin && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -140,13 +176,16 @@ const BillReport = () => {
                       {bill.paymentMethod === 'upi' ? 'UPI' : 'Cash'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    {user?.isAdmin && (
+                  {user?.isAdmin && (
+                    <TableCell>
                       <div className="flex space-x-1">
-                        <Dialog open={selectedBillId === bill.id} onOpenChange={(open) => {
-                          if (!open) setSelectedBillId(null);
-                          if (open) setSelectedBillId(bill.id);
-                        }}>
+                        <Dialog 
+                          open={selectedBillId === bill.id} 
+                          onOpenChange={(open) => {
+                            if (!open) setSelectedBillId(null);
+                            if (open) setSelectedBillId(bill.id);
+                          }}
+                        >
                           <DialogTrigger asChild>
                             <Button 
                               variant="ghost" 
@@ -203,15 +242,15 @@ const BillReport = () => {
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    )}
-                  </TableCell>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
             
             {filteredBills.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-16 text-gray-500">
+                <TableCell colSpan={user?.isAdmin ? 10 : 9} className="text-center py-16 text-gray-500">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
                     <p className="text-lg font-medium">No bills available</p>

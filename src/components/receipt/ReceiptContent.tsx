@@ -1,6 +1,6 @@
 
 import React, { ReactNode, RefObject, useState } from 'react';
-import { Bill, Customer } from '@/context/POSContext';
+import { Bill, Customer } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
 import CustomerInfo from './CustomerInfo';
 import ReceiptItems from './ReceiptItems';
@@ -9,7 +9,7 @@ import ReceiptFooter from './ReceiptFooter';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Edit, Info, Save, Trash2 } from 'lucide-react';
+import { Edit, Info, Save, Trash2, X } from 'lucide-react';
 import { 
   Tooltip,
   TooltipContent,
@@ -40,35 +40,56 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   // Check if bill is valid
   if (!bill || !bill.id) {
     return (
-      <div ref={receiptRef} className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto">
-        <div className="text-center py-8">
-          <h3 className="text-xl font-bold">Error: Invalid Bill Data</h3>
-          <p className="mt-2">Unable to display receipt. Bill information is missing or invalid.</p>
-        </div>
+      <div ref={receiptRef} className="p-6 text-center py-8">
+        <h3 className="text-xl font-bold">Error: Invalid Bill Data</h3>
+        <p className="mt-2">Unable to display receipt. Bill information is missing or invalid.</p>
       </div>
     );
   }
 
   const handleEditToggle = () => {
     if (isEditing) {
+      // Reset to original if canceling
       setEditedBill({ ...bill });
     }
     setIsEditing(!isEditing);
   };
 
   const handleSave = async () => {
-    if (onUpdateBill && await onUpdateBill(editedBill)) {
-      setIsEditing(false);
+    if (onUpdateBill) {
+      // Recalculate the total and discountValue based on the inputs
+      let updatedBill = { ...editedBill };
+      
+      // Calculate the discount value
+      if (updatedBill.discountType === 'percentage') {
+        updatedBill.discountValue = (updatedBill.subtotal * updatedBill.discount) / 100;
+      } else {
+        updatedBill.discountValue = updatedBill.discount;
+      }
+      
+      // Calculate the loyalty points value (₹1 = 1 point typically)
+      const loyaltyPointsValue = updatedBill.loyaltyPointsUsed || 0;
+      
+      // Calculate the total after discounts and loyalty points
+      updatedBill.total = Math.max(0, updatedBill.subtotal - updatedBill.discountValue - loyaltyPointsValue);
+      
+      const success = await onUpdateBill(updatedBill);
+      if (success) {
+        setIsEditing(false);
+      }
     }
   };
   
   const handleDelete = async () => {
-    if (isDeleting && onDeleteBill) {
+    if (isDeleting && onDeleteBill && bill.id) {
       await onDeleteBill(bill.id, bill.customerId);
-      setIsDeleting(false);
     } else {
       setIsDeleting(true);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setIsDeleting(false);
   };
 
   const handleInputChange = (field: keyof Bill, value: any) => {
@@ -79,17 +100,17 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   };
 
   return (
-    <div ref={receiptRef} className="p-6 text-black max-h-[calc(100vh-250px)] overflow-auto">
+    <div ref={receiptRef} className="p-4 max-h-[calc(100vh-200px)] overflow-auto">
       <ReceiptHeader bill={isEditing ? editedBill : bill} />
       <CustomerInfo customer={customer} />
       
       <ReceiptItems bill={bill} showTooltips={true} />
       
       {user?.isAdmin && (onUpdateBill || onDeleteBill) && (
-        <div className="flex justify-end mb-2 space-x-2">
+        <div className="flex justify-end mb-4 space-x-2">
           {isDeleting ? (
             <div className="flex space-x-2">
-              <Button variant="outline" onClick={() => setIsDeleting(false)} size="sm">
+              <Button variant="outline" onClick={handleCancelDelete} size="sm">
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleDelete} size="sm">
@@ -99,6 +120,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           ) : isEditing ? (
             <div className="flex space-x-2">
               <Button variant="outline" onClick={handleEditToggle} size="sm">
+                <X className="h-4 w-4 mr-1" />
                 Cancel
               </Button>
               <Button variant="default" onClick={handleSave} size="sm">
@@ -115,7 +137,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
                 </Button>
               )}
               {onDeleteBill && (
-                <Button variant="outline" onClick={handleDelete} size="sm" className="text-red-500 hover:bg-red-950 hover:text-red-400">
+                <Button variant="outline" onClick={handleDelete} size="sm" className="text-red-500 hover:bg-red-50">
                   <Trash2 className="h-4 w-4 mr-1" />
                   Delete
                 </Button>
@@ -127,6 +149,8 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       
       {isEditing && user?.isAdmin ? (
         <div className="space-y-3 mb-4 border p-3 rounded-md">
+          <h3 className="font-medium">Edit Bill Details</h3>
+          
           <div className="flex items-center space-x-2">
             <label className="w-1/3 text-sm">Subtotal:</label>
             <Input 
@@ -152,7 +176,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
             <select
               value={editedBill.discountType}
               onChange={(e) => handleInputChange('discountType', e.target.value as 'percentage' | 'fixed')}
-              className="w-2/3 p-2 border rounded"
+              className="w-2/3 p-2 border rounded bg-background"
             >
               <option value="percentage">Percentage (%)</option>
               <option value="fixed">Fixed Amount (₹)</option>
@@ -174,14 +198,14 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
             <select
               value={editedBill.paymentMethod}
               onChange={(e) => handleInputChange('paymentMethod', e.target.value as 'cash' | 'upi')}
-              className="w-2/3 p-2 border rounded"
+              className="w-2/3 p-2 border rounded bg-background"
             >
               <option value="cash">Cash</option>
               <option value="upi">UPI</option>
             </select>
           </div>
           
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm text-muted-foreground mt-2">
             <p>Total will be recalculated based on subtotal, discount, and loyalty points.</p>
           </div>
         </div>
