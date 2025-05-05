@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -52,7 +51,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill, products, updateProduct } = usePOS();
+  const { bills, customers, deleteBill, products, updateProduct, updateCustomer } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
