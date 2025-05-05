@@ -80,49 +80,6 @@ const RecentTransactions: React.FC = () => {
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
   
-  // Filtered products based on search query
-  const filteredProducts = products.filter(product => {
-    if (!productSearchQuery.trim()) return true;
-    
-    const query = productSearchQuery.toLowerCase().trim();
-    return (
-      product.name.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query)
-    );
-  }).filter(product => product.stock > 0);
-  
-  // Filter bills based on search query (bill ID, customer name, phone or email)
-  const filteredBills = bills.filter(bill => {
-    if (!searchQuery.trim()) return true;
-    
-    const query = searchQuery.toLowerCase().trim();
-    
-    // Match by bill ID
-    if (bill.id.toLowerCase().includes(query)) return true;
-    
-    // Match by customer name, phone or email
-    const customer = customers.find(c => c.id === bill.customerId);
-    if (customer) {
-      const customerName = customer.name.toLowerCase();
-      const customerPhone = customer.phone.toLowerCase();
-      const customerEmail = customer.email?.toLowerCase() || '';
-      
-      return customerName.includes(query) || 
-             customerPhone.includes(query) || 
-             customerEmail.includes(query);
-    }
-    
-    return false;
-  });
-  
-  // Sort bills by date (newest first)
-  const sortedBills = [...filteredBills].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  
-  // Get the 5 most recent transactions
-  const recentBills = sortedBills.slice(0, 5);
-  
   // Add this new state for controlling dropdown visibility
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
@@ -149,6 +106,7 @@ const RecentTransactions: React.FC = () => {
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
       setSelectedProductName(selectedProduct.name);
+      setProductSearchQuery(selectedProduct.name); // Set the search query to the selected product name
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -387,6 +345,302 @@ const RecentTransactions: React.FC = () => {
       setIsSaving(false);
     }
   };
+  
+  // Filtered products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!productSearchQuery.trim()) return true;
+    
+    const query = productSearchQuery.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  }).filter(product => product.stock > 0);
+  
+  // Filter bills based on search query (bill ID, customer name, phone or email)
+  const filteredBills = bills.filter(bill => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Match by bill ID
+    if (bill.id.toLowerCase().includes(query)) return true;
+    
+    // Match by customer name, phone or email
+    const customer = customers.find(c => c.id === bill.customerId);
+    if (customer) {
+      const customerName = customer.name.toLowerCase();
+      const customerPhone = customer.phone.toLowerCase();
+      const customerEmail = customer.email?.toLowerCase() || '';
+      
+      return customerName.includes(query) || 
+             customerPhone.includes(query) || 
+             customerEmail.includes(query);
+    }
+    
+    return false;
+  });
+  
+  // Sort bills by date (newest first)
+  const sortedBills = [...filteredBills].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  
+  // Get the 5 most recent transactions
+  const recentBills = sortedBills.slice(0, 5);
+  
+  // Add this new state for controlling dropdown visibility
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // State to hold selected product name for display
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
+  
+  // Reset the add item form when dialog opens
+  const handleOpenAddItemDialog = () => {
+    setSelectedProductId('');
+    setSelectedProductName('');
+    setNewItemQuantity(1);
+    setAvailableStock(0);
+    setProductSearchQuery('');
+    setIsDropdownOpen(false);
+    setIsAddItemDialogOpen(true);
+  };
+  
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
+    setIsDropdownOpen(false);
+    
+    // Auto-fill product information and set the selected product name
+    const selectedProduct = products.find(p => p.id === productId);
+    if (selectedProduct) {
+      setAvailableStock(selectedProduct.stock || 0);
+      setSelectedProductName(selectedProduct.name);
+      setProductSearchQuery(selectedProduct.name); // Set the search query to the selected product name
+      // Reset quantity to 1 when a new product is selected
+      setNewItemQuantity(1);
+    }
+  };
+  
+  // Function to open edit dialog
+  const handleEditClick = (bill: Bill) => {
+    setSelectedBill(bill);
+    setEditedItems([...bill.items]);
+    setEditedDiscount(bill.discount);
+    setEditedDiscountType(bill.discountType);
+    setEditedLoyaltyPointsUsed(bill.loyaltyPointsUsed);
+    setEditedPaymentMethod(bill.paymentMethod);
+    setIsEditDialogOpen(true);
+  };
+  
+  // Function to update edited items
+  const handleUpdateItem = (index: number, field: keyof CartItem, value: any) => {
+    const updatedItems = [...editedItems];
+    updatedItems[index] = { 
+      ...updatedItems[index], 
+      [field]: value 
+    };
+    
+    // Recalculate total if price or quantity changed
+    if (field === 'price' || field === 'quantity') {
+      updatedItems[index].total = updatedItems[index].price * updatedItems[index].quantity;
+    }
+    
+    setEditedItems(updatedItems);
+  };
+  
+  // Function to remove item from edited items
+  const handleRemoveItem = (index: number) => {
+    const updatedItems = [...editedItems];
+    updatedItems.splice(index, 1);
+    setEditedItems(updatedItems);
+  };
+  
+  // Function to add new item to bill
+  const handleAddNewItem = () => {
+    if (!selectedProductId) {
+      toast({
+        title: "Selection Required",
+        description: "Please select a product from the list",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const selectedProduct = products.find(p => p.id === selectedProductId);
+    
+    if (!selectedProduct) {
+      toast({
+        title: "Product Not Found",
+        description: "The selected product could not be found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newItemQuantity <= 0) {
+      toast({
+        title: "Invalid Quantity",
+        description: "Quantity must be greater than zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newItemQuantity > selectedProduct.stock) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${selectedProduct.stock} items available in stock`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const itemToAdd: CartItem = {
+      id: selectedProduct.id,
+      name: selectedProduct.name,
+      price: selectedProduct.price,
+      quantity: newItemQuantity,
+      total: selectedProduct.price * newItemQuantity,
+      type: 'product',
+      category: selectedProduct.category
+    };
+    
+    setEditedItems([...editedItems, itemToAdd]);
+    
+    // Update product stock
+    updateProduct({
+      ...selectedProduct,
+      stock: selectedProduct.stock - newItemQuantity
+    });
+    
+    // Reset form
+    setSelectedProductId('');
+    setNewItemQuantity(1);
+    setProductSearchQuery('');
+    setIsAddItemDialogOpen(false);
+  };
+  
+  // Calculate updated bill values
+  const calculateUpdatedBill = () => {
+    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0 };
+    
+    // Calculate new subtotal
+    const subtotal = editedItems.reduce((sum, item) => sum + item.total, 0);
+    
+    // Recalculate discount value based on type
+    let discountValue = 0;
+    if (editedDiscountType === 'percentage') {
+      discountValue = subtotal * (editedDiscount / 100);
+    } else {
+      discountValue = editedDiscount;
+    }
+    
+    // Calculate new total
+    const total = Math.max(0, subtotal - discountValue - editedLoyaltyPointsUsed);
+    
+    return { subtotal, discountValue, total };
+  };
+  
+  // Function to save changes to bill
+  const handleSaveChanges = async () => {
+    if (!selectedBill) return;
+    
+    setIsSaving(true);
+    try {
+      const { subtotal, discountValue, total } = calculateUpdatedBill();
+      
+      // Update bill in database
+      const { error: billError } = await supabase
+        .from('bills')
+        .update({
+          subtotal,
+          discount: editedDiscount,
+          discount_type: editedDiscountType,
+          discount_value: discountValue,
+          loyalty_points_used: editedLoyaltyPointsUsed,
+          payment_method: editedPaymentMethod,
+          total
+        })
+        .eq('id', selectedBill.id);
+        
+      if (billError) {
+        throw new Error(`Failed to update bill: ${billError.message}`);
+      }
+      
+      // Delete existing bill items
+      const { error: deleteError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', selectedBill.id);
+        
+      if (deleteError) {
+        throw new Error(`Failed to update bill items: ${deleteError.message}`);
+      }
+      
+      // Insert updated items
+      for (const item of editedItems) {
+        const { error: itemError } = await supabase
+          .from('bill_items')
+          .insert({
+            bill_id: selectedBill.id,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          });
+          
+        if (itemError) {
+          console.error('Error creating bill item:', itemError);
+        }
+      }
+      
+      toast({
+        title: "Changes Saved",
+        description: "Bill items have been updated successfully",
+      });
+      
+      // Update the bill in context
+      const updatedBill = {
+        ...selectedBill,
+        items: editedItems,
+        subtotal,
+        discount: editedDiscount,
+        discountType: editedDiscountType,
+        discountValue,
+        loyaltyPointsUsed: editedLoyaltyPointsUsed,
+        paymentMethod: editedPaymentMethod,
+        total
+      };
+      
+      // Close dialog and reset state
+      setIsEditDialogOpen(false);
+      setSelectedBill(null);
+      
+      // Refresh page to see updated data
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save changes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Filtered products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!productSearchQuery.trim()) return true;
+    
+    const query = productSearchQuery.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  }).filter(product => product.stock > 0);
   
   return (
     <>
@@ -654,186 +908,3 @@ const RecentTransactions: React.FC = () => {
                       <Label htmlFor="upi" className="flex items-center gap-1 cursor-pointer">
                         <CreditCard className="h-4 w-4" /> UPI
                       </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </div>
-              
-              <div className="flex justify-between pt-4 border-t border-gray-700 mt-4">
-                <div>
-                  <p className="text-gray-400 text-sm">
-                    Subtotal: <span className="text-white">
-                      <CurrencyDisplay amount={calculateUpdatedBill().subtotal} />
-                    </span>
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    Discount ({editedDiscountType === 'percentage' ? `${editedDiscount}%` : 'fixed'}): 
-                    <span className="text-white ml-1">
-                      <CurrencyDisplay amount={calculateUpdatedBill().discountValue} />
-                    </span>
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    Points Used: <span className="text-white">{editedLoyaltyPointsUsed}</span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold">
-                    Total: <CurrencyDisplay amount={calculateUpdatedBill().total} />
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
-              Cancel
-            </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
-        setIsAddItemDialogOpen(open);
-        if (!open) {
-          setIsDropdownOpen(false); // Ensure dropdown closes when dialog closes
-        }
-      }}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white">
-          <DialogHeader>
-            <DialogTitle>Add New Item</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Add a product from your inventory to this transaction.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
-              <div className="relative">
-                <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
-                  <CommandInput 
-                    placeholder={selectedProductName || "Search products..."}
-                    value={productSearchQuery}
-                    onValueChange={setProductSearchQuery}
-                    className="text-white"
-                    onFocus={() => setIsDropdownOpen(true)}
-                  />
-                  <CommandList open={isDropdownOpen} className="text-white">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                      No products match your search
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-72 w-full" type="always">
-                        {filteredProducts.map(product => (
-                          <CommandItem 
-                            key={product.id} 
-                            value={product.id}
-                            onSelect={() => handleProductSelect(product.id)}
-                            className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                          >
-                            <div className="flex flex-col">
-                              <span>{product.name}</span>
-                              <span className="text-xs text-gray-400">
-                                Price: <CurrencyDisplay amount={product.price} /> | 
-                                Category: {product.category} | 
-                                Stock: {product.stock}
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </div>
-              {selectedProductName && (
-                <p className="text-xs text-green-400 mt-1">
-                  Selected: {selectedProductName}
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="item-quantity" className="text-sm font-medium">Quantity</label>
-              <Input 
-                id="item-quantity"
-                type="number" 
-                value={newItemQuantity} 
-                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                className="bg-gray-700 border-gray-600 text-white"
-                min="1"
-                max={availableStock}
-              />
-              {selectedProductId && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Available stock: {availableStock}
-                </p>
-              )}
-            </div>
-            
-            {selectedProductId && (
-              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
-                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
-                {(() => {
-                  const product = products.find(p => p.id === selectedProductId);
-                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
-                  
-                  return (
-                    <div className="space-y-1 text-xs">
-                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
-                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
-                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
-                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
-                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => {
-              setIsAddItemDialogOpen(false);
-              setIsDropdownOpen(false);
-            }} className="bg-gray-700 text-white hover:bg-gray-600">
-              Cancel
-            </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
-              onClick={handleAddNewItem}
-              disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-};
-
-export default RecentTransactions;
