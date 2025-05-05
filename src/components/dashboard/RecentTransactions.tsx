@@ -705,26 +705,28 @@ const RecentTransactions: React.FC = () => {
                     onValueChange={setProductSearchQuery}
                     onFocus={() => setIsDropdownOpen(true)}
                   />
-                  <CommandList open={isDropdownOpen} className="bg-gray-900 border border-gray-700 rounded-b-md absolute w-full z-20 max-h-60">
-                    <CommandEmpty className="text-gray-400 p-2">No products found.</CommandEmpty>
-                    <CommandGroup>
-                      {filteredProducts.map((product) => (
-                        <CommandItem
-                          key={product.id}
-                          value={product.name}
-                          onSelect={() => handleProductSelect(product.id)}
-                          className="text-white hover:bg-gray-800 cursor-pointer"
-                        >
-                          <div className="flex flex-col">
-                            <span>{product.name}</span>
-                            <span className="text-xs text-gray-400">
-                              Price: ₹{product.price} | Stock: {product.stock} | Category: {product.category}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
+                  {isDropdownOpen && filteredProducts.length > 0 && (
+                    <CommandList className="bg-gray-900 border border-gray-700 rounded-b-md absolute w-full z-20 max-h-60">
+                      <CommandEmpty className="text-gray-400 p-2">No products found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredProducts.map((product) => (
+                          <CommandItem
+                            key={product.id}
+                            value={product.name}
+                            onSelect={() => handleProductSelect(product.id)}
+                            className="text-white hover:bg-gray-800 cursor-pointer"
+                          >
+                            <div className="flex flex-col">
+                              <span>{product.name}</span>
+                              <span className="text-xs text-gray-400">
+                                Price: ₹{product.price} | Stock: {product.stock} | Category: {product.category}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  )}
                 </Command>
               </div>
             </div>
