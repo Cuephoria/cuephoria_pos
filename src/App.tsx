@@ -18,6 +18,7 @@ import Products from "./pages/Products";
 import POS from "./pages/POS";
 import Customers from "./pages/Customers";
 import Reports from "./pages/Reports";
+import BillReport from "./pages/BillReport";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
@@ -119,6 +120,12 @@ const App = () => (
                 <Route path="/reports" element={
                   <ProtectedRoute>
                     <Reports />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/bill-report" element={
+                  <ProtectedRoute>
+                    <BillReport />
                   </ProtectedRoute>
                 } />
                 
