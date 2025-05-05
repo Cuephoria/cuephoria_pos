@@ -126,9 +126,13 @@ const RecentTransactions: React.FC = () => {
   // Add this new state for controlling dropdown visibility
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
+  // State to hold selected product name for display
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
+  
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
     setSelectedProductId('');
+    setSelectedProductName('');
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
@@ -140,10 +144,11 @@ const RecentTransactions: React.FC = () => {
     setSelectedProductId(productId);
     setIsDropdownOpen(false);
     
-    // Auto-fill product information
+    // Auto-fill product information and set the selected product name
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
+      setSelectedProductName(selectedProduct.name);
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -709,7 +714,12 @@ const RecentTransactions: React.FC = () => {
       </Dialog>
       
       {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+      <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
+        setIsAddItemDialogOpen(open);
+        if (!open) {
+          setIsDropdownOpen(false); // Ensure dropdown closes when dialog closes
+        }
+      }}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
@@ -724,7 +734,7 @@ const RecentTransactions: React.FC = () => {
               <div className="relative">
                 <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
                   <CommandInput 
-                    placeholder="Search products..." 
+                    placeholder={selectedProductName || "Search products..."}
                     value={productSearchQuery}
                     onValueChange={setProductSearchQuery}
                     className="text-white"
@@ -758,6 +768,11 @@ const RecentTransactions: React.FC = () => {
                   </CommandList>
                 </Command>
               </div>
+              {selectedProductName && (
+                <p className="text-xs text-green-400 mt-1">
+                  Selected: {selectedProductName}
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
