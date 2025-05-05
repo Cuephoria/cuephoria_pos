@@ -112,7 +112,7 @@ const CategoryManagement: React.FC = () => {
   };
 
   const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership'];
-  const isDefaultCategory = (category: string) => defaultCategories.includes(category);
+  const isDefaultCategory = (category: string) => defaultCategories.includes(category.toLowerCase());
 
   return (
     <Card>
@@ -193,6 +193,7 @@ const CategoryManagement: React.FC = () => {
               value={editedCategory}
               onChange={(e) => setEditedCategory(e.target.value)}
               placeholder="Enter new category name"
+              autoFocus
             />
           </div>
           <DialogFooter>
