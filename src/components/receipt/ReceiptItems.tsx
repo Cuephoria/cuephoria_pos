@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ReceiptItemsProps {
   bill: Bill;
@@ -29,6 +36,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
   const [availableStock, setAvailableStock] = useState<number>(0);
@@ -159,7 +167,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     // Reset form
     setSelectedProductId('');
     setNewItemQuantity(1);
-    setShowAddForm(false);
+    setShowAddProductDialog(false);
     
     if (onUpdateItems) {
       onUpdateItems(updatedItems);
@@ -189,111 +197,17 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     <div className="space-y-3 mb-4">
       <div className="text-sm font-medium border-b pb-1 flex justify-between items-center">
         <span>Items</span>
-        {editable && !showAddForm && (
+        {editable && (
           <Button 
             variant="ghost" 
             size="sm" 
             className="h-7 px-2 text-xs" 
-            onClick={() => setShowAddForm(true)}
+            onClick={() => setShowAddProductDialog(true)}
           >
             <Plus className="h-3 w-3 mr-1" /> Add Item
           </Button>
         )}
       </div>
-
-      {showAddForm && (
-        <div className="bg-gray-800/30 p-3 rounded-md mb-2 border border-gray-700">
-          <h4 className="text-sm font-medium mb-2">Add Product</h4>
-          <div className="space-y-2">
-            <div className="space-y-2">
-              <label className="text-xs text-gray-400">Select Product</label>
-              <Select 
-                value={selectedProductId} 
-                onValueChange={handleProductSelect}
-              >
-                <SelectTrigger className="w-full bg-gray-700 border border-gray-600 rounded">
-                  <SelectValue placeholder="Choose a product" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-600 text-white max-h-60">
-                  {products
-                    .filter(p => p.category !== 'membership' && p.stock > 0)
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(product => (
-                      <SelectItem key={product.id} value={product.id} className="py-2">
-                        <div className="flex flex-col">
-                          <span>{product.name}</span>
-                          <span className="text-xs text-gray-400">
-                            Price: <CurrencyDisplay amount={product.price} /> | 
-                            Category: {product.category} | 
-                            Stock: {product.stock}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-xs text-gray-400">Quantity</label>
-              <Input
-                type="number"
-                className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-                value={newItemQuantity}
-                min="1"
-                max={availableStock}
-                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-              />
-              {selectedProductId && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Available stock: {availableStock}
-                </p>
-              )}
-            </div>
-            
-            {selectedProductId && (
-              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
-                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
-                {(() => {
-                  const product = products.find(p => p.id === selectedProductId);
-                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
-                  
-                  return (
-                    <div className="space-y-1 text-xs">
-                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
-                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
-                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
-                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
-                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            
-            <div className="flex justify-end space-x-2 mt-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2 text-xs" 
-                onClick={() => setShowAddForm(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="h-7 px-2 text-xs bg-cuephoria-purple hover:bg-cuephoria-purple/80" 
-                onClick={handleAddItem}
-                disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
-              >
-                Add Item
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Table className="border border-gray-700 rounded-md overflow-hidden">
         <TableHeader className="bg-gray-800">
@@ -386,6 +300,99 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
           ))}
         </TableBody>
       </Table>
+
+      {/* Add Product Dialog */}
+      <Dialog open={showAddProductDialog} onOpenChange={setShowAddProductDialog}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Add New Item</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
+              <Select 
+                value={selectedProductId} 
+                onValueChange={handleProductSelect}
+              >
+                <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="Choose a product" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-60">
+                  {products
+                    .filter(p => p.category !== 'membership' && p.stock > 0)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(product => (
+                      <SelectItem key={product.id} value={product.id} className="py-2">
+                        <div className="flex flex-col">
+                          <span>{product.name}</span>
+                          <span className="text-xs text-gray-400">
+                            Price: <CurrencyDisplay amount={product.price} /> | 
+                            Category: {product.category} | 
+                            Stock: {product.stock}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="item-quantity" className="text-sm font-medium">Quantity</label>
+              <Input 
+                id="item-quantity"
+                type="number" 
+                value={newItemQuantity} 
+                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                className="bg-gray-700 border-gray-600 text-white"
+                min="1"
+                max={availableStock}
+              />
+              {selectedProductId && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Available stock: {availableStock}
+                </p>
+              )}
+            </div>
+            
+            {selectedProductId && (
+              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
+                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
+                {(() => {
+                  const product = products.find(p => p.id === selectedProductId);
+                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
+                  
+                  return (
+                    <div className="space-y-1 text-xs">
+                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
+                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
+                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
+                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
+                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
+            <Button variant="outline" onClick={() => setShowAddProductDialog(false)} className="bg-gray-700 text-white hover:bg-gray-600">
+              Cancel
+            </Button>
+            <Button 
+              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
+              onClick={handleAddItem}
+              disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
