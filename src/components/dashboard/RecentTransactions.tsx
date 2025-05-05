@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { User, Trash2, Search, Edit2, Plus, X, Save } from 'lucide-react';
+import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { 
@@ -42,6 +42,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  RadioGroup,
+  RadioGroupItem
+} from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 
 const RecentTransactions: React.FC = () => {
@@ -64,6 +69,12 @@ const RecentTransactions: React.FC = () => {
   const [newItemPrice, setNewItemPrice] = useState<number>(0);
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
   const [newItemType, setNewItemType] = useState<'product' | 'session'>('product');
+  
+  // Additional edit states for discount, points, and payment method
+  const [editedDiscount, setEditedDiscount] = useState<number>(0);
+  const [editedDiscountType, setEditedDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [editedLoyaltyPointsUsed, setEditedLoyaltyPointsUsed] = useState<number>(0);
+  const [editedPaymentMethod, setEditedPaymentMethod] = useState<'cash' | 'upi'>('cash');
   
   // Filter bills based on search query (bill ID, customer name, phone or email)
   const filteredBills = bills.filter(bill => {
@@ -125,6 +136,10 @@ const RecentTransactions: React.FC = () => {
   const handleEditClick = (bill: Bill) => {
     setSelectedBill(bill);
     setEditedItems([...bill.items]);
+    setEditedDiscount(bill.discount);
+    setEditedDiscountType(bill.discountType);
+    setEditedLoyaltyPointsUsed(bill.loyaltyPointsUsed);
+    setEditedPaymentMethod(bill.paymentMethod);
     setIsEditDialogOpen(true);
   };
   
@@ -180,32 +195,45 @@ const RecentTransactions: React.FC = () => {
     setIsAddItemDialogOpen(false);
   };
   
+  // Calculate updated bill values
+  const calculateUpdatedBill = () => {
+    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0 };
+    
+    // Calculate new subtotal
+    const subtotal = editedItems.reduce((sum, item) => sum + item.total, 0);
+    
+    // Recalculate discount value based on type
+    let discountValue = 0;
+    if (editedDiscountType === 'percentage') {
+      discountValue = subtotal * (editedDiscount / 100);
+    } else {
+      discountValue = editedDiscount;
+    }
+    
+    // Calculate new total
+    const total = Math.max(0, subtotal - discountValue - editedLoyaltyPointsUsed);
+    
+    return { subtotal, discountValue, total };
+  };
+  
   // Function to save changes to bill
   const handleSaveChanges = async () => {
     if (!selectedBill) return;
     
     setIsSaving(true);
     try {
-      // Calculate new subtotal
-      const subtotal = editedItems.reduce((sum, item) => sum + item.total, 0);
-      
-      // Recalculate discount value based on type
-      let discountValue = 0;
-      if (selectedBill.discountType === 'percentage') {
-        discountValue = subtotal * (selectedBill.discount / 100);
-      } else {
-        discountValue = selectedBill.discount;
-      }
-      
-      // Calculate new total
-      const total = Math.max(0, subtotal - discountValue - selectedBill.loyaltyPointsUsed);
+      const { subtotal, discountValue, total } = calculateUpdatedBill();
       
       // Update bill in database
       const { error: billError } = await supabase
         .from('bills')
         .update({
           subtotal,
+          discount: editedDiscount,
+          discount_type: editedDiscountType,
           discount_value: discountValue,
+          loyalty_points_used: editedLoyaltyPointsUsed,
+          payment_method: editedPaymentMethod,
           total
         })
         .eq('id', selectedBill.id);
@@ -253,7 +281,11 @@ const RecentTransactions: React.FC = () => {
         ...selectedBill,
         items: editedItems,
         subtotal,
+        discount: editedDiscount,
+        discountType: editedDiscountType,
         discountValue,
+        loyaltyPointsUsed: editedLoyaltyPointsUsed,
+        paymentMethod: editedPaymentMethod,
         total
       };
       
@@ -305,7 +337,7 @@ const RecentTransactions: React.FC = () => {
                       <User className="h-5 w-5 text-purple-400" />
                     </div>
                     <div>
-                      <p className="font-medium">{customer?.name || 'Unknown Customer'}</p>
+                      <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
                       <div className="flex space-x-2">
                         <p className="text-xs text-gray-400">
                           {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -377,12 +409,12 @@ const RecentTransactions: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Edit Transaction</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Modify existing products or add new ones to this transaction.
+              Modify transaction details including products, discount, loyalty points, and payment method.
             </DialogDescription>
           </DialogHeader>
           
           {selectedBill && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400">Bill ID</h3>
@@ -484,38 +516,87 @@ const RecentTransactions: React.FC = () => {
                 </Table>
               </div>
               
-              <div className="flex justify-between pt-4 border-t border-gray-700">
+              {/* New section for discount, loyalty points, and payment method */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-700 pt-4">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-300">Discount</h3>
+                  <div className="flex space-x-2">
+                    <Input 
+                      type="number" 
+                      value={editedDiscount} 
+                      onChange={(e) => setEditedDiscount(parseFloat(e.target.value))}
+                      className="bg-gray-700 border-gray-600 text-white flex-1"
+                      min="0"
+                    />
+                    <Select
+                      value={editedDiscountType}
+                      onValueChange={(value) => setEditedDiscountType(value as 'percentage' | 'fixed')}
+                    >
+                      <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-24">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                        <SelectItem value="percentage">%</SelectItem>
+                        <SelectItem value="fixed">₹</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-300">Loyalty Points Used</h3>
+                  <Input 
+                    type="number" 
+                    value={editedLoyaltyPointsUsed} 
+                    onChange={(e) => setEditedLoyaltyPointsUsed(parseInt(e.target.value))}
+                    className="bg-gray-700 border-gray-600 text-white"
+                    min="0"
+                  />
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-300">Payment Method</h3>
+                  <RadioGroup 
+                    value={editedPaymentMethod} 
+                    onValueChange={(value) => setEditedPaymentMethod(value as 'cash' | 'upi')}
+                    className="flex space-x-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="cash" id="cash" className="text-purple-400" />
+                      <Label htmlFor="cash" className="flex items-center gap-1 cursor-pointer">
+                        <Wallet className="h-4 w-4" /> Cash
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="upi" id="upi" className="text-purple-400" />
+                      <Label htmlFor="upi" className="flex items-center gap-1 cursor-pointer">
+                        <CreditCard className="h-4 w-4" /> UPI
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+              
+              <div className="flex justify-between pt-4 border-t border-gray-700 mt-4">
                 <div>
                   <p className="text-gray-400 text-sm">
                     Subtotal: <span className="text-white">
-                      <CurrencyDisplay amount={editedItems.reduce((sum, item) => sum + item.total, 0)} />
+                      <CurrencyDisplay amount={calculateUpdatedBill().subtotal} />
                     </span>
                   </p>
                   <p className="text-gray-400 text-sm">
-                    Discount ({selectedBill.discountType === 'percentage' ? `${selectedBill.discount}%` : 'fixed'}): 
+                    Discount ({editedDiscountType === 'percentage' ? `${editedDiscount}%` : 'fixed'}): 
                     <span className="text-white ml-1">
-                      <CurrencyDisplay amount={
-                        selectedBill.discountType === 'percentage' 
-                          ? (editedItems.reduce((sum, item) => sum + item.total, 0) * selectedBill.discount / 100) 
-                          : selectedBill.discount
-                      } />
+                      <CurrencyDisplay amount={calculateUpdatedBill().discountValue} />
                     </span>
                   </p>
                   <p className="text-gray-400 text-sm">
-                    Points Used: <span className="text-white">{selectedBill.loyaltyPointsUsed}</span>
+                    Points Used: <span className="text-white">{editedLoyaltyPointsUsed}</span>
                   </p>
                 </div>
                 <div>
                   <p className="text-lg font-semibold">
-                    Total: <CurrencyDisplay amount={
-                      Math.max(0, 
-                        editedItems.reduce((sum, item) => sum + item.total, 0) - 
-                        (selectedBill.discountType === 'percentage' 
-                          ? (editedItems.reduce((sum, item) => sum + item.total, 0) * selectedBill.discount / 100) 
-                          : selectedBill.discount) -
-                        selectedBill.loyaltyPointsUsed
-                      )
-                    } />
+                    Total: <CurrencyDisplay amount={calculateUpdatedBill().total} />
                   </p>
                 </div>
               </div>
