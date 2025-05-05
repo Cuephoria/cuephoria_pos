@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { BillItem } from '@/types/pos.types';
+import { CartItem } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ReceiptItemsProps {
-  items: BillItem[];
+  items: CartItem[];
   editable?: boolean;
   onUpdateQuantity?: (itemId: string, newQuantity: number) => void;
   onRemoveItem?: (itemId: string) => void;

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bill } from '@/context/POSContext';
+import { Bill } from '@/types/pos.types';
 
 interface ReceiptHeaderProps {
   bill: Bill;
@@ -8,7 +8,7 @@ interface ReceiptHeaderProps {
 
 const ReceiptHeader: React.FC<ReceiptHeaderProps> = ({ bill }) => {
   return (
-    <div className="receipt-header">
+    <div className="receipt-header mb-4">
       <h1 className="text-lg font-bold mb-1 font-heading">CUEPHORIA</h1>
       <p className="text-sm">Gaming Lounge & Café</p>
       <p className="text-xs text-gray-600 mt-2">

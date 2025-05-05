@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, MutableRefObject } from 'react';
-import { Bill, Customer, Product } from '@/types/pos.types';
+import { Bill, Customer, Product, CartItem } from '@/types/pos.types';
 import CustomerInfo from './CustomerInfo';
 import ReceiptHeader from './ReceiptHeader';
 import ReceiptTitle from './ReceiptTitle';
@@ -68,11 +68,13 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       });
     } else {
       // Add new product to bill
-      const newItem = {
+      const newItem: CartItem = {
         id: product.id,
+        type: 'product',
         name: product.name,
         price: product.price,
-        quantity: 1
+        quantity: 1,
+        total: product.price
       };
       
       const updatedItems = [...editedBill.items, newItem];
@@ -109,7 +111,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     }
     
     const updatedItems = editedBill.items.map(item => 
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
+      item.id === itemId ? { ...item, quantity: newQuantity, total: item.price * newQuantity } : item
     );
     
     const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -138,8 +140,8 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         ref={receiptRef}
         className={`bg-white p-6 ${printMode ? 'w-full' : 'w-auto'}`}
       >
-        <ReceiptHeader />
-        <ReceiptTitle date={new Date(bill.createdAt)} />
+        <ReceiptHeader bill={editedBill} />
+        <ReceiptTitle date={new Date(editedBill.createdAt)} />
         <CustomerInfo customer={customer} />
         
         <div className="mb-4">
