@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill, products, updateProduct } = usePOS();
@@ -73,6 +74,9 @@ const RecentTransactions: React.FC = () => {
   const [editedDiscountType, setEditedDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [editedLoyaltyPointsUsed, setEditedLoyaltyPointsUsed] = useState<number>(0);
   const [editedPaymentMethod, setEditedPaymentMethod] = useState<'cash' | 'upi'>('cash');
+  
+  // State for product search in add item dialog
+  const [productSearchQuery, setProductSearchQuery] = useState<string>('');
   
   // Filter bills based on search query (bill ID, customer name, phone or email)
   const filteredBills = bills.filter(bill => {
@@ -111,6 +115,7 @@ const RecentTransactions: React.FC = () => {
     setSelectedProductId('');
     setNewItemQuantity(1);
     setAvailableStock(0);
+    setProductSearchQuery('');
     setIsAddItemDialogOpen(true);
   };
   
@@ -245,6 +250,7 @@ const RecentTransactions: React.FC = () => {
     // Reset form
     setSelectedProductId('');
     setNewItemQuantity(1);
+    setProductSearchQuery('');
     setIsAddItemDialogOpen(false);
   };
   
@@ -697,32 +703,50 @@ const RecentTransactions: React.FC = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
-              <Select 
-                value={selectedProductId} 
-                onValueChange={handleProductSelect}
-              >
-                <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
-                  <SelectValue placeholder="Choose a product" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-60">
-                  {products
-                    .filter(p => p.category !== 'membership' && p.stock > 0)
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(product => (
-                      <SelectItem key={product.id} value={product.id} className="py-2">
-                        <div className="flex flex-col">
-                          <span>{product.name}</span>
-                          <span className="text-xs text-gray-400">
-                            Price: <CurrencyDisplay amount={product.price} /> | 
-                            Category: {product.category} | 
-                            Stock: {product.stock}
-                          </span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="Search products..."
+                  value={productSearchQuery}
+                  onChange={(e) => setProductSearchQuery(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white pl-10 w-full"
+                />
+              </div>
+              <div className="relative mt-1">
+                <Select 
+                  value={selectedProductId} 
+                  onValueChange={handleProductSelect}
+                >
+                  <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="Choose a product" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                    <ScrollArea className="h-72 w-full">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(product => (
+                          <SelectItem key={product.id} value={product.id} className="py-2">
+                            <div className="flex flex-col">
+                              <span>{product.name}</span>
+                              <span className="text-xs text-gray-400">
+                                Price: <CurrencyDisplay amount={product.price} /> | 
+                                Category: {product.category} | 
+                                Stock: {product.stock}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="py-2 px-2 text-center text-sm text-gray-400">
+                          No products match your search
                         </div>
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
+                      )}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="space-y-2">
