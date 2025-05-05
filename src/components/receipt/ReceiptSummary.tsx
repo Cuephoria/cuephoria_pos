@@ -148,6 +148,7 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
             size="sm" 
             className="h-7 px-2 text-xs bg-cuephoria-purple hover:bg-cuephoria-purple/80" 
             onClick={handleSaveChanges}
+            disabled={editValues.loyaltyPointsUsed > availableLoyaltyPoints}
           >
             <Save className="h-3 w-3 mr-1" /> Save
           </Button>

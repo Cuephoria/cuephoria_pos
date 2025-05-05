@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -80,6 +81,26 @@ const RecentTransactions: React.FC = () => {
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
   
+  // State to check if user is admin
+  const [isAdmin, setIsAdmin] = useState<boolean>(true); // Default to true for testing
+
+  // Check user role from supabase
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // For demo purposes, we'll use user metadata to check admin status
+        // In production, you would query a proper roles table
+        const isUserAdmin = session.user?.user_metadata?.is_admin === true;
+        setIsAdmin(isUserAdmin !== undefined ? isUserAdmin : false);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    
+    checkUserRole();
+  }, []);
+  
   // Filtered products based on search query
   const filteredProducts = products.filter(product => {
     if (!productSearchQuery.trim()) return true;
@@ -120,9 +141,6 @@ const RecentTransactions: React.FC = () => {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   
-  // Get the 5 most recent transactions
-  const recentBills = sortedBills.slice(0, 5);
-  
   // Add this new state for controlling dropdown visibility
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
@@ -155,6 +173,15 @@ const RecentTransactions: React.FC = () => {
   };
   
   const handleDeleteClick = (bill: Bill) => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission Denied",
+        description: "Only administrators can delete transactions",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setBillToDelete(bill);
     setIsConfirmOpen(true);
   };
@@ -180,6 +207,15 @@ const RecentTransactions: React.FC = () => {
   
   // Function to open edit dialog
   const handleEditClick = (bill: Bill) => {
+    if (!isAdmin) {
+      toast({
+        title: "Permission Denied",
+        description: "Only administrators can edit transactions",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSelectedBill(bill);
     setEditedItems([...bill.items]);
     setEditedDiscount(bill.discount);
@@ -418,8 +454,8 @@ const RecentTransactions: React.FC = () => {
       <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
         <CardHeader className="space-y-4">
           <div>
-            <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
-            <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
+            <CardTitle className="text-xl font-bold text-white font-heading">Transactions</CardTitle>
+            <CardDescription className="text-gray-400">Sales and billing information</CardDescription>
           </div>
           <div className="relative flex w-full items-center">
             <Input
@@ -431,59 +467,65 @@ const RecentTransactions: React.FC = () => {
             <Search className="absolute right-2 h-4 w-4 text-gray-400" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {recentBills.length > 0 ? (
-            recentBills.map(bill => {
-              const customer = customers.find(c => c.id === bill.customerId);
-              const date = new Date(bill.createdAt);
-              
-              return (
-                <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
-                      <User className="h-5 w-5 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
-                      <div className="flex space-x-2">
-                        <p className="text-xs text-gray-400">
-                          {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
-                        <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
+        <CardContent>
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="space-y-4">
+              {sortedBills.length > 0 ? (
+                sortedBills.map(bill => {
+                  const customer = customers.find(c => c.id === bill.customerId);
+                  const date = new Date(bill.createdAt);
+                  
+                  return (
+                    <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
+                          <User className="h-5 w-5 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
+                          <div className="flex space-x-2">
+                            <p className="text-xs text-gray-400">
+                              {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-white font-semibold">
+                          <CurrencyDisplay amount={bill.total} />
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={`transition-colors ${isAdmin ? 'text-gray-400 hover:text-blue-500' : 'text-gray-600 cursor-not-allowed'}`}
+                            onClick={() => handleEditClick(bill)}
+                            disabled={!isAdmin}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={`transition-colors ${isAdmin ? 'text-gray-400 hover:text-red-500' : 'text-gray-600 cursor-not-allowed'}`}
+                            onClick={() => handleDeleteClick(bill)}
+                            disabled={!isAdmin}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-white font-semibold">
-                      <CurrencyDisplay amount={bill.total} />
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-blue-500 transition-colors"
-                        onClick={() => handleEditClick(bill)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        onClick={() => handleDeleteClick(bill)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  );
+                })
+              ) : (
+                <div className="flex items-center justify-center p-6 text-gray-400">
+                  <p>No transactions found</p>
                 </div>
-              );
-            })
-          ) : (
-            <div className="flex items-center justify-center p-6 text-gray-400">
-              <p>No transactions found</p>
+              )}
             </div>
-          )}
+          </ScrollArea>
         </CardContent>
       </Card>
       
@@ -623,7 +665,7 @@ const RecentTransactions: React.FC = () => {
                 </Table>
               </div>
               
-              {/* New section for discount, loyalty points, and payment method */}
+              {/* Discount, loyalty points, and payment method section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-700 pt-4">
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300">Discount</h3>
