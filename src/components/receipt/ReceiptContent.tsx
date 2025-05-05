@@ -1,4 +1,3 @@
-
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -169,9 +168,9 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           p_changes: string;
         }
         
-        // Fix: Use correct generic type parameters for rpc call
+        // Fix: Use correct method signature for rpc call
         const { error: auditError } = await supabase
-          .rpc<null, SaveBillEditAuditParams>('save_bill_edit_audit', {
+          .rpc('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
             p_changes: 'Bill edited: ' + new Date().toISOString()
