@@ -1,5 +1,5 @@
 
-import React, { ReactNode, RefObject, useState } from 'react';
+import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
 import CustomerInfo from './CustomerInfo';
@@ -36,6 +36,14 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedBill, setEditedBill] = useState<Bill>({ ...bill });
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Debug log for admin status
+  useEffect(() => {
+    console.log("ReceiptContent - Current user:", user);
+    console.log("ReceiptContent - Is admin:", user?.isAdmin);
+    console.log("ReceiptContent - onUpdateBill available:", !!onUpdateBill);
+    console.log("ReceiptContent - onDeleteBill available:", !!onDeleteBill);
+  }, [user, onUpdateBill, onDeleteBill]);
 
   // Check if bill is valid
   if (!bill || !bill.id) {

@@ -23,11 +23,17 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 const BillReport = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { bills, customers, updateBill, deleteBill } = usePOS();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
+  
+  // Log for debugging admin status
+  useEffect(() => {
+    console.log("Current user on BillReport page:", user);
+    console.log("Is admin:", user?.isAdmin);
+  }, [user]);
   
   // Filter bills based on search query
   const filteredBills = useMemo(() => {
@@ -50,7 +56,9 @@ const BillReport = () => {
   const handleUpdateBill = async (updatedBill: Bill) => {
     if (updateBill) {
       try {
+        console.log("Attempting to update bill:", updatedBill);
         const success = await updateBill(updatedBill);
+        console.log("Update bill result:", success);
         if (success) {
           setSelectedBillId(null);
           toast({
@@ -76,7 +84,9 @@ const BillReport = () => {
   const handleDeleteBill = async (billId: string, customerId: string) => {
     if (deleteBill) {
       try {
+        console.log("Attempting to delete bill:", billId, "for customer:", customerId);
         const success = await deleteBill(billId, customerId);
+        console.log("Delete bill result:", success);
         if (success) {
           setSelectedBillId(null);
           toast({
@@ -97,12 +107,6 @@ const BillReport = () => {
     }
     return false;
   };
-  
-  useEffect(() => {
-    // Log to verify user admin status
-    console.log("Current user:", user);
-    console.log("Is admin:", user?.isAdmin);
-  }, [user]);
   
   return (
     <div className="p-6">
@@ -191,6 +195,7 @@ const BillReport = () => {
                               variant="ghost" 
                               size="sm"
                               className="h-8 w-8 p-0 text-blue-600"
+                              onClick={() => console.log("Edit button clicked for bill:", bill.id)}
                             >
                               <Edit className="h-4 w-4" />
                               <span className="sr-only">Edit bill</span>
@@ -218,6 +223,7 @@ const BillReport = () => {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-600"
+                              onClick={() => console.log("Delete button clicked for bill:", bill.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete bill</span>
