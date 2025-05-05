@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Bill, CartItem, Product } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash, Plus, Save, X } from 'lucide-react';
+import { Pencil, Trash, Plus, Save, X, Search } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import {
   Select,
@@ -21,7 +20,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ReceiptItemsProps {
   bill: Bill;
@@ -40,6 +41,16 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
   const [availableStock, setAvailableStock] = useState<number>(0);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Filter products based on search query
+  const filteredProducts = products
+    .filter(p => p.category !== 'membership' && p.stock > 0)
+    .filter(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
   
   const handleEditItem = (index: number) => {
     setEditingItemIndex(index);
@@ -93,7 +104,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       onUpdateItems(updatedItems);
     }
   };
-
+  
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
     
@@ -167,6 +178,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     // Reset form
     setSelectedProductId('');
     setNewItemQuantity(1);
+    setSearchQuery('');
     setShowAddProductDialog(false);
     
     if (onUpdateItems) {
@@ -306,37 +318,58 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Add a product from your inventory to this transaction.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
-              <Select 
-                value={selectedProductId} 
-                onValueChange={handleProductSelect}
-              >
-                <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
-                  <SelectValue placeholder="Choose a product" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-60">
-                  {products
-                    .filter(p => p.category !== 'membership' && p.stock > 0)
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(product => (
-                      <SelectItem key={product.id} value={product.id} className="py-2">
-                        <div className="flex flex-col">
-                          <span>{product.name}</span>
-                          <span className="text-xs text-gray-400">
-                            Price: <CurrencyDisplay amount={product.price} /> | 
-                            Category: {product.category} | 
-                            Stock: {product.stock}
-                          </span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white pl-10 w-full"
+                />
+              </div>
+              <div className="relative mt-1">
+                <Select 
+                  value={selectedProductId} 
+                  onValueChange={handleProductSelect}
+                >
+                  <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="Choose a product" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                    <ScrollArea className="h-72 w-full">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(product => (
+                          <SelectItem key={product.id} value={product.id} className="py-2">
+                            <div className="flex flex-col">
+                              <span>{product.name}</span>
+                              <span className="text-xs text-gray-400">
+                                Price: <CurrencyDisplay amount={product.price} /> | 
+                                Category: {product.category} | 
+                                Stock: {product.stock}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="py-2 px-2 text-center text-sm text-gray-400">
+                          No products match your search
                         </div>
-                      </SelectItem>
-                    ))
-                  }
-                </SelectContent>
-              </Select>
+                      )}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="space-y-2">
