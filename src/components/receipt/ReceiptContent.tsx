@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -161,16 +162,16 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       
       // Save edit history using the RPC function
       try {
-        // Use type assertion to tell TypeScript that this RPC function exists
-        // This bypasses the type checking for the RPC call
+        // Define the parameter types for the RPC function
         interface SaveBillEditAuditParams {
           p_bill_id: string;
           p_editor_name: string;
           p_changes: string;
         }
         
+        // Fix: Use correct generic type parameters for rpc call
         const { error: auditError } = await supabase
-          .rpc<void, SaveBillEditAuditParams>('save_bill_edit_audit', {
+          .rpc<null, SaveBillEditAuditParams>('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
             p_changes: 'Bill edited: ' + new Date().toISOString()
