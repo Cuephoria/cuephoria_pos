@@ -45,7 +45,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const [availableStock, setAvailableStock] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
-  const [originalStockLevels, setOriginalStockLevels] = useState<Record<string, number>>({});
   
   // Filter products based on search query
   const filteredProducts = products
@@ -56,20 +55,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     )
     .sort((a, b) => a.name.localeCompare(b.name));
   
-  // Store original stock levels when component mounts
-  useEffect(() => {
-    const stockMap: Record<string, number> = {};
-    bill.items.forEach(item => {
-      if (item.type === 'product') {
-        const product = products.find(p => p.id === item.id);
-        if (product) {
-          stockMap[item.id] = product.stock + item.quantity;
-        }
-      }
-    });
-    setOriginalStockLevels(stockMap);
-  }, [bill.items, products]);
-
   const handleEditItem = (index: number) => {
     setEditingItemIndex(index);
     setEditingItem({ ...items[index] });
@@ -78,29 +63,11 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const handleSaveItem = () => {
     if (editingItemIndex !== null && editingItem) {
       const updatedItems = [...items];
-      const currentItem = items[editingItemIndex];
-      
-      // If this is a product with stock, we need to update the stock
-      if (currentItem.type === 'product') {
-        const product = products.find(p => p.id === currentItem.id);
-        if (product) {
-          // Calculate stock difference: positive if reducing quantity, negative if increasing
-          const quantityDifference = currentItem.quantity - editingItem.quantity;
-          
-          // Update the product stock
-          updateProduct({
-            ...product,
-            stock: product.stock + quantityDifference
-          });
-        }
-      }
-      
       // Recalculate total
       const updatedItem = {
         ...editingItem,
         total: editingItem.price * editingItem.quantity
       };
-      
       updatedItems[editingItemIndex] = updatedItem;
       setItems(updatedItems);
       setEditingItemIndex(null);
@@ -125,16 +92,11 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     if (removedItem.type === 'product') {
       const product = products.find(p => p.id === removedItem.id);
       if (product) {
-        // Use original stock level or calculate increase
-        const originalStock = originalStockLevels[removedItem.id] || (product.stock + removedItem.quantity);
-        
         // Update the product stock (increase it back)
         updateProduct({
           ...product,
           stock: product.stock + removedItem.quantity
         });
-        
-        console.log(`Restored ${removedItem.quantity} items to product ${removedItem.name}, new stock: ${product.stock + removedItem.quantity}`);
       }
     }
     
@@ -218,16 +180,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       stock: selectedProduct.stock - newItemQuantity
     });
     
-    console.log(`Reduced stock for ${selectedProduct.name} by ${newItemQuantity}, new stock: ${selectedProduct.stock - newItemQuantity}`);
-    
-    // Add to original stock levels if not already present
-    if (!originalStockLevels[selectedProduct.id]) {
-      setOriginalStockLevels(prev => ({
-        ...prev,
-        [selectedProduct.id]: selectedProduct.stock
-      }));
-    }
-    
     // Reset form
     setSelectedProductId('');
     setSelectedProductName('');
@@ -286,112 +238,109 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
         )}
       </div>
 
-      <div className="max-h-60 overflow-y-auto">
-        <Table className="border border-gray-700 rounded-md overflow-hidden">
-          <TableHeader className="bg-gray-800 sticky top-0">
-            <TableRow>
-              <TableHead className="text-xs font-medium text-gray-300">Item</TableHead>
-              <TableHead className="text-xs font-medium text-gray-300 text-right">Price</TableHead>
-              <TableHead className="text-xs font-medium text-gray-300 text-right">Qty</TableHead>
-              <TableHead className="text-xs font-medium text-gray-300 text-right">Total</TableHead>
-              {editable && <TableHead className="w-20"></TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item, index) => (
-              <TableRow key={index} className="hover:bg-gray-700/50">
-                {editingItemIndex === index ? (
-                  // Editing mode - only quantity can be edited
-                  <>
-                    <TableCell>
-                      <div className="font-medium">{editingItem?.name}</div>
-                      <div className="text-xs text-gray-400">{editingItem?.category}</div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <CurrencyDisplay amount={editingItem?.price || 0} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
-                        value={editingItem?.quantity || 1}
-                        min="1"
-                        onChange={(e) => {
-                          if (!editingItem) return;
-                          const newQuantity = parseInt(e.target.value) || 1;
-                          const product = products.find(p => p.id === editingItem.id);
-                          
-                          // Calculate max available quantity (current stock + current quantity in item)
-                          const currentQuantityInItem = items[editingItemIndex].quantity;
-                          const originalStock = originalStockLevels[editingItem.id] || 0;
-                          const maxAvailable = product ? Math.max(originalStock, product.stock + currentQuantityInItem) : currentQuantityInItem;
-                          
-                          if (newQuantity > maxAvailable) {
-                            toast({
-                              title: "Insufficient Stock",
-                              description: `Only ${maxAvailable} items available for this product`,
-                              variant: "destructive"
-                            });
-                            return;
-                          }
-                          
-                          setEditingItem({...editingItem, quantity: newQuantity});
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <CurrencyDisplay amount={(editingItem?.price || 0) * (editingItem?.quantity || 1)} />
-                    </TableCell>
+      <Table className="border border-gray-700 rounded-md overflow-hidden">
+        <TableHeader className="bg-gray-800">
+          <TableRow>
+            <TableHead className="text-xs font-medium text-gray-300">Item</TableHead>
+            <TableHead className="text-xs font-medium text-gray-300 text-right">Price</TableHead>
+            <TableHead className="text-xs font-medium text-gray-300 text-right">Qty</TableHead>
+            <TableHead className="text-xs font-medium text-gray-300 text-right">Total</TableHead>
+            {editable && <TableHead className="w-20"></TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, index) => (
+            <TableRow key={index} className="hover:bg-gray-700/50">
+              {editingItemIndex === index ? (
+                // Editing mode - only quantity can be edited
+                <>
+                  <TableCell>
+                    <div className="font-medium">{editingItem?.name}</div>
+                    <div className="text-xs text-gray-400">{editingItem?.category}</div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <CurrencyDisplay amount={editingItem?.price || 0} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Input
+                      type="number"
+                      className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
+                      value={editingItem?.quantity || 1}
+                      min="1"
+                      onChange={(e) => {
+                        if (!editingItem) return;
+                        const newQuantity = parseInt(e.target.value) || 1;
+                        const product = products.find(p => p.id === editingItem.id);
+                        
+                        // Calculate max available quantity (current stock + current quantity in item)
+                        const currentQuantityInItem = items[editingItemIndex].quantity;
+                        const maxAvailable = (product?.stock || 0) + currentQuantityInItem;
+                        
+                        if (newQuantity > maxAvailable) {
+                          toast({
+                            title: "Insufficient Stock",
+                            description: `Only ${maxAvailable} items available in stock`,
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        
+                        setEditingItem({...editingItem, quantity: newQuantity});
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <CurrencyDisplay amount={(editingItem?.price || 0) * (editingItem?.quantity || 1)} />
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleSaveItem}>
+                      <Save className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleCancelEdit}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </TableCell>
+                </>
+              ) : (
+                // View mode
+                <>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-xs text-gray-400">{item.category}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right"><CurrencyDisplay amount={item.price} /></TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right"><CurrencyDisplay amount={item.total} /></TableCell>
+                  {editable && (
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleSaveItem}>
-                        <Save className="h-3 w-3" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleEditItem(index)}>
+                        <Pencil className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={handleCancelEdit}>
-                        <X className="h-3 w-3" />
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRemoveItem(index)}>
+                        <Trash className="h-3 w-3" />
                       </Button>
                     </TableCell>
-                  </>
-                ) : (
-                  // View mode
-                  <>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{item.name}</span>
-                        <span className="text-xs text-gray-400">{item.category}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right"><CurrencyDisplay amount={item.price} /></TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right"><CurrencyDisplay amount={item.total} /></TableCell>
-                    {editable && (
-                      <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleEditItem(index)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRemoveItem(index)}>
-                          <Trash className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                  )}
+                </>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       {/* Add Product Dialog */}
       <Dialog 
         open={showAddProductDialog} 
         onOpenChange={(open) => {
-          setShowAddProductDialog(open);
-          if (open) {
+          if (!open) {
             setIsCommandOpen(false);
           }
+          setShowAddProductDialog(open);
         }}
       >
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-h-[80vh] overflow-hidden">
+        <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -399,7 +348,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
               <div className="relative">
@@ -423,32 +372,30 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                         onValueChange={setSearchQuery}
                         className="text-white"
                       />
-                      <ScrollArea className="max-h-[250px]">
-                        <CommandList>
-                          <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                            No products match your search
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {filteredProducts.map(product => (
-                              <CommandItem 
-                                key={product.id} 
-                                value={product.id}
-                                onSelect={() => handleProductSelect(product.id)}
-                                className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                              >
-                                <div className="flex flex-col">
-                                  <span>{product.name}</span>
-                                  <span className="text-xs text-gray-400">
-                                    Price: <CurrencyDisplay amount={product.price} /> | 
-                                    Category: {product.category} | 
-                                    Stock: {product.stock}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </ScrollArea>
+                      <CommandList className="max-h-[300px] overflow-y-auto py-2">
+                        <CommandEmpty className="py-6 text-center text-sm text-gray-400">
+                          No products match your search
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {filteredProducts.map(product => (
+                            <CommandItem 
+                              key={product.id} 
+                              value={product.id}
+                              onSelect={() => handleProductSelect(product.id)}
+                              className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
+                            >
+                              <div className="flex flex-col">
+                                <span>{product.name}</span>
+                                <span className="text-xs text-gray-400">
+                                  Price: <CurrencyDisplay amount={product.price} /> | 
+                                  Category: {product.category} | 
+                                  Stock: {product.stock}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
                     </Command>
                   </div>
                 )}
