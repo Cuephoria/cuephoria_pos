@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -50,7 +49,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 
 const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill } = usePOS();
+  const { bills, customers, deleteBill, products, updateProduct } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -65,10 +64,9 @@ const RecentTransactions: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   
   // New item form state
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemPrice, setNewItemPrice] = useState<number>(0);
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
-  const [newItemType, setNewItemType] = useState<'product' | 'session'>('product');
+  const [availableStock, setAvailableStock] = useState<number>(0);
   
   // Additional edit states for discount, points, and payment method
   const [editedDiscount, setEditedDiscount] = useState<number>(0);
@@ -107,6 +105,26 @@ const RecentTransactions: React.FC = () => {
   
   // Get the 5 most recent transactions
   const recentBills = sortedBills.slice(0, 5);
+  
+  // Reset the add item form when dialog opens
+  const handleOpenAddItemDialog = () => {
+    setSelectedProductId('');
+    setNewItemQuantity(1);
+    setAvailableStock(0);
+    setIsAddItemDialogOpen(true);
+  };
+  
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
+    
+    // Auto-fill product information
+    const selectedProduct = products.find(p => p.id === productId);
+    if (selectedProduct) {
+      setAvailableStock(selectedProduct.stock || 0);
+      // Reset quantity to 1 when a new product is selected
+      setNewItemQuantity(1);
+    }
+  };
   
   const handleDeleteClick = (bill: Bill) => {
     setBillToDelete(bill);
@@ -168,29 +186,64 @@ const RecentTransactions: React.FC = () => {
   
   // Function to add new item to bill
   const handleAddNewItem = () => {
-    if (!newItemName || newItemPrice <= 0 || newItemQuantity <= 0) {
+    if (!selectedProductId) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields with valid values",
+        title: "Selection Required",
+        description: "Please select a product from the list",
         variant: "destructive"
       });
       return;
     }
     
-    const newItem: CartItem = {
-      id: `manual-${Date.now()}`,
-      name: newItemName,
-      price: newItemPrice,
+    const selectedProduct = products.find(p => p.id === selectedProductId);
+    
+    if (!selectedProduct) {
+      toast({
+        title: "Product Not Found",
+        description: "The selected product could not be found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newItemQuantity <= 0) {
+      toast({
+        title: "Invalid Quantity",
+        description: "Quantity must be greater than zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (newItemQuantity > selectedProduct.stock) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${selectedProduct.stock} items available in stock`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const itemToAdd: CartItem = {
+      id: selectedProduct.id,
+      name: selectedProduct.name,
+      price: selectedProduct.price,
       quantity: newItemQuantity,
-      type: newItemType,
-      total: newItemPrice * newItemQuantity
+      total: selectedProduct.price * newItemQuantity,
+      type: 'product',
+      category: selectedProduct.category
     };
     
-    setEditedItems([...editedItems, newItem]);
+    setEditedItems([...editedItems, itemToAdd]);
+    
+    // Update product stock
+    updateProduct({
+      ...selectedProduct,
+      stock: selectedProduct.stock - newItemQuantity
+    });
     
     // Reset form
-    setNewItemName('');
-    setNewItemPrice(0);
+    setSelectedProductId('');
     setNewItemQuantity(1);
     setIsAddItemDialogOpen(false);
   };
@@ -438,7 +491,7 @@ const RecentTransactions: React.FC = () => {
                   variant="outline" 
                   size="sm" 
                   className="flex items-center gap-1"
-                  onClick={() => setIsAddItemDialogOpen(true)}
+                  onClick={handleOpenAddItemDialog}
                 >
                   <Plus className="h-4 w-4" /> Add Item
                 </Button>
@@ -637,63 +690,78 @@ const RecentTransactions: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Add a new product or service to this transaction.
+              Add a product from your inventory to this transaction.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="item-name" className="text-sm font-medium">Item Name</label>
-              <Input 
-                id="item-name"
-                value={newItemName} 
-                onChange={(e) => setNewItemName(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white"
-                placeholder="Enter item name"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="item-type" className="text-sm font-medium">Type</label>
+              <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
               <Select 
-                value={newItemType} 
-                onValueChange={(value) => setNewItemType(value as 'product' | 'session')}
+                value={selectedProductId} 
+                onValueChange={handleProductSelect}
               >
-                <SelectTrigger id="item-type" className="bg-gray-700 border-gray-600 text-white">
-                  <SelectValue placeholder="Select Type" />
+                <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="Choose a product" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                  <SelectItem value="product">Product</SelectItem>
-                  <SelectItem value="session">Session</SelectItem>
+                <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-60">
+                  {products
+                    .filter(p => p.category !== 'membership' && p.stock > 0)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(product => (
+                      <SelectItem key={product.id} value={product.id} className="py-2">
+                        <div className="flex flex-col">
+                          <span>{product.name}</span>
+                          <span className="text-xs text-gray-400">
+                            Price: <CurrencyDisplay amount={product.price} /> | 
+                            Category: {product.category} | 
+                            Stock: {product.stock}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  }
                 </SelectContent>
               </Select>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="item-price" className="text-sm font-medium">Price</label>
-                <Input 
-                  id="item-price"
-                  type="number" 
-                  value={newItemPrice} 
-                  onChange={(e) => setNewItemPrice(parseFloat(e.target.value))}
-                  className="bg-gray-700 border-gray-600 text-white"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="item-quantity" className="text-sm font-medium">Quantity</label>
-                <Input 
-                  id="item-quantity"
-                  type="number" 
-                  value={newItemQuantity} 
-                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value))}
-                  className="bg-gray-700 border-gray-600 text-white"
-                  min="1"
-                />
-              </div>
+            <div className="space-y-2">
+              <label htmlFor="item-quantity" className="text-sm font-medium">Quantity</label>
+              <Input 
+                id="item-quantity"
+                type="number" 
+                value={newItemQuantity} 
+                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                className="bg-gray-700 border-gray-600 text-white"
+                min="1"
+                max={availableStock}
+              />
+              {selectedProductId && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Available stock: {availableStock}
+                </p>
+              )}
             </div>
+            
+            {selectedProductId && (
+              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
+                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
+                {(() => {
+                  const product = products.find(p => p.id === selectedProductId);
+                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
+                  
+                  return (
+                    <div className="space-y-1 text-xs">
+                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
+                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
+                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
+                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
+                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
@@ -703,6 +771,7 @@ const RecentTransactions: React.FC = () => {
             <Button 
               className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
               onClick={handleAddNewItem}
+              disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Item
