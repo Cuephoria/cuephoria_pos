@@ -43,11 +43,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const [availableStock, setAvailableStock] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // Update local items state when bill items change
-  useEffect(() => {
-    setItems(bill.items);
-  }, [bill.items]);
-  
   // Filter products based on search query
   const filteredProducts = products
     .filter(p => p.category !== 'membership' && p.stock > 0)
@@ -65,26 +60,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const handleSaveItem = () => {
     if (editingItemIndex !== null && editingItem) {
       const updatedItems = [...items];
-      const originalItem = updatedItems[editingItemIndex];
-      
-      // Check if quantity has changed
-      if (originalItem.quantity !== editingItem.quantity) {
-        // Find the product to update its stock
-        const product = products.find(p => p.id === editingItem.id);
-        if (product && editingItem.type === 'product') {
-          // Calculate the quantity difference
-          const quantityDiff = originalItem.quantity - editingItem.quantity;
-          
-          // Update product stock based on the difference
-          if (quantityDiff !== 0) {
-            updateProduct({
-              ...product,
-              stock: product.stock + quantityDiff
-            });
-          }
-        }
-      }
-      
       // Recalculate total
       const updatedItem = {
         ...editingItem,
@@ -115,14 +90,9 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       const product = products.find(p => p.id === removedItem.id);
       if (product) {
         // Update the product stock (increase it back)
-        console.log(`Restoring stock for ${product.name}: current ${product.stock} + ${removedItem.quantity}`);
         updateProduct({
           ...product,
           stock: product.stock + removedItem.quantity
-        });
-        toast({
-          title: "Stock Updated",
-          description: `Added ${removedItem.quantity} units back to ${product.name} stock`,
         });
       }
     }

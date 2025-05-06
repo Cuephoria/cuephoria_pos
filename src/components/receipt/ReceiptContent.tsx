@@ -53,10 +53,6 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   }
 
   const handleItemsUpdate = (updatedItems: CartItem[]) => {
-    // Store old total before recalculating to track loyalty point differences
-    const oldTotal = bill.total;
-    const oldItems = [...bill.items];
-    
     // Recalculate subtotal based on updated items
     const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
     
@@ -70,34 +66,13 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     
     // Calculate new total
     const total = Math.max(0, subtotal - discountValue - bill.loyaltyPointsUsed);
-
-    // Calculate loyalty points difference based on the new total
-    // Using the same logic from completeSale: Members 5 points per 100, Non-members 2 points per 100
-    const pointsRate = customer.isMember ? 5 : 2;
-    const newLoyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
-    const loyaltyPointsDelta = newLoyaltyPointsEarned - bill.loyaltyPointsEarned;
-    
-    // Log for debugging
-    console.log('Old total:', oldTotal, 'New total:', total);
-    console.log('Old loyalty points earned:', bill.loyaltyPointsEarned, 'New loyalty points earned:', newLoyaltyPointsEarned);
-    console.log('Loyalty points delta:', loyaltyPointsDelta);
-    console.log('Discount value:', discountValue, 'Loyalty points used:', bill.loyaltyPointsUsed);
-    
-    // Calculate removed items to update stock if needed
-    const removedItems = oldItems.filter(oldItem => 
-      !updatedItems.some(newItem => newItem.id === oldItem.id && newItem.type === oldItem.type)
-    );
-    
-    // Log removed items
-    console.log('Removed items:', removedItems);
     
     setBill({
       ...bill,
       items: updatedItems,
       subtotal,
       discountValue,
-      total,
-      loyaltyPointsEarned: newLoyaltyPointsEarned
+      total
     });
   };
 
@@ -137,13 +112,6 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     setIsSaving(true);
     
     try {
-      // Calculate what changed for loyalty points
-      const loyaltyPointsDelta = bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
-      const totalSpentDelta = bill.total - initialBill.total;
-      
-      console.log('Loyalty points delta:', loyaltyPointsDelta);
-      console.log('Total spent delta:', totalSpentDelta);
-      
       // Update bill in database
       const { error: billError } = await supabase
         .from('bills')
@@ -153,7 +121,6 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           discount_value: bill.discountValue,
           discount_type: bill.discountType,
           loyalty_points_used: bill.loyaltyPointsUsed,
-          loyalty_points_earned: bill.loyaltyPointsEarned,
           total: bill.total,
           payment_method: bill.paymentMethod
         })
@@ -229,31 +196,34 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         console.error('Error saving edit audit:', auditError);
       }
       
-      // Update customer loyalty points and total spent
-      const updatedCustomer = {
-        ...customer,
-        loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
-        totalSpent: customer.totalSpent + totalSpentDelta
-      };
-      
-      console.log('Updating customer:', customer.name);
-      console.log('Current loyalty points:', customer.loyaltyPoints);
-      console.log('Adding loyalty points delta:', loyaltyPointsDelta);
-      console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
-      
-      setCustomer(updatedCustomer);
-      updateCustomer(updatedCustomer);
-      
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({
-          loyalty_points: updatedCustomer.loyaltyPoints,
-          total_spent: updatedCustomer.totalSpent
-        })
-        .eq('id', customer.id);
+      // Update customer loyalty points and total spent if needed
+      const loyaltyPointsDelta = 
+        initialBill.loyaltyPointsUsed - bill.loyaltyPointsUsed + 
+        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
         
-      if (customerError) {
-        console.error('Error updating customer:', customerError);
+      const totalSpentDelta = bill.total - initialBill.total;
+      
+      if (loyaltyPointsDelta !== 0 || totalSpentDelta !== 0) {
+        const updatedCustomer = {
+          ...customer,
+          loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
+          totalSpent: customer.totalSpent + totalSpentDelta
+        };
+        
+        setCustomer(updatedCustomer);
+        updateCustomer(updatedCustomer);
+        
+        const { error: customerError } = await supabase
+          .from('customers')
+          .update({
+            loyalty_points: updatedCustomer.loyaltyPoints,
+            total_spent: updatedCustomer.totalSpent
+          })
+          .eq('id', customer.id);
+          
+        if (customerError) {
+          console.error('Error updating customer:', customerError);
+        }
       }
       
       toast({

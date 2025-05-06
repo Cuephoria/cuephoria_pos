@@ -107,9 +107,6 @@ export interface POSContextType {
   // Station state setter
   setStations: (stations: Station[]) => void;
   
-  // Bills state setter
-  setBills: (bills: Bill[]) => void; // Added this line
-  
   // Product functions
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (product: Product) => void;
