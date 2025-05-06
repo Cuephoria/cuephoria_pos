@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ProductForm, { ProductFormState } from './ProductForm';
 import { Product } from '@/types/pos.types';
@@ -21,9 +21,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   onSubmit,
   isSubmitting
 }) => {
+  // Use a controlled open state to ensure proper dialog behavior
+  const handleOpenChange = (open: boolean) => {
+    // When dialog is closing, ensure we call the parent's onOpenChange
+    onOpenChange(open);
+  };
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={handleOpenChange}
+    >
+      <DialogContent className="overflow-hidden">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
         </DialogHeader>

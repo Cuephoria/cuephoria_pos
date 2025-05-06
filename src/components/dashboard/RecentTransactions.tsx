@@ -79,6 +79,8 @@ const RecentTransactions: React.FC = () => {
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
+  const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
   
   // Filtered products based on search query
   const filteredProducts = products.filter(product => {
@@ -126,19 +128,23 @@ const RecentTransactions: React.FC = () => {
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
     setSelectedProductId('');
+    setSelectedProductName('');
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
+    setIsCommandOpen(false);
     setIsAddItemDialogOpen(true);
   };
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
+    setIsCommandOpen(false);
     
-    // Auto-fill product information
+    // Auto-fill product information and set the selected product name
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
+      setSelectedProductName(selectedProduct.name);
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -262,8 +268,10 @@ const RecentTransactions: React.FC = () => {
     
     // Reset form
     setSelectedProductId('');
+    setSelectedProductName('');
     setNewItemQuantity(1);
     setProductSearchQuery('');
+    setIsCommandOpen(false);
     setIsAddItemDialogOpen(false);
   };
   
@@ -717,40 +725,55 @@ const RecentTransactions: React.FC = () => {
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
               <div className="relative">
-                <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
-                  <CommandInput 
-                    placeholder="Search products..." 
-                    value={productSearchQuery}
-                    onValueChange={setProductSearchQuery}
-                    className="text-white"
-                  />
-                  <CommandList className="text-white">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                      No products match your search
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-72 w-full" type="always">
-                        {filteredProducts.map(product => (
-                          <CommandItem 
-                            key={product.id} 
-                            value={product.id}
-                            onSelect={() => handleProductSelect(product.id)}
-                            className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                          >
-                            <div className="flex flex-col">
-                              <span>{product.name}</span>
-                              <span className="text-xs text-gray-400">
-                                Price: <CurrencyDisplay amount={product.price} /> | 
-                                Category: {product.category} | 
-                                Stock: {product.stock}
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
+                <div className="relative w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between bg-gray-700 border-gray-600 text-white"
+                    onClick={() => setIsCommandOpen(!isCommandOpen)}
+                  >
+                    {selectedProductName || "Choose a product"}
+                    <span className="ml-auto opacity-70">
+                      <Search className="h-4 w-4" />
+                    </span>
+                  </Button>
+                  
+                  {isCommandOpen && (
+                    <div className="absolute mt-1 w-full z-50 rounded-md border border-gray-700 bg-gray-800 shadow-lg">
+                      <Command className="rounded-lg overflow-hidden">
+                        <CommandInput 
+                          placeholder="Search products..." 
+                          value={productSearchQuery}
+                          onValueChange={setProductSearchQuery}
+                          className="text-white"
+                        />
+                        <CommandList className="max-h-[300px] overflow-y-auto py-2">
+                          <CommandEmpty className="py-6 text-center text-sm text-gray-400">
+                            No products match your search
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {filteredProducts.map(product => (
+                              <CommandItem 
+                                key={product.id} 
+                                value={product.id}
+                                onSelect={() => handleProductSelect(product.id)}
+                                className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
+                              >
+                                <div className="flex flex-col">
+                                  <span>{product.name}</span>
+                                  <span className="text-xs text-gray-400">
+                                    Price: <CurrencyDisplay amount={product.price} /> | 
+                                    Category: {product.category} | 
+                                    Stock: {product.stock}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -794,7 +817,14 @@ const RecentTransactions: React.FC = () => {
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsCommandOpen(false);
+                setIsAddItemDialogOpen(false);
+              }} 
+              className="bg-gray-700 text-white hover:bg-gray-600"
+            >
               Cancel
             </Button>
             <Button 
