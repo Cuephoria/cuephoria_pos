@@ -32,12 +32,14 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [displayedCustomers, setDisplayedCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load and sort customers when component mounts or customers prop changes
+  // Debug logging to verify customers are being passed
   useEffect(() => {
+    console.log("Customers passed to StationActions:", customers.length, customers);
     // Sort customers alphabetically by name
     const sortedCustomers = [...customers].sort((a, b) => 
       a.name.toLowerCase().localeCompare(b.name.toLowerCase())
     );
+    console.log("Sorted customers:", sortedCustomers.length);
     setDisplayedCustomers(sortedCustomers);
   }, [customers]);
 
@@ -158,7 +160,7 @@ const StationActions: React.FC<StationActionsProps> = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
+        <PopoverContent className="w-full p-0 bg-background border">
           <Command>
             <CommandInput 
               placeholder="Search customers..." 
