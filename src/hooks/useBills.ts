@@ -11,6 +11,72 @@ export const useBills = (
   const [bills, setBills] = useState<Bill[]>([]);
   const { toast } = useToast();
 
+  const fetchBills = async () => {
+    try {
+      const { data: billsData, error: billsError } = await supabase
+        .from('bills')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (billsError) {
+        console.error('Error fetching bills:', billsError);
+        return;
+      }
+      
+      if (!billsData) {
+        console.log('No bills found in database');
+        return;
+      }
+      
+      const transformedBills: Bill[] = [];
+      
+      for (const billData of billsData) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('bill_items')
+          .select('*')
+          .eq('bill_id', billData.id);
+          
+        if (itemsError) {
+          console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
+          continue;
+        }
+        
+        if (!itemsData) {
+          console.log(`No items found for bill ${billData.id}`);
+          continue;
+        }
+        
+        const items: CartItem[] = itemsData.map(item => ({
+          id: item.item_id,
+          type: item.item_type as 'product' | 'session',
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.total
+        }));
+        
+        transformedBills.push({
+          id: billData.id,
+          customerId: billData.customer_id,
+          items,
+          subtotal: billData.subtotal,
+          discount: billData.discount,
+          discountValue: billData.discount_value,
+          discountType: billData.discount_type as 'percentage' | 'fixed',
+          loyaltyPointsUsed: billData.loyalty_points_used,
+          loyaltyPointsEarned: billData.loyalty_points_earned,
+          total: billData.total,
+          paymentMethod: billData.payment_method as 'cash' | 'upi',
+          createdAt: new Date(billData.created_at)
+        });
+      }
+      
+      setBills(transformedBills);
+    } catch (error) {
+      console.error('Error in fetchBills:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchBills = async () => {
       try {
@@ -555,6 +621,7 @@ export const useBills = (
     completeSale,
     deleteBill,
     exportBills,
-    exportCustomers
+    exportCustomers,
+    fetchBills
   };
 };
