@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,14 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onSelect,
   isSelectable = false
 }) => {
+  const { bills } = usePOS();
+  
+  // Calculate the actual total spent by summing all bills for this customer
+  const totalSpent = React.useMemo(() => {
+    const customerBills = bills.filter(bill => bill.customerId === customer.id);
+    return customerBills.reduce((sum, bill) => sum + bill.total, 0);
+  }, [bills, customer.id]);
+  
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-IN');
@@ -110,7 +119,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <span className="flex items-center">
               <CreditCard className="h-4 w-4 mr-1" /> Total Spent:
             </span>
-            <CurrencyDisplay amount={customer.totalSpent} />
+            {/* Use the calculated value instead of the customer.totalSpent property */}
+            <CurrencyDisplay amount={totalSpent} />
           </div>
           <div className="flex justify-between text-sm">
             <span className="flex items-center">
