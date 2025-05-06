@@ -719,9 +719,7 @@ const POS = () => {
 
       {showReceipt && lastCompletedBill && selectedCustomer && (
         <Receipt 
-          billId={lastCompletedBill.id}
-          customerId={selectedCustomer.id}
-          bill={lastCompletedBill}
+          bill={lastCompletedBill} 
           customer={selectedCustomer} 
           onClose={() => setShowReceipt(false)} 
         />
