@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Station, Customer } from '@/context/POSContext';
@@ -29,6 +29,32 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
+  const [displayedCustomers, setDisplayedCustomers] = useState<Customer[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Load and sort customers when component mounts or customers prop changes
+  useEffect(() => {
+    // Sort customers alphabetically by name
+    const sortedCustomers = [...customers].sort((a, b) => 
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+    setDisplayedCustomers(sortedCustomers);
+  }, [customers]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.trim() === '') {
+      setDisplayedCustomers([...customers].sort((a, b) => 
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      ));
+    } else {
+      const filtered = customers.filter(customer => 
+        customer.name.toLowerCase().includes(value.toLowerCase()) ||
+        customer.phone.toLowerCase().includes(value.toLowerCase())
+      );
+      setDisplayedCustomers(filtered);
+    }
+  };
 
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
@@ -125,7 +151,7 @@ const StationActions: React.FC<StationActionsProps> = ({
             disabled={customers.length === 0}
           >
             {selectedCustomerId ? (
-              customers.find((customer) => customer.id === selectedCustomerId)?.name
+              customers.find((customer) => customer.id === selectedCustomerId)?.name || "Select customer..."
             ) : (
               customers.length === 0 ? "No customers available" : "Select customer..."
             )}
@@ -134,16 +160,21 @@ const StationActions: React.FC<StationActionsProps> = ({
         </PopoverTrigger>
         <PopoverContent className="w-full p-0">
           <Command>
-            <CommandInput placeholder="Search customers..." />
+            <CommandInput 
+              placeholder="Search customers..." 
+              value={searchQuery} 
+              onValueChange={handleSearchChange}
+            />
             <CommandEmpty>No customer found.</CommandEmpty>
             <CommandGroup>
               <CommandList>
-                {customers.map((customer) => (
+                {displayedCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
-                    value={customer.name}
+                    value={customer.id}
                     onSelect={() => {
                       setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
+                      setSearchQuery('');
                       setOpen(false);
                     }}
                   >
