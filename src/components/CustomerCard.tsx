@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +17,29 @@ interface CustomerCardProps {
 }
 
 const CustomerCard: React.FC<CustomerCardProps> = ({ 
-  customer, 
+  customer: initialCustomer, 
   onEdit, 
   onDelete,
   onSelect,
   isSelectable = false
 }) => {
+  // Keep a local state of the customer to allow for updates
+  const [customer, setCustomer] = useState<Customer>(initialCustomer);
+  const { customers } = usePOS();
+  
+  // Update the customer card whenever the customer data changes in the context
+  useEffect(() => {
+    const updatedCustomer = customers.find(c => c.id === customer.id);
+    if (updatedCustomer) {
+      setCustomer(updatedCustomer);
+    }
+  }, [customers, customer.id]);
+  
+  // Also update when the initial customer prop changes
+  useEffect(() => {
+    setCustomer(initialCustomer);
+  }, [initialCustomer]);
+
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-IN');

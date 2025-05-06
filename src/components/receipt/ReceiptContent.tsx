@@ -38,7 +38,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [editHistory, setEditHistory] = useState<BillEditInfo[]>([]);
   const [editorName, setEditorName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { updateCustomer } = usePOS();
+  const { updateCustomer, selectCustomer } = usePOS();
   const { toast } = useToast();
   
   // Update local bill and customer state if props change
@@ -244,8 +244,11 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       if (customerError) {
         console.error('Error updating customer:', customerError);
       } else {
-        // Update customer in global context
+        // Update customer in global context AND force a refresh of any component using this customer
         updateCustomer(updatedCustomer);
+        
+        // Force a refresh of the selected customer if this is the currently selected customer
+        selectCustomer(customer.id);
       }
       
       toast({
