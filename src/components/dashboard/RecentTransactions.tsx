@@ -122,6 +122,21 @@ const RecentTransactions: React.FC = () => {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   
+  // Get current customer info for the selected bill
+  const getCurrentCustomerInfo = () => {
+    if (!selectedBill) return null;
+    return customers.find(c => c.id === selectedBill.customerId);
+  };
+
+  const currentCustomer = getCurrentCustomerInfo();
+  
+  // Validate loyalty points input to not exceed available points
+  const validateLoyaltyPoints = (value: number) => {
+    if (!currentCustomer) return value;
+    const maxPoints = currentCustomer.loyaltyPoints + selectedBill?.loyaltyPointsUsed || 0;
+    return Math.min(value, maxPoints);
+  };
+  
   // Get the 5 most recent transactions
   const recentBills = sortedBills.slice(0, 5);
   
@@ -203,9 +218,38 @@ const RecentTransactions: React.FC = () => {
   
   // Function to remove item from edited items
   const handleRemoveItem = (index: number) => {
+    const removedItem = editedItems[index];
+    
+    // If this is a product type item, restore stock
+    if (removedItem.type === 'product') {
+      const product = products.find(p => p.id === removedItem.id);
+      if (product) {
+        updateProduct({
+          ...product,
+          stock: product.stock + removedItem.quantity
+        });
+      }
+    }
+    
     const updatedItems = [...editedItems];
     updatedItems.splice(index, 1);
     setEditedItems(updatedItems);
+  };
+  
+  // Function to handle loyalty points input change with validation
+  const handleLoyaltyPointsChange = (value: string) => {
+    const points = parseInt(value) || 0;
+    const validatedPoints = validateLoyaltyPoints(points);
+    setEditedLoyaltyPointsUsed(validatedPoints);
+    
+    // If user tries to enter more points than available, show a toast
+    if (points > validatedPoints) {
+      toast({
+        title: "Maximum Points Exceeded",
+        description: `You can only use up to ${currentCustomer?.loyaltyPoints + (selectedBill?.loyaltyPointsUsed || 0)} points`,
+        variant: "destructive"
+      });
+    }
   };
   
   // Function to add new item to bill
@@ -405,53 +449,57 @@ const RecentTransactions: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {recentBills.length > 0 ? (
-            recentBills.map(bill => {
-              const customer = customers.find(c => c.id === bill.customerId);
-              const date = new Date(bill.createdAt);
-              
-              return (
-                <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
-                  <div className="flex items-center space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
-                      <User className="h-5 w-5 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
-                      <div className="flex space-x-2">
-                        <p className="text-xs text-gray-400">
-                          {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
-                        <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
+          {sortedBills.length > 0 ? (
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {sortedBills.map(bill => {
+                  const customer = customers.find(c => c.id === bill.customerId);
+                  const date = new Date(bill.createdAt);
+                  
+                  return (
+                    <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
+                          <User className="h-5 w-5 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
+                          <div className="flex space-x-2">
+                            <p className="text-xs text-gray-400">
+                              {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-white font-semibold">
+                          <CurrencyDisplay amount={bill.total} />
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-gray-400 hover:text-blue-500 transition-colors"
+                            onClick={() => handleEditClick(bill)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                            onClick={() => handleDeleteClick(bill)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-white font-semibold">
-                      <CurrencyDisplay amount={bill.total} />
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-blue-500 transition-colors"
-                        onClick={() => handleEditClick(bill)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        onClick={() => handleDeleteClick(bill)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                  );
+                })}
+              </div>
+            </ScrollArea>
           ) : (
             <div className="flex items-center justify-center p-6 text-gray-400">
               <p>No transactions found</p>
@@ -596,7 +644,7 @@ const RecentTransactions: React.FC = () => {
                 </Table>
               </div>
               
-              {/* New section for discount, loyalty points, and payment method */}
+              {/* Section for discount, loyalty points, and payment method */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-700 pt-4">
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300">Discount</h3>
@@ -624,13 +672,21 @@ const RecentTransactions: React.FC = () => {
                 </div>
                 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-300">Loyalty Points Used</h3>
+                  <h3 className="text-sm font-medium text-gray-300">
+                    Loyalty Points Used 
+                    {currentCustomer && (
+                      <span className="text-xs ml-2 text-cuephoria-orange">
+                        (Available: {currentCustomer.loyaltyPoints + selectedBill.loyaltyPointsUsed})
+                      </span>
+                    )}
+                  </h3>
                   <Input 
                     type="number" 
                     value={editedLoyaltyPointsUsed} 
-                    onChange={(e) => setEditedLoyaltyPointsUsed(parseInt(e.target.value))}
+                    onChange={(e) => handleLoyaltyPointsChange(e.target.value)}
                     className="bg-gray-700 border-gray-600 text-white"
                     min="0"
+                    max={currentCustomer ? currentCustomer.loyaltyPoints + selectedBill.loyaltyPointsUsed : 0}
                   />
                 </div>
                 
