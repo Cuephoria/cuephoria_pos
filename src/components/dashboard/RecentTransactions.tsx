@@ -123,22 +123,17 @@ const RecentTransactions: React.FC = () => {
   // Get the 5 most recent transactions
   const recentBills = sortedBills.slice(0, 5);
   
-  // Add this new state for controlling dropdown visibility
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
     setSelectedProductId('');
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
-    setIsDropdownOpen(false);
     setIsAddItemDialogOpen(true);
   };
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
-    setIsDropdownOpen(false);
     
     // Auto-fill product information
     const selectedProduct = products.find(p => p.id === productId);
@@ -728,9 +723,8 @@ const RecentTransactions: React.FC = () => {
                     value={productSearchQuery}
                     onValueChange={setProductSearchQuery}
                     className="text-white"
-                    onFocus={() => setIsDropdownOpen(true)}
                   />
-                  <CommandList open={isDropdownOpen} className="text-white">
+                  <CommandList className="text-white">
                     <CommandEmpty className="py-6 text-center text-sm text-gray-400">
                       No products match your search
                     </CommandEmpty>
@@ -800,10 +794,7 @@ const RecentTransactions: React.FC = () => {
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => {
-              setIsAddItemDialogOpen(false);
-              setIsDropdownOpen(false);
-            }} className="bg-gray-700 text-white hover:bg-gray-600">
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
               Cancel
             </Button>
             <Button 
