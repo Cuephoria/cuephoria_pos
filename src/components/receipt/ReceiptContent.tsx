@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -23,13 +24,15 @@ interface ReceiptContentProps {
   customer: Customer;
   receiptRef: RefObject<HTMLDivElement>;
   allowEdit?: boolean;
+  onBillUpdated?: (updatedBill: Bill, updatedCustomer: Customer) => void;
 }
 
 const ReceiptContent: React.FC<ReceiptContentProps> = ({ 
   bill: initialBill, 
   customer: initialCustomer, 
   receiptRef,
-  allowEdit = false 
+  allowEdit = false,
+  onBillUpdated
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [bill, setBill] = useState<Bill>(initialBill);
@@ -231,6 +234,11 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         description: 'Bill has been updated successfully',
       });
       
+      // Call the onBillUpdated callback if provided to notify parent components
+      if (onBillUpdated) {
+        onBillUpdated(bill, customer);
+      }
+      
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving changes:', error);
@@ -303,6 +311,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       />
       <ReceiptSummary 
         bill={bill}
+        customer={customer}
         onUpdateBill={handleBillUpdate}
         editable={isEditing}
       />

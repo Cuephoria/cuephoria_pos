@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ProductForm, { ProductFormState } from './ProductForm';
 import { Product } from '@/types/pos.types';
@@ -32,7 +32,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       open={isOpen} 
       onOpenChange={handleOpenChange}
     >
-      <DialogContent className="overflow-hidden">
+      <DialogContent className="overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
         </DialogHeader>
