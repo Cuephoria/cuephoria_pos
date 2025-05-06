@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -48,8 +49,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
   const { bills, customers, deleteBill, products, updateProduct } = usePOS();
@@ -123,22 +122,17 @@ const RecentTransactions: React.FC = () => {
   // Get the 5 most recent transactions
   const recentBills = sortedBills.slice(0, 5);
   
-  // Add this new state for controlling dropdown visibility
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
     setSelectedProductId('');
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
-    setIsDropdownOpen(false);
     setIsAddItemDialogOpen(true);
   };
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
-    setIsDropdownOpen(false);
     
     // Auto-fill product information
     const selectedProduct = products.find(p => p.id === productId);
@@ -722,27 +716,30 @@ const RecentTransactions: React.FC = () => {
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
               <div className="relative">
-                <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
-                  <CommandInput 
-                    placeholder="Search products..." 
-                    value={productSearchQuery}
-                    onValueChange={setProductSearchQuery}
-                    className="text-white"
-                    onFocus={() => setIsDropdownOpen(true)}
-                  />
-                  <CommandList open={isDropdownOpen} className="text-white">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                      No products match your search
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-72 w-full" type="always">
-                        {filteredProducts.map(product => (
-                          <CommandItem 
-                            key={product.id} 
-                            value={product.id}
-                            onSelect={() => handleProductSelect(product.id)}
-                            className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                          >
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="Search products..."
+                  value={productSearchQuery}
+                  onChange={(e) => setProductSearchQuery(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white pl-10 w-full"
+                />
+              </div>
+              <div className="relative mt-1">
+                <Select 
+                  value={selectedProductId} 
+                  onValueChange={handleProductSelect}
+                >
+                  <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="Choose a product" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                    <ScrollArea className="h-72 w-full" type="always">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(product => (
+                          <SelectItem key={product.id} value={product.id} className="py-2">
                             <div className="flex flex-col">
                               <span>{product.name}</span>
                               <span className="text-xs text-gray-400">
@@ -751,12 +748,16 @@ const RecentTransactions: React.FC = () => {
                                 Stock: {product.stock}
                               </span>
                             </div>
-                          </CommandItem>
-                        ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="py-2 px-2 text-center text-sm text-gray-400">
+                          No products match your search
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
@@ -800,10 +801,7 @@ const RecentTransactions: React.FC = () => {
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => {
-              setIsAddItemDialogOpen(false);
-              setIsDropdownOpen(false);
-            }} className="bg-gray-700 text-white hover:bg-gray-600">
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
               Cancel
             </Button>
             <Button 
