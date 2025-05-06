@@ -1,4 +1,5 @@
-import React, { ReactNode, RefObject, useState } from 'react';
+
+import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
 import CustomerInfo from './CustomerInfo';
@@ -23,13 +24,15 @@ interface ReceiptContentProps {
   customer: Customer;
   receiptRef: RefObject<HTMLDivElement>;
   allowEdit?: boolean;
+  onBillUpdated?: () => void;
 }
 
 const ReceiptContent: React.FC<ReceiptContentProps> = ({ 
   bill: initialBill, 
   customer: initialCustomer, 
   receiptRef,
-  allowEdit = false 
+  allowEdit = false,
+  onBillUpdated
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [bill, setBill] = useState<Bill>(initialBill);
@@ -67,20 +70,47 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     // Calculate new total
     const total = Math.max(0, subtotal - discountValue - bill.loyaltyPointsUsed);
     
+    // Calculate loyalty points earned
+    // Members: 5 points per 100 INR spent
+    // Non-members: 2 points per 100 INR spent
+    const pointsRate = customer.isMember ? 5 : 2;
+    const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+    
     setBill({
       ...bill,
       items: updatedItems,
       subtotal,
       discountValue,
-      total
+      total,
+      loyaltyPointsEarned
     });
   };
 
   const handleBillUpdate = (updatedBill: Partial<Bill>) => {
-    setBill({
-      ...bill,
-      ...updatedBill
-    });
+    // If loyalty points used is updated, calculate new total
+    let newTotal = bill.total;
+    if ('loyaltyPointsUsed' in updatedBill || 'subtotal' in updatedBill || 'discountValue' in updatedBill) {
+      const subtotal = updatedBill.subtotal ?? bill.subtotal;
+      const discountValue = updatedBill.discountValue ?? bill.discountValue;
+      const loyaltyPointsUsed = updatedBill.loyaltyPointsUsed ?? bill.loyaltyPointsUsed;
+      newTotal = Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+      
+      // Recalculate loyalty points earned
+      const pointsRate = customer.isMember ? 5 : 2;
+      const loyaltyPointsEarned = Math.floor((newTotal / 100) * pointsRate);
+      
+      setBill({
+        ...bill,
+        ...updatedBill,
+        total: newTotal,
+        loyaltyPointsEarned
+      });
+    } else {
+      setBill({
+        ...bill,
+        ...updatedBill
+      });
+    }
   };
 
   const handleEditToggle = () => {
@@ -112,6 +142,13 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     setIsSaving(true);
     
     try {
+      // Calculate loyalty points difference
+      const loyaltyPointsDelta = 
+        initialBill.loyaltyPointsUsed - bill.loyaltyPointsUsed + 
+        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
+        
+      const totalSpentDelta = bill.total - initialBill.total;
+      
       // Update bill in database
       const { error: billError } = await supabase
         .from('bills')
@@ -121,6 +158,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           discount_value: bill.discountValue,
           discount_type: bill.discountType,
           loyalty_points_used: bill.loyaltyPointsUsed,
+          loyalty_points_earned: bill.loyaltyPointsEarned,
           total: bill.total,
           payment_method: bill.paymentMethod
         })
@@ -197,12 +235,6 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       }
       
       // Update customer loyalty points and total spent if needed
-      const loyaltyPointsDelta = 
-        initialBill.loyaltyPointsUsed - bill.loyaltyPointsUsed + 
-        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
-        
-      const totalSpentDelta = bill.total - initialBill.total;
-      
       if (loyaltyPointsDelta !== 0 || totalSpentDelta !== 0) {
         const updatedCustomer = {
           ...customer,
@@ -232,6 +264,11 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       });
       
       setIsEditing(false);
+      
+      // Call the onBillUpdated callback if provided
+      if (onBillUpdated) {
+        onBillUpdated();
+      }
     } catch (error) {
       console.error('Error saving changes:', error);
       toast({
@@ -305,6 +342,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         bill={bill}
         onUpdateBill={handleBillUpdate}
         editable={isEditing}
+        customer={customer}
       />
       <BillEditAudit 
         edits={editHistory}

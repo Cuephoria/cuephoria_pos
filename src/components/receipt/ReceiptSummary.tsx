@@ -1,20 +1,24 @@
 
-import React, { useState } from 'react';
-import { Bill } from '@/types/pos.types';
+import React, { useState, useEffect } from 'react';
+import { Bill, Customer } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Button } from '@/components/ui/button';
-import { Pencil, Save, X } from 'lucide-react';
+import { Pencil, Save, X, Info } from 'lucide-react';
+import { usePOS } from '@/context/POSContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReceiptSummaryProps {
   bill: Bill;
   onUpdateBill?: (updatedBill: Partial<Bill>) => void;
   editable?: boolean;
+  customer?: Customer | null;
 }
 
 const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ 
   bill, 
   onUpdateBill,
-  editable = false 
+  editable = false,
+  customer = null
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
@@ -24,6 +28,21 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     loyaltyPointsUsed: bill.loyaltyPointsUsed,
     paymentMethod: bill.paymentMethod
   });
+  const { toast } = useToast();
+  const { customers } = usePOS();
+  const [availablePoints, setAvailablePoints] = useState<number>(0);
+
+  // Find the customer and set available points
+  useEffect(() => {
+    if (customer) {
+      setAvailablePoints(customer.loyaltyPoints + bill.loyaltyPointsUsed);
+    } else if (bill.customerId) {
+      const billCustomer = customers.find(c => c.id === bill.customerId);
+      if (billCustomer) {
+        setAvailablePoints(billCustomer.loyaltyPoints + bill.loyaltyPointsUsed);
+      }
+    }
+  }, [bill, customer, customers]);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -66,6 +85,20 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
   };
 
   const handleInputChange = (field: string, value: string | number) => {
+    if (field === 'loyaltyPointsUsed') {
+      const pointsValue = parseInt(value as string) || 0;
+      
+      // Check if points exceed available points
+      if (pointsValue > availablePoints) {
+        toast({
+          title: "Loyalty Points Limit Exceeded",
+          description: `Cannot use more than ${availablePoints} available loyalty points`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     setEditValues(prev => ({
       ...prev,
       [field]: value
@@ -180,12 +213,19 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         </div>
         
         <div>
-          <label className="text-xs text-gray-400 mb-1 block">Loyalty Points Used</label>
+          <label className="text-xs text-gray-400 mb-1 flex justify-between items-center">
+            <span>Loyalty Points Used</span>
+            <span className="text-cuephoria-orange flex items-center">
+              <Info className="h-3 w-3 mr-1" />
+              Available: {availablePoints}
+            </span>
+          </label>
           <input
             type="number"
             className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
             value={editValues.loyaltyPointsUsed}
             onChange={(e) => handleInputChange('loyaltyPointsUsed', parseInt(e.target.value))}
+            max={availablePoints}
           />
         </div>
         

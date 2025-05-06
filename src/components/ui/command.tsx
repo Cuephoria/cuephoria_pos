@@ -22,11 +22,28 @@ const Command = React.forwardRef<
 ))
 Command.displayName = CommandPrimitive.displayName
 
-interface CommandDialogProps extends DialogProps {}
+interface CommandDialogProps extends DialogProps {
+  initialIsOpen?: boolean;
+}
 
-const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
+const CommandDialog = ({ children, initialIsOpen = false, ...props }: CommandDialogProps) => {
+  const [open, setOpen] = React.useState(initialIsOpen);
+  
+  React.useEffect(() => {
+    if (props.open !== undefined) {
+      setOpen(props.open);
+    }
+  }, [props.open]);
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (props.onOpenChange) {
+      props.onOpenChange(newOpen);
+    }
+  };
+
   return (
-    <Dialog {...props}>
+    <Dialog {...props} open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="overflow-hidden p-0 shadow-lg">
         <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
