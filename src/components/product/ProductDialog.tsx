@@ -23,7 +23,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-gray-800 border-gray-700 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
         </DialogHeader>

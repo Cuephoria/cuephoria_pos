@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Bill, CartItem, Product } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -6,6 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash, Plus, Save, X, Search } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -17,21 +23,6 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "@/components/ui/command";
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger 
-} from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface ReceiptItemsProps {
   bill: Bill;
@@ -40,23 +31,19 @@ interface ReceiptItemsProps {
 }
 
 const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editable = false }) => {
-  const { products, updateProduct, customers } = usePOS();
+  const { products, updateProduct } = usePOS();
   const { toast } = useToast();
   const [items, setItems] = useState<CartItem[]>(bill.items);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
   const [availableStock, setAvailableStock] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [commandOpen, setCommandOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  // Get customer details for loyalty points display
-  const customer = customers.find(c => c.id === bill.customerId);
-  
-  // Filter products based on search query and only include those with stock
+  // Filter products based on search query
   const filteredProducts = products
     .filter(p => p.category !== 'membership' && p.stock > 0)
     .filter(p => 
@@ -72,24 +59,8 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
 
   const handleSaveItem = () => {
     if (editingItemIndex !== null && editingItem) {
-      // Calculate stock adjustment
-      const originalItem = items[editingItemIndex];
-      const stockDifference = originalItem.quantity - editingItem.quantity;
-      
-      // Find the product to update its stock
-      if (originalItem.type === 'product') {
-        const product = products.find(p => p.id === originalItem.id);
-        if (product) {
-          // Update product stock based on quantity difference
-          updateProduct({
-            ...product,
-            stock: product.stock + stockDifference
-          });
-        }
-      }
-      
-      // Recalculate total
       const updatedItems = [...items];
+      // Recalculate total
       const updatedItem = {
         ...editingItem,
         total: editingItem.price * editingItem.quantity
@@ -102,11 +73,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       if (onUpdateItems) {
         onUpdateItems(updatedItems);
       }
-      
-      toast({
-        title: "Item Updated",
-        description: `Updated quantity of ${updatedItem.name}`,
-      });
     }
   };
 
@@ -128,11 +94,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
           ...product,
           stock: product.stock + removedItem.quantity
         });
-        
-        toast({
-          title: "Stock Updated",
-          description: `Added ${removedItem.quantity} back to ${product.name} stock`,
-        });
       }
     }
     
@@ -142,29 +103,36 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     if (onUpdateItems) {
       onUpdateItems(updatedItems);
     }
-    
-    toast({
-      title: "Item Removed",
-      description: `Removed ${removedItem.name} from transaction`,
-    });
   };
   
   const handleProductSelect = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      setSelectedProduct(product);
-      setSelectedProductId(productId);
-      setAvailableStock(product.stock || 0);
+    setSelectedProductId(productId);
+    
+    // Auto-fill product information
+    const selectedProduct = products.find(p => p.id === productId);
+    if (selectedProduct) {
+      setAvailableStock(selectedProduct.stock || 0);
+      // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
-      setCommandOpen(false);
     }
   };
   
   const handleAddItem = () => {
-    if (!selectedProduct) {
+    if (!selectedProductId) {
       toast({
         title: "Selection Required",
         description: "Please select a product from the list",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const selectedProduct = products.find(p => p.id === selectedProductId);
+    
+    if (!selectedProduct) {
+      toast({
+        title: "Product Not Found",
+        description: "The selected product could not be found",
         variant: "destructive"
       });
       return;
@@ -207,14 +175,8 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       stock: selectedProduct.stock - newItemQuantity
     });
     
-    toast({
-      title: "Stock Updated",
-      description: `Removed ${newItemQuantity} from ${selectedProduct.name} stock`,
-    });
-    
     // Reset form
     setSelectedProductId('');
-    setSelectedProduct(null);
     setNewItemQuantity(1);
     setSearchQuery('');
     setShowAddProductDialog(false);
@@ -222,11 +184,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     if (onUpdateItems) {
       onUpdateItems(updatedItems);
     }
-    
-    toast({
-      title: "Item Added",
-      description: `Added ${itemToAdd.name} to transaction`,
-    });
   };
 
   if (!editable) {
@@ -369,65 +326,50 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
-              
-              <Popover open={commandOpen} onOpenChange={setCommandOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={commandOpen}
-                    className="w-full justify-between bg-gray-700 border-gray-600 hover:bg-gray-600"
-                  >
-                    {selectedProduct ? selectedProduct.name : "Choose a product..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent 
-                  className="w-full p-0 bg-gray-800 border-gray-700 text-white shadow-lg shadow-black/50"
-                  style={{ maxHeight: '300px', overflowY: 'auto' }}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white pl-10 w-full"
+                />
+              </div>
+              <div className="relative mt-1">
+                <Select 
+                  value={selectedProductId} 
+                  onValueChange={handleProductSelect}
                 >
-                  <Command className="bg-gray-800">
-                    <CommandInput 
-                      placeholder="Search products..."
-                      value={searchQuery}
-                      onValueChange={setSearchQuery}
-                      className="text-white"
-                    />
-                    <CommandEmpty className="py-2 text-gray-400">
-                      No products found
-                    </CommandEmpty>
-                    <CommandList className="max-h-[270px]">
-                      <CommandGroup>
-                        <ScrollArea className="h-[270px] w-full">
-                          {filteredProducts.map((product) => (
-                            <CommandItem
-                              key={product.id}
-                              value={product.id}
-                              onSelect={() => handleProductSelect(product.id)}
-                              className="cursor-pointer hover:bg-gray-700"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedProductId === product.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{product.name}</span>
-                                <span className="text-xs text-gray-400">
-                                  Price: <CurrencyDisplay amount={product.price} /> | 
-                                  Category: {product.category} | 
-                                  Stock: {product.stock}
-                                </span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </ScrollArea>
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                  <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="Choose a product" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                    <ScrollArea className="h-72 w-full">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(product => (
+                          <SelectItem key={product.id} value={product.id} className="py-2">
+                            <div className="flex flex-col">
+                              <span>{product.name}</span>
+                              <span className="text-xs text-gray-400">
+                                Price: <CurrencyDisplay amount={product.price} /> | 
+                                Category: {product.category} | 
+                                Stock: {product.stock}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="py-2 px-2 text-center text-sm text-gray-400">
+                          No products match your search
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -441,23 +383,30 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                 min="1"
                 max={availableStock}
               />
-              {selectedProduct && (
+              {selectedProductId && (
                 <p className="text-xs text-gray-400 mt-1">
                   Available stock: {availableStock}
                 </p>
               )}
             </div>
             
-            {selectedProduct && (
+            {selectedProductId && (
               <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
                 <h5 className="text-xs font-medium mb-1">Selected Product</h5>
-                <div className="space-y-1 text-xs">
-                  <p><span className="text-gray-400">Name:</span> {selectedProduct.name}</p>
-                  <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={selectedProduct.price} /></p>
-                  <p><span className="text-gray-400">Category:</span> {selectedProduct.category}</p>
-                  <p><span className="text-gray-400">Stock:</span> {selectedProduct.stock}</p>
-                  <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={selectedProduct.price * newItemQuantity} /></p>
-                </div>
+                {(() => {
+                  const product = products.find(p => p.id === selectedProductId);
+                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
+                  
+                  return (
+                    <div className="space-y-1 text-xs">
+                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
+                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
+                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
+                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
+                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -469,7 +418,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
             <Button 
               className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
               onClick={handleAddItem}
-              disabled={!selectedProduct || newItemQuantity < 1 || newItemQuantity > availableStock}
+              disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Item
@@ -477,13 +426,6 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Customer loyalty points info */}
-      {customer && (
-        <div className="text-xs text-gray-400 mt-1 italic">
-          Customer loyalty points available: <span className="font-semibold text-cuephoria-orange">{customer.loyaltyPoints}</span>
-        </div>
-      )}
     </div>
   );
 };
