@@ -1,180 +1,79 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { usePOS, Station } from '@/context/POSContext';
-import StationInfo from '@/components/station/StationInfo';
-import StationTimer from '@/components/station/StationTimer';
-import StationActions from '@/components/station/StationActions';
-import { Button } from '@/components/ui/button';
-import { Trash2, Edit2 } from 'lucide-react';
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { usePOS } from '@/context/POSContext';
+import { Station } from '@/types/pos.types';
+import StationInfo from './station/StationInfo';
+import StationActions from './station/StationActions';
+import StationTimer from './station/StationTimer';
+import { Edit } from 'lucide-react';
+import { useState } from 'react';
 import EditStationDialog from './EditStationDialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 interface StationCardProps {
   station: Station;
 }
 
 const StationCard: React.FC<StationCardProps> = ({ station }) => {
-  const { customers, startSession, endSession, deleteStation, updateStation } = usePOS();
-  const isPoolTable = station.type === '8ball';
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-
-  const getCustomer = (id: string) => {
-    return customers.find(c => c.id === id);
-  };
-
-  const customer = station.currentSession 
-    ? getCustomer(station.currentSession.customerId)
-    : null;
-    
-  const customerName = customer ? customer.name : 'Unknown Customer';
-    
-  const handleDeleteStation = async () => {
-    await deleteStation(station.id);
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditDialogOpen(true);
-  };
-
+  const { startSession, endSession, customers } = usePOS();
+  const [editOpen, setEditOpen] = useState(false);
+  
+  // Debug log to verify customers are being passed to the StationActions component
+  console.log(`StationCard ${station.name} has ${customers.length} customers to pass down`);
+  
   return (
-    <>
-      <Card 
-        className={`
-          relative overflow-hidden card-hover animate-scale-in h-full
-          ${station.isOccupied 
-            ? customer?.isMember 
-              ? 'border-green-500 bg-black/80' 
-              : 'border-cuephoria-orange bg-black/80' 
-            : isPoolTable 
-              ? 'border-green-500 bg-gradient-to-b from-green-900/30 to-green-950/40' 
-              : 'border-cuephoria-purple bg-gradient-to-b from-cuephoria-purple/20 to-black/50'
-          }
-          ${isPoolTable ? 'rounded-xl' : 'rounded-lg'}
-        `}
-      >
-        {/* Visual elements to enhance the appearance */}
-        {isPoolTable && (
-          <>
-            <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-300"></div>
-            <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-300"></div>
-            <div className="absolute bottom-3 left-3 w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-300"></div>
-            <div className="absolute bottom-3 right-3 w-2 h-2 rounded-full bg-green-400 shadow-sm shadow-green-300"></div>
-            <div className="absolute w-full h-[1px] top-10 bg-gradient-to-r from-transparent via-green-500/30 to-transparent"></div>
-          </>
-        )}
+    <Card className={`border ${station.isOccupied ? 'border-green-500 bg-green-900/10' : 'border-gray-700 bg-gray-900/50'} transition-colors overflow-hidden relative`}>
+      <div onClick={() => setEditOpen(true)} className="absolute top-2 right-2 p-1.5 bg-gray-800/80 hover:bg-gray-700 rounded-full cursor-pointer">
+        <Edit className="h-4 w-4 text-gray-400" />
+      </div>
+      
+      <CardHeader className="p-4 pb-0">
+        <div className="flex items-center justify-between">
+          <Badge variant={station.isOccupied ? "destructive" : "outline"} className={station.isOccupied ? "bg-green-600 hover:bg-green-700" : ""}>
+            {station.isOccupied ? "In Use" : "Available"}
+          </Badge>
+        </div>
         
-        {!isPoolTable && (
-          <>
-            <div className="absolute right-0 top-0 w-8 h-3 bg-cuephoria-lightpurple/20 rounded-bl-lg"></div>
-            <div className="absolute w-full h-[1px] top-10 bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent"></div>
-            <div className="absolute left-4 bottom-3 w-1 h-1 rounded-full bg-cuephoria-orange animate-pulse-soft"></div>
-            <div className="absolute left-7 bottom-3 w-1 h-1 rounded-full bg-cuephoria-lightpurple animate-pulse-soft delay-100"></div>
-          </>
-        )}
-
-        {/* Membership indicator on top of card */}
-        {station.isOccupied && customer && (
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-transparent to-transparent">
-            <div className={`h-full ${customer.isMember ? 'bg-green-500' : 'bg-gray-500'} w-2/3 rounded-br-lg`}></div>
-          </div>
-        )}
-
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-center space-x-2">
-            <div className="flex-grow">
-              <StationInfo station={station} customerName={customerName} customerData={customer} />
-            </div>
-            <div className="flex gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={`
-                  h-8 w-8 shrink-0 
-                  ${isPoolTable 
-                    ? 'text-green-300 hover:text-blue-500 hover:bg-green-950/50' 
-                    : 'text-cuephoria-lightpurple hover:text-blue-500 hover:bg-cuephoria-purple/20'
-                  }
-                `}
-                disabled={station.isOccupied}
-                onClick={handleEditClick}
-              >
-                <Edit2 className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`
-                      h-8 w-8 shrink-0 
-                      ${isPoolTable 
-                        ? 'text-green-300 hover:text-red-500 hover:bg-green-950/50' 
-                        : 'text-cuephoria-lightpurple hover:text-destructive hover:bg-cuephoria-purple/20'
-                      }
-                    `}
-                    disabled={station.isOccupied}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className={isPoolTable ? 'border-green-500' : 'border-cuephoria-purple'}>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Station</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete {station.name}? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleDeleteStation}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+        <CardTitle className="text-xl mt-2 mb-0 font-bold">
+          {station.name}
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="p-4 pt-2 pb-2">
+        <div className="text-sm text-muted-foreground flex items-center justify-between">
+          <span>Hourly Rate:</span>
+          <span className="font-semibold">₹{station.hourlyRate}</span>
+        </div>
+        
+        {station.isOccupied && station.currentSession && (
+          <div className="mt-2">
+            <StationInfo station={station} />
+            <div className="mt-2">
+              <StationTimer 
+                startTime={station.currentSession.startTime} 
+                hourlyRate={station.hourlyRate} 
+              />
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pb-2">
-          <div className="flex flex-col space-y-2">
-            {station.isOccupied && station.currentSession && (
-              <StationTimer station={station} />
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex-col space-y-2 pt-2">
-          <StationActions 
-            station={station}
-            customers={customers}
-            onStartSession={startSession}
-            onEndSession={endSession}
-          />
-        </CardFooter>
-      </Card>
-
-      {/* Edit Station Dialog */}
+        )}
+      </CardContent>
+      
+      <CardFooter className="p-4 pt-2">
+        <StationActions 
+          station={station} 
+          customers={customers}
+          onStartSession={startSession}
+          onEndSession={endSession}
+        />
+      </CardFooter>
+      
       <EditStationDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        open={editOpen}
+        onOpenChange={setEditOpen}
         station={station}
-        onSave={updateStation}
       />
-    </>
+    </Card>
   );
 };
 

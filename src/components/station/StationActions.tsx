@@ -160,16 +160,16 @@ const StationActions: React.FC<StationActionsProps> = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-background border">
+        <PopoverContent className="w-full p-0 bg-background border shadow-md">
           <Command>
             <CommandInput 
               placeholder="Search customers..." 
               value={searchQuery} 
               onValueChange={handleSearchChange}
             />
-            <CommandEmpty>No customer found.</CommandEmpty>
-            <CommandGroup>
-              <CommandList>
+            <CommandList className="max-h-[300px] overflow-auto">
+              <CommandEmpty>No customer found.</CommandEmpty>
+              <CommandGroup>
                 {displayedCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
@@ -179,6 +179,7 @@ const StationActions: React.FC<StationActionsProps> = ({
                       setSearchQuery('');
                       setOpen(false);
                     }}
+                    className="cursor-pointer"
                   >
                     <Check
                       className={cn(
@@ -195,8 +196,8 @@ const StationActions: React.FC<StationActionsProps> = ({
                     </div>
                   </CommandItem>
                 ))}
-              </CommandList>
-            </CommandGroup>
+              </CommandGroup>
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
