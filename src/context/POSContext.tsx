@@ -3,9 +3,11 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useStations } from '@/hooks/useStations';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useSessions } from '@/hooks/useSessions';
 import { useBills } from '@/hooks/useBills';
 import { Product, Station, Session, Customer, CartItem, Bill } from '@/types/pos.types';
+
+// We need to import from the stations directory since that's where the hooks have been moved
+import { useSessionActions } from '@/hooks/stations/session-actions';
 
 export { type Product, type Station, type Session, type Customer, type CartItem, type Bill };
 
@@ -28,10 +30,10 @@ interface POSContextType {
   addStation: (station: Omit<Station, "id" | "isOccupied" | "createdAt">) => Promise<Station | undefined>;
   updateStation: (station: Station) => Promise<Station | undefined>;
   deleteStation: (id: string) => Promise<void>;
-  startSession: (stationId: string, customerId: string, sessionData: Pick<Session, "price" | "notes">) => Promise<Session | undefined>;
-  pauseSession: (id: string) => Promise<Session | undefined>;
-  resumeSession: (id: string) => Promise<Session | undefined>;
-  endSession: (id: string) => Promise<Session | undefined>;
+  startSession: (stationId: string, customerId: string) => Promise<void>;
+  pauseSession: (id: string) => Promise<void>;
+  resumeSession: (id: string) => Promise<void>;
+  endSession: (stationId: string) => Promise<void>;
   updateSession: (session: Session) => Promise<Session | undefined>;
   deleteSession: (id: string) => Promise<void>;
   addCustomer: (customer: Omit<Customer, "id" | "createdAt">) => Promise<Customer | null>;
@@ -48,16 +50,7 @@ interface POSContextType {
   selectCustomer: (id: string | null) => void;
   checkMembershipValidity: (customerId: string) => boolean;
   deductMembershipHours: (customerId: string, hours: number) => boolean;
-  completeSale: (
-    cart: CartItem[],
-    selectedCustomer: Customer | null,
-    discount: number,
-    discountType: 'percentage' | 'fixed',
-    loyaltyPointsUsed: number,
-    calculateTotal: () => number,
-    paymentMethod: 'cash' | 'upi',
-    products: Product[]
-  ) => Promise<Bill | undefined>;
+  completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
   deleteBill: (billId: string, customerId: string) => Promise<boolean>;
   exportBills: (customers: Customer[]) => void;
   exportCustomers: (customers: Customer[]) => void;
@@ -78,9 +71,6 @@ export const POSProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const {
     stations,
     setStations,
-    addStation,
-    updateStation,
-    deleteStation
   } = useStations();
   
   const {
@@ -97,6 +87,7 @@ export const POSProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     deductMembershipHours
   } = useCustomers([]);
   
+  // Use the session actions hook instead
   const {
     sessions,
     setSessions,
@@ -105,8 +96,11 @@ export const POSProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     resumeSession,
     endSession,
     updateSession,
-    deleteSession
-  } = useSessions(stations, setStations);
+    deleteSession,
+    addStation,
+    updateStation,
+    deleteStation,
+  } = useSessionActions(stations, setStations);
   
   const {
     bills,
@@ -118,7 +112,7 @@ export const POSProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     fetchBills
   } = useBills(updateCustomer, updateProduct);
   
-  const value = {
+  const value: POSContextType = {
     products,
     setProducts,
     stations,
