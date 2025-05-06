@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -112,6 +113,9 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     setIsSaving(true);
     
     try {
+      // Calculate the difference in total amount
+      const totalDifference = bill.total - initialBill.total;
+      
       // Update bill in database
       const { error: billError } = await supabase
         .from('bills')
@@ -200,30 +204,27 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       const loyaltyPointsDelta = 
         initialBill.loyaltyPointsUsed - bill.loyaltyPointsUsed + 
         bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
-        
-      const totalSpentDelta = bill.total - initialBill.total;
       
-      if (loyaltyPointsDelta !== 0 || totalSpentDelta !== 0) {
-        const updatedCustomer = {
-          ...customer,
-          loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
-          totalSpent: customer.totalSpent + totalSpentDelta
-        };
+      // Update the customer's total spent based on the difference in bill totals
+      const updatedCustomer = {
+        ...customer,
+        loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
+        totalSpent: customer.totalSpent + totalDifference
+      };
+      
+      setCustomer(updatedCustomer);
+      updateCustomer(updatedCustomer);
+      
+      const { error: customerError } = await supabase
+        .from('customers')
+        .update({
+          loyalty_points: updatedCustomer.loyaltyPoints,
+          total_spent: updatedCustomer.totalSpent
+        })
+        .eq('id', customer.id);
         
-        setCustomer(updatedCustomer);
-        updateCustomer(updatedCustomer);
-        
-        const { error: customerError } = await supabase
-          .from('customers')
-          .update({
-            loyalty_points: updatedCustomer.loyaltyPoints,
-            total_spent: updatedCustomer.totalSpent
-          })
-          .eq('id', customer.id);
-          
-        if (customerError) {
-          console.error('Error updating customer:', customerError);
-        }
+      if (customerError) {
+        console.error('Error updating customer:', customerError);
       }
       
       toast({
