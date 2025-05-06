@@ -1,5 +1,5 @@
 
-import React, { ReactNode, RefObject, useState } from 'react';
+import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
 import CustomerInfo from './CustomerInfo';
@@ -40,6 +40,12 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const { updateCustomer } = usePOS();
   const { toast } = useToast();
+  
+  // Update local bill and customer state if props change
+  useEffect(() => {
+    setBill(initialBill);
+    setCustomer(initialCustomer);
+  }, [initialBill, initialCustomer]);
   
   // Check if bill is valid
   if (!bill || !bill.id) {
@@ -115,6 +121,9 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     try {
       // Calculate the difference in total amount
       const totalDifference = bill.total - initialBill.total;
+      console.log('Bill total difference:', totalDifference);
+      console.log('Initial bill total:', initialBill.total);
+      console.log('Updated bill total:', bill.total);
       
       // Update bill in database
       const { error: billError } = await supabase
@@ -125,6 +134,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           discount_value: bill.discountValue,
           discount_type: bill.discountType,
           loyalty_points_used: bill.loyaltyPointsUsed,
+          loyalty_points_earned: bill.loyaltyPointsEarned,
           total: bill.total,
           payment_method: bill.paymentMethod
         })
@@ -172,12 +182,12 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           p_changes: string;
         }
         
-        // Fix: Use correct method signature for rpc call
+        // Call RPC function to save edit audit
         const { error: auditError } = await supabase
           .rpc('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
-            p_changes: 'Bill edited: ' + new Date().toISOString()
+            p_changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
           });
           
         if (auditError) {
@@ -189,7 +199,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
             .insert({
               bill_id: bill.id,
               editor_name: editorName,
-              changes: 'Bill edited: ' + new Date().toISOString()
+              changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
             });
             
           if (fallbackError) {
@@ -200,21 +210,29 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         console.error('Error saving edit audit:', auditError);
       }
       
-      // Update customer loyalty points and total spent if needed
+      // Update customer loyalty points and total spent
       const loyaltyPointsDelta = 
-        initialBill.loyaltyPointsUsed - bill.loyaltyPointsUsed + 
-        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
+        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned - 
+        (bill.loyaltyPointsUsed - initialBill.loyaltyPointsUsed);
+
+      console.log('Loyalty points delta:', loyaltyPointsDelta);
+      console.log('Customer current points:', customer.loyaltyPoints);
+      console.log('Customer current spent:', customer.totalSpent);
       
-      // Update the customer's total spent based on the difference in bill totals
+      // Create updated customer with new values
       const updatedCustomer = {
         ...customer,
         loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
         totalSpent: customer.totalSpent + totalDifference
       };
+
+      console.log('Updated customer points:', updatedCustomer.loyaltyPoints);
+      console.log('Updated customer spent:', updatedCustomer.totalSpent);
       
+      // Update local state
       setCustomer(updatedCustomer);
-      updateCustomer(updatedCustomer);
       
+      // Update customer in database
       const { error: customerError } = await supabase
         .from('customers')
         .update({
@@ -225,6 +243,9 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         
       if (customerError) {
         console.error('Error updating customer:', customerError);
+      } else {
+        // Update customer in global context
+        updateCustomer(updatedCustomer);
       }
       
       toast({

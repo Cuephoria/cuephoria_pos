@@ -13,9 +13,10 @@ interface ReceiptProps {
   bill: Bill;
   customer: Customer;
   onClose: () => void;
+  allowEdit?: boolean;
 }
 
-const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
+const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose, allowEdit = true }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -80,6 +81,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
         bill={bill} 
         customer={customer} 
         receiptRef={receiptRef} 
+        allowEdit={allowEdit}
       />
       <ReceiptActions 
         onPrint={handlePrintReceipt}
