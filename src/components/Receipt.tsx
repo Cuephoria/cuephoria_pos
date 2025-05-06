@@ -12,6 +12,8 @@ import { usePOS } from '@/context/POSContext';
 interface ReceiptProps {
   billId: string;
   customerId: string;
+  bill?: Bill;
+  customer?: Customer;
   onClose: () => void;
   allowEdit?: boolean;
   onPrint?: () => void;
@@ -20,18 +22,24 @@ interface ReceiptProps {
 
 const Receipt: React.FC<ReceiptProps> = ({ 
   billId, 
-  customerId, 
+  customerId,
+  bill: initialBill,
+  customer: initialCustomer,
   onClose, 
   allowEdit = false, 
   onPrint = () => {},
   onRefresh
 }) => {
   const { customers, bills } = usePOS();
+  const { toast } = useToast();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [bill, setBill] = useState<Bill | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [showSuccessMsg, setShowSuccessMsg] = useState<boolean>(false);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +47,15 @@ const Receipt: React.FC<ReceiptProps> = ({
       setError(null);
       
       try {
-        // Find bill and customer
+        // If bill and customer are passed directly, use them
+        if (initialBill && initialCustomer) {
+          setBill(initialBill);
+          setCustomer(initialCustomer);
+          setLoading(false);
+          return;
+        }
+        
+        // Otherwise find bill and customer from context
         const billData = bills.find(b => b.id === billId);
         
         if (!billData) {
@@ -65,7 +81,7 @@ const Receipt: React.FC<ReceiptProps> = ({
     };
     
     fetchData();
-  }, [billId, customerId, bills, customers]);
+  }, [billId, customerId, bills, customers, initialBill, initialCustomer]);
 
   // Handle bill update and refresh parent components if needed
   const handleBillUpdated = (updatedBill: Bill, updatedCustomer: Customer) => {
@@ -131,7 +147,7 @@ const Receipt: React.FC<ReceiptProps> = ({
   return (
     <ReceiptContainer>
       {showSuccessMsg && <SuccessMessage onClose={handleCloseSuccessMsg} />}
-      <ReceiptTitle onClose={onClose} date={bill.createdAt} />
+      <ReceiptTitle onClose={onClose} date={bill?.createdAt} />
       <div className="max-h-[calc(100vh-220px)] overflow-auto">
         {bill && customer ? (
           <ReceiptContent 
