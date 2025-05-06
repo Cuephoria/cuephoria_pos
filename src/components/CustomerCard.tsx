@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,26 +17,12 @@ interface CustomerCardProps {
 }
 
 const CustomerCard: React.FC<CustomerCardProps> = ({ 
-  customer: initialCustomer, 
+  customer, 
   onEdit, 
   onDelete,
   onSelect,
   isSelectable = false
 }) => {
-  const { customers } = usePOS();
-  const [customer, setCustomer] = useState<Customer>(initialCustomer);
-  
-  // Update the customer whenever the customers array in context changes
-  useEffect(() => {
-    const updatedCustomer = customers.find(c => c.id === customer.id);
-    if (updatedCustomer) {
-      console.log(`Customer card updating ${customer.name}:`, 
-        `Old total spent: ${customer.totalSpent}`, 
-        `New total spent: ${updatedCustomer.totalSpent}`);
-      setCustomer(updatedCustomer);
-    }
-  }, [customers, customer.id]);
-
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-IN');

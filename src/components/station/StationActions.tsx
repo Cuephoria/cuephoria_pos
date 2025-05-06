@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Station, Customer } from '@/context/POSContext';
@@ -29,34 +29,6 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
-  const [displayedCustomers, setDisplayedCustomers] = useState<Customer[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Debug logging to verify customers are being passed
-  useEffect(() => {
-    console.log("Customers passed to StationActions:", customers.length, customers);
-    // Sort customers alphabetically by name
-    const sortedCustomers = [...customers].sort((a, b) => 
-      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-    );
-    console.log("Sorted customers:", sortedCustomers.length);
-    setDisplayedCustomers(sortedCustomers);
-  }, [customers]);
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    if (value.trim() === '') {
-      setDisplayedCustomers([...customers].sort((a, b) => 
-        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-      ));
-    } else {
-      const filtered = customers.filter(customer => 
-        customer.name.toLowerCase().includes(value.toLowerCase()) ||
-        customer.phone.toLowerCase().includes(value.toLowerCase())
-      );
-      setDisplayedCustomers(filtered);
-    }
-  };
 
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
@@ -153,33 +125,27 @@ const StationActions: React.FC<StationActionsProps> = ({
             disabled={customers.length === 0}
           >
             {selectedCustomerId ? (
-              customers.find((customer) => customer.id === selectedCustomerId)?.name || "Select customer..."
+              customers.find((customer) => customer.id === selectedCustomerId)?.name
             ) : (
               customers.length === 0 ? "No customers available" : "Select customer..."
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-background border shadow-md">
+        <PopoverContent className="w-full p-0">
           <Command>
-            <CommandInput 
-              placeholder="Search customers..." 
-              value={searchQuery} 
-              onValueChange={handleSearchChange}
-            />
-            <CommandList className="max-h-[300px] overflow-auto">
-              <CommandEmpty>No customer found.</CommandEmpty>
-              <CommandGroup>
-                {displayedCustomers.map((customer) => (
+            <CommandInput placeholder="Search customers..." />
+            <CommandEmpty>No customer found.</CommandEmpty>
+            <CommandGroup>
+              <CommandList>
+                {customers.map((customer) => (
                   <CommandItem
                     key={customer.id}
-                    value={customer.id}
+                    value={customer.name}
                     onSelect={() => {
                       setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
-                      setSearchQuery('');
                       setOpen(false);
                     }}
-                    className="cursor-pointer"
                   >
                     <Check
                       className={cn(
@@ -196,8 +162,8 @@ const StationActions: React.FC<StationActionsProps> = ({
                     </div>
                   </CommandItem>
                 ))}
-              </CommandGroup>
-            </CommandList>
+              </CommandList>
+            </CommandGroup>
           </Command>
         </PopoverContent>
       </Popover>

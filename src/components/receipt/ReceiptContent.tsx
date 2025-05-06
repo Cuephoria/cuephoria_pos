@@ -1,4 +1,3 @@
-
 import React, { ReactNode, RefObject, useState } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -38,7 +37,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [editHistory, setEditHistory] = useState<BillEditInfo[]>([]);
   const [editorName, setEditorName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { updateCustomer, customers, setBills, bills } = usePOS();
+  const { updateCustomer } = usePOS();
   const { toast } = useToast();
   
   // Check if bill is valid
@@ -138,16 +137,12 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     setIsSaving(true);
     
     try {
-      // Calculate what changed for loyalty points and total spent
+      // Calculate what changed for loyalty points
       const loyaltyPointsDelta = bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
-      
-      // Calculate the exact difference in total spent, not just the new bill total
       const totalSpentDelta = bill.total - initialBill.total;
       
       console.log('Loyalty points delta:', loyaltyPointsDelta);
       console.log('Total spent delta:', totalSpentDelta);
-      console.log('Initial bill total:', initialBill.total);
-      console.log('Updated bill total:', bill.total);
       
       // Update bill in database
       const { error: billError } = await supabase
@@ -235,54 +230,19 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       }
       
       // Update customer loyalty points and total spent
-      // Get the latest customer data to ensure we have the most up-to-date values
-      const { data: latestCustomerData, error: customerFetchError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customer.id)
-        .single();
-        
-      if (customerFetchError) {
-        console.error('Error fetching latest customer data:', customerFetchError);
-      }
-      
-      const latestCustomer = latestCustomerData ? {
-        ...customer,
-        loyaltyPoints: latestCustomerData.loyalty_points,
-        totalSpent: latestCustomerData.total_spent
-      } : customer;
-      
       const updatedCustomer = {
-        ...latestCustomer,
-        loyaltyPoints: latestCustomer.loyaltyPoints + loyaltyPointsDelta,
-        totalSpent: latestCustomer.totalSpent + totalSpentDelta
+        ...customer,
+        loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
+        totalSpent: customer.totalSpent + totalSpentDelta
       };
       
       console.log('Updating customer:', customer.name);
-      console.log('Current loyalty points:', latestCustomer.loyaltyPoints);
+      console.log('Current loyalty points:', customer.loyaltyPoints);
       console.log('Adding loyalty points delta:', loyaltyPointsDelta);
       console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
-      console.log('Current total spent:', latestCustomer.totalSpent);
-      console.log('Adding total spent delta:', totalSpentDelta);
-      console.log('New total spent:', updatedCustomer.totalSpent);
       
       setCustomer(updatedCustomer);
-      
-      // Update customer in the POSContext customers list
-      // This ensures the CustomerCard component gets the updated data
-      const updatedCustomers = customers.map(c => 
-        c.id === customer.id ? updatedCustomer : c
-      );
-      
-      // Call updateCustomer to update both local state and database
-      const result = updateCustomer(updatedCustomer);
-      console.log('Update customer result:', result);
-      
-      // Update the bills in the POSContext to reflect changes
-      const updatedBills = bills.map(b => 
-        b.id === bill.id ? bill : b
-      );
-      setBills(updatedBills);
+      updateCustomer(updatedCustomer);
       
       const { error: customerError } = await supabase
         .from('customers')
