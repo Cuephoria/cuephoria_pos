@@ -9,14 +9,12 @@ interface ReceiptSummaryProps {
   bill: Bill;
   onUpdateBill?: (updatedBill: Partial<Bill>) => void;
   editable?: boolean;
-  availableLoyaltyPoints?: number;
 }
 
 const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ 
   bill, 
   onUpdateBill,
-  editable = false,
-  availableLoyaltyPoints = 0
+  editable = false 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({
@@ -68,13 +66,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    if (field === 'loyaltyPointsUsed' && typeof value === 'number') {
-      // Don't allow loyalty points to exceed available points
-      if (value > availableLoyaltyPoints) {
-        value = availableLoyaltyPoints;
-      }
-    }
-    
     setEditValues(prev => ({
       ...prev,
       [field]: value
@@ -148,7 +139,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
             size="sm" 
             className="h-7 px-2 text-xs bg-cuephoria-purple hover:bg-cuephoria-purple/80" 
             onClick={handleSaveChanges}
-            disabled={editValues.loyaltyPointsUsed > availableLoyaltyPoints}
           >
             <Save className="h-3 w-3 mr-1" /> Save
           </Button>
@@ -190,23 +180,13 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         </div>
         
         <div>
-          <label className="text-xs text-gray-400 mb-1 block">
-            Loyalty Points Used
-            <span className="text-xs ml-2 text-gray-500">(Available: {availableLoyaltyPoints})</span>
-          </label>
+          <label className="text-xs text-gray-400 mb-1 block">Loyalty Points Used</label>
           <input
             type="number"
-            className={`w-full bg-gray-700 border ${editValues.loyaltyPointsUsed > availableLoyaltyPoints ? 'border-red-500' : 'border-gray-600'} rounded px-2 py-1 text-sm`}
+            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
             value={editValues.loyaltyPointsUsed}
             onChange={(e) => handleInputChange('loyaltyPointsUsed', parseInt(e.target.value))}
-            max={availableLoyaltyPoints}
-            min="0"
           />
-          {editValues.loyaltyPointsUsed > availableLoyaltyPoints && (
-            <p className="text-xs text-red-500 mt-1">
-              Cannot exceed available points
-            </p>
-          )}
         </div>
         
         <div>
