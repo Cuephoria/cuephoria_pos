@@ -49,9 +49,10 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill, products, updateProduct, fetchBills, updateCustomer } = usePOS();
+  const { bills, customers, deleteBill, products, updateProduct } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -132,12 +133,12 @@ const RecentTransactions: React.FC = () => {
   // Validate loyalty points input to not exceed available points
   const validateLoyaltyPoints = (value: number) => {
     if (!currentCustomer) return value;
-    const maxPoints = currentCustomer.loyaltyPoints + (selectedBill?.loyaltyPointsUsed || 0);
+    const maxPoints = currentCustomer.loyaltyPoints + selectedBill?.loyaltyPointsUsed || 0;
     return Math.min(value, maxPoints);
   };
   
-  // Get all transactions, no limit
-  const allBills = sortedBills;
+  // Get the 5 most recent transactions
+  const recentBills = sortedBills.slice(0, 5);
   
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
@@ -347,14 +348,6 @@ const RecentTransactions: React.FC = () => {
     try {
       const { subtotal, discountValue, total } = calculateUpdatedBill();
       
-      // Calculate the changes in loyalty points and total spent
-      const originalLoyaltyPointsUsed = selectedBill.loyaltyPointsUsed;
-      const pointsDifference = editedLoyaltyPointsUsed - originalLoyaltyPointsUsed;
-      const totalDifference = total - selectedBill.total;
-      
-      // Find the associated customer
-      const customer = customers.find(c => c.id === selectedBill.customerId);
-      
       // Update bill in database
       const { error: billError } = await supabase
         .from('bills')
@@ -402,29 +395,30 @@ const RecentTransactions: React.FC = () => {
         }
       }
       
-      // Update customer's loyalty points and total spent if necessary
-      if (customer && (pointsDifference !== 0 || totalDifference !== 0)) {
-        const updatedCustomer = {
-          ...customer,
-          loyaltyPoints: Math.max(0, customer.loyaltyPoints - pointsDifference),
-          totalSpent: Math.max(0, customer.totalSpent + totalDifference)
-        };
-        
-        await updateCustomer(updatedCustomer);
-      }
-      
       toast({
         title: "Changes Saved",
-        description: "Bill has been updated successfully",
+        description: "Bill items have been updated successfully",
       });
+      
+      // Update the bill in context
+      const updatedBill = {
+        ...selectedBill,
+        items: editedItems,
+        subtotal,
+        discount: editedDiscount,
+        discountType: editedDiscountType,
+        discountValue,
+        loyaltyPointsUsed: editedLoyaltyPointsUsed,
+        paymentMethod: editedPaymentMethod,
+        total
+      };
       
       // Close dialog and reset state
       setIsEditDialogOpen(false);
       setSelectedBill(null);
       
-      // Refresh bill data seamlessly - instead of reloading the page
-      await fetchBills();
-      
+      // Refresh page to see updated data
+      window.location.reload();
     } catch (error) {
       toast({
         title: "Error",
@@ -458,7 +452,7 @@ const RecentTransactions: React.FC = () => {
           {sortedBills.length > 0 ? (
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-4">
-                {allBills.map(bill => {
+                {sortedBills.map(bill => {
                   const customer = customers.find(c => c.id === bill.customerId);
                   const date = new Date(bill.createdAt);
                   

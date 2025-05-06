@@ -10,8 +10,8 @@ import SuccessMessage from './receipt/SuccessMessage';
 import { useToast } from '@/hooks/use-toast';
 
 interface ReceiptProps {
-  bill?: Bill;
-  customer?: Customer;
+  bill: Bill;
+  customer: Customer;
   onClose: () => void;
 }
 
@@ -21,10 +21,6 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
   const { toast } = useToast();
-
-  if (!bill || !customer) {
-    return null;
-  }
 
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) return;

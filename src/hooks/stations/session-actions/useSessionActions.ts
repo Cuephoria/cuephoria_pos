@@ -132,7 +132,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
   };
   
   // End an active session
-  const endSession = async (stationId: string, customersList?: Customer[]): Promise<void> => {
+  const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
       setIsLoading(true);
       console.log('Ending session for station:', stationId);
@@ -150,8 +150,10 @@ export const useSessionActions = (props: SessionActionsProps) => {
       }
       
       // Call the original hook implementation to handle session ending
-      await endSessionHook.endSession(stationId, customersList);
-      console.log("Session ended successfully");
+      const result = await endSessionHook.endSession(stationId, customersList);
+      console.log("Session ended successfully, result:", result);
+      
+      return result;
       
     } catch (error) {
       console.error('Error in endSession:', error);
@@ -166,166 +168,9 @@ export const useSessionActions = (props: SessionActionsProps) => {
     }
   };
   
-  // Add a new station
-  const addStation = async (station: Omit<Station, "id" | "isOccupied" | "createdAt">): Promise<Station | undefined> => {
-    try {
-      const { name, type, hourlyRate } = station;
-      
-      // Create a new station object
-      const newStation: Station = {
-        id: generateId(),
-        name,
-        type,
-        hourlyRate,
-        isOccupied: false,
-        currentSession: null,
-        createdAt: new Date()
-      };
-      
-      // Insert into Supabase
-      try {
-        const { data, error } = await supabase
-          .from('stations')
-          .insert({
-            name: newStation.name,
-            type: newStation.type,
-            hourly_rate: newStation.hourlyRate,
-            is_occupied: false
-          })
-          .select();
-          
-        if (error) {
-          console.error('Error inserting station into Supabase:', error);
-        } else if (data && data[0]) {
-          // Use the ID from Supabase
-          newStation.id = data[0].id;
-          console.log('Station inserted into Supabase:', data);
-        }
-      } catch (error) {
-        console.error('Supabase station insert error:', error);
-      }
-      
-      // Update local state
-      setStations(prevStations => [...prevStations, newStation]);
-      
-      toast({
-        title: 'Station Added',
-        description: `Station ${newStation.name} has been added`,
-      });
-      
-      return newStation;
-      
-    } catch (error) {
-      console.error('Error in addStation:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to add station',
-        variant: 'destructive'
-      });
-      return undefined;
-    }
-  };
-  
-  // Update an existing station
-  const updateStation = async (station: Station): Promise<Station | undefined> => {
-    try {
-      // Update in Supabase
-      try {
-        const { error } = await supabase
-          .from('stations')
-          .update({
-            name: station.name,
-            type: station.type,
-            hourly_rate: station.hourlyRate,
-            is_occupied: station.isOccupied
-          })
-          .eq('id', station.id);
-          
-        if (error) {
-          console.error('Error updating station in Supabase:', error);
-        }
-      } catch (error) {
-        console.error('Supabase station update error:', error);
-      }
-      
-      // Update local state
-      setStations(prevStations => 
-        prevStations.map(s => s.id === station.id ? station : s)
-      );
-      
-      toast({
-        title: 'Station Updated',
-        description: `Station ${station.name} has been updated`,
-      });
-      
-      return station;
-      
-    } catch (error) {
-      console.error('Error in updateStation:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update station',
-        variant: 'destructive'
-      });
-      return undefined;
-    }
-  };
-  
-  // Delete a station
-  const deleteStation = async (id: string): Promise<void> => {
-    try {
-      // Delete from Supabase
-      try {
-        const { error } = await supabase
-          .from('stations')
-          .delete()
-          .eq('id', id);
-          
-        if (error) {
-          console.error('Error deleting station from Supabase:', error);
-        }
-      } catch (error) {
-        console.error('Supabase station delete error:', error);
-      }
-      
-      // Update local state
-      setStations(prevStations => prevStations.filter(s => s.id !== id));
-      
-      toast({
-        title: 'Station Deleted',
-        description: 'The station has been deleted',
-      });
-      
-    } catch (error) {
-      console.error('Error in deleteStation:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete station',
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  // Add placeholder functions for pause and resume
-  const pauseSession = async (id: string): Promise<void> => {
-    console.log('Pause session requested for:', id);
-    // Implement later
-  };
-  
-  const resumeSession = async (id: string): Promise<void> => {
-    console.log('Resume session requested for:', id);
-    // Implement later
-  };
-  
-  // Return all the functions
   return {
     startSession,
     endSession,
-    pauseSession,
-    resumeSession,
-    addStation,
-    updateStation,
-    deleteStation,
     isLoading
   };
 };

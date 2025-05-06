@@ -217,10 +217,10 @@ const ReportsPage: React.FC = () => {
     console.log('Downloading report with date range:', date);
     switch (activeTab) {
       case 'bills':
-        exportBills(customers);
+        exportBills();
         break;
       case 'customers':
-        exportCustomers(customers);
+        exportCustomers();
         break;
       default:
         // For other tabs, implement specific export functionality
