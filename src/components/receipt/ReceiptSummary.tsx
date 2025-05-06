@@ -1,18 +1,20 @@
 
 import React, { useState } from 'react';
-import { Bill } from '@/types/pos.types';
+import { Bill, Customer } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Button } from '@/components/ui/button';
 import { Pencil, Save, X } from 'lucide-react';
 
 interface ReceiptSummaryProps {
   bill: Bill;
+  customer?: Customer;
   onUpdateBill?: (updatedBill: Partial<Bill>) => void;
   editable?: boolean;
 }
 
 const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({ 
   bill, 
+  customer,
   onUpdateBill,
   editable = false 
 }) => {
@@ -50,6 +52,11 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     // Calculate new total
     const total = Math.max(0, editValues.subtotal - discountValue - editValues.loyaltyPointsUsed);
 
+    // Calculate loyalty points earned using the membership status
+    // Members: 5 points per 100 INR spent, Non-members: 2 points per 100 INR spent
+    const pointsRate = customer?.isMember ? 5 : 2;
+    const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+
     if (onUpdateBill) {
       onUpdateBill({
         subtotal: editValues.subtotal,
@@ -57,6 +64,7 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         discountType: editValues.discountType,
         discountValue,
         loyaltyPointsUsed: editValues.loyaltyPointsUsed,
+        loyaltyPointsEarned,
         total,
         paymentMethod: editValues.paymentMethod
       });
@@ -120,10 +128,19 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
               </span>
             </div>
           )}
+          
+          {customer && (
+            <div className="mt-1">
+              <span className="text-xs">Available Points: {customer.loyaltyPoints}</span>
+            </div>
+          )}
         </div>
       </div>
     );
   }
+
+  // Maximum points that can be used (either all available points or the subtotal)
+  const maxLoyaltyPointsUsed = customer ? Math.min(customer.loyaltyPoints, Math.floor(editValues.subtotal)) : bill.loyaltyPointsUsed;
 
   // Editable view
   return (
@@ -180,11 +197,17 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         </div>
         
         <div>
-          <label className="text-xs text-gray-400 mb-1 block">Loyalty Points Used</label>
+          <label className="text-xs text-gray-400 mb-1 flex justify-between">
+            <span>Loyalty Points Used</span>
+            {customer && (
+              <span className="text-gray-400">Available: {customer.loyaltyPoints}</span>
+            )}
+          </label>
           <input
             type="number"
             className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
             value={editValues.loyaltyPointsUsed}
+            max={maxLoyaltyPointsUsed}
             onChange={(e) => handleInputChange('loyaltyPointsUsed', parseInt(e.target.value))}
           />
         </div>

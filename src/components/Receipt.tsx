@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Bill, Customer } from '@/context/POSContext';
 import { generatePDF, handlePrint } from './receipt/receiptUtils';
@@ -30,6 +31,10 @@ const Receipt: React.FC<ReceiptProps> = ({ bill: initialBill, customer: initialC
   useEffect(() => {
     const updatedCustomer = customers.find(c => c.id === customer.id);
     if (updatedCustomer) {
+      console.log('Receipt: Customer updated from context:', {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: updatedCustomer.totalSpent
+      });
       setCustomer(updatedCustomer);
     }
   }, [customers, customer.id]);

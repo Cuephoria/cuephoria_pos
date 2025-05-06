@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,14 +32,23 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   useEffect(() => {
     const updatedCustomer = customers.find(c => c.id === customer.id);
     if (updatedCustomer) {
+      console.log('CustomerCard: Customer data updated for', updatedCustomer.name, {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: updatedCustomer.totalSpent,
+        oldLoyaltyPoints: customer.loyaltyPoints,
+        newLoyaltyPoints: updatedCustomer.loyaltyPoints
+      });
       setCustomer(updatedCustomer);
     }
   }, [customers, customer.id]);
   
   // Also update when the initial customer prop changes
   useEffect(() => {
-    setCustomer(initialCustomer);
-  }, [initialCustomer]);
+    if (initialCustomer && initialCustomer.id !== customer.id) {
+      console.log('CustomerCard: Initial customer prop changed to', initialCustomer.name);
+      setCustomer(initialCustomer);
+    }
+  }, [initialCustomer, customer.id]);
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
