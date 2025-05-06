@@ -119,7 +119,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
             <span className="flex items-center">
               <CreditCard className="h-4 w-4 mr-1" /> Total Spent:
             </span>
-            {/* Use the calculated value instead of the customer.totalSpent property */}
+            {/* Use the calculated value for accurate total spent */}
             <CurrencyDisplay amount={totalSpent} />
           </div>
           <div className="flex justify-between text-sm">
