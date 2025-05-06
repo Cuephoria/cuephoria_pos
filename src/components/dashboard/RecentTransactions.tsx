@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -80,65 +81,33 @@ const RecentTransactions: React.FC = () => {
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
   
-  // Filtered products based on search query
-  const filteredProducts = products.filter(product => {
-    if (!productSearchQuery.trim()) return true;
-    
-    const query = productSearchQuery.toLowerCase().trim();
-    return (
-      product.name.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query)
-    );
-  }).filter(product => product.stock > 0);
+  // State for controlling dropdown visibility
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  // Filter bills based on search query (bill ID, customer name, phone or email)
-  const filteredBills = bills.filter(bill => {
-    if (!searchQuery.trim()) return true;
-    
-    const query = searchQuery.toLowerCase().trim();
-    
-    // Match by bill ID
-    if (bill.id.toLowerCase().includes(query)) return true;
-    
-    // Match by customer name, phone or email
-    const customer = customers.find(c => c.id === bill.customerId);
-    if (customer) {
-      const customerName = customer.name.toLowerCase();
-      const customerPhone = customer.phone.toLowerCase();
-      const customerEmail = customer.email?.toLowerCase() || '';
-      
-      return customerName.includes(query) || 
-             customerPhone.includes(query) || 
-             customerEmail.includes(query);
-    }
-    
-    return false;
-  });
-  
-  // Sort bills by date (newest first)
-  const sortedBills = [...filteredBills].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  
-  // Get the 5 most recent transactions
-  const recentBills = sortedBills.slice(0, 5);
+  // State to hold selected product name for display
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
   
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
     setSelectedProductId('');
+    setSelectedProductName('');
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
+    setIsDropdownOpen(false);
     setIsAddItemDialogOpen(true);
   };
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
+    setIsDropdownOpen(false);
     
-    // Auto-fill product information
+    // Auto-fill product information and set the selected product name
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
+      setSelectedProductName(selectedProduct.name);
+      setProductSearchQuery(selectedProduct.name); // Set the search query to the selected product name
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -377,6 +346,49 @@ const RecentTransactions: React.FC = () => {
       setIsSaving(false);
     }
   };
+  
+  // Filtered products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!productSearchQuery.trim()) return true;
+    
+    const query = productSearchQuery.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  }).filter(product => product.stock > 0);
+  
+  // Filter bills based on search query (bill ID, customer name, phone or email)
+  const filteredBills = bills.filter(bill => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Match by bill ID
+    if (bill.id.toLowerCase().includes(query)) return true;
+    
+    // Match by customer name, phone or email
+    const customer = customers.find(c => c.id === bill.customerId);
+    if (customer) {
+      const customerName = customer.name.toLowerCase();
+      const customerPhone = customer.phone.toLowerCase();
+      const customerEmail = customer.email?.toLowerCase() || '';
+      
+      return customerName.includes(query) || 
+             customerPhone.includes(query) || 
+             customerEmail.includes(query);
+    }
+    
+    return false;
+  });
+  
+  // Sort bills by date (newest first)
+  const sortedBills = [...filteredBills].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  
+  // Get the 5 most recent transactions
+  const recentBills = sortedBills.slice(0, 5);
   
   return (
     <>
@@ -649,57 +661,25 @@ const RecentTransactions: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex justify-between pt-4 border-t border-gray-700 mt-4">
-                <div>
-                  <p className="text-gray-400 text-sm">
-                    Subtotal: <span className="text-white">
-                      <CurrencyDisplay amount={calculateUpdatedBill().subtotal} />
-                    </span>
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    Discount ({editedDiscountType === 'percentage' ? `${editedDiscount}%` : 'fixed'}): 
-                    <span className="text-white ml-1">
-                      <CurrencyDisplay amount={calculateUpdatedBill().discountValue} />
-                    </span>
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    Points Used: <span className="text-white">{editedLoyaltyPointsUsed}</span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold">
-                    Total: <CurrencyDisplay amount={calculateUpdatedBill().total} />
-                  </p>
-                </div>
-              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                  className="bg-gray-700 text-white hover:bg-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
             </div>
           )}
-          
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
-              Cancel
-            </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       
@@ -707,102 +687,85 @@ const RecentTransactions: React.FC = () => {
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
-            <DialogTitle>Add New Item</DialogTitle>
+            <DialogTitle>Add Item to Bill</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Add a product from your inventory to this transaction.
+              Select a product to add to this transaction.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
+              <Label htmlFor="product-search" className="text-white">Product</Label>
               <div className="relative">
-                <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
+                <Command className="rounded-lg border border-gray-700 overflow-visible bg-gray-900">
                   <CommandInput 
                     placeholder="Search products..." 
+                    className="border-0 focus:ring-0 text-white bg-transparent h-10"
                     value={productSearchQuery}
                     onValueChange={setProductSearchQuery}
-                    className="text-white"
+                    onFocus={() => setIsDropdownOpen(true)}
                   />
-                  <CommandList className="text-white">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                      No products match your search
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-72 w-full" type="always">
-                        {filteredProducts.map(product => (
-                          <CommandItem 
-                            key={product.id} 
-                            value={product.id}
+                  {isDropdownOpen && filteredProducts.length > 0 && (
+                    <CommandList className="bg-gray-900 border border-gray-700 rounded-b-md absolute w-full z-20 max-h-60">
+                      <CommandEmpty className="text-gray-400 p-2">No products found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredProducts.map((product) => (
+                          <CommandItem
+                            key={product.id}
+                            value={product.name}
                             onSelect={() => handleProductSelect(product.id)}
-                            className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
+                            className="text-white hover:bg-gray-800 cursor-pointer"
                           >
                             <div className="flex flex-col">
                               <span>{product.name}</span>
                               <span className="text-xs text-gray-400">
-                                Price: <CurrencyDisplay amount={product.price} /> | 
-                                Category: {product.category} | 
-                                Stock: {product.stock}
+                                Price: ₹{product.price} | Stock: {product.stock} | Category: {product.category}
                               </span>
                             </div>
                           </CommandItem>
                         ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
+                      </CommandGroup>
+                    </CommandList>
+                  )}
                 </Command>
               </div>
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="item-quantity" className="text-sm font-medium">Quantity</label>
-              <Input 
-                id="item-quantity"
-                type="number" 
-                value={newItemQuantity} 
-                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                className="bg-gray-700 border-gray-600 text-white"
-                min="1"
-                max={availableStock}
-              />
-              {selectedProductId && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Available stock: {availableStock}
-                </p>
-              )}
-            </div>
-            
-            {selectedProductId && (
-              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
-                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
-                {(() => {
-                  const product = products.find(p => p.id === selectedProductId);
-                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
-                  
-                  return (
-                    <div className="space-y-1 text-xs">
-                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
-                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
-                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
-                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
-                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
-                    </div>
-                  );
-                })()}
+              <Label htmlFor="quantity" className="text-white">Quantity</Label>
+              <div className="flex items-center space-x-4">
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  max={availableStock}
+                  value={newItemQuantity}
+                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value))}
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
+                {selectedProductId && (
+                  <div className="text-sm text-gray-400">
+                    Available: {availableStock}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
           
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddItemDialogOpen(false)}
+              className="bg-gray-700 text-white hover:bg-gray-600"
+            >
               Cancel
             </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
+            <Button
+              variant="default"
               onClick={handleAddNewItem}
-              disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
+              disabled={!selectedProductId || newItemQuantity <= 0}
+              className="bg-purple-600 hover:bg-purple-700"
             >
-              <Plus className="mr-2 h-4 w-4" />
               Add Item
             </Button>
           </DialogFooter>
