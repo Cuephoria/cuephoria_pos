@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -277,7 +278,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         difference: totalDifference
       });
       
-      // Update local state
+      // Update local state first for immediate UI update
       setCustomer(updatedCustomer);
       
       // Update customer in database
@@ -296,12 +297,40 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       
       console.log('Successfully updated customer in database');
       
-      // Update customer in global context AND force a refresh of any component using this customer
-      await updateCustomer(updatedCustomer);
-      
-      // Force a refresh of the selected customer to update all components
-      await selectCustomer(null);  // Clear selection first
-      await selectCustomer(customer.id);  // Then reselect to force refresh
+      // Get the updated customer from the database to ensure we have the most recent data
+      const { data: refreshedCustomerData, error: refreshError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customer.id)
+        .single();
+        
+      if (!refreshError && refreshedCustomerData) {
+        const refreshedCustomer: Customer = {
+          id: refreshedCustomerData.id,
+          name: refreshedCustomerData.name,
+          phone: refreshedCustomerData.phone,
+          email: refreshedCustomerData.email || undefined,
+          isMember: refreshedCustomerData.is_member,
+          membershipExpiryDate: refreshedCustomerData.membership_expiry_date ? new Date(refreshedCustomerData.membership_expiry_date) : undefined,
+          membershipStartDate: refreshedCustomerData.membership_start_date ? new Date(refreshedCustomerData.membership_start_date) : undefined,
+          membershipPlan: refreshedCustomerData.membership_plan || undefined,
+          membershipHoursLeft: refreshedCustomerData.membership_hours_left || undefined,
+          membershipDuration: refreshedCustomerData.membership_duration as 'weekly' | 'monthly' | undefined,
+          loyaltyPoints: refreshedCustomerData.loyalty_points,
+          totalSpent: refreshedCustomerData.total_spent,
+          totalPlayTime: refreshedCustomerData.total_play_time,
+          createdAt: new Date(refreshedCustomerData.created_at)
+        };
+        
+        // Update the context with the refreshed customer data
+        await updateCustomer(refreshedCustomer);
+        
+        // Temporarily clear selection and reselect to force UI refresh without page reload
+        selectCustomer(null);
+        setTimeout(() => {
+          selectCustomer(customer.id);
+        }, 50);
+      }
       
       toast({
         title: 'Changes Saved',

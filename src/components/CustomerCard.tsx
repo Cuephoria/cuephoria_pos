@@ -38,6 +38,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
         oldLoyaltyPoints: customer.loyaltyPoints,
         newLoyaltyPoints: updatedCustomer.loyaltyPoints
       });
+      
+      // Always update with the latest data to ensure real-time updates
       setCustomer(updatedCustomer);
     }
   }, [customers, customer.id]);
@@ -48,7 +50,21 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
       console.log('CustomerCard: Initial customer prop changed to', initialCustomer.name);
       setCustomer(initialCustomer);
     }
-  }, [initialCustomer, customer.id]);
+    
+    // Also check for data changes even if ID is the same
+    else if (initialCustomer && (
+      initialCustomer.totalSpent !== customer.totalSpent || 
+      initialCustomer.loyaltyPoints !== customer.loyaltyPoints
+    )) {
+      console.log('CustomerCard: Initial customer data updated', {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: initialCustomer.totalSpent,
+        oldLoyaltyPoints: customer.loyaltyPoints,
+        newLoyaltyPoints: initialCustomer.loyaltyPoints
+      });
+      setCustomer(initialCustomer);
+    }
+  }, [initialCustomer, customer.id, customer.totalSpent, customer.loyaltyPoints]);
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
