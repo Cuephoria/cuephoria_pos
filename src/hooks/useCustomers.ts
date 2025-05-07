@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -306,11 +305,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         }
       }
       
-      console.log('useCustomers: Updating customer in database:', customer.name, {
-        totalSpent: customer.totalSpent,
-        loyaltyPoints: customer.loyaltyPoints
-      });
-      
       const { error } = await supabase
         .from('customers')
         .update({
@@ -339,53 +333,10 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         return null;
       }
       
-      // First, get fresh customer data after database update
-      const { data: refreshedData, error: refreshError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customer.id)
-        .single();
-        
-      if (refreshError) {
-        console.error('Error refreshing customer data:', refreshError);
-      }
+      setCustomers(customers.map(c => c.id === customer.id ? customer : c));
       
-      // Create updated customer with data from DB
-      let updatedCustomer = customer;
-      if (refreshedData) {
-        updatedCustomer = {
-          id: refreshedData.id,
-          name: refreshedData.name,
-          phone: refreshedData.phone,
-          email: refreshedData.email || undefined,
-          isMember: refreshedData.is_member,
-          membershipExpiryDate: refreshedData.membership_expiry_date ? new Date(refreshedData.membership_expiry_date) : undefined,
-          membershipStartDate: refreshedData.membership_start_date ? new Date(refreshedData.membership_start_date) : undefined,
-          membershipPlan: refreshedData.membership_plan || undefined,
-          membershipHoursLeft: refreshedData.membership_hours_left || undefined,
-          membershipDuration: refreshedData.membership_duration as 'weekly' | 'monthly' | undefined,
-          loyaltyPoints: refreshedData.loyalty_points,
-          totalSpent: refreshedData.total_spent,
-          totalPlayTime: refreshedData.total_play_time,
-          createdAt: new Date(refreshedData.created_at)
-        };
-        
-        console.log('useCustomers: Refreshed customer data from DB:', {
-          name: updatedCustomer.name,
-          totalSpent: updatedCustomer.totalSpent,
-          loyaltyPoints: updatedCustomer.loyaltyPoints
-        });
-      }
-      
-      // Update customers array
-      setCustomers(prevCustomers => 
-        prevCustomers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c)
-      );
-      
-      // Update selected customer if this was the selected one
-      if (selectedCustomer && selectedCustomer.id === updatedCustomer.id) {
-        console.log('useCustomers: Updating selected customer with refreshed data');
-        setSelectedCustomer(updatedCustomer);
+      if (selectedCustomer && selectedCustomer.id === customer.id) {
+        setSelectedCustomer(customer);
       }
       
       toast({
@@ -393,7 +344,7 @@ export const useCustomers = (initialCustomers: Customer[]) => {
         description: 'Customer updated successfully',
       });
       
-      return updatedCustomer;
+      return customer;
     } catch (error) {
       console.error('Error in updateCustomer:', error);
       toast({
@@ -466,7 +417,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
   };
   
   const selectCustomer = (id: string | null) => {
-    console.log('useCustomers: Selecting customer with ID:', id);
     if (!id) {
       setSelectedCustomer(null);
       return;
@@ -475,12 +425,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
     const customer = customers.find(c => c.id === id);
     
     if (customer) {
-      console.log('useCustomers: Found customer to select:', {
-        name: customer.name,
-        totalSpent: customer.totalSpent,
-        loyaltyPoints: customer.loyaltyPoints
-      });
-      
       if (customer.isMember && customer.membershipExpiryDate) {
         const expiryDate = new Date(customer.membershipExpiryDate);
         
@@ -512,7 +456,6 @@ export const useCustomers = (initialCustomers: Customer[]) => {
       
       setSelectedCustomer(customer);
     } else {
-      console.log('useCustomers: Customer not found with ID:', id);
       setSelectedCustomer(null);
     }
   };

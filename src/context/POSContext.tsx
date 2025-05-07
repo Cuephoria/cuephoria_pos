@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   POSContextType, 
@@ -34,6 +35,7 @@ const POSContext = createContext<POSContextType>({
   categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
   setIsStudentDiscount: () => {},
   setStations: () => {},
+  setBills: () => {}, // Add this line to default context
   addProduct: () => ({}),
   updateProduct: () => ({}),
   deleteProduct: () => {},
@@ -694,6 +696,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         categories,
         setIsStudentDiscount,
         setStations,
+        setBills, // Add this line to provider value
         addProduct,
         updateProduct,
         deleteProduct,

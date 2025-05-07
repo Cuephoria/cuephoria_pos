@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Bill, CartItem, Product } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -23,7 +22,6 @@ import {
   DialogTitle,
   DialogDescription
 } from "@/components/ui/dialog";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ReceiptItemsProps {
@@ -38,13 +36,17 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const [items, setItems] = useState<CartItem[]>(bill.items);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [showAddProductDialog, setShowAddProductDialog] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [selectedProductName, setSelectedProductName] = useState<string>('');
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
   const [availableStock, setAvailableStock] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
+  
+  // Update local items state when bill items change
+  useEffect(() => {
+    setItems(bill.items);
+  }, [bill.items]);
   
   // Filter products based on search query
   const filteredProducts = products
@@ -63,6 +65,26 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   const handleSaveItem = () => {
     if (editingItemIndex !== null && editingItem) {
       const updatedItems = [...items];
+      const originalItem = updatedItems[editingItemIndex];
+      
+      // Check if quantity has changed
+      if (originalItem.quantity !== editingItem.quantity) {
+        // Find the product to update its stock
+        const product = products.find(p => p.id === editingItem.id);
+        if (product && editingItem.type === 'product') {
+          // Calculate the quantity difference
+          const quantityDiff = originalItem.quantity - editingItem.quantity;
+          
+          // Update product stock based on the difference
+          if (quantityDiff !== 0) {
+            updateProduct({
+              ...product,
+              stock: product.stock + quantityDiff
+            });
+          }
+        }
+      }
+      
       // Recalculate total
       const updatedItem = {
         ...editingItem,
@@ -93,9 +115,14 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       const product = products.find(p => p.id === removedItem.id);
       if (product) {
         // Update the product stock (increase it back)
+        console.log(`Restoring stock for ${product.name}: current ${product.stock} + ${removedItem.quantity}`);
         updateProduct({
           ...product,
           stock: product.stock + removedItem.quantity
+        });
+        toast({
+          title: "Stock Updated",
+          description: `Added ${removedItem.quantity} units back to ${product.name} stock`,
         });
       }
     }
@@ -110,13 +137,11 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
-    setIsCommandOpen(false);
     
     // Auto-fill product information
     const selectedProduct = products.find(p => p.id === productId);
     if (selectedProduct) {
       setAvailableStock(selectedProduct.stock || 0);
-      setSelectedProductName(selectedProduct.name);
       // Reset quantity to 1 when a new product is selected
       setNewItemQuantity(1);
     }
@@ -182,25 +207,13 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
     
     // Reset form
     setSelectedProductId('');
-    setSelectedProductName('');
     setNewItemQuantity(1);
     setSearchQuery('');
-    setIsCommandOpen(false);
     setShowAddProductDialog(false);
     
     if (onUpdateItems) {
       onUpdateItems(updatedItems);
     }
-  };
-
-  // Reset fields when dialog opens
-  const handleOpenAddDialog = () => {
-    setSelectedProductId('');
-    setSelectedProductName('');
-    setNewItemQuantity(1);
-    setSearchQuery('');
-    setIsCommandOpen(false);
-    setShowAddProductDialog(true);
   };
 
   if (!editable) {
@@ -231,7 +244,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
             variant="ghost" 
             size="sm" 
             className="h-7 px-2 text-xs" 
-            onClick={handleOpenAddDialog}
+            onClick={() => setShowAddProductDialog(true)}
           >
             <Plus className="h-3 w-3 mr-1" /> Add Item
           </Button>
@@ -331,15 +344,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       </Table>
 
       {/* Add Product Dialog */}
-      <Dialog 
-        open={showAddProductDialog} 
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsCommandOpen(false);
-          }
-          setShowAddProductDialog(open);
-        }}
-      >
+      <Dialog open={showAddProductDialog} onOpenChange={setShowAddProductDialog}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
@@ -352,53 +357,48 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
               <div className="relative">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-between bg-gray-700 border-gray-600 text-white"
-                  onClick={() => setIsCommandOpen(!isCommandOpen)}
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white pl-10 w-full"
+                />
+              </div>
+              <div className="relative mt-1">
+                <Select 
+                  value={selectedProductId} 
+                  onValueChange={handleProductSelect}
                 >
-                  {selectedProductName || "Choose a product"}
-                  <span className="ml-auto opacity-70">
-                    <Search className="h-4 w-4" />
-                  </span>
-                </Button>
-                
-                {isCommandOpen && (
-                  <div className="absolute mt-1 w-full z-50 rounded-md border border-gray-700 bg-gray-800 shadow-lg">
-                    <Command className="rounded-lg overflow-hidden">
-                      <CommandInput 
-                        placeholder="Search products..." 
-                        value={searchQuery}
-                        onValueChange={setSearchQuery}
-                        className="text-white"
-                      />
-                      <CommandList className="max-h-[300px] overflow-y-auto py-2">
-                        <CommandEmpty className="py-6 text-center text-sm text-gray-400">
+                  <SelectTrigger id="product-select" className="bg-gray-700 border-gray-600 text-white">
+                    <SelectValue placeholder="Choose a product" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700 text-white">
+                    <ScrollArea className="h-72 w-full">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(product => (
+                          <SelectItem key={product.id} value={product.id} className="py-2">
+                            <div className="flex flex-col">
+                              <span>{product.name}</span>
+                              <span className="text-xs text-gray-400">
+                                Price: <CurrencyDisplay amount={product.price} /> | 
+                                Category: {product.category} | 
+                                Stock: {product.stock}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="py-2 px-2 text-center text-sm text-gray-400">
                           No products match your search
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {filteredProducts.map(product => (
-                            <CommandItem 
-                              key={product.id} 
-                              value={product.id}
-                              onSelect={() => handleProductSelect(product.id)}
-                              className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                            >
-                              <div className="flex flex-col">
-                                <span>{product.name}</span>
-                                <span className="text-xs text-gray-400">
-                                  Price: <CurrencyDisplay amount={product.price} /> | 
-                                  Category: {product.category} | 
-                                  Stock: {product.stock}
-                                </span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </div>
-                )}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
@@ -442,14 +442,7 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsCommandOpen(false);
-                setShowAddProductDialog(false);
-              }} 
-              className="bg-gray-700 text-white hover:bg-gray-600"
-            >
+            <Button variant="outline" onClick={() => setShowAddProductDialog(false)} className="bg-gray-700 text-white hover:bg-gray-600">
               Cancel
             </Button>
             <Button 
