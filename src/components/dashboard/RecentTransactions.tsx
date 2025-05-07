@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -827,4 +828,140 @@ const RecentTransactions: React.FC = () => {
                 <>
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Item Dialog */}
+      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle>Add Item to Transaction</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Select a product and quantity to add to this transaction.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Product Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="product-search">Product</Label>
+              <div className="relative">
+                <Command className="rounded-lg border border-gray-700 overflow-hidden">
+                  <CommandInput 
+                    placeholder="Search products..." 
+                    value={productSearchQuery}
+                    onValueChange={setProductSearchQuery}
+                    className="bg-gray-800 text-white"
+                  />
+                  <CommandList className="max-h-[200px] overflow-auto bg-gray-800">
+                    <CommandEmpty className="py-2 px-4 text-gray-400">No products found</CommandEmpty>
+                    <CommandGroup>
+                      {filteredProducts.map(product => (
+                        <CommandItem
+                          key={product.id}
+                          className="flex items-center justify-between cursor-pointer hover:bg-gray-700 text-white"
+                          onSelect={() => handleProductSelect(product.id)}
+                        >
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-xs text-gray-400">{product.category}</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <p className="font-medium text-cuephoria-orange">
+                              <CurrencyDisplay amount={product.price} />
+                            </p>
+                            <span className="text-xs bg-gray-700 rounded px-2 py-1">
+                              Stock: {product.stock}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </div>
+              
+              {selectedProductName && (
+                <div className="px-3 py-2 bg-gray-700/50 rounded flex items-center justify-between">
+                  <span className="text-white font-medium">{selectedProductName}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200"
+                    onClick={() => {
+                      setSelectedProductId('');
+                      setSelectedProductName('');
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* Quantity Input */}
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantity</Label>
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8 bg-gray-700 border-gray-600 text-white"
+                  onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                  disabled={newItemQuantity <= 1}
+                >
+                  -
+                </Button>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min="1" 
+                  max={availableStock}
+                  value={newItemQuantity} 
+                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  className="bg-gray-700 border-gray-600 text-white text-center"
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8 bg-gray-700 border-gray-600 text-white"
+                  onClick={() => setNewItemQuantity(Math.min(availableStock, newItemQuantity + 1))}
+                  disabled={newItemQuantity >= availableStock || availableStock === 0}
+                >
+                  +
+                </Button>
+              </div>
+              {selectedProductId && (
+                <p className="text-xs text-gray-400">
+                  Available stock: {availableStock}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
+              Cancel
+            </Button>
+            <Button 
+              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
+              onClick={handleAddNewItem}
+              disabled={!selectedProductId || newItemQuantity < 1}
+            >
+              Add Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+export default RecentTransactions;
