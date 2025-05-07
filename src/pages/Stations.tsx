@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StationCard from '@/components/StationCard';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,17 +8,8 @@ import { Button } from '@/components/ui/button';
 import AddStationDialog from '@/components/AddStationDialog';
 
 const Stations = () => {
-  const { stations, customers } = usePOS();
+  const { stations } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
-  
-  // Debug customers data with more details
-  useEffect(() => {
-    console.log('Stations page customers:', { 
-      count: customers?.length, 
-      firstFew: customers?.slice(0, 3).map(c => ({ id: c.id, name: c.name })),
-      customersValid: Array.isArray(customers)
-    });
-  }, [customers]);
   
   // Separate stations by type
   const ps5Stations = stations.filter(station => station.type === 'ps5');

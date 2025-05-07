@@ -62,7 +62,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
         }
       }));
     }
-  }, [sessions, stations.length, setStations]);
+  }, [sessions, stations.length]);
   
   const {
     startSession,
@@ -75,11 +75,6 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     setSessions,
     updateCustomer
   });
-
-  // Add extra logging to track when stations are returned to POSContext
-  useEffect(() => {
-    console.log('useStations hook is providing', stations.length, 'stations');
-  }, [stations.length]);
 
   return {
     stations,

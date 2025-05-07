@@ -1,5 +1,5 @@
 
-import React, { ReactNode, RefObject, useState } from 'react';
+import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
 import CustomerInfo from './CustomerInfo';
@@ -38,8 +38,28 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [editHistory, setEditHistory] = useState<BillEditInfo[]>([]);
   const [editorName, setEditorName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { updateCustomer, customers, setBills, bills } = usePOS();
+  const { updateCustomer, selectCustomer, customers } = usePOS();
   const { toast } = useToast();
+  
+  // Update local bill and customer state if props change
+  useEffect(() => {
+    setBill(initialBill);
+    setCustomer(initialCustomer);
+  }, [initialBill, initialCustomer]);
+  
+  // Keep customer data in sync with context
+  useEffect(() => {
+    const updatedCustomer = customers.find(c => c.id === customer.id);
+    if (updatedCustomer) {
+      console.log(`ReceiptContent: Customer ${customer.id} updated from context:`, {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: updatedCustomer.totalSpent,
+        oldLoyaltyPoints: customer.loyaltyPoints,
+        newLoyaltyPoints: updatedCustomer.loyaltyPoints
+      });
+      setCustomer(updatedCustomer);
+    }
+  }, [customers, customer.id]);
   
   // Check if bill is valid
   if (!bill || !bill.id) {
@@ -54,10 +74,6 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   }
 
   const handleItemsUpdate = (updatedItems: CartItem[]) => {
-    // Store old total before recalculating to track loyalty point differences
-    const oldTotal = bill.total;
-    const oldItems = [...bill.items];
-    
     // Recalculate subtotal based on updated items
     const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
     
@@ -71,34 +87,13 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     
     // Calculate new total
     const total = Math.max(0, subtotal - discountValue - bill.loyaltyPointsUsed);
-
-    // Calculate loyalty points difference based on the new total
-    // Using the same logic from completeSale: Members 5 points per 100, Non-members 2 points per 100
-    const pointsRate = customer.isMember ? 5 : 2;
-    const newLoyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
-    const loyaltyPointsDelta = newLoyaltyPointsEarned - bill.loyaltyPointsEarned;
-    
-    // Log for debugging
-    console.log('Old total:', oldTotal, 'New total:', total);
-    console.log('Old loyalty points earned:', bill.loyaltyPointsEarned, 'New loyalty points earned:', newLoyaltyPointsEarned);
-    console.log('Loyalty points delta:', loyaltyPointsDelta);
-    console.log('Discount value:', discountValue, 'Loyalty points used:', bill.loyaltyPointsUsed);
-    
-    // Calculate removed items to update stock if needed
-    const removedItems = oldItems.filter(oldItem => 
-      !updatedItems.some(newItem => newItem.id === oldItem.id && newItem.type === oldItem.type)
-    );
-    
-    // Log removed items
-    console.log('Removed items:', removedItems);
     
     setBill({
       ...bill,
       items: updatedItems,
       subtotal,
       discountValue,
-      total,
-      loyaltyPointsEarned: newLoyaltyPointsEarned
+      total
     });
   };
 
@@ -138,14 +133,39 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
     setIsSaving(true);
     
     try {
-      // Calculate what changed for loyalty points and total spent
-      const loyaltyPointsDelta = bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned;
+      // First, get the latest customer data from database to ensure we have the most accurate values
+      const { data: latestCustomerData, error: customerFetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customer.id)
+        .single();
+        
+      if (customerFetchError) {
+        console.error('Error fetching latest customer data:', customerFetchError);
+        throw new Error(`Failed to fetch latest customer data: ${customerFetchError.message}`);
+      }
       
-      // Calculate the exact difference in total spent, not just the new bill total
-      const totalSpentDelta = bill.total - initialBill.total;
+      // Map the database customer to our Customer type
+      const latestCustomer: Customer = {
+        id: latestCustomerData.id,
+        name: latestCustomerData.name,
+        phone: latestCustomerData.phone,
+        email: latestCustomerData.email || undefined,
+        isMember: latestCustomerData.is_member,
+        membershipExpiryDate: latestCustomerData.membership_expiry_date ? new Date(latestCustomerData.membership_expiry_date) : undefined,
+        membershipStartDate: latestCustomerData.membership_start_date ? new Date(latestCustomerData.membership_start_date) : undefined,
+        membershipPlan: latestCustomerData.membership_plan || undefined,
+        membershipHoursLeft: latestCustomerData.membership_hours_left || undefined,
+        membershipDuration: latestCustomerData.membership_duration as 'weekly' | 'monthly' | undefined,
+        loyaltyPoints: latestCustomerData.loyalty_points,
+        totalSpent: latestCustomerData.total_spent,
+        totalPlayTime: latestCustomerData.total_play_time,
+        createdAt: new Date(latestCustomerData.created_at)
+      };
       
-      console.log('Loyalty points delta:', loyaltyPointsDelta);
-      console.log('Total spent delta:', totalSpentDelta);
+      // Calculate the difference in total amount from the original bill
+      const totalDifference = bill.total - initialBill.total;
+      console.log('Bill total difference:', totalDifference);
       console.log('Initial bill total:', initialBill.total);
       console.log('Updated bill total:', bill.total);
       
@@ -206,12 +226,12 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           p_changes: string;
         }
         
-        // Fix: Use correct method signature for rpc call
+        // Call RPC function to save edit audit
         const { error: auditError } = await supabase
           .rpc('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
-            p_changes: 'Bill edited: ' + new Date().toISOString()
+            p_changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
           });
           
         if (auditError) {
@@ -223,7 +243,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
             .insert({
               bill_id: bill.id,
               editor_name: editorName,
-              changes: 'Bill edited: ' + new Date().toISOString()
+              changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
             });
             
           if (fallbackError) {
@@ -234,56 +254,34 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         console.error('Error saving edit audit:', auditError);
       }
       
-      // Update customer loyalty points and total spent
-      // Get the latest customer data to ensure we have the most up-to-date values
-      const { data: latestCustomerData, error: customerFetchError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customer.id)
-        .single();
-        
-      if (customerFetchError) {
-        console.error('Error fetching latest customer data:', customerFetchError);
-      }
+      // Calculate loyalty points delta
+      const loyaltyPointsDelta = 
+        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned - 
+        (bill.loyaltyPointsUsed - initialBill.loyaltyPointsUsed);
+
+      console.log('Loyalty points delta:', loyaltyPointsDelta);
+      console.log('Latest customer data from DB:', {
+        points: latestCustomer.loyaltyPoints,
+        spent: latestCustomer.totalSpent
+      });
       
-      const latestCustomer = latestCustomerData ? {
-        ...customer,
-        loyaltyPoints: latestCustomerData.loyalty_points,
-        totalSpent: latestCustomerData.total_spent
-      } : customer;
-      
+      // Create updated customer with new values based on the latest data
       const updatedCustomer = {
         ...latestCustomer,
         loyaltyPoints: latestCustomer.loyaltyPoints + loyaltyPointsDelta,
-        totalSpent: latestCustomer.totalSpent + totalSpentDelta
+        totalSpent: latestCustomer.totalSpent + totalDifference
       };
+
+      console.log('Updating customer in database with:', {
+        points: updatedCustomer.loyaltyPoints,
+        spent: updatedCustomer.totalSpent,
+        difference: totalDifference
+      });
       
-      console.log('Updating customer:', customer.name);
-      console.log('Current loyalty points:', latestCustomer.loyaltyPoints);
-      console.log('Adding loyalty points delta:', loyaltyPointsDelta);
-      console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
-      console.log('Current total spent:', latestCustomer.totalSpent);
-      console.log('Adding total spent delta:', totalSpentDelta);
-      console.log('New total spent:', updatedCustomer.totalSpent);
-      
+      // Update local state first for immediate UI update
       setCustomer(updatedCustomer);
       
-      // Update customer in the POSContext customers list
-      // This ensures the CustomerCard component gets the updated data
-      const updatedCustomers = customers.map(c => 
-        c.id === customer.id ? updatedCustomer : c
-      );
-      
-      // Call updateCustomer to update both local state and database
-      const result = updateCustomer(updatedCustomer);
-      console.log('Update customer result:', result);
-      
-      // Update the bills in the POSContext to reflect changes
-      const updatedBills = bills.map(b => 
-        b.id === bill.id ? bill : b
-      );
-      setBills(updatedBills);
-      
+      // Update customer in database
       const { error: customerError } = await supabase
         .from('customers')
         .update({
@@ -294,6 +292,44 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         
       if (customerError) {
         console.error('Error updating customer:', customerError);
+        throw new Error(`Failed to update customer: ${customerError.message}`);
+      } 
+      
+      console.log('Successfully updated customer in database');
+      
+      // Get the updated customer from the database to ensure we have the most recent data
+      const { data: refreshedCustomerData, error: refreshError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customer.id)
+        .single();
+        
+      if (!refreshError && refreshedCustomerData) {
+        const refreshedCustomer: Customer = {
+          id: refreshedCustomerData.id,
+          name: refreshedCustomerData.name,
+          phone: refreshedCustomerData.phone,
+          email: refreshedCustomerData.email || undefined,
+          isMember: refreshedCustomerData.is_member,
+          membershipExpiryDate: refreshedCustomerData.membership_expiry_date ? new Date(refreshedCustomerData.membership_expiry_date) : undefined,
+          membershipStartDate: refreshedCustomerData.membership_start_date ? new Date(refreshedCustomerData.membership_start_date) : undefined,
+          membershipPlan: refreshedCustomerData.membership_plan || undefined,
+          membershipHoursLeft: refreshedCustomerData.membership_hours_left || undefined,
+          membershipDuration: refreshedCustomerData.membership_duration as 'weekly' | 'monthly' | undefined,
+          loyaltyPoints: refreshedCustomerData.loyalty_points,
+          totalSpent: refreshedCustomerData.total_spent,
+          totalPlayTime: refreshedCustomerData.total_play_time,
+          createdAt: new Date(refreshedCustomerData.created_at)
+        };
+        
+        // Update the context with the refreshed customer data
+        await updateCustomer(refreshedCustomer);
+        
+        // Temporarily clear selection and reselect to force UI refresh without page reload
+        selectCustomer(null);
+        setTimeout(() => {
+          selectCustomer(customer.id);
+        }, 50);
       }
       
       toast({
@@ -373,6 +409,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       />
       <ReceiptSummary 
         bill={bill}
+        customer={customer}
         onUpdateBill={handleBillUpdate}
         editable={isEditing}
       />

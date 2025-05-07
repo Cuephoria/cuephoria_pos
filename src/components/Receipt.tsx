@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Bill, Customer } from '@/context/POSContext';
 import { generatePDF, handlePrint } from './receipt/receiptUtils';
 import ReceiptContainer from './receipt/ReceiptContainer';
@@ -8,19 +8,36 @@ import ReceiptContent from './receipt/ReceiptContent';
 import ReceiptActions from './receipt/ReceiptActions';
 import SuccessMessage from './receipt/SuccessMessage';
 import { useToast } from '@/hooks/use-toast';
+import { usePOS } from '@/context/POSContext';
 
 interface ReceiptProps {
   bill: Bill;
   customer: Customer;
   onClose: () => void;
+  allowEdit?: boolean;
 }
 
-const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
+const Receipt: React.FC<ReceiptProps> = ({ bill: initialBill, customer: initialCustomer, onClose, allowEdit = true }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [showSuccessMsg, setShowSuccessMsg] = useState(true);
+  const [bill, setBill] = useState<Bill>(initialBill);
+  const [customer, setCustomer] = useState<Customer>(initialCustomer);
   const { toast } = useToast();
+  const { customers } = usePOS();
+  
+  // Keep the customer data updated if it changes in the context
+  useEffect(() => {
+    const updatedCustomer = customers.find(c => c.id === customer.id);
+    if (updatedCustomer) {
+      console.log('Receipt: Customer updated from context:', {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: updatedCustomer.totalSpent
+      });
+      setCustomer(updatedCustomer);
+    }
+  }, [customers, customer.id]);
 
   const handleDownloadPDF = async () => {
     if (!receiptRef.current) return;
@@ -80,6 +97,7 @@ const Receipt: React.FC<ReceiptProps> = ({ bill, customer, onClose }) => {
         bill={bill} 
         customer={customer} 
         receiptRef={receiptRef} 
+        allowEdit={allowEdit}
       />
       <ReceiptActions 
         onPrint={handlePrintReceipt}

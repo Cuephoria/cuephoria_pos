@@ -24,19 +24,47 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   onSelect,
   isSelectable = false
 }) => {
-  const { customers } = usePOS();
+  // Keep a local state of the customer to allow for updates
   const [customer, setCustomer] = useState<Customer>(initialCustomer);
+  const { customers } = usePOS();
   
-  // Update the customer whenever the customers array in context changes
+  // Update the customer card whenever the customer data changes in the context
   useEffect(() => {
     const updatedCustomer = customers.find(c => c.id === customer.id);
     if (updatedCustomer) {
-      console.log(`Customer card updating ${customer.name}:`, 
-        `Old total spent: ${customer.totalSpent}`, 
-        `New total spent: ${updatedCustomer.totalSpent}`);
+      console.log('CustomerCard: Customer data updated for', updatedCustomer.name, {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: updatedCustomer.totalSpent,
+        oldLoyaltyPoints: customer.loyaltyPoints,
+        newLoyaltyPoints: updatedCustomer.loyaltyPoints
+      });
+      
+      // Always update with the latest data to ensure real-time updates
       setCustomer(updatedCustomer);
     }
   }, [customers, customer.id]);
+  
+  // Also update when the initial customer prop changes
+  useEffect(() => {
+    if (initialCustomer && initialCustomer.id !== customer.id) {
+      console.log('CustomerCard: Initial customer prop changed to', initialCustomer.name);
+      setCustomer(initialCustomer);
+    }
+    
+    // Also check for data changes even if ID is the same
+    else if (initialCustomer && (
+      initialCustomer.totalSpent !== customer.totalSpent || 
+      initialCustomer.loyaltyPoints !== customer.loyaltyPoints
+    )) {
+      console.log('CustomerCard: Initial customer data updated', {
+        oldTotalSpent: customer.totalSpent,
+        newTotalSpent: initialCustomer.totalSpent,
+        oldLoyaltyPoints: customer.loyaltyPoints,
+        newLoyaltyPoints: initialCustomer.loyaltyPoints
+      });
+      setCustomer(initialCustomer);
+    }
+  }, [initialCustomer, customer.id, customer.totalSpent, customer.loyaltyPoints]);
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';

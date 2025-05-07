@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bill, CartItem, Customer } from '@/types/pos.types';
+import { Bill, CartItem } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Dialog, 
@@ -49,9 +49,10 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill, products, updateProduct, updateCustomer, setBills } = usePOS();
+  const { bills, customers, deleteBill, products, updateProduct } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -78,6 +79,8 @@ const RecentTransactions: React.FC = () => {
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
+  const [isCommandOpen, setIsCommandOpen] = useState<boolean>(false);
+  const [selectedProductName, setSelectedProductName] = useState<string>('');
   
   // Filtered products based on search query
   const filteredProducts = products.filter(product => {
@@ -119,11 +122,23 @@ const RecentTransactions: React.FC = () => {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   
-  // Add this new state for controlling dropdown visibility
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Get current customer info for the selected bill
+  const getCurrentCustomerInfo = () => {
+    if (!selectedBill) return null;
+    return customers.find(c => c.id === selectedBill.customerId);
+  };
+
+  const currentCustomer = getCurrentCustomerInfo();
   
-  // State to hold selected product name for display
-  const [selectedProductName, setSelectedProductName] = useState<string>('');
+  // Validate loyalty points input to not exceed available points
+  const validateLoyaltyPoints = (value: number) => {
+    if (!currentCustomer) return value;
+    const maxPoints = currentCustomer.loyaltyPoints + selectedBill?.loyaltyPointsUsed || 0;
+    return Math.min(value, maxPoints);
+  };
+  
+  // Get the 5 most recent transactions
+  const recentBills = sortedBills.slice(0, 5);
   
   // Reset the add item form when dialog opens
   const handleOpenAddItemDialog = () => {
@@ -132,13 +147,13 @@ const RecentTransactions: React.FC = () => {
     setNewItemQuantity(1);
     setAvailableStock(0);
     setProductSearchQuery('');
-    setIsDropdownOpen(false);
+    setIsCommandOpen(false);
     setIsAddItemDialogOpen(true);
   };
   
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
-    setIsDropdownOpen(false);
+    setIsCommandOpen(false);
     
     // Auto-fill product information and set the selected product name
     const selectedProduct = products.find(p => p.id === productId);
@@ -203,43 +218,38 @@ const RecentTransactions: React.FC = () => {
   
   // Function to remove item from edited items
   const handleRemoveItem = (index: number) => {
-    const updatedItems = [...editedItems];
-    const removedItem = updatedItems[index];
+    const removedItem = editedItems[index];
     
-    // If this is a product, we need to restore the stock
+    // If this is a product type item, restore stock
     if (removedItem.type === 'product') {
       const product = products.find(p => p.id === removedItem.id);
       if (product) {
-        // Find the original item in the bill (if it exists in the original bill)
-        const originalBill = bills.find(b => b.id === selectedBill?.id);
-        const originalItem = originalBill?.items.find(item => 
-          item.id === removedItem.id && item.type === removedItem.type
-        );
-        
-        // Calculate how much stock to restore
-        // If it was in the original bill, only restore the difference
-        // If it's a new item added during editing, restore the full quantity
-        const stockToRestore = originalItem 
-          ? removedItem.quantity 
-          : removedItem.quantity;
-        
-        console.log(`Restoring stock for ${product.name}: current ${product.stock} + ${stockToRestore}`);
-        
-        // Update product stock
         updateProduct({
           ...product,
-          stock: product.stock + stockToRestore
-        });
-        
-        toast({
-          title: "Stock Updated",
-          description: `Added ${stockToRestore} units back to ${product.name} stock`,
+          stock: product.stock + removedItem.quantity
         });
       }
     }
     
+    const updatedItems = [...editedItems];
     updatedItems.splice(index, 1);
     setEditedItems(updatedItems);
+  };
+  
+  // Function to handle loyalty points input change with validation
+  const handleLoyaltyPointsChange = (value: string) => {
+    const points = parseInt(value) || 0;
+    const validatedPoints = validateLoyaltyPoints(points);
+    setEditedLoyaltyPointsUsed(validatedPoints);
+    
+    // If user tries to enter more points than available, show a toast
+    if (points > validatedPoints) {
+      toast({
+        title: "Maximum Points Exceeded",
+        description: `You can only use up to ${currentCustomer?.loyaltyPoints + (selectedBill?.loyaltyPointsUsed || 0)} points`,
+        variant: "destructive"
+      });
+    }
   };
   
   // Function to add new item to bill
@@ -302,14 +312,16 @@ const RecentTransactions: React.FC = () => {
     
     // Reset form
     setSelectedProductId('');
+    setSelectedProductName('');
     setNewItemQuantity(1);
     setProductSearchQuery('');
+    setIsCommandOpen(false);
     setIsAddItemDialogOpen(false);
   };
   
   // Calculate updated bill values
   const calculateUpdatedBill = () => {
-    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0, loyaltyPointsDelta: 0 };
+    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0 };
     
     // Calculate new subtotal
     const subtotal = editedItems.reduce((sum, item) => sum + item.total, 0);
@@ -325,106 +337,7 @@ const RecentTransactions: React.FC = () => {
     // Calculate new total
     const total = Math.max(0, subtotal - discountValue - editedLoyaltyPointsUsed);
     
-    // Calculate loyalty points difference based on the changed total
-    // Get the rate based on customer membership status (5 points per 100 for members, 2 for non)
-    const customer = customers.find(c => c.id === selectedBill.customerId);
-    const pointsRate = customer?.isMember ? 5 : 2;
-    
-    // Calculate new points earned based on updated total
-    const newLoyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
-    
-    // Original points earned from the bill
-    const originalPointsEarned = selectedBill.loyaltyPointsEarned || 0;
-    
-    // Calculate the delta (may be positive or negative)
-    const loyaltyPointsDelta = newLoyaltyPointsEarned - originalPointsEarned;
-    
-    // Debugging logs
-    console.log('Original Bill:', selectedBill);
-    console.log('Updated items:', editedItems);
-    console.log('New subtotal:', subtotal);
-    console.log('New discount value:', discountValue);
-    console.log('New total:', total);
-    console.log('Original loyalty points earned:', originalPointsEarned);
-    console.log('New loyalty points earned:', newLoyaltyPointsEarned);
-    console.log('Loyalty points delta:', loyaltyPointsDelta);
-    
-    return { subtotal, discountValue, total, loyaltyPointsDelta };
-  };
-  
-  // Helper function to refresh bills data
-  const refreshBillsData = async () => {
-    try {
-      const { data: refreshedBills, error } = await supabase
-        .from('bills')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error('Error refreshing bills data:', error);
-        return;
-      }
-      
-      if (!refreshedBills) {
-        console.log('No bills found during refresh');
-        return;
-      }
-      
-      // Transform the bills data to the expected format
-      const transformedBills: Bill[] = [];
-      
-      for (const billData of refreshedBills) {
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('bill_items')
-          .select('*')
-          .eq('bill_id', billData.id);
-          
-        if (itemsError) {
-          console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
-          continue;
-        }
-        
-        if (!itemsData) {
-          console.log(`No items found for bill ${billData.id}`);
-          continue;
-        }
-        
-        const items: CartItem[] = itemsData.map(item => {
-          // Ensure all required properties are present
-          return {
-            id: item.item_id,
-            type: item.item_type as 'product' | 'session',
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            total: item.total,
-            // Safely handle the category - use empty string if not present
-            category: (item as any).category || ''
-          };
-        });
-        
-        transformedBills.push({
-          id: billData.id,
-          customerId: billData.customer_id,
-          items,
-          subtotal: billData.subtotal,
-          discount: billData.discount,
-          discountValue: billData.discount_value,
-          discountType: billData.discount_type as 'percentage' | 'fixed',
-          loyaltyPointsUsed: billData.loyalty_points_used,
-          loyaltyPointsEarned: billData.loyalty_points_earned,
-          total: billData.total,
-          paymentMethod: billData.payment_method as 'cash' | 'upi',
-          createdAt: new Date(billData.created_at)
-        });
-      }
-      
-      // Update bills in context
-      setBills(transformedBills);
-      console.log('Bills data refreshed successfully:', transformedBills.length);
-    } catch (refreshError) {
-      console.error('Error in refreshBillsData:', refreshError);
-    }
+    return { subtotal, discountValue, total };
   };
   
   // Function to save changes to bill
@@ -433,16 +346,7 @@ const RecentTransactions: React.FC = () => {
     
     setIsSaving(true);
     try {
-      const { subtotal, discountValue, total, loyaltyPointsDelta } = calculateUpdatedBill();
-      
-      // Points customer will earn from this updated transaction
-      const newLoyaltyPointsEarned = selectedBill.loyaltyPointsEarned + loyaltyPointsDelta;
-      
-      // Calculate total price change for customer total spent tracking
-      const totalPriceDelta = total - selectedBill.total;
-      
-      console.log('Total price delta:', totalPriceDelta);
-      console.log('New loyalty points earned:', newLoyaltyPointsEarned);
+      const { subtotal, discountValue, total } = calculateUpdatedBill();
       
       // Update bill in database
       const { error: billError } = await supabase
@@ -453,7 +357,6 @@ const RecentTransactions: React.FC = () => {
           discount_type: editedDiscountType,
           discount_value: discountValue,
           loyalty_points_used: editedLoyaltyPointsUsed,
-          loyalty_points_earned: newLoyaltyPointsEarned,
           payment_method: editedPaymentMethod,
           total
         })
@@ -461,47 +364,6 @@ const RecentTransactions: React.FC = () => {
         
       if (billError) {
         throw new Error(`Failed to update bill: ${billError.message}`);
-      }
-      
-      // Find the customer to update loyalty points and total spent
-      const customer = customers.find(c => c.id === selectedBill.customerId);
-      if (customer) {
-        // Update customer loyalty points and total spent
-        const updatedCustomer: Customer = {
-          ...customer,
-          loyaltyPoints: customer.loyaltyPoints + loyaltyPointsDelta,
-          totalSpent: customer.totalSpent + totalPriceDelta
-        };
-        
-        console.log('Updating customer:', customer.name);
-        console.log('Current loyalty points:', customer.loyaltyPoints);
-        console.log('Adding loyalty points delta:', loyaltyPointsDelta);
-        console.log('New loyalty points:', updatedCustomer.loyaltyPoints);
-        console.log('Current total spent:', customer.totalSpent);
-        console.log('Adding total spent delta:', totalPriceDelta);
-        console.log('New total spent:', updatedCustomer.totalSpent);
-        
-        // Update customer in database
-        const { error: customerError } = await supabase
-          .from('customers')
-          .update({
-            loyalty_points: updatedCustomer.loyaltyPoints,
-            total_spent: updatedCustomer.totalSpent
-          })
-          .eq('id', customer.id);
-          
-        if (customerError) {
-          console.error('Error updating customer:', customerError);
-          toast({
-            title: "Warning",
-            description: `Updated bill but failed to update customer data: ${customerError.message}`,
-            variant: "destructive"
-          });
-        } else {
-          console.log('Customer updated successfully');
-          // Update the customer in context
-          updateCustomer(updatedCustomer);
-        }
       }
       
       // Delete existing bill items
@@ -535,16 +397,28 @@ const RecentTransactions: React.FC = () => {
       
       toast({
         title: "Changes Saved",
-        description: "Transaction updated successfully",
+        description: "Bill items have been updated successfully",
       });
+      
+      // Update the bill in context
+      const updatedBill = {
+        ...selectedBill,
+        items: editedItems,
+        subtotal,
+        discount: editedDiscount,
+        discountType: editedDiscountType,
+        discountValue,
+        loyaltyPointsUsed: editedLoyaltyPointsUsed,
+        paymentMethod: editedPaymentMethod,
+        total
+      };
       
       // Close dialog and reset state
       setIsEditDialogOpen(false);
       setSelectedBill(null);
       
-      // Refresh bills data seamlessly without causing a full page reload
-      await refreshBillsData();
-      
+      // Refresh page to see updated data
+      window.location.reload();
     } catch (error) {
       toast({
         title: "Error",
@@ -556,38 +430,13 @@ const RecentTransactions: React.FC = () => {
     }
   };
   
-  // Check if loyalty points exceed available
-  const isLoyaltyPointsExceeded = (pointsUsed: number, customer: any) => {
-    return pointsUsed > (customer?.loyaltyPoints || 0);
-  };
-  
-  // Handle loyalty points change with validation
-  const handleLoyaltyPointsChange = (value: number) => {
-    if (!selectedBill) return;
-    
-    const customer = customers.find(c => c.id === selectedBill.customerId);
-    if (!customer) return;
-    
-    // Don't allow more points than available
-    if (value > customer.loyaltyPoints) {
-      toast({
-        title: "Invalid Points",
-        description: `Cannot use more than ${customer.loyaltyPoints} available points`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setEditedLoyaltyPointsUsed(value);
-  };
-  
   return (
     <>
       <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
         <CardHeader className="space-y-4">
           <div>
-            <CardTitle className="text-xl font-bold text-white font-heading">Transactions</CardTitle>
-            <CardDescription className="text-gray-400">Sales and billing information</CardDescription>
+            <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
+            <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
           </div>
           <div className="relative flex w-full items-center">
             <Input
@@ -599,11 +448,11 @@ const RecentTransactions: React.FC = () => {
             <Search className="absolute right-2 h-4 w-4 text-gray-400" />
           </div>
         </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[500px] pr-4">
-            <div className="space-y-4">
-              {sortedBills.length > 0 ? (
-                sortedBills.map(bill => {
+        <CardContent className="space-y-4">
+          {sortedBills.length > 0 ? (
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {sortedBills.map(bill => {
                   const customer = customers.find(c => c.id === bill.customerId);
                   const date = new Date(bill.createdAt);
                   
@@ -631,7 +480,7 @@ const RecentTransactions: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-gray-400 hover:text-blue-500"
+                            className="text-gray-400 hover:text-blue-500 transition-colors"
                             onClick={() => handleEditClick(bill)}
                           >
                             <Edit2 className="h-4 w-4" />
@@ -639,7 +488,7 @@ const RecentTransactions: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-gray-400 hover:text-red-500"
+                            className="text-gray-400 hover:text-red-500 transition-colors"
                             onClick={() => handleDeleteClick(bill)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -648,14 +497,14 @@ const RecentTransactions: React.FC = () => {
                       </div>
                     </div>
                   );
-                })
-              ) : (
-                <div className="flex items-center justify-center p-6 text-gray-400">
-                  <p>No transactions found</p>
-                </div>
-              )}
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex items-center justify-center p-6 text-gray-400">
+              <p>No transactions found</p>
             </div>
-          </ScrollArea>
+          )}
         </CardContent>
       </Card>
       
@@ -795,7 +644,7 @@ const RecentTransactions: React.FC = () => {
                 </Table>
               </div>
               
-              {/* Discount, loyalty points, and payment method section */}
+              {/* Section for discount, loyalty points, and payment method */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-700 pt-4">
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300">Discount</h3>
@@ -823,40 +672,22 @@ const RecentTransactions: React.FC = () => {
                 </div>
                 
                 <div className="space-y-3">
-                  {(() => {
-                    const customer = customers.find(c => c.id === selectedBill.customerId);
-                    const availablePoints = customer?.loyaltyPoints || 0;
-                    const isExceeded = isLoyaltyPointsExceeded(editedLoyaltyPointsUsed, customer);
-                    
-                    return (
-                      <>
-                        <h3 className="text-sm font-medium text-gray-300">
-                          Loyalty Points Used 
-                          <span className="text-xs ml-2 text-gray-400">
-                            (Available: {availablePoints})
-                          </span>
-                        </h3>
-                        <Input 
-                          type="number" 
-                          value={editedLoyaltyPointsUsed} 
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (!isNaN(value) && value >= 0) {
-                              handleLoyaltyPointsChange(value);
-                            }
-                          }}
-                          className={`bg-gray-700 border-gray-600 text-white ${isExceeded ? 'border-red-500' : ''}`}
-                          min="0"
-                          max={availablePoints}
-                        />
-                        {isExceeded && (
-                          <p className="text-xs text-red-500">
-                            Cannot exceed available points
-                          </p>
-                        )}
-                      </>
-                    );
-                  })()}
+                  <h3 className="text-sm font-medium text-gray-300">
+                    Loyalty Points Used 
+                    {currentCustomer && (
+                      <span className="text-xs ml-2 text-cuephoria-orange">
+                        (Available: {currentCustomer.loyaltyPoints + selectedBill.loyaltyPointsUsed})
+                      </span>
+                    )}
+                  </h3>
+                  <Input 
+                    type="number" 
+                    value={editedLoyaltyPointsUsed} 
+                    onChange={(e) => handleLoyaltyPointsChange(e.target.value)}
+                    className="bg-gray-700 border-gray-600 text-white"
+                    min="0"
+                    max={currentCustomer ? currentCustomer.loyaltyPoints + selectedBill.loyaltyPointsUsed : 0}
+                  />
                 </div>
                 
                 <div className="space-y-3">
@@ -915,15 +746,11 @@ const RecentTransactions: React.FC = () => {
             <Button 
               className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
               onClick={handleSaveChanges}
-              disabled={isSaving || (() => {
-                if (!selectedBill) return true;
-                const customer = customers.find(c => c.id === selectedBill.customerId);
-                return isLoyaltyPointsExceeded(editedLoyaltyPointsUsed, customer);
-              })()}
+              disabled={isSaving}
             >
               {isSaving ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -941,12 +768,7 @@ const RecentTransactions: React.FC = () => {
       </Dialog>
       
       {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={(open) => {
-        setIsAddItemDialogOpen(open);
-        if (!open) {
-          setIsDropdownOpen(false); // Ensure dropdown closes when dialog closes
-        }
-      }}>
+      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle>Add New Item</DialogTitle>
@@ -959,47 +781,56 @@ const RecentTransactions: React.FC = () => {
             <div className="space-y-2">
               <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
               <div className="relative">
-                <Command className="rounded-lg border border-gray-600 overflow-visible bg-gray-700">
-                  <CommandInput 
-                    placeholder={selectedProductName || "Search products..."}
-                    value={productSearchQuery}
-                    onValueChange={setProductSearchQuery}
-                    className="text-white"
-                    onFocus={() => setIsDropdownOpen(true)}
-                  />
-                  <CommandList open={isDropdownOpen} className="text-white">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                      No products match your search
-                    </CommandEmpty>
-                    <CommandGroup>
-                      <ScrollArea className="h-72 w-full" type="always">
-                        {filteredProducts.map(product => (
-                          <CommandItem 
-                            key={product.id} 
-                            value={product.id}
-                            onSelect={() => handleProductSelect(product.id)}
-                            className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                          >
-                            <div className="flex flex-col">
-                              <span>{product.name}</span>
-                              <span className="text-xs text-gray-400">
-                                Price: <CurrencyDisplay amount={product.price} /> | 
-                                Category: {product.category} | 
-                                Stock: {product.stock}
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </ScrollArea>
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
+                <div className="relative w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between bg-gray-700 border-gray-600 text-white"
+                    onClick={() => setIsCommandOpen(!isCommandOpen)}
+                  >
+                    {selectedProductName || "Choose a product"}
+                    <span className="ml-auto opacity-70">
+                      <Search className="h-4 w-4" />
+                    </span>
+                  </Button>
+                  
+                  {isCommandOpen && (
+                    <div className="absolute mt-1 w-full z-50 rounded-md border border-gray-700 bg-gray-800 shadow-lg">
+                      <Command className="rounded-lg overflow-hidden">
+                        <CommandInput 
+                          placeholder="Search products..." 
+                          value={productSearchQuery}
+                          onValueChange={setProductSearchQuery}
+                          className="text-white"
+                        />
+                        <CommandList className="max-h-[300px] overflow-y-auto py-2">
+                          <CommandEmpty className="py-6 text-center text-sm text-gray-400">
+                            No products match your search
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {filteredProducts.map(product => (
+                              <CommandItem 
+                                key={product.id} 
+                                value={product.id}
+                                onSelect={() => handleProductSelect(product.id)}
+                                className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
+                              >
+                                <div className="flex flex-col">
+                                  <span>{product.name}</span>
+                                  <span className="text-xs text-gray-400">
+                                    Price: <CurrencyDisplay amount={product.price} /> | 
+                                    Category: {product.category} | 
+                                    Stock: {product.stock}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                  )}
+                </div>
               </div>
-              {selectedProductName && (
-                <p className="text-xs text-green-400 mt-1">
-                  Selected: {selectedProductName}
-                </p>
-              )}
             </div>
             
             <div className="space-y-2">
@@ -1042,10 +873,14 @@ const RecentTransactions: React.FC = () => {
           </div>
           
           <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => {
-              setIsAddItemDialogOpen(false);
-              setIsDropdownOpen(false);
-            }} className="bg-gray-700 text-white hover:bg-gray-600">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsCommandOpen(false);
+                setIsAddItemDialogOpen(false);
+              }} 
+              className="bg-gray-700 text-white hover:bg-gray-600"
+            >
               Cancel
             </Button>
             <Button 
