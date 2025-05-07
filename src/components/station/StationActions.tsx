@@ -30,6 +30,12 @@ const StationActions: React.FC<StationActionsProps> = ({
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
 
+  // Debug the customers array
+  console.log('StationActions Customers:', { 
+    count: customers?.length, 
+    firstFew: customers?.slice(0, 3).map(c => ({ id: c.id, name: c.name }))
+  });
+
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
       toast({
@@ -113,10 +119,11 @@ const StationActions: React.FC<StationActionsProps> = ({
     );
   }
 
-  // Debug the customers array
-  console.log('StationActions Customers:', { 
+  // Debug the customers array again right before rendering
+  console.log('StationActions Rendering Dropdown with Customers:', { 
     count: customers?.length, 
-    firstFew: customers?.slice(0, 3).map(c => ({ id: c.id, name: c.name }))
+    customersArray: Array.isArray(customers),
+    areCustomersEmpty: !customers || customers.length === 0
   });
 
   return (
@@ -127,48 +134,53 @@ const StationActions: React.FC<StationActionsProps> = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between mb-3"
+            className="w-full justify-between mb-3 bg-gray-800 border-gray-700 text-white"
             disabled={!customers || customers.length === 0}
           >
             {selectedCustomerId ? (
-              customers.find((customer) => customer.id === selectedCustomerId)?.name || "Select customer..."
+              customers?.find((customer) => customer.id === selectedCustomerId)?.name || "Select customer..."
             ) : (
               !customers || customers.length === 0 ? "No customers available" : "Select customer..."
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
-          <Command>
-            <CommandInput placeholder="Search customers..." />
-            <CommandList>
-              <CommandEmpty>No customer found.</CommandEmpty>
-              <CommandGroup>
-                {Array.isArray(customers) && customers.map((customer) => (
-                  <CommandItem
-                    key={customer.id}
-                    value={customer.name}
-                    onSelect={() => {
-                      setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex items-center">
-                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">{customer.name}</p>
-                        <p className="text-xs text-muted-foreground">{customer.phone}</p>
+        <PopoverContent className="w-full p-0 bg-gray-900 border-gray-700 text-white">
+          <Command className="bg-gray-900 text-white border-none">
+            <CommandInput placeholder="Search customers..." className="bg-gray-800 text-white" />
+            <CommandList className="max-h-[300px] overflow-y-auto py-2">
+              <CommandEmpty className="py-6 text-center text-sm text-gray-500">No customer found.</CommandEmpty>
+              {Array.isArray(customers) && customers.length > 0 ? (
+                <CommandGroup>
+                  {customers.map((customer) => (
+                    <CommandItem
+                      key={customer.id}
+                      value={customer.name}
+                      onSelect={() => {
+                        setSelectedCustomerId(customer.id === selectedCustomerId ? "" : customer.id);
+                        setOpen(false);
+                      }}
+                      className="cursor-pointer hover:bg-gray-800 aria-selected:bg-gray-700"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex items-center">
+                        <User className="mr-2 h-4 w-4 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium">{customer.name}</p>
+                          <p className="text-xs text-gray-500">{customer.phone}</p>
+                        </div>
                       </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : (
+                <div className="py-6 text-center text-sm text-gray-500">No customers available</div>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>

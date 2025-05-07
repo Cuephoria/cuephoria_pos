@@ -11,11 +11,12 @@ const Stations = () => {
   const { stations, customers } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
   
-  // Debug customers data 
+  // Debug customers data with more details
   useEffect(() => {
     console.log('Stations page customers:', { 
       count: customers?.length, 
-      firstFew: customers?.slice(0, 3).map(c => ({ id: c.id, name: c.name }))
+      firstFew: customers?.slice(0, 3).map(c => ({ id: c.id, name: c.name })),
+      customersValid: Array.isArray(customers)
     });
   }, [customers]);
   
