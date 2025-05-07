@@ -52,7 +52,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const RecentTransactions: React.FC = () => {
-  const { bills, customers, deleteBill, products, updateProduct } = usePOS();
+  const { bills, setBills, customers, setCustomers, deleteBill, products, updateProduct, updateCustomer } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -346,10 +346,31 @@ const RecentTransactions: React.FC = () => {
     
     setIsSaving(true);
     try {
+      // First, get the latest customer data from database to ensure we have the most accurate values
+      const { data: latestCustomerData, error: customerFetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', selectedBill.customerId)
+        .single();
+        
+      if (customerFetchError) {
+        console.error('Error fetching latest customer data:', customerFetchError);
+        throw new Error(`Failed to fetch latest customer data: ${customerFetchError.message}`);
+      }
+      
+      // Calculate the values for the updated bill
       const { subtotal, discountValue, total } = calculateUpdatedBill();
       
+      // Calculate the difference in total amount from the original bill
+      const totalDifference = total - selectedBill.total;
+      
+      // Calculate loyalty points delta
+      const loyaltyPointsDelta = 
+        selectedBill.loyaltyPointsEarned - 
+        (editedLoyaltyPointsUsed - selectedBill.loyaltyPointsUsed);
+      
       // Update bill in database
-      const { error: billError } = await supabase
+      const { data: updatedBillData, error: billError } = await supabase
         .from('bills')
         .update({
           subtotal,
@@ -360,11 +381,14 @@ const RecentTransactions: React.FC = () => {
           payment_method: editedPaymentMethod,
           total
         })
-        .eq('id', selectedBill.id);
+        .eq('id', selectedBill.id)
+        .select();
         
       if (billError) {
         throw new Error(`Failed to update bill: ${billError.message}`);
       }
+      
+      console.log('Bill updated in database:', updatedBillData);
       
       // Delete existing bill items
       const { error: deleteError } = await supabase
@@ -395,13 +419,56 @@ const RecentTransactions: React.FC = () => {
         }
       }
       
-      toast({
-        title: "Changes Saved",
-        description: "Bill items have been updated successfully",
-      });
+      // Update customer in database
+      if (latestCustomerData) {
+        const updatedLoyaltyPoints = latestCustomerData.loyalty_points + loyaltyPointsDelta;
+        const updatedTotalSpent = latestCustomerData.total_spent + totalDifference;
+        
+        const { data: updatedCustomerData, error: customerUpdateError } = await supabase
+          .from('customers')
+          .update({
+            loyalty_points: updatedLoyaltyPoints,
+            total_spent: updatedTotalSpent
+          })
+          .eq('id', selectedBill.customerId)
+          .select();
+          
+        if (customerUpdateError) {
+          console.error('Error updating customer:', customerUpdateError);
+          throw new Error(`Failed to update customer: ${customerUpdateError.message}`);
+        }
+        
+        // Map the updated customer data to our Customer type and update in context
+        if (updatedCustomerData && updatedCustomerData[0]) {
+          const customer = {
+            id: updatedCustomerData[0].id,
+            name: updatedCustomerData[0].name,
+            phone: updatedCustomerData[0].phone,
+            email: updatedCustomerData[0].email || undefined,
+            isMember: updatedCustomerData[0].is_member,
+            membershipExpiryDate: updatedCustomerData[0].membership_expiry_date ? new Date(updatedCustomerData[0].membership_expiry_date) : undefined,
+            membershipStartDate: updatedCustomerData[0].membership_start_date ? new Date(updatedCustomerData[0].membership_start_date) : undefined,
+            membershipPlan: updatedCustomerData[0].membership_plan || undefined,
+            membershipHoursLeft: updatedCustomerData[0].membership_hours_left || undefined,
+            membershipDuration: updatedCustomerData[0].membership_duration as 'weekly' | 'monthly' | undefined,
+            loyaltyPoints: updatedCustomerData[0].loyalty_points,
+            totalSpent: updatedCustomerData[0].total_spent,
+            totalPlayTime: updatedCustomerData[0].total_play_time,
+            createdAt: new Date(updatedCustomerData[0].created_at)
+          };
+          
+          // Update customer in context
+          await updateCustomer(customer);
+          
+          // Update the customers list to ensure UI reflects changes
+          setCustomers(prevCustomers => 
+            prevCustomers.map(c => c.id === customer.id ? customer : c)
+          );
+        }
+      }
       
-      // Update the bill in context
-      const updatedBill = {
+      // Create the updated bill with new values
+      const updatedBill: Bill = {
         ...selectedBill,
         items: editedItems,
         subtotal,
@@ -413,12 +480,20 @@ const RecentTransactions: React.FC = () => {
         total
       };
       
-      // Close dialog and reset state
+      // Update the bill in the local state
+      setBills(prevBills => 
+        prevBills.map(b => b.id === updatedBill.id ? updatedBill : b)
+      );
+      
+      toast({
+        title: "Changes Saved",
+        description: "Bill items have been updated successfully",
+      });
+      
+      // Close dialog and reset state without page reload
       setIsEditDialogOpen(false);
       setSelectedBill(null);
       
-      // Refresh page to see updated data
-      window.location.reload();
     } catch (error) {
       toast({
         title: "Error",
@@ -752,150 +827,4 @@ const RecentTransactions: React.FC = () => {
                 <>
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white">
-          <DialogHeader>
-            <DialogTitle>Add New Item</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Add a product from your inventory to this transaction.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="product-select" className="text-sm font-medium">Select Product</label>
-              <div className="relative">
-                <div className="relative w-full">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-between bg-gray-700 border-gray-600 text-white"
-                    onClick={() => setIsCommandOpen(!isCommandOpen)}
-                  >
-                    {selectedProductName || "Choose a product"}
-                    <span className="ml-auto opacity-70">
-                      <Search className="h-4 w-4" />
-                    </span>
-                  </Button>
-                  
-                  {isCommandOpen && (
-                    <div className="absolute mt-1 w-full z-50 rounded-md border border-gray-700 bg-gray-800 shadow-lg">
-                      <Command className="rounded-lg overflow-hidden">
-                        <CommandInput 
-                          placeholder="Search products..." 
-                          value={productSearchQuery}
-                          onValueChange={setProductSearchQuery}
-                          className="text-white"
-                        />
-                        <CommandList className="max-h-[300px] overflow-y-auto py-2">
-                          <CommandEmpty className="py-6 text-center text-sm text-gray-400">
-                            No products match your search
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {filteredProducts.map(product => (
-                              <CommandItem 
-                                key={product.id} 
-                                value={product.id}
-                                onSelect={() => handleProductSelect(product.id)}
-                                className={`py-2 ${selectedProductId === product.id ? 'bg-gray-600' : ''}`}
-                              >
-                                <div className="flex flex-col">
-                                  <span>{product.name}</span>
-                                  <span className="text-xs text-gray-400">
-                                    Price: <CurrencyDisplay amount={product.price} /> | 
-                                    Category: {product.category} | 
-                                    Stock: {product.stock}
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="item-quantity" className="text-sm font-medium">Quantity</label>
-              <Input 
-                id="item-quantity"
-                type="number" 
-                value={newItemQuantity} 
-                onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                className="bg-gray-700 border-gray-600 text-white"
-                min="1"
-                max={availableStock}
-              />
-              {selectedProductId && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Available stock: {availableStock}
-                </p>
-              )}
-            </div>
-            
-            {selectedProductId && (
-              <div className="border border-gray-700 rounded p-2 bg-gray-700/30 mt-2">
-                <h5 className="text-xs font-medium mb-1">Selected Product</h5>
-                {(() => {
-                  const product = products.find(p => p.id === selectedProductId);
-                  if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
-                  
-                  return (
-                    <div className="space-y-1 text-xs">
-                      <p><span className="text-gray-400">Name:</span> {product.name}</p>
-                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
-                      <p><span className="text-gray-400">Category:</span> {product.category}</p>
-                      <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
-                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsCommandOpen(false);
-                setIsAddItemDialogOpen(false);
-              }} 
-              className="bg-gray-700 text-white hover:bg-gray-600"
-            >
-              Cancel
-            </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
-              onClick={handleAddNewItem}
-              disabled={!selectedProductId || newItemQuantity < 1 || newItemQuantity > availableStock}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-};
-
-export default RecentTransactions;
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></
