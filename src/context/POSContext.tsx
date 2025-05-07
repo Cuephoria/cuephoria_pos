@@ -33,6 +33,8 @@ const POSContext = createContext<POSContextType>({
   isStudentDiscount: false,
   categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
   setIsStudentDiscount: () => {},
+  setBills: () => {}, // Add default implementation
+  setCustomers: () => {}, // Add default implementation
   setStations: () => {},
   addProduct: () => ({}),
   updateProduct: () => ({}),
@@ -693,6 +695,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isStudentDiscount,
         categories,
         setIsStudentDiscount,
+        setBills, // Expose setBills
+        setCustomers, // Expose setCustomers
         setStations,
         addProduct,
         updateProduct,

@@ -104,6 +104,10 @@ export interface POSContextType {
   categories: string[]; // New property to store available categories
   setIsStudentDiscount: (value: boolean) => void;
   
+  // State setters (adding these to fix the TypeScript errors)
+  setBills?: (bills: Bill[] | ((prevBills: Bill[]) => Bill[])) => void;
+  setCustomers?: (customers: Customer[] | ((prevCustomers: Customer[]) => Customer[])) => void;
+  
   // Station state setter
   setStations: (stations: Station[]) => void;
   
