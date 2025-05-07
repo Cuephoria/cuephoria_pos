@@ -113,6 +113,12 @@ const StationActions: React.FC<StationActionsProps> = ({
     );
   }
 
+  // Debug the customers array
+  console.log('StationActions Customers:', { 
+    count: customers?.length, 
+    firstFew: customers?.slice(0, 3).map(c => ({ id: c.id, name: c.name }))
+  });
+
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -122,12 +128,12 @@ const StationActions: React.FC<StationActionsProps> = ({
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between mb-3"
-            disabled={customers.length === 0}
+            disabled={!customers || customers.length === 0}
           >
             {selectedCustomerId ? (
-              customers.find((customer) => customer.id === selectedCustomerId)?.name
+              customers.find((customer) => customer.id === selectedCustomerId)?.name || "Select customer..."
             ) : (
-              customers.length === 0 ? "No customers available" : "Select customer..."
+              !customers || customers.length === 0 ? "No customers available" : "Select customer..."
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -135,10 +141,10 @@ const StationActions: React.FC<StationActionsProps> = ({
         <PopoverContent className="w-full p-0">
           <Command>
             <CommandInput placeholder="Search customers..." />
-            <CommandEmpty>No customer found.</CommandEmpty>
-            <CommandGroup>
-              <CommandList>
-                {customers.map((customer) => (
+            <CommandList>
+              <CommandEmpty>No customer found.</CommandEmpty>
+              <CommandGroup>
+                {Array.isArray(customers) && customers.map((customer) => (
                   <CommandItem
                     key={customer.id}
                     value={customer.name}
@@ -162,8 +168,8 @@ const StationActions: React.FC<StationActionsProps> = ({
                     </div>
                   </CommandItem>
                 ))}
-              </CommandList>
-            </CommandGroup>
+              </CommandGroup>
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
@@ -171,10 +177,10 @@ const StationActions: React.FC<StationActionsProps> = ({
       <Button 
         variant="default" 
         className="w-full py-3 text-lg font-bold bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 transition-opacity"
-        disabled={!selectedCustomerId || isLoading || customers.length === 0} 
+        disabled={!selectedCustomerId || isLoading || !customers || customers.length === 0} 
         onClick={handleStartSession}
       >
-        {isLoading ? "Starting..." : customers.length === 0 ? "No Customers Available" : "Start Session"}
+        {isLoading ? "Starting..." : !customers || customers.length === 0 ? "No Customers Available" : "Start Session"}
       </Button>
     </>
   );

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { usePOS, Station } from '@/context/POSContext';
 import StationInfo from '@/components/station/StationInfo';
@@ -28,6 +28,14 @@ const StationCard: React.FC<StationCardProps> = ({ station }) => {
   const { customers, startSession, endSession, deleteStation, updateStation } = usePOS();
   const isPoolTable = station.type === '8ball';
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // Log customers data for debugging
+  useEffect(() => {
+    console.log('StationCard customers for station:', station.name, {
+      customersLength: customers?.length,
+      firstCustomer: customers?.[0]?.name || 'No customers'
+    });
+  }, [customers, station.name]);
 
   const getCustomer = (id: string) => {
     return customers.find(c => c.id === id);
