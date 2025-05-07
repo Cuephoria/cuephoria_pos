@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -134,7 +133,7 @@ const RecentTransactions: React.FC = () => {
   // Validate loyalty points input to not exceed available points
   const validateLoyaltyPoints = (value: number) => {
     if (!currentCustomer) return value;
-    const maxPoints = currentCustomer.loyaltyPoints + selectedBill?.loyaltyPointsUsed || 0;
+    const maxPoints = currentCustomer.loyaltyPoints + (selectedBill?.loyaltyPointsUsed || 0);
     return Math.min(value, maxPoints);
   };
   
@@ -341,6 +340,14 @@ const RecentTransactions: React.FC = () => {
     return { subtotal, discountValue, total };
   };
   
+  // Calculate loyalty points earned based on total amount
+  const calculateLoyaltyPointsEarned = (total: number, isMember: boolean) => {
+    // Members: 5 points per 100 INR spent
+    // Non-members: 2 points per 100 INR spent
+    const pointsRate = isMember ? 5 : 2;
+    return Math.floor((total / 100) * pointsRate);
+  };
+  
   // Function to save changes to bill
   const handleSaveChanges = async () => {
     if (!selectedBill) return;
@@ -365,10 +372,23 @@ const RecentTransactions: React.FC = () => {
       // Calculate the difference in total amount from the original bill
       const totalDifference = total - selectedBill.total;
       
-      // Calculate loyalty points delta
-      const loyaltyPointsDelta = 
-        selectedBill.loyaltyPointsEarned - 
+      // Calculate new loyalty points earned based on the new total
+      const isMember = latestCustomerData?.is_member || false;
+      const newLoyaltyPointsEarned = calculateLoyaltyPointsEarned(total, isMember);
+      
+      // Calculate loyalty points adjustment
+      // (new points earned - old points earned) - (new points used - old points used)
+      const loyaltyPointsAdjustment = 
+        (newLoyaltyPointsEarned - selectedBill.loyaltyPointsEarned) - 
         (editedLoyaltyPointsUsed - selectedBill.loyaltyPointsUsed);
+      
+      console.log('Loyalty points calculation:', {
+        newPointsEarned: newLoyaltyPointsEarned,
+        oldPointsEarned: selectedBill.loyaltyPointsEarned,
+        newPointsUsed: editedLoyaltyPointsUsed,
+        oldPointsUsed: selectedBill.loyaltyPointsUsed,
+        adjustment: loyaltyPointsAdjustment
+      });
       
       // Update bill in database
       const { data: updatedBillData, error: billError } = await supabase
@@ -379,6 +399,7 @@ const RecentTransactions: React.FC = () => {
           discount_type: editedDiscountType,
           discount_value: discountValue,
           loyalty_points_used: editedLoyaltyPointsUsed,
+          loyalty_points_earned: newLoyaltyPointsEarned,
           payment_method: editedPaymentMethod,
           total
         })
@@ -420,16 +441,30 @@ const RecentTransactions: React.FC = () => {
         }
       }
       
-      // Update customer in database
+      // Update customer in database with adjusted loyalty points
       if (latestCustomerData) {
-        const updatedLoyaltyPoints = latestCustomerData.loyalty_points + loyaltyPointsDelta;
-        const updatedTotalSpent = latestCustomerData.total_spent + totalDifference;
+        // Calculate new loyalty points by adding the adjustment
+        const currentPoints = latestCustomerData.loyalty_points || 0;
+        const newLoyaltyPoints = Math.max(0, currentPoints + loyaltyPointsAdjustment);
+        
+        // Calculate new total spent
+        const currentTotalSpent = latestCustomerData.total_spent || 0;
+        const newTotalSpent = currentTotalSpent + totalDifference;
+        
+        console.log('Customer update data:', {
+          currentPoints,
+          newLoyaltyPoints,
+          adjustment: loyaltyPointsAdjustment,
+          currentTotalSpent,
+          newTotalSpent,
+          totalDifference
+        });
         
         const { data: updatedCustomerData, error: customerUpdateError } = await supabase
           .from('customers')
           .update({
-            loyalty_points: updatedLoyaltyPoints,
-            total_spent: updatedTotalSpent
+            loyalty_points: newLoyaltyPoints,
+            total_spent: newTotalSpent
           })
           .eq('id', selectedBill.customerId)
           .select();
@@ -459,7 +494,7 @@ const RecentTransactions: React.FC = () => {
           };
           
           // Update customer in context
-          await updateCustomer(customer);
+          updateCustomer(customer);
           
           // Update the customers list to ensure UI reflects changes
           setCustomers(prevCustomers => 
@@ -477,6 +512,7 @@ const RecentTransactions: React.FC = () => {
         discountType: editedDiscountType,
         discountValue,
         loyaltyPointsUsed: editedLoyaltyPointsUsed,
+        loyaltyPointsEarned: newLoyaltyPointsEarned,
         paymentMethod: editedPaymentMethod,
         total
       };
@@ -505,6 +541,7 @@ const RecentTransactions: React.FC = () => {
       setIsSaving(false);
     }
   };
+  
   
   return (
     <>
@@ -805,163 +842,3 @@ const RecentTransactions: React.FC = () => {
                   <p className="text-gray-400 text-sm">
                     Points Used: <span className="text-white">{editedLoyaltyPointsUsed}</span>
                   </p>
-                </div>
-                <div>
-                  <p className="text-lg font-semibold">
-                    Total: <CurrencyDisplay amount={calculateUpdatedBill().total} />
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
-              Cancel
-            </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white">
-          <DialogHeader>
-            <DialogTitle>Add Item to Transaction</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Select a product and quantity to add to this transaction.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Product Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="product-search">Product</Label>
-              <div className="relative">
-                <Command className="rounded-lg border border-gray-700 overflow-hidden">
-                  <CommandInput 
-                    placeholder="Search products..." 
-                    value={productSearchQuery}
-                    onValueChange={setProductSearchQuery}
-                    className="bg-gray-800 text-white"
-                  />
-                  <CommandList className="max-h-[200px] overflow-auto bg-gray-800">
-                    <CommandEmpty className="py-2 px-4 text-gray-400">No products found</CommandEmpty>
-                    <CommandGroup>
-                      {filteredProducts.map(product => (
-                        <CommandItem
-                          key={product.id}
-                          className="flex items-center justify-between cursor-pointer hover:bg-gray-700 text-white"
-                          onSelect={() => handleProductSelect(product.id)}
-                        >
-                          <div>
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-xs text-gray-400">{product.category}</p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <p className="font-medium text-cuephoria-orange">
-                              <CurrencyDisplay amount={product.price} />
-                            </p>
-                            <span className="text-xs bg-gray-700 rounded px-2 py-1">
-                              Stock: {product.stock}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </div>
-              
-              {selectedProductName && (
-                <div className="px-3 py-2 bg-gray-700/50 rounded flex items-center justify-between">
-                  <span className="text-white font-medium">{selectedProductName}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200"
-                    onClick={() => {
-                      setSelectedProductId('');
-                      setSelectedProductName('');
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {/* Quantity Input */}
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <div className="flex items-center space-x-3">
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="h-8 w-8 bg-gray-700 border-gray-600 text-white"
-                  onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
-                  disabled={newItemQuantity <= 1}
-                >
-                  -
-                </Button>
-                <Input 
-                  id="quantity" 
-                  type="number" 
-                  min="1" 
-                  max={availableStock}
-                  value={newItemQuantity} 
-                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                  className="bg-gray-700 border-gray-600 text-white text-center"
-                />
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="h-8 w-8 bg-gray-700 border-gray-600 text-white"
-                  onClick={() => setNewItemQuantity(Math.min(availableStock, newItemQuantity + 1))}
-                  disabled={newItemQuantity >= availableStock || availableStock === 0}
-                >
-                  +
-                </Button>
-              </div>
-              {selectedProductId && (
-                <p className="text-xs text-gray-400">
-                  Available stock: {availableStock}
-                </p>
-              )}
-            </div>
-          </div>
-          
-          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
-            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
-              Cancel
-            </Button>
-            <Button 
-              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
-              onClick={handleAddNewItem}
-              disabled={!selectedProductId || newItemQuantity < 1}
-            >
-              Add Item
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-};
-
-export default RecentTransactions;
