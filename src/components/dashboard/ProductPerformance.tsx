@@ -1,64 +1,112 @@
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { ChartContainer } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { BarChartHorizontal } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PieChart, Package } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
+import { Bill } from '@/types/pos.types';
+import { CurrencyDisplay } from '@/components/ui/currency';
+import { Input } from '@/components/ui/input';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-const ProductPerformance: React.FC = () => {
-  const { bills, products, categories } = usePOS();
+interface ProductPerformanceProps {
+  filteredBills?: Bill[];
+}
+
+const ProductPerformance: React.FC<ProductPerformanceProps> = ({ filteredBills }) => {
+  const { products, bills: allBills } = usePOS();
   
-  const generateProductData = () => {
-    const productSales = new Map();
+  // Use filtered bills if provided, otherwise use all bills
+  const bills = filteredBills || allBills;
+  
+  // State for sorting and filtering
+  const [sortBy, setSortBy] = useState<'revenue' | 'quantity' | 'profit'>('revenue');
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  
+  // Get unique categories
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    products.forEach(product => {
+      if (product.category) {
+        uniqueCategories.add(product.category);
+      }
+    });
+    return Array.from(uniqueCategories);
+  }, [products]);
+  
+  // Calculate product performance data
+  const productPerformanceData = useMemo(() => {
+    // Create a map to store product performance metrics
+    const productMap = new Map();
     
-    bills.forEach(bill => {
-      bill.items.forEach(item => {
-        if (item.type === 'product') {
-          const current = productSales.get(item.name) || { 
-            sales: 0, 
-            count: 0, 
-            category: item.category || 'unknown'
-          };
-          
-          productSales.set(item.name, {
-            sales: current.sales + item.total,
-            count: current.count + item.quantity,
-            category: item.category || current.category
-          });
-        }
+    // Initialize with all products
+    products.forEach(product => {
+      productMap.set(product.id, {
+        id: product.id,
+        name: product.name,
+        category: product.category || 'Uncategorized',
+        stock: product.stock,
+        cost: product.cost || 0,
+        price: product.price,
+        quantity: 0,
+        revenue: 0,
+        profit: 0
       });
     });
     
-    return Array.from(productSales, ([name, data]) => ({
-      name,
-      sales: data.sales,
-      count: data.count,
-      category: data.category
-    }))
-    .sort((a, b) => b.sales - a.sales)
-    .slice(0, 10);
-  };
-  
-  const getCategoryColor = (category?: string) => {
-    if (!category) return '#10B981';
+    // Process all bills to get sales data
+    bills.forEach(bill => {
+      // Calculate discount ratio for proportional application
+      const discountRatio = bill.subtotal > 0 ? bill.total / bill.subtotal : 1;
+      
+      bill.items.forEach(item => {
+        if (item.type !== 'product' || !productMap.has(item.id)) return;
+        
+        const product = productMap.get(item.id);
+        
+        // Apply proportional discount to the item
+        const discountedItemTotal = item.total * discountRatio;
+        
+        // Update product metrics
+        product.quantity += item.quantity;
+        product.revenue += discountedItemTotal;
+        
+        // Calculate profit (revenue - cost)
+        product.profit += discountedItemTotal - (product.cost * item.quantity);
+      });
+    });
     
-    const colorMap: Record<string, string> = {
-      'food': '#F97316',      // Orange
-      'drinks': '#3B82F6',    // Blue
-      'tobacco': '#EF4444',   // Red
-      'challenges': '#22C55E', // Green
-      'membership': '#8B5CF6'  // Purple
-    };
+    // Convert map to array and sort by specified criteria
+    const result = Array.from(productMap.values())
+      // Filter by search term if provided
+      .filter(product => {
+        const searchLower = search.toLowerCase();
+        return product.name.toLowerCase().includes(searchLower) ||
+               product.category.toLowerCase().includes(searchLower);
+      })
+      // Filter by category if selected
+      .filter(product => !categoryFilter || product.category === categoryFilter)
+      // Only include products that have been sold
+      .filter(product => product.quantity > 0);
     
-    return colorMap[category] || '#10B981';
-  };
-  
-  const formatCurrency = (value: number) => {
-    return `₹${value.toFixed(2)}`;
-  };
-  
-  const productData = generateProductData();
+    // Sort the data
+    if (sortBy === 'revenue') {
+      result.sort((a, b) => b.revenue - a.revenue);
+    } else if (sortBy === 'quantity') {
+      result.sort((a, b) => b.quantity - a.quantity);
+    } else if (sortBy === 'profit') {
+      result.sort((a, b) => b.profit - a.profit);
+    }
+    
+    return result;
+  }, [products, bills, sortBy, search, categoryFilter]);
   
   return (
     <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
@@ -66,98 +114,87 @@ const ProductPerformance: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl font-bold text-white font-heading">Product Performance</CardTitle>
-            <CardDescription className="text-gray-400">Top selling products by revenue</CardDescription>
+            <CardDescription className="text-gray-400">Sales and performance metrics by product</CardDescription>
           </div>
-          <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-            <BarChartHorizontal className="h-5 w-5 text-blue-500" />
+          <div className="h-10 w-10 rounded-full bg-[#EC4899]/20 flex items-center justify-center">
+            <Package className="h-5 w-5 text-[#EC4899]" />
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:flex sm:items-center sm:justify-between">
+          <Input
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-sm"
+          />
+          <div className="flex gap-2">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="revenue">Sort by Revenue</SelectItem>
+                <SelectItem value="quantity">Sort by Quantity</SelectItem>
+                <SelectItem value="profit">Sort by Profit</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="h-[300px] pt-4">
-        <ChartContainer
-          config={{
-            revenue: {
-              label: "Product Revenue",
-              color: "#10B981"
-            }
-          }}
-          className="h-full w-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={productData}
-              margin={{
-                top: 5,
-                right: 30,
-                left: 100,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#444" horizontal={false} />
-              <XAxis 
-                type="number" 
-                tick={{ fill: '#999' }} 
-                tickFormatter={formatCurrency}
-              />
-              <YAxis 
-                dataKey="name" 
-                type="category" 
-                tick={{ fill: '#999' }} 
-                width={100}
-                tickFormatter={(value) => {
-                  return value.length > 13 ? value.substring(0, 13) + '...' : value;
-                }}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const item = payload[0].payload;
-                    
-                    return (
-                      <div className="rounded-lg border bg-gray-800 border-gray-700 p-2 shadow-md">
-                        <p className="font-bold text-white">{item.name}</p>
-                        <div className="grid grid-cols-1 gap-2 mt-1">
-                          <div className="flex justify-between items-center gap-4">
-                            <span className="text-gray-400">Revenue:</span>
-                            <span className="font-bold text-white">₹{Number(item.sales).toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center gap-4">
-                            <span className="text-gray-400">Items Sold:</span>
-                            <span className="font-bold text-white">{item.count}</span>
-                          </div>
-                          <div className="flex justify-between items-center gap-4">
-                            <span className="text-gray-400">Category:</span>
-                            <span className="font-bold text-white capitalize">{item.category}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Legend 
-                payload={categories.map(category => ({ 
-                  value: category.charAt(0).toUpperCase() + category.slice(1), 
-                  color: getCategoryColor(category), 
-                  type: 'rect' 
-                }))}
-              />
-              <Bar 
-                dataKey="sales" 
-                name="Revenue"
-                fill="#10B981"
-                fillOpacity={0.9}
-                radius={[0, 4, 4, 0]}
-              >
-                {productData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getCategoryColor(entry.category)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead className="text-right">Quantity</TableHead>
+              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead className="text-right">Profit</TableHead>
+              <TableHead className="text-right">Stock</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {productPerformanceData.length > 0 ? (
+              productPerformanceData.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell className="text-right">{product.quantity}</TableCell>
+                  <TableCell className="text-right">
+                    <CurrencyDisplay amount={product.revenue} />
+                  </TableCell>
+                  <TableCell className={`text-right ${product.profit < 0 ? 'text-red-500' : ''}`}>
+                    <CurrencyDisplay amount={product.profit} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className={product.stock <= 5 ? 'text-orange-500' : ''}>
+                      {product.stock}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No products found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );

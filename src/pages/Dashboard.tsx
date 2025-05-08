@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
+import { DateRange } from 'react-day-picker';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import StatCardSection from '@/components/dashboard/StatCardSection';
 import ActionButtonSection from '@/components/dashboard/ActionButtonSection';
 import SalesChart from '@/components/dashboard/SalesChart';
@@ -13,6 +15,9 @@ import CustomerSpendingCorrelation from '@/components/dashboard/CustomerSpending
 import HourlyRevenueDistribution from '@/components/dashboard/HourlyRevenueDistribution';
 import ProductPerformance from '@/components/dashboard/ProductPerformance';
 import ExpenseList from '@/components/expenses/ExpenseList';
+import DateRangeFilter from '@/components/dashboard/DateRangeFilter';
+import RevenueBreakdownChart from '@/components/dashboard/RevenueBreakdownChart';
+import ProductCategoryTrendsChart from '@/components/dashboard/ProductCategoryTrendsChart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Dashboard = () => {
@@ -29,7 +34,10 @@ const Dashboard = () => {
     lowStockCount: 0,
     lowStockItems: []
   });
-  
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [filteredBills, setFilteredBills] = useState(bills);
+  const [filteredExpenses, setFilteredExpenses] = useState(expenses);
+
   useEffect(() => {
     setChartData(generateChartData());
     
@@ -289,6 +297,120 @@ const Dashboard = () => {
     return customers.filter(c => new Date(c.createdAt) >= today).length;
   };
 
+  const applyDateFilter = () => {
+    if (!dateRange?.from) {
+      setFilteredBills(bills);
+      setFilteredExpenses(expenses);
+      return;
+    }
+
+    const from = startOfDay(dateRange.from);
+    const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+
+    // Filter bills
+    const newFilteredBills = bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return isWithinInterval(billDate, { start: from, end: to });
+    });
+    setFilteredBills(newFilteredBills);
+
+    // Filter expenses
+    const newFilteredExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense.date);
+      return isWithinInterval(expenseDate, { start: from, end: to });
+    });
+    setFilteredExpenses(newFilteredExpenses);
+  };
+
+  const resetDateFilter = () => {
+    setDateRange(undefined);
+    setFilteredBills(bills);
+    setFilteredExpenses(expenses);
+  };
+
+  const getRevenueBreakdownData = () => {
+    const data = [
+      { name: 'PS5 Gaming', value: 0, color: '#9b87f5' },
+      { name: 'Pool Tables', value: 0, color: '#0EA5E9' },
+      { name: 'Metashot', value: 0, color: '#10B981' },
+      { name: 'Food', value: 0, color: '#F59E0B' },
+      { name: 'Beverages', value: 0, color: '#EC4899' },
+      { name: 'Tobacco', value: 0, color: '#8B5CF6' }
+    ];
+
+    filteredBills.forEach(bill => {
+      // Apply proportional discount to each item
+      const discountRatio = bill.subtotal > 0 ? bill.total / bill.subtotal : 1;
+      
+      bill.items.forEach(item => {
+        const discountedItemTotal = item.total * discountRatio;
+        
+        if (item.type === 'session') {
+          const itemName = item.name.toLowerCase();
+          if (itemName.includes('ps5') || itemName.includes('playstation')) {
+            data[0].value += discountedItemTotal;
+          } else if (itemName.includes('pool') || itemName.includes('8-ball')) {
+            data[1].value += discountedItemTotal;
+          }
+        } else if (item.type === 'product') {
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+            const category = product.category.toLowerCase();
+            const name = product.name.toLowerCase();
+            
+            if (name.includes('metashot') || category === 'challenges') {
+              data[2].value += discountedItemTotal;
+            } else if (category === 'food' || category === 'snacks') {
+              data[3].value += discountedItemTotal;
+            } else if (category === 'beverage' || category === 'drinks') {
+              data[4].value += discountedItemTotal;
+            } else if (category === 'tobacco') {
+              data[5].value += discountedItemTotal;
+            }
+          }
+        }
+      });
+    });
+    
+    return {
+      data,
+      totalRevenue: data.reduce((sum, item) => sum + item.value, 0)
+    };
+  };
+  
+  const getProductCategoryTrendsData = () => {
+    const categoryData = new Map();
+    
+    filteredBills.forEach(bill => {
+      bill.items
+        .filter(item => item.type === 'product')
+        .forEach(item => {
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+            const category = product.category;
+            
+            if (!categoryData.has(category)) {
+              categoryData.set(category, { sales: 0, quantity: 0 });
+            }
+            
+            const data = categoryData.get(category);
+            data.sales += item.total;
+            data.quantity += item.quantity;
+          }
+        });
+    });
+    
+    return Array.from(categoryData.entries())
+      .map(([category, data]) => ({
+        category,
+        ...data
+      }))
+      .sort((a, b) => b.sales - a.sales); // Sort by sales descending
+  };
+  
+  const { data: revenueBreakdownData, totalRevenue } = getRevenueBreakdownData();
+  const productCategoryTrendsData = getProductCategoryTrendsData();
+
   return (
     <div className="flex-1 space-y-6 p-6 bg-[#1A1F2C] text-white">
       <h2 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h2>
@@ -327,15 +449,40 @@ const Dashboard = () => {
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-6">
+          <DateRangeFilter 
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            onApplyFilter={applyDateFilter}
+            onResetFilter={resetDateFilter}
+          />
+          
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            <CustomerSpendingCorrelation />
-            <HourlyRevenueDistribution />
+            <RevenueBreakdownChart 
+              data={revenueBreakdownData}
+              totalRevenue={totalRevenue}
+            />
+            <ProductCategoryTrendsChart
+              data={productCategoryTrendsData}
+            />
           </div>
           
-          <ProductPerformance />
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <CustomerSpendingCorrelation 
+              filteredBills={filteredBills}
+            />
+            <HourlyRevenueDistribution 
+              filteredBills={filteredBills}
+            />
+          </div>
+          
+          <ProductPerformance 
+            filteredBills={filteredBills}
+          />
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            <CustomerActivityChart />
+            <CustomerActivityChart 
+              filteredBills={filteredBills}
+            />
             <ProductInventoryChart />
           </div>
         </TabsContent>

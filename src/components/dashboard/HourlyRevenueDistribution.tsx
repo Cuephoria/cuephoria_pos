@@ -1,39 +1,60 @@
 
 import React from 'react';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer } from '@/components/ui/chart';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
+import { Bill } from '@/types/pos.types';
+import { CurrencyDisplay } from '@/components/ui/currency';
 
-const HourlyRevenueDistribution: React.FC = () => {
-  const { bills } = usePOS();
+interface HourlyRevenueDistributionProps {
+  filteredBills?: Bill[];
+}
+
+const HourlyRevenueDistribution: React.FC<HourlyRevenueDistributionProps> = ({ filteredBills }) => {
+  const { bills: allBills } = usePOS();
   
-  // Generate hourly distribution data
-  const generateHourlyDistribution = () => {
-    const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
-      hour,
-      weekday: 0,
-      weekend: 0,
-      displayHour: hour === 0 ? '12AM' : hour === 12 ? '12PM' : hour < 12 ? `${hour}AM` : `${hour-12}PM`
-    }));
+  // Use filtered bills if provided, otherwise use all bills
+  const bills = filteredBills || allBills;
+  
+  // Prepare data for the chart
+  const getHourlyDistributionData = () => {
+    // Initialize hours array with all 24 hours
+    const hours = Array.from({ length: 24 }, (_, i) => {
+      const hour = i;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      
+      return {
+        hour,
+        label: `${hour12}${ampm}`,
+        revenue: 0,
+        transactions: 0,
+      };
+    });
     
+    // Process bills
     bills.forEach(bill => {
       const date = new Date(bill.createdAt);
       const hour = date.getHours();
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6; // Sunday or Saturday
       
-      if (isWeekend) {
-        hourlyData[hour].weekend += bill.total;
-      } else {
-        hourlyData[hour].weekday += bill.total;
-      }
+      hours[hour].revenue += bill.total;
+      hours[hour].transactions += 1;
     });
     
-    return hourlyData;
+    return hours;
   };
   
-  const hourlyData = generateHourlyDistribution();
+  const chartData = getHourlyDistributionData();
+  
+  // Find peak hours (top 3 by revenue)
+  const peakHours = [...chartData]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 3)
+    .filter(hour => hour.revenue > 0)
+    .map(hour => hour.label)
+    .join(', ');
   
   return (
     <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
@@ -41,104 +62,81 @@ const HourlyRevenueDistribution: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl font-bold text-white font-heading">Hourly Revenue Distribution</CardTitle>
-            <CardDescription className="text-gray-400">Revenue by time of day (Weekday vs Weekend)</CardDescription>
+            <CardDescription className="text-gray-400">
+              {peakHours ? `Peak hours: ${peakHours}` : 'Revenue by hour of day'}
+            </CardDescription>
           </div>
-          <div className="h-10 w-10 rounded-full bg-[#0EA5E9]/20 flex items-center justify-center">
-            <Clock className="h-5 w-5 text-[#0EA5E9]" />
+          <div className="h-10 w-10 rounded-full bg-[#F97316]/20 flex items-center justify-center">
+            <Clock className="h-5 w-5 text-[#F97316]" />
           </div>
         </div>
       </CardHeader>
-      <CardContent className="h-[300px] pt-4">
+      <CardContent className="h-[350px] pt-4">
         <ChartContainer
           config={{
-            weekday: {
-              label: "Weekday",
+            revenue: {
+              label: "Revenue",
               theme: {
-                light: "#0EA5E9",
-                dark: "#0EA5E9",
-              },
-            },
-            weekend: {
-              label: "Weekend",
-              theme: {
-                light: "#D946EF",
-                dark: "#D946EF",
+                light: "#F97316",
+                dark: "#F97316",
               },
             },
           }}
           className="h-full w-full"
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={hourlyData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 30 }}
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+              <CartesianGrid stroke="#333" strokeDasharray="3 3" vertical={false} />
               <XAxis 
-                dataKey="displayHour" 
+                dataKey="label" 
                 stroke="#777" 
                 axisLine={false}
                 tickLine={false}
-                interval={1}
-                tick={{ fontSize: 10 }}
               />
               <YAxis 
                 stroke="#777"
                 axisLine={false}
                 tickLine={false}
-                width={50}
-                tickFormatter={(value) => `₹${typeof value === 'number' ? value.toFixed(0) : value}`}
+                tickFormatter={(value) => `$${value}`}
               />
               <Tooltip 
-                content={({ active, payload, label }) => {
+                content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     return (
                       <div className="rounded-lg border bg-gray-800 border-gray-700 p-2 shadow-md">
-                        <p className="font-bold text-white">{label}</p>
-                        <div className="grid grid-cols-1 gap-2 mt-1">
-                          {payload.map((entry, index) => (
-                            <div key={`item-${index}`} className="flex justify-between items-center gap-4">
-                              <div className="flex items-center">
-                                <div 
-                                  className="w-3 h-3 rounded-full mr-2" 
-                                  style={{ backgroundColor: entry.color }}
-                                />
-                                <span className="text-gray-400">{entry.name}:</span>
-                              </div>
-                              <span className="font-bold text-white">
-                                ₹{typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
-                              </span>
-                            </div>
-                          ))}
+                        <p className="text-sm font-medium text-white mb-1">{payload[0].payload.label}</p>
+                        <div className="grid gap-1 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-400">Revenue:</span>
+                            <span className="text-white font-medium">
+                              <CurrencyDisplay amount={payload[0].value as number} />
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-gray-400">Transactions:</span>
+                            <span className="text-white font-medium">
+                              {payload[0].payload.transactions}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
                   }
+                  
                   return null;
                 }}
               />
-              <Legend 
-                verticalAlign="bottom" 
-                height={36}
-                formatter={(value) => <span style={{ color: '#999' }}>{value}</span>}
+              <Bar 
+                dataKey="revenue" 
+                name="revenue" 
+                fill="#F97316" 
+                radius={[4, 4, 0, 0]} 
+                maxBarSize={20}
               />
-              <Line 
-                type="monotone" 
-                dataKey="weekday" 
-                stroke="#0EA5E9" 
-                strokeWidth={2} 
-                dot={{ r: 3 }} 
-                activeDot={{ r: 5 }} 
-              />
-              <Line 
-                type="monotone" 
-                dataKey="weekend" 
-                stroke="#D946EF" 
-                strokeWidth={2} 
-                dot={{ r: 3 }} 
-                activeDot={{ r: 5 }} 
-              />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
