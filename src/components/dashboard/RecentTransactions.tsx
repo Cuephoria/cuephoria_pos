@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -17,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bill, CartItem } from '@/types/pos.types';
+import { Bill, CartItem, Customer } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Dialog, 

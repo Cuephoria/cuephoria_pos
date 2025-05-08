@@ -61,6 +61,7 @@ const POSContext = createContext<POSContextType>({
   setLoyaltyPointsUsed: () => {},
   calculateTotal: () => 0,
   completeSale: () => undefined,
+  updateBill: async () => null, // Changed from optional to a required function with default implementation
   deleteBill: async () => false,
   exportBills: () => {},
   exportCustomers: () => {},

@@ -153,6 +153,7 @@ export interface POSContextType {
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
   completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
+  updateBill: (originalBill: Bill, updatedItems: CartItem[], customer: Customer, discount: number, discountType: 'percentage' | 'fixed', loyaltyPointsUsed: number) => Promise<Bill | null>; // Changed from optional to required
   
   // Data export
   exportBills: () => void;
