@@ -5,9 +5,17 @@ import { ChartContainer } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
+import { Bill } from '@/types/pos.types';
 
-const CustomerActivityChart: React.FC = () => {
-  const { customers, bills } = usePOS();
+interface CustomerActivityChartProps {
+  filteredBills?: Bill[];
+}
+
+const CustomerActivityChart: React.FC<CustomerActivityChartProps> = ({ filteredBills }) => {
+  const { customers, bills: allBills } = usePOS();
+  
+  // Use filtered bills if provided, otherwise use all bills
+  const bills = filteredBills || allBills;
   
   // Prepare data for the chart
   const getCustomerActivityData = () => {
