@@ -32,7 +32,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
       open={isOpen} 
       onOpenChange={handleOpenChange}
     >
-      <DialogContent className="overflow-hidden">
+      <DialogContent className="overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
         </DialogHeader>

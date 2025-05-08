@@ -24,6 +24,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const { addToCart, isStudentDiscount, setIsStudentDiscount, cart } = usePOS();
 
+  // Define categories that shouldn't show buying/selling price info
+  const hidePricingFieldsCategories = ['membership', 'challenges'];
+  const shouldShowPricingFields = !hidePricingFieldsCategories.includes(product.category);
+
   const getCategoryColor = (category: string) => {
     const categoryColorMap: Record<string, string> = {
       'food': 'bg-cuephoria-orange',
@@ -100,6 +104,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   // Helper for fade/overflow styling for name
   const nameTooLong = product.name.length > 18;
 
+  // Calculate profit for display (only for applicable categories)
+  const profit = shouldShowPricingFields && product.buyingPrice ? 
+    (product.price - product.buyingPrice).toFixed(2) : null;
+
   return (
     <Card className={`flex flex-col h-full card-hover transition-all ${className} shadow-md`}>
       <CardHeader className="pb-2 space-y-1">
@@ -148,6 +156,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <span>Price:</span>
             <CurrencyDisplay amount={product.price} />
           </div>
+          
+          {/* Only display profit information for applicable categories */}
+          {shouldShowPricingFields && product.buyingPrice !== undefined && profit && (
+            <div className="flex justify-between text-sm">
+              <span>Profit:</span>
+              <span className="text-green-600 dark:text-green-400">
+                <CurrencyDisplay amount={parseFloat(profit)} />
+              </span>
+            </div>
+          )}
           
           {product.category === 'membership' && (
             <>

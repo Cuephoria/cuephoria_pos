@@ -4,6 +4,9 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  buyingPrice?: number;   // Added buying price
+  sellingPrice?: number;  // Added selling price (this will be the same as price by default)
+  profit?: number;        // Added profit field
   category: string; // Changed from enum to string for custom categories
   stock: number;
   image?: string;
@@ -153,6 +156,7 @@ export interface POSContextType {
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
   completeSale: (paymentMethod: 'cash' | 'upi') => Bill | undefined;
+  updateBill: (originalBill: Bill, updatedItems: CartItem[], customer: Customer, discount: number, discountType: 'percentage' | 'fixed', loyaltyPointsUsed: number) => Promise<Bill | null>; // Changed from optional to required
   
   // Data export
   exportBills: () => void;

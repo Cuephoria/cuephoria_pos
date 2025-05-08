@@ -61,6 +61,7 @@ const POSContext = createContext<POSContextType>({
   setLoyaltyPointsUsed: () => {},
   calculateTotal: () => 0,
   completeSale: () => undefined,
+  updateBill: async () => null, // Changed from optional to a required function with default implementation
   deleteBill: async () => false,
   exportBills: () => {},
   exportCustomers: () => {},
@@ -633,6 +634,146 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportCustomersBase(customers);
   };
   
+  // Implement the updateBill function
+  const updateBill = async (
+    originalBill: Bill, 
+    updatedItems: CartItem[], 
+    customer: Customer, 
+    discount: number, 
+    discountType: 'percentage' | 'fixed', 
+    loyaltyPointsUsed: number
+  ): Promise<Bill | null> => {
+    try {
+      // Calculate the new bill total
+      const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
+      
+      // Calculate discount value based on type
+      let discountValue = 0;
+      if (discountType === 'percentage') {
+        discountValue = subtotal * (discount / 100);
+      } else {
+        discountValue = discount;
+      }
+      
+      // Calculate total after discount and loyalty points
+      const total = Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+      
+      // Calculate loyalty points earned (members: 5 points per 100 INR, non-members: 2 points per 100 INR)
+      const pointsRate = customer.isMember ? 5 : 2;
+      const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+      
+      // Calculate the difference in loyalty points used from the original bill
+      const loyaltyPointsDifference = loyaltyPointsUsed - originalBill.loyaltyPointsUsed;
+      
+      // Calculate the difference in points earned (new points earned - original points earned)
+      const pointsEarnedDifference = loyaltyPointsEarned - originalBill.loyaltyPointsEarned;
+      
+      // Calculate the net change in loyalty points for the customer
+      const netLoyaltyPointsChange = -loyaltyPointsDifference + pointsEarnedDifference;
+      
+      // Create updated bill object
+      const updatedBill: Bill = {
+        ...originalBill,
+        items: updatedItems,
+        subtotal,
+        discount,
+        discountValue,
+        discountType,
+        loyaltyPointsUsed,
+        loyaltyPointsEarned,
+        total,
+      };
+      
+      // Update bill in Supabase
+      const { error: billUpdateError } = await supabase
+        .from('bills')
+        .update({
+          subtotal,
+          discount,
+          discount_type: discountType,
+          discount_value: discountValue, 
+          loyalty_points_used: loyaltyPointsUsed,
+          loyalty_points_earned: loyaltyPointsEarned,
+          total
+        })
+        .eq('id', originalBill.id);
+      
+      if (billUpdateError) {
+        console.error('Error updating bill:', billUpdateError);
+        throw billUpdateError;
+      }
+      
+      // Delete existing bill items
+      const { error: deleteItemsError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', originalBill.id);
+      
+      if (deleteItemsError) {
+        console.error('Error deleting bill items:', deleteItemsError);
+        throw deleteItemsError;
+      }
+      
+      // Insert updated bill items
+      const billItemsToInsert = updatedItems.map(item => ({
+        bill_id: originalBill.id,
+        item_id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total,
+        item_type: item.type
+      }));
+      
+      const { error: insertItemsError } = await supabase
+        .from('bill_items')
+        .insert(billItemsToInsert);
+      
+      if (insertItemsError) {
+        console.error('Error inserting bill items:', insertItemsError);
+        throw insertItemsError;
+      }
+      
+      // Update customer's loyalty points
+      if (netLoyaltyPointsChange !== 0) {
+        const updatedCustomer = {
+          ...customer,
+          loyaltyPoints: customer.loyaltyPoints + netLoyaltyPointsChange
+        };
+        
+        // Update customer in database
+        const { error: customerUpdateError } = await supabase
+          .from('customers')
+          .update({ loyalty_points: updatedCustomer.loyaltyPoints })
+          .eq('id', customer.id);
+        
+        if (customerUpdateError) {
+          console.error('Error updating customer loyalty points:', customerUpdateError);
+          throw customerUpdateError;
+        }
+        
+        // Update customer in state
+        updateCustomer(updatedCustomer);
+      }
+      
+      // Update local bills state
+      setBills(prevBills => prevBills.map(bill => 
+        bill.id === updatedBill.id ? updatedBill : bill
+      ));
+      
+      return updatedBill;
+      
+    } catch (error) {
+      console.error('Error in updateBill:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update the transaction.',
+        variant: 'destructive'
+      });
+      return null;
+    }
+  };
+  
   // Simplified reset function - only resets local state
   const handleResetToSampleData = async (options?: ResetOptions) => {
     try {
@@ -695,8 +836,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isStudentDiscount,
         categories,
         setIsStudentDiscount,
-        setBills, // Expose setBills
-        setCustomers, // Expose setCustomers
+        setBills,
+        setCustomers,
         setStations,
         addProduct,
         updateProduct,
@@ -723,6 +864,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoyaltyPointsUsed,
         calculateTotal,
         completeSale,
+        updateBill,
         deleteBill,
         exportBills,
         exportCustomers,
