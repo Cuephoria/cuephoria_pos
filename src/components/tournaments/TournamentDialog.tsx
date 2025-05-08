@@ -673,10 +673,13 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
                 {matches.length > 0 ? (
                   <TournamentMatchSection 
                     matches={matches} 
-                    setMatches={setMatches}
                     players={players}
-                    setWinner={setWinner}
+                    updateMatchResult={updateMatchResult}
+                    updateMatchSchedule={updateMatchSchedule}
+                    updateMatchStatus={updateMatchStatus}
+                    setMatches={setMatches}
                     currentWinner={winner}
+                    setWinner={setWinner}
                     setTournamentStatus={setTournamentStatus}
                   />
                 ) : (
