@@ -471,21 +471,21 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {tournament ? 'Edit Tournament' : 'Create Tournament'}
+            {tournament ? 'Edit Tournament' : 'Create New Tournament'}
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="players" disabled={!open}>Players</TabsTrigger>
-            <TabsTrigger value="matches" disabled={!open || players.length < 2}>Matches</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="details">Tournament Details</TabsTrigger>
+            <TabsTrigger value="players">Players</TabsTrigger>
+            <TabsTrigger value="matches">Matches</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="details">
+          <TabsContent value="details" className="space-y-4 pt-4">
             <Form {...form}>
               <form className="space-y-4">
                 <FormField
@@ -495,164 +495,132 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
                     <FormItem>
                       <FormLabel>Tournament Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter tournament name" {...field} />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="gameType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Game Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select game type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="PS5">PS5</SelectItem>
-                          <SelectItem value="Pool">Pool</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {gameType === 'PS5' && !customGameTitle && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="gameTitle"
+                    name="gameType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Game Title</FormLabel>
-                        <div className="space-y-2">
-                          <Select
-                            onValueChange={(value) => {
-                              if (value === "custom") {
-                                setCustomGameTitle(true);
-                                field.onChange("");
-                              } else {
-                                field.onChange(value);
-                              }
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select game title" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="FIFA">FIFA</SelectItem>
-                              <SelectItem value="COD">Call of Duty (COD)</SelectItem>
-                              <SelectItem value="custom">Add Custom Game Title</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                )}
-                
-                {gameType === 'PS5' && customGameTitle && (
-                  <FormField
-                    control={form.control}
-                    name="gameTitle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custom Game Title</FormLabel>
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <FormControl className="flex-1">
-                              <Input 
-                                placeholder="Enter custom game title" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={() => {
-                                setCustomGameTitle(false);
-                                form.setValue("gameTitle", "FIFA");
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                )}
-                
-                {gameType === 'Pool' && (
-                  <FormField
-                    control={form.control}
-                    name="gameVariant"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Game Variant</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
+                        <FormLabel>Game Type</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
                           defaultValue={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select pool game variant" />
+                              <SelectValue placeholder="Select game type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="8 Ball">8 Ball</SelectItem>
-                            <SelectItem value="Snooker">Snooker</SelectItem>
+                            <SelectItem value="PS5">PlayStation 5</SelectItem>
+                            <SelectItem value="Pool">Pool</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-                
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tournament Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="border-t pt-4 mt-4">
-                  <h3 className="text-md font-medium mb-4">Tournament Finance</h3>
                   
+                  {gameType === 'PS5' ? (
+                    <FormField
+                      control={form.control}
+                      name="gameTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Game Title</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              if (value === 'custom') {
+                                setCustomGameTitle(true);
+                                field.onChange('');
+                              } else {
+                                setCustomGameTitle(false);
+                                field.onChange(value);
+                              }
+                            }} 
+                            defaultValue={customGameTitle ? 'custom' : field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select game" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="FIFA">FIFA</SelectItem>
+                              <SelectItem value="COD">Call of Duty</SelectItem>
+                              <SelectItem value="custom">Other (Custom)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {customGameTitle && (
+                            <Input 
+                              value={field.value} 
+                              onChange={field.onChange}
+                              placeholder="Enter custom game title"
+                              className="mt-2"
+                            />
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="gameVariant"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Game Variant</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select variant" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="8 Ball">8 Ball</SelectItem>
+                              <SelectItem value="Snooker">Snooker</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tournament Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="budget"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tournament Budget (₹)</FormLabel>
+                        <FormLabel>Budget (₹)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="Enter budget amount" 
-                            {...field} 
-                          />
+                          <Input type="number" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -664,13 +632,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
                     name="winnerPrize"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Winner Prize Money (₹)</FormLabel>
+                        <FormLabel>Winner Prize (₹)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="Enter prize for winner" 
-                            {...field} 
-                          />
+                          <Input type="number" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -682,13 +646,9 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
                     name="runnerUpPrize"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Runner-up Prize Money (₹)</FormLabel>
+                        <FormLabel>Runner-up Prize (₹)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="Enter prize for runner-up" 
-                            {...field} 
-                          />
+                          <Input type="number" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -699,47 +659,48 @@ const TournamentDialog: React.FC<TournamentDialogProps> = ({
             </Form>
           </TabsContent>
           
-          <TabsContent value="players">
+          <TabsContent value="players" className="pt-4">
             <TournamentPlayerSection 
               players={players} 
-              setPlayers={setPlayers}
-              matchesExist={matches.length > 0} 
+              setPlayers={setPlayers} 
+              matchesExist={matches.length > 0}
             />
           </TabsContent>
           
-          <TabsContent value="matches">
-            <TournamentMatchSection 
-              matches={matches}
-              players={players}
-              updateMatchResult={updateMatchResult}
-              updateMatchSchedule={updateMatchSchedule}
-              updateMatchStatus={updateMatchStatus}
-              winner={winner}
-            />
-            
-            {matches.length === 0 && (
-              <div className="mt-4 text-center">
-                <Button 
-                  onClick={generateBracket}
-                  disabled={players.length < 2 || players.length % 2 !== 0}
-                >
-                  Generate Tournament Bracket
-                </Button>
-                {players.length > 0 && players.length % 2 !== 0 && (
-                  <p className="text-sm text-amber-500 mt-2">
-                    Tournament requires an even number of players. Please add or remove a player.
-                  </p>
+          <TabsContent value="matches" className="pt-4">
+            {players.length >= 2 ? (
+              <>
+                {matches.length > 0 ? (
+                  <TournamentMatchSection 
+                    matches={matches} 
+                    setMatches={setMatches}
+                    players={players}
+                    setWinner={setWinner}
+                    currentWinner={winner}
+                    setTournamentStatus={setTournamentStatus}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="mb-4">No matches have been generated yet.</p>
+                    <Button onClick={generateBracket}>Generate Tournament Bracket</Button>
+                  </div>
                 )}
+              </>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Add at least 2 players to generate matches
               </div>
             )}
           </TabsContent>
         </Tabs>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <DialogFooter className="pt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button 
-            onClick={form.handleSubmit(handleSave)}
-            disabled={activeTab === 'players' && players.length < 2}
+            onClick={form.handleSubmit(handleSave)} 
+            disabled={players.length < 2}
           >
             Save Tournament
           </Button>

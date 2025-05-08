@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -212,6 +213,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                     selected={field.value}
                     onSelect={field.onChange}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
