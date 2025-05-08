@@ -463,6 +463,7 @@ const Dashboard = () => {
             />
             <ProductCategoryTrendsChart
               data={productCategoryTrendsData}
+              filteredBills={filteredBills}
             />
           </div>
           

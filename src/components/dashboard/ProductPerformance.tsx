@@ -53,7 +53,7 @@ const ProductPerformance: React.FC<ProductPerformanceProps> = ({ filteredBills }
         name: product.name,
         category: product.category || 'Uncategorized',
         stock: product.stock,
-        cost: product.cost || 0,
+        cost: product.originalPrice || 0, // Use originalPrice instead of cost
         price: product.price,
         quantity: 0,
         revenue: 0,

@@ -144,9 +144,7 @@ const CustomerSpendingCorrelation: React.FC<CustomerSpendingCorrelationProps> = 
                 }}
               />
               <Scatter name="spending" data={chartData} fill="#9b87f5">
-                {chartData.map((entry, index) => (
-                  <cell key={`cell-${index}`} fill="#9b87f5" />
-                ))}
+                {/* Remove the invalid <cell> element here */}
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
