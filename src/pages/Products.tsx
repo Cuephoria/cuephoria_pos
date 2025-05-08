@@ -64,6 +64,9 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  // Define categories that shouldn't show buying/selling price fields
+  const hidePricingFieldsCategories = ['membership', 'challenges'];
+
   const handleSubmit = async (e: React.FormEvent, formData: ProductFormState) => {
     e.preventDefault();
     
@@ -93,14 +96,17 @@ const ProductsPage: React.FC = () => {
         stock: Number(stock),
       };
       
-      // Add the new fields for buying price and profit
-      if (buyingPrice) productData.buyingPrice = Number(buyingPrice);
-      if (sellingPrice) productData.sellingPrice = Number(sellingPrice);
-      
-      // Calculate profit if both buying and selling price exist
-      if (buyingPrice && (sellingPrice || price)) {
-        const finalSellingPrice = Number(sellingPrice || price);
-        productData.profit = finalSellingPrice - Number(buyingPrice);
+      // Add the new fields for buying price and profit only for applicable categories
+      const shouldIncludePriceFields = !hidePricingFieldsCategories.includes(category);
+      if (shouldIncludePriceFields) {
+        if (buyingPrice) productData.buyingPrice = Number(buyingPrice);
+        if (sellingPrice) productData.sellingPrice = Number(sellingPrice);
+        
+        // Calculate profit if both buying and selling price exist
+        if (buyingPrice && (sellingPrice || price)) {
+          const finalSellingPrice = Number(sellingPrice || price);
+          productData.profit = finalSellingPrice - Number(buyingPrice);
+        }
       }
       
       if (originalPrice) productData.originalPrice = Number(originalPrice);
