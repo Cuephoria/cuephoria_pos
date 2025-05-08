@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Match, Player, Tournament, MatchStatus, MatchStage } from '@/types/tournament.types';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dispatch, SetStateAction } from 'react';
 
 interface TournamentMatchSectionProps {
   matches: Match[];
@@ -29,10 +29,6 @@ interface TournamentMatchSectionProps {
   updateMatchSchedule: (matchId: string, date: string, time: string) => void;
   updateMatchStatus: (matchId: string, status: MatchStatus) => void;
   winner?: Player;
-  setMatches?: Dispatch<SetStateAction<Match[]>>;
-  currentWinner?: Player;
-  setWinner?: Dispatch<SetStateAction<Player | undefined>>;
-  setTournamentStatus?: Dispatch<SetStateAction<Tournament['status']>>;
 }
 
 const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
@@ -41,11 +37,7 @@ const TournamentMatchSection: React.FC<TournamentMatchSectionProps> = ({
   updateMatchResult,
   updateMatchSchedule,
   updateMatchStatus,
-  winner,
-  setMatches,
-  currentWinner,
-  setWinner,
-  setTournamentStatus
+  winner
 }) => {
   const [selectedMatchId, setSelectedMatchId] = React.useState<string | null>(null);
   const [editDate, setEditDate] = React.useState('');
