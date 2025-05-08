@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bill, CartItem, Customer } from '@/types/pos.types';
+import { Bill, CartItem } from '@/types/pos.types';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Dialog, 
@@ -51,24 +52,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-// Add interface for component props
-interface RecentTransactionsProps {
-  className?: string;
-}
-
-const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) => {
-  const { 
-    bills, 
-    setBills, 
-    customers, 
-    setCustomers, 
-    deleteBill, 
-    products, 
-    updateProduct, 
-    updateCustomer,
-    updateBill 
-  } = usePOS();
-  
+const RecentTransactions: React.FC = () => {
+  const { bills, setBills, customers, setCustomers, deleteBill, products, updateProduct, updateCustomer } = usePOS();
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -78,8 +63,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   // State for managing bill items
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
-  const [editingBill, setEditingBill] = useState<Bill | null>(null);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [editedItems, setEditedItems] = useState<CartItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -89,11 +73,10 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   const [availableStock, setAvailableStock] = useState<number>(0);
   
   // Additional edit states for discount, points, and payment method
-  const [editingDiscount, setEditingDiscount] = useState<number>(0);
-  const [editingDiscountType, setEditingDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-  const [editingLoyaltyPointsUsed, setEditingLoyaltyPointsUsed] = useState<number>(0);
-  const [editingPaymentMethod, setEditingPaymentMethod] = useState<'cash' | 'upi'>('cash');
-  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editedDiscount, setEditedDiscount] = useState<number>(0);
+  const [editedDiscountType, setEditedDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [editedLoyaltyPointsUsed, setEditedLoyaltyPointsUsed] = useState<number>(0);
+  const [editedPaymentMethod, setEditedPaymentMethod] = useState<'cash' | 'upi'>('cash');
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
@@ -142,8 +125,8 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   
   // Get current customer info for the selected bill
   const getCurrentCustomerInfo = () => {
-    if (!editingBill) return null;
-    return customers.find(c => c.id === editingBill.customerId);
+    if (!selectedBill) return null;
+    return customers.find(c => c.id === selectedBill.customerId);
   };
 
   const currentCustomer = getCurrentCustomerInfo();
@@ -151,7 +134,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   // Validate loyalty points input to not exceed available points
   const validateLoyaltyPoints = (value: number) => {
     if (!currentCustomer) return value;
-    const maxPoints = currentCustomer.loyaltyPoints + (editingBill?.loyaltyPointsUsed || 0);
+    const maxPoints = currentCustomer.loyaltyPoints + selectedBill?.loyaltyPointsUsed || 0;
     return Math.min(value, maxPoints);
   };
   
@@ -209,14 +192,12 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   
   // Function to open edit dialog
   const handleEditClick = (bill: Bill) => {
-    setEditingBill(bill);
+    setSelectedBill(bill);
     setEditedItems([...bill.items]);
-    setEditingDiscount(bill.discount);
-    setEditingDiscountType(bill.discountType);
-    setEditingLoyaltyPointsUsed(bill.loyaltyPointsUsed);
-    setEditingPaymentMethod(bill.paymentMethod);
-    setEditingCustomer(customers.find(c => c.id === bill.customerId) || null);
-    setIsEditing(true);
+    setEditedDiscount(bill.discount);
+    setEditedDiscountType(bill.discountType);
+    setEditedLoyaltyPointsUsed(bill.loyaltyPointsUsed);
+    setEditedPaymentMethod(bill.paymentMethod);
     setIsEditDialogOpen(true);
   };
   
@@ -260,13 +241,13 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   const handleLoyaltyPointsChange = (value: string) => {
     const points = parseInt(value) || 0;
     const validatedPoints = validateLoyaltyPoints(points);
-    setEditingLoyaltyPointsUsed(validatedPoints);
+    setEditedLoyaltyPointsUsed(validatedPoints);
     
     // If user tries to enter more points than available, show a toast
     if (points > validatedPoints) {
       toast({
         title: "Maximum Points Exceeded",
-        description: `You can only use up to ${currentCustomer?.loyaltyPoints + (editingBill?.loyaltyPointsUsed || 0)} points`,
+        description: `You can only use up to ${currentCustomer?.loyaltyPoints + (selectedBill?.loyaltyPointsUsed || 0)} points`,
         variant: "destructive"
       });
     }
@@ -341,68 +322,183 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   
   // Calculate updated bill values
   const calculateUpdatedBill = () => {
-    if (!editingBill) return { subtotal: 0, discountValue: 0, total: 0 };
+    if (!selectedBill) return { subtotal: 0, discountValue: 0, total: 0 };
     
     // Calculate new subtotal
     const subtotal = editedItems.reduce((sum, item) => sum + item.total, 0);
     
     // Recalculate discount value based on type
     let discountValue = 0;
-    if (editingDiscountType === 'percentage') {
-      discountValue = subtotal * (editingDiscount / 100);
+    if (editedDiscountType === 'percentage') {
+      discountValue = subtotal * (editedDiscount / 100);
     } else {
-      discountValue = editingDiscount;
+      discountValue = editedDiscount;
     }
     
     // Calculate new total
-    const total = Math.max(0, subtotal - discountValue - editingLoyaltyPointsUsed);
+    const total = Math.max(0, subtotal - discountValue - editedLoyaltyPointsUsed);
     
     return { subtotal, discountValue, total };
   };
   
-  // Calculate loyalty points earned based on total amount
-  const calculateLoyaltyPointsEarned = (total: number, isMember: boolean) => {
-    // Members: 5 points per 100 INR spent
-    // Non-members: 2 points per 100 INR spent
-    const pointsRate = isMember ? 5 : 2;
-    return Math.floor((total / 100) * pointsRate);
-  };
-  
   // Function to save changes to bill
   const handleSaveChanges = async () => {
-    if (!editingBill || !editingCustomer) return;
+    if (!selectedBill) return;
     
     setIsSaving(true);
-    
     try {
-      // Use the updateBill function to update the bill and automatically handle loyalty points
-      if (updateBill) {
-        const updatedBill = await updateBill(
-          editingBill,
-          editedItems,
-          editingCustomer,
-          editingDiscount,
-          editingDiscountType,
-          editingLoyaltyPointsUsed
-        );
+      // First, get the latest customer data from database to ensure we have the most accurate values
+      const { data: latestCustomerData, error: customerFetchError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', selectedBill.customerId)
+        .single();
         
-        if (updatedBill) {
-          toast({
-            title: "Transaction Updated",
-            description: "The transaction has been successfully updated.",
-            variant: "default"
+      if (customerFetchError) {
+        console.error('Error fetching latest customer data:', customerFetchError);
+        throw new Error(`Failed to fetch latest customer data: ${customerFetchError.message}`);
+      }
+      
+      // Calculate the values for the updated bill
+      const { subtotal, discountValue, total } = calculateUpdatedBill();
+      
+      // Calculate the difference in total amount from the original bill
+      const totalDifference = total - selectedBill.total;
+      
+      // Calculate loyalty points delta
+      const loyaltyPointsDelta = 
+        selectedBill.loyaltyPointsEarned - 
+        (editedLoyaltyPointsUsed - selectedBill.loyaltyPointsUsed);
+      
+      // Update bill in database
+      const { data: updatedBillData, error: billError } = await supabase
+        .from('bills')
+        .update({
+          subtotal,
+          discount: editedDiscount,
+          discount_type: editedDiscountType,
+          discount_value: discountValue,
+          loyalty_points_used: editedLoyaltyPointsUsed,
+          payment_method: editedPaymentMethod,
+          total
+        })
+        .eq('id', selectedBill.id)
+        .select();
+        
+      if (billError) {
+        throw new Error(`Failed to update bill: ${billError.message}`);
+      }
+      
+      console.log('Bill updated in database:', updatedBillData);
+      
+      // Delete existing bill items
+      const { error: deleteError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', selectedBill.id);
+        
+      if (deleteError) {
+        throw new Error(`Failed to update bill items: ${deleteError.message}`);
+      }
+      
+      // Insert updated items
+      for (const item of editedItems) {
+        const { error: itemError } = await supabase
+          .from('bill_items')
+          .insert({
+            bill_id: selectedBill.id,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
           });
           
-          // Close dialog and reset state
-          setIsEditing(false);
-          setIsEditDialogOpen(false);
+        if (itemError) {
+          console.error('Error creating bill item:', itemError);
         }
       }
-    } catch (error) {
-      console.error('Error updating transaction:', error);
+      
+      // Update customer in database
+      if (latestCustomerData) {
+        const updatedLoyaltyPoints = latestCustomerData.loyalty_points + loyaltyPointsDelta;
+        const updatedTotalSpent = latestCustomerData.total_spent + totalDifference;
+        
+        const { data: updatedCustomerData, error: customerUpdateError } = await supabase
+          .from('customers')
+          .update({
+            loyalty_points: updatedLoyaltyPoints,
+            total_spent: updatedTotalSpent
+          })
+          .eq('id', selectedBill.customerId)
+          .select();
+          
+        if (customerUpdateError) {
+          console.error('Error updating customer:', customerUpdateError);
+          throw new Error(`Failed to update customer: ${customerUpdateError.message}`);
+        }
+        
+        // Map the updated customer data to our Customer type and update in context
+        if (updatedCustomerData && updatedCustomerData[0]) {
+          const customer = {
+            id: updatedCustomerData[0].id,
+            name: updatedCustomerData[0].name,
+            phone: updatedCustomerData[0].phone,
+            email: updatedCustomerData[0].email || undefined,
+            isMember: updatedCustomerData[0].is_member,
+            membershipExpiryDate: updatedCustomerData[0].membership_expiry_date ? new Date(updatedCustomerData[0].membership_expiry_date) : undefined,
+            membershipStartDate: updatedCustomerData[0].membership_start_date ? new Date(updatedCustomerData[0].membership_start_date) : undefined,
+            membershipPlan: updatedCustomerData[0].membership_plan || undefined,
+            membershipHoursLeft: updatedCustomerData[0].membership_hours_left || undefined,
+            membershipDuration: updatedCustomerData[0].membership_duration as 'weekly' | 'monthly' | undefined,
+            loyaltyPoints: updatedCustomerData[0].loyalty_points,
+            totalSpent: updatedCustomerData[0].total_spent,
+            totalPlayTime: updatedCustomerData[0].total_play_time,
+            createdAt: new Date(updatedCustomerData[0].created_at)
+          };
+          
+          // Update customer in context
+          await updateCustomer(customer);
+          
+          // Update the customers list to ensure UI reflects changes
+          setCustomers(prevCustomers => 
+            prevCustomers.map(c => c.id === customer.id ? customer : c)
+          );
+        }
+      }
+      
+      // Create the updated bill with new values
+      const updatedBill: Bill = {
+        ...selectedBill,
+        items: editedItems,
+        subtotal,
+        discount: editedDiscount,
+        discountType: editedDiscountType,
+        discountValue,
+        loyaltyPointsUsed: editedLoyaltyPointsUsed,
+        paymentMethod: editedPaymentMethod,
+        total
+      };
+      
+      // Update the bill in the local state
+      setBills(prevBills => 
+        prevBills.map(b => b.id === updatedBill.id ? updatedBill : b)
+      );
+      
       toast({
-        title: "Update Failed",
-        description: "Failed to update the transaction. Please try again.",
+        title: "Changes Saved",
+        description: "Bill items have been updated successfully",
+      });
+      
+      // Close dialog and reset state without page reload
+      setIsEditDialogOpen(false);
+      setSelectedBill(null);
+      
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save changes",
         variant: "destructive"
       });
     } finally {
@@ -411,80 +507,82 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   };
   
   return (
-    <Card className={`bg-[#1A1F2C] border-gray-700 shadow-xl ${className}`}>
-      <CardHeader className="space-y-4">
-        <div>
-          <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
-          <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
-        </div>
-        <div className="relative flex w-full items-center">
-          <Input
-            placeholder="Search by ID, name, phone or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-8 bg-gray-800 border-gray-700 text-white"
-          />
-          <Search className="absolute right-2 h-4 w-4 text-gray-400" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {sortedBills.length > 0 ? (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
-              {sortedBills.map(bill => {
-                const customer = customers.find(c => c.id === bill.customerId);
-                const date = new Date(bill.createdAt);
-                
-                return (
-                  <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
-                        <User className="h-5 w-5 text-purple-400" />
+    <>
+      <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
+        <CardHeader className="space-y-4">
+          <div>
+            <CardTitle className="text-xl font-bold text-white font-heading">Recent Transactions</CardTitle>
+            <CardDescription className="text-gray-400">Latest sales and billing information</CardDescription>
+          </div>
+          <div className="relative flex w-full items-center">
+            <Input
+              placeholder="Search by ID, name, phone or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-8 bg-gray-800 border-gray-700 text-white"
+            />
+            <Search className="absolute right-2 h-4 w-4 text-gray-400" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {sortedBills.length > 0 ? (
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {sortedBills.map(bill => {
+                  const customer = customers.find(c => c.id === bill.customerId);
+                  const date = new Date(bill.createdAt);
+                  
+                  return (
+                    <div key={bill.id} className="flex items-center justify-between p-4 rounded-lg bg-gray-800 border border-gray-700">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-10 w-10 rounded-full bg-[#6E59A5]/30 flex items-center justify-center">
+                          <User className="h-5 w-5 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
+                          <div className="flex space-x-2">
+                            <p className="text-xs text-gray-400">
+                              {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-white">{customer?.name || 'Unknown Customer'}</p>
-                        <div className="flex space-x-2">
-                          <p className="text-xs text-gray-400">
-                            {date.toLocaleDateString()} {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                          </p>
-                          <p className="text-xs text-gray-400">ID: {bill.id.substring(0, 8)}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-white font-semibold">
+                          <CurrencyDisplay amount={bill.total} />
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-gray-400 hover:text-blue-500 transition-colors"
+                            onClick={() => handleEditClick(bill)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                            onClick={() => handleDeleteClick(bill)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-white font-semibold">
-                        <CurrencyDisplay amount={bill.total} />
-                      </div>
-                      <div className="flex space-x-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-gray-400 hover:text-blue-500 transition-colors"
-                          onClick={() => handleEditClick(bill)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                          onClick={() => handleDeleteClick(bill)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="flex items-center justify-center p-6 text-gray-400">
+              <p>No transactions found</p>
             </div>
-          </ScrollArea>
-        ) : (
-          <div className="flex items-center justify-center p-6 text-gray-400">
-            <p>No transactions found</p>
-          </div>
-        )}
-      </CardContent>
+          )}
+        </CardContent>
+      </Card>
       
       {/* Delete confirmation dialog */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
@@ -519,25 +617,25 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
             </DialogDescription>
           </DialogHeader>
           
-          {editingBill && (
+          {selectedBill && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400">Bill ID</h3>
-                  <p className="text-white text-xs font-mono">{editingBill.id}</p>
+                  <p className="text-white text-xs font-mono">{selectedBill.id}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400">Customer</h3>
                   <p className="text-white">
-                    {customers.find(c => c.id === editingBill.customerId)?.name || 'Unknown Customer'}
+                    {customers.find(c => c.id === selectedBill.customerId)?.name || 'Unknown Customer'}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-400">Date</h3>
                   <p className="text-white">
-                    {new Date(editingBill.createdAt).toLocaleDateString()} 
+                    {new Date(selectedBill.createdAt).toLocaleDateString()} 
                     {' '}
-                    {new Date(editingBill.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    {new Date(selectedBill.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </p>
                 </div>
                 <Button 
@@ -629,14 +727,14 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                   <div className="flex space-x-2">
                     <Input 
                       type="number" 
-                      value={editingDiscount} 
-                      onChange={(e) => setEditingDiscount(parseFloat(e.target.value))}
+                      value={editedDiscount} 
+                      onChange={(e) => setEditedDiscount(parseFloat(e.target.value))}
                       className="bg-gray-700 border-gray-600 text-white flex-1"
                       min="0"
                     />
                     <Select
-                      value={editingDiscountType}
-                      onValueChange={(value) => setEditingDiscountType(value as 'percentage' | 'fixed')}
+                      value={editedDiscountType}
+                      onValueChange={(value) => setEditedDiscountType(value as 'percentage' | 'fixed')}
                     >
                       <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-24">
                         <SelectValue placeholder="Type" />
@@ -654,25 +752,25 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                     Loyalty Points Used 
                     {currentCustomer && (
                       <span className="text-xs ml-2 text-cuephoria-orange">
-                        (Available: {currentCustomer.loyaltyPoints + editingBill.loyaltyPointsUsed})
+                        (Available: {currentCustomer.loyaltyPoints + selectedBill.loyaltyPointsUsed})
                       </span>
                     )}
                   </h3>
                   <Input 
                     type="number" 
-                    value={editingLoyaltyPointsUsed} 
+                    value={editedLoyaltyPointsUsed} 
                     onChange={(e) => handleLoyaltyPointsChange(e.target.value)}
                     className="bg-gray-700 border-gray-600 text-white"
                     min="0"
-                    max={currentCustomer ? currentCustomer.loyaltyPoints + editingBill.loyaltyPointsUsed : 0}
+                    max={currentCustomer ? currentCustomer.loyaltyPoints + selectedBill.loyaltyPointsUsed : 0}
                   />
                 </div>
                 
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-gray-300">Payment Method</h3>
                   <RadioGroup 
-                    value={editingPaymentMethod} 
-                    onValueChange={(value) => setEditingPaymentMethod(value as 'cash' | 'upi')}
+                    value={editedPaymentMethod} 
+                    onValueChange={(value) => setEditedPaymentMethod(value as 'cash' | 'upi')}
                     className="flex space-x-4"
                   >
                     <div className="flex items-center space-x-2">
@@ -699,47 +797,44 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                     </span>
                   </p>
                   <p className="text-gray-400 text-sm">
-                    Discount ({editingDiscountType === 'percentage' ? `${editingDiscount}%` : 'fixed'}): 
+                    Discount ({editedDiscountType === 'percentage' ? `${editedDiscount}%` : 'fixed'}): 
                     <span className="text-white ml-1">
                       <CurrencyDisplay amount={calculateUpdatedBill().discountValue} />
                     </span>
                   </p>
                   <p className="text-gray-400 text-sm">
-                    Points Used: <span className="text-white">{editingLoyaltyPointsUsed}</span>
+                    Points Used: <span className="text-white">{editedLoyaltyPointsUsed}</span>
                   </p>
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-white">
+                  <p className="text-lg font-semibold">
                     Total: <CurrencyDisplay amount={calculateUpdatedBill().total} />
                   </p>
                 </div>
               </div>
-              
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
-                  className="bg-gray-700 hover:bg-gray-600 text-white"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSaveChanges}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>Saving Changes...</>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
             </div>
           )}
+          
+          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
+              Cancel
+            </Button>
+            <Button 
+              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : "Save Changes"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       
@@ -749,100 +844,123 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
           <DialogHeader>
             <DialogTitle>Add Item to Transaction</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Select a product to add to this transaction
+              Select a product and quantity to add to this transaction.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Product selection */}
+            {/* Product Selection */}
             <div className="space-y-2">
-              <Label htmlFor="product" className="text-white">Product</Label>
+              <Label htmlFor="product-search">Product</Label>
               <div className="relative">
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={isCommandOpen}
-                  className="w-full justify-between bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-                  onClick={() => setIsCommandOpen(!isCommandOpen)}
-                >
-                  {selectedProductName || "Select product..."}
-                </Button>
-                
-                {isCommandOpen && (
-                  <div className="absolute top-full mt-2 w-full z-50">
-                    <Command className="rounded-lg border border-gray-600 bg-gray-800 text-white shadow-md">
-                      <CommandInput 
-                        placeholder="Search products..." 
-                        value={productSearchQuery}
-                        onValueChange={setProductSearchQuery}
-                        className="border-gray-600"
-                      />
-                      <CommandList className="max-h-60">
-                        <CommandEmpty>No products found</CommandEmpty>
-                        <CommandGroup>
-                          {filteredProducts.map((product) => (
-                            <CommandItem
-                              key={product.id}
-                              value={product.id}
-                              onSelect={() => handleProductSelect(product.id)}
-                              className="flex justify-between cursor-pointer hover:bg-gray-700"
-                            >
-                              <div className="flex flex-col">
-                                <span>{product.name}</span>
-                                <span className="text-xs text-gray-400">{product.category}</span>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-semibold"><CurrencyDisplay amount={product.price} /></span>
-                                <span className="text-xs text-gray-400 block">Stock: {product.stock}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </div>
-                )}
+                <Command className="rounded-lg border border-gray-700 overflow-hidden">
+                  <CommandInput 
+                    placeholder="Search products..." 
+                    value={productSearchQuery}
+                    onValueChange={setProductSearchQuery}
+                    className="bg-gray-800 text-white"
+                  />
+                  <CommandList className="max-h-[200px] overflow-auto bg-gray-800">
+                    <CommandEmpty className="py-2 px-4 text-gray-400">No products found</CommandEmpty>
+                    <CommandGroup>
+                      {filteredProducts.map(product => (
+                        <CommandItem
+                          key={product.id}
+                          className="flex items-center justify-between cursor-pointer hover:bg-gray-700 text-white"
+                          onSelect={() => handleProductSelect(product.id)}
+                        >
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-xs text-gray-400">{product.category}</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <p className="font-medium text-cuephoria-orange">
+                              <CurrencyDisplay amount={product.price} />
+                            </p>
+                            <span className="text-xs bg-gray-700 rounded px-2 py-1">
+                              Stock: {product.stock}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
               </div>
+              
+              {selectedProductName && (
+                <div className="px-3 py-2 bg-gray-700/50 rounded flex items-center justify-between">
+                  <span className="text-white font-medium">{selectedProductName}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 text-gray-400 hover:text-gray-200"
+                    onClick={() => {
+                      setSelectedProductId('');
+                      setSelectedProductName('');
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
             
-            {/* Quantity */}
+            {/* Quantity Input */}
             <div className="space-y-2">
-              <Label htmlFor="quantity" className="text-white">Quantity</Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={newItemQuantity}
-                  onChange={(e) => setNewItemQuantity(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="bg-gray-700 border-gray-600 text-white"
-                  min="1"
+              <Label htmlFor="quantity">Quantity</Label>
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8 bg-gray-700 border-gray-600 text-white"
+                  onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                  disabled={newItemQuantity <= 1}
+                >
+                  -
+                </Button>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min="1" 
                   max={availableStock}
+                  value={newItemQuantity} 
+                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  className="bg-gray-700 border-gray-600 text-white text-center"
                 />
-                {availableStock > 0 && (
-                  <p className="text-xs text-gray-400">Available: {availableStock}</p>
-                )}
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8 bg-gray-700 border-gray-600 text-white"
+                  onClick={() => setNewItemQuantity(Math.min(availableStock, newItemQuantity + 1))}
+                  disabled={newItemQuantity >= availableStock || availableStock === 0}
+                >
+                  +
+                </Button>
               </div>
+              {selectedProductId && (
+                <p className="text-xs text-gray-400">
+                  Available stock: {availableStock}
+                </p>
+              )}
             </div>
           </div>
           
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsAddItemDialogOpen(false)}
-              className="bg-gray-700 hover:bg-gray-600 text-white"
-            >
+          <DialogFooter className="pt-4 border-t border-gray-700 mt-4">
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)} className="bg-gray-700 text-white hover:bg-gray-600">
               Cancel
             </Button>
             <Button 
+              className="bg-cuephoria-purple hover:bg-cuephoria-purple/80 text-white"
               onClick={handleAddNewItem}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={!selectedProductId || newItemQuantity < 1}
             >
-              Add to Bill
+              Add Item
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 };
 
