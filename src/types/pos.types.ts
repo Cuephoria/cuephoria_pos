@@ -4,6 +4,9 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  buyingPrice?: number;   // Added buying price
+  sellingPrice?: number;  // Added selling price (this will be the same as price by default)
+  profit?: number;        // Added profit field
   category: string; // Changed from enum to string for custom categories
   stock: number;
   image?: string;

@@ -21,6 +21,8 @@ interface ProductFormProps {
 export interface ProductFormState {
   name: string;
   price: string;
+  buyingPrice: string;
+  sellingPrice: string;
   category: string;
   stock: string;
   originalPrice: string;
@@ -41,6 +43,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const [formState, setFormState] = useState<ProductFormState>({
     name: '',
     price: '',
+    buyingPrice: '',
+    sellingPrice: '',
     category: '',
     stock: '',
     originalPrice: '',
@@ -51,12 +55,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
   });
   
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [profit, setProfit] = useState<number>(0);
 
   useEffect(() => {
     if (isEditMode && selectedProduct) {
       setFormState({
         name: selectedProduct.name,
         price: selectedProduct.price.toString(),
+        buyingPrice: selectedProduct.buyingPrice?.toString() || '',
+        sellingPrice: selectedProduct.sellingPrice?.toString() || selectedProduct.price.toString(),
         category: selectedProduct.category,
         stock: selectedProduct.stock.toString(),
         originalPrice: selectedProduct.originalPrice?.toString() || '',
@@ -65,10 +72,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
         duration: selectedProduct.duration || '',
         membershipHours: selectedProduct.membershipHours?.toString() || '',
       });
+
+      // Calculate profit if both buying and selling price exist
+      if (selectedProduct.buyingPrice && selectedProduct.price) {
+        setProfit(selectedProduct.price - selectedProduct.buyingPrice);
+      }
     } else {
       setFormState({
         name: '',
         price: '',
+        buyingPrice: '',
+        sellingPrice: '',
         category: '',
         stock: '',
         originalPrice: '',
@@ -77,6 +91,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         duration: '',
         membershipHours: '',
       });
+      setProfit(0);
     }
     // Clear validation errors when selected product changes
     setValidationErrors({});
@@ -84,7 +99,34 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormState(prev => ({ ...prev, [name]: value }));
+    setFormState(prev => {
+      const newState = { ...prev, [name]: value };
+      
+      // When buying price or selling price changes, update profit
+      if (name === 'buyingPrice' || name === 'sellingPrice' || name === 'price') {
+        const buyingPrice = parseFloat(name === 'buyingPrice' ? value : newState.buyingPrice) || 0;
+        // If sellingPrice is explicitly set, use it, otherwise use price
+        const sellingPrice = parseFloat(
+          name === 'sellingPrice' ? value : 
+          newState.sellingPrice || newState.price
+        ) || 0;
+        
+        // Update price field if sellingPrice changes
+        if (name === 'sellingPrice') {
+          newState.price = value;
+        }
+        
+        // Update sellingPrice field if price changes
+        if (name === 'price') {
+          newState.sellingPrice = value;
+        }
+        
+        // Calculate profit
+        setProfit(sellingPrice - buyingPrice);
+      }
+      
+      return newState;
+    });
     
     // Clear validation error for this field when it changes
     if (validationErrors[name]) {
@@ -121,6 +163,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
       errors.price = 'Price is required';
     } else if (parseFloat(formState.price) < 0) {
       errors.price = 'Price cannot be negative';
+    }
+    
+    if (formState.buyingPrice && parseFloat(formState.buyingPrice) < 0) {
+      errors.buyingPrice = 'Buying price cannot be negative';
+    }
+    
+    if (formState.sellingPrice && parseFloat(formState.sellingPrice) < 0) {
+      errors.sellingPrice = 'Selling price cannot be negative';
     }
     
     if (!formState.category) {
@@ -188,24 +238,66 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
         </div>
         
-        <div className="grid gap-2">
-          <Label htmlFor="price" className={validationErrors.price ? 'text-destructive' : ''}>
-            Price (₹)*
-          </Label>
-          <Input
-            id="price"
-            name="price"
-            type="number"
-            value={formState.price}
-            onChange={handleChange}
-            placeholder="Enter price in INR"
-            className={validationErrors.price ? 'border-destructive' : ''}
-            min="0"
-            required
-          />
-          {validationErrors.price && (
-            <p className="text-xs text-destructive mt-1">{validationErrors.price}</p>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="buyingPrice" className={validationErrors.buyingPrice ? 'text-destructive' : ''}>
+              Buying Price (₹)
+            </Label>
+            <Input
+              id="buyingPrice"
+              name="buyingPrice"
+              type="number"
+              value={formState.buyingPrice}
+              onChange={handleChange}
+              placeholder="Enter buying price"
+              className={validationErrors.buyingPrice ? 'border-destructive' : ''}
+              min="0"
+              step="0.01"
+            />
+            {validationErrors.buyingPrice && (
+              <p className="text-xs text-destructive mt-1">{validationErrors.buyingPrice}</p>
+            )}
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="sellingPrice" className={validationErrors.sellingPrice ? 'text-destructive' : ''}>
+              Selling Price (₹)*
+            </Label>
+            <Input
+              id="sellingPrice"
+              name="sellingPrice"
+              type="number"
+              value={formState.sellingPrice || formState.price}
+              onChange={handleChange}
+              placeholder="Enter selling price"
+              className={validationErrors.sellingPrice ? 'border-destructive' : ''}
+              min="0"
+              step="0.01"
+              required
+            />
+            {validationErrors.sellingPrice && (
+              <p className="text-xs text-destructive mt-1">{validationErrors.sellingPrice}</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Price field - hidden but still part of the form for backward compatibility */}
+        <Input
+          id="price"
+          name="price"
+          type="hidden"
+          value={formState.sellingPrice || formState.price}
+          onChange={handleChange}
+        />
+
+        {/* Profit display */}
+        <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Profit per unit:</span>
+            <span className="font-bold text-green-600 dark:text-green-400">
+              {isNaN(profit) ? '₹0.00' : `₹${profit.toFixed(2)}`}
+            </span>
+          </div>
         </div>
         
         <div className="grid gap-2">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { Button } from '@/components/ui/button';
@@ -72,7 +71,10 @@ const ProductsPage: React.FC = () => {
       setIsSubmitting(true);
       setFormError(null);
       
-      const { name, price, category, stock, originalPrice, offerPrice, studentPrice, duration, membershipHours } = formData;
+      const { 
+        name, price, category, stock, originalPrice, offerPrice, 
+        studentPrice, duration, membershipHours, buyingPrice, sellingPrice 
+      } = formData;
       
       if (!name || !price || !category || !stock) {
         toast({
@@ -87,9 +89,19 @@ const ProductsPage: React.FC = () => {
       const productData: Omit<Product, 'id'> = {
         name,
         price: Number(price),
-        category: category as 'food' | 'drinks' | 'tobacco' | 'challenges' | 'membership',
+        category: category as string,
         stock: Number(stock),
       };
+      
+      // Add the new fields for buying price and profit
+      if (buyingPrice) productData.buyingPrice = Number(buyingPrice);
+      if (sellingPrice) productData.sellingPrice = Number(sellingPrice);
+      
+      // Calculate profit if both buying and selling price exist
+      if (buyingPrice && (sellingPrice || price)) {
+        const finalSellingPrice = Number(sellingPrice || price);
+        productData.profit = finalSellingPrice - Number(buyingPrice);
+      }
       
       if (originalPrice) productData.originalPrice = Number(originalPrice);
       if (offerPrice) productData.offerPrice = Number(offerPrice);
