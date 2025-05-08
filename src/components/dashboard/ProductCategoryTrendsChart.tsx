@@ -5,6 +5,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { BarChart3 } from 'lucide-react';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { Bill } from '@/types/pos.types';
 
 interface ProductCategoryTrendsChartProps {
   data: {
@@ -12,6 +13,7 @@ interface ProductCategoryTrendsChartProps {
     sales: number;
     quantity: number;
   }[];
+  filteredBills?: Bill[]; // Add the filteredBills prop
 }
 
 const ProductCategoryTrendsChart: React.FC<ProductCategoryTrendsChartProps> = ({ data }) => {
