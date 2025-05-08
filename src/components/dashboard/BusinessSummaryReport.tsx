@@ -87,10 +87,12 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     // Calculate total expenses
     const totalExpenses = categoryTotals.reduce((sum, category) => sum + category.total, 0);
     
-    // Initialize revenue variables with zero values
+    // Calculate ONLY game station sales (PS5, Pool and Metashot challenges)
     let ps5Sales = 0;
     let poolSales = 0;
     let metashotSales = 0;
+    
+    // Calculate canteen sales - But keep these separate from gaming metrics
     let foodSales = 0;
     let beverageSales = 0;
     let tobaccoSales = 0;
@@ -98,7 +100,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     // Process all bills at once to improve performance
     filteredBills.forEach(bill => {
       // Calculate effective discount rate for proportional application
-      const discountRatio = bill.subtotal > 0 ? bill.total / bill.subtotal : 1;
+      const discountRatio = bill.total / bill.subtotal;
       
       bill.items.forEach(item => {
         // Apply proportional discount to each item to reflect actual revenue
@@ -136,17 +138,13 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
       });
     });
     
-    // Calculate total gaming sales and canteen sales
-    const totalGameSales = ps5Sales + poolSales + metashotSales;
-    const totalCanteenSales = foodSales + beverageSales + tobaccoSales;
-    
-    // Calculate total revenue as the sum of all sales
-    const totalRevenue = totalGameSales + totalCanteenSales;
-    
-    // Calculate net profit and profit margin
+    // Calculate business health metrics
+    const totalRevenue = ps5Sales + poolSales + metashotSales + foodSales + beverageSales + tobaccoSales;
     const netProfit = totalRevenue - totalExpenses;
-    // Prevent division by zero
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    
+    const totalCanteenSales = foodSales + beverageSales + tobaccoSales;
+    const totalGameSales = ps5Sales + poolSales + metashotSales;
     
     // Calculate customer metrics for deeper insights
     const activeCustomers = customers.filter(c => {
@@ -226,7 +224,7 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
                 ? `${reportData.gameSales.totalGameSales / reportData.businessHealth.totalRevenue * 100 < 100
                     ? `${(reportData.gameSales.totalGameSales / reportData.businessHealth.totalRevenue * 100).toFixed(0)}% from gaming`
                     : '100% from gaming'}`
-                : '0% from gaming'}
+                : ''}
             </p>
           </div>
           <div className="space-y-1.5">

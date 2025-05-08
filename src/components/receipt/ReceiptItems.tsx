@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Bill, CartItem, Product } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
@@ -160,15 +161,12 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
       return;
     }
     
-    // Use sellingPrice if available, otherwise fall back to price
-    const finalPrice = selectedProduct.sellingPrice || selectedProduct.price;
-    
     const itemToAdd: CartItem = {
       id: selectedProduct.id,
       name: selectedProduct.name,
-      price: finalPrice, // Use the selling price or fallback to regular price
+      price: selectedProduct.price,
       quantity: newItemQuantity,
-      total: finalPrice * newItemQuantity,
+      total: selectedProduct.price * newItemQuantity,
       type: 'product',
       category: selectedProduct.category
     };
@@ -429,24 +427,13 @@ const ReceiptItems: React.FC<ReceiptItemsProps> = ({ bill, onUpdateItems, editab
                   const product = products.find(p => p.id === selectedProductId);
                   if (!product) return <p className="text-xs text-gray-400">Product not found</p>;
                   
-                  // Calculate selling price and profit information
-                  const sellingPrice = product.sellingPrice || product.price;
-                  const profit = product.buyingPrice ? sellingPrice - product.buyingPrice : undefined;
-                  const totalProfit = profit !== undefined ? profit * newItemQuantity : undefined;
-                  
                   return (
                     <div className="space-y-1 text-xs">
                       <p><span className="text-gray-400">Name:</span> {product.name}</p>
-                      <p><span className="text-gray-400">Price:</span> ₹{sellingPrice.toFixed(2)}</p>
+                      <p><span className="text-gray-400">Price:</span> <CurrencyDisplay amount={product.price} /></p>
                       <p><span className="text-gray-400">Category:</span> {product.category}</p>
                       <p><span className="text-gray-400">Stock:</span> {product.stock}</p>
-                      <p><span className="text-gray-400">Total:</span> ₹{(sellingPrice * newItemQuantity).toFixed(2)}</p>
-                      {profit !== undefined && (
-                        <p><span className="text-gray-400">Profit/Unit:</span> <span className="text-green-400">₹{profit.toFixed(2)}</span></p>
-                      )}
-                      {totalProfit !== undefined && (
-                        <p><span className="text-gray-400">Total Profit:</span> <span className="text-green-400">₹{totalProfit.toFixed(2)}</span></p>
-                      )}
+                      <p><span className="text-gray-400">Total:</span> <CurrencyDisplay amount={product.price * newItemQuantity} /></p>
                     </div>
                   );
                 })()}

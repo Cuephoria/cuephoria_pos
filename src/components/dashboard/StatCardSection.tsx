@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import StatsCard from './StatsCard';
-import { CreditCard, Users, PlayCircle, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { CreditCard, Users, Clock, AlertTriangle, PlayCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { useSessionsData } from '@/hooks/stations/useSessionsData';

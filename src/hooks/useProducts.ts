@@ -41,10 +41,7 @@ export const useProducts = () => {
       const newProductId = generateId();
       const newProduct: Product = {
         ...product,
-        id: newProductId,
-        sellingPrice: product.sellingPrice || product.price,
-        profit: product.buyingPrice ? 
-          (product.sellingPrice || product.price) - product.buyingPrice : undefined
+        id: newProductId
       };
       
       setProducts(prev => [...prev, newProduct]);
@@ -109,21 +106,12 @@ export const useProducts = () => {
         throw new Error(`Another product named "${product.name}" already exists`);
       }
       
-      // Ensure selling price is set to price if not provided
-      const updatedProduct = {
-        ...product,
-        sellingPrice: product.sellingPrice || product.price,
-        // Recalculate profit if both buying price and selling price exist
-        profit: product.buyingPrice ? 
-          (product.sellingPrice || product.price) - product.buyingPrice : undefined
-      };
-      
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+      setProducts(prev => prev.map(p => p.id === product.id ? product : p));
       
       supabase
         .from('products')
-        .update(convertToSupabaseProduct(updatedProduct))
-        .eq('id', updatedProduct.id)
+        .update(convertToSupabaseProduct(product))
+        .eq('id', product.id)
         .then(({ error }) => {
           if (error) {
             console.error('Error updating product in DB:', error);
@@ -135,9 +123,9 @@ export const useProducts = () => {
             });
             return supabase
               .from('products')
-              .insert(convertToSupabaseProduct(updatedProduct));
+              .insert(convertToSupabaseProduct(product));
           } else {
-            console.log('Product updated in DB:', updatedProduct.name);
+            console.log('Product updated in DB:', product.name);
           }
         })
         .then(result => {
@@ -152,7 +140,7 @@ export const useProducts = () => {
         description: 'Product updated successfully',
       });
       
-      return updatedProduct;
+      return product;
     } catch (error) {
       console.error('Error updating product:', error);
       
