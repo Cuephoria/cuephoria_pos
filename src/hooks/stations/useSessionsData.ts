@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePOS } from '@/context/POSContext';
@@ -78,7 +77,7 @@ export const useSessionsData = () => {
     }
   }, [fetchSessions]);
   
-  // New function to export sessions data
+  // Function to export sessions data
   const exportSessions = useCallback(() => {
     if (sessions.length === 0) {
       toast.error('No sessions data to export');

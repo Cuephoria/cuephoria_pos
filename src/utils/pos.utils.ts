@@ -20,42 +20,46 @@ export const generateId = (): string => {
 
 // Export functions for CSV generation
 export const exportCustomersToCSV = (customers: Customer[]) => {
-  let csvContent = "data:text/csv;charset=utf-8,";
-  
-  // Header row
-  csvContent += "Customer ID,Name,Phone,Email,Member Status,Loyalty Points,Total Spent,Total Play Time (mins),Join Date\n";
+  // Generate CSV content
+  let csvRows = ["Customer ID,Name,Phone,Email,Member Status,Loyalty Points,Total Spent,Total Play Time (mins),Join Date"];
   
   // Data rows
   customers.forEach(customer => {
     const row = [
       customer.id,
-      customer.name,
+      `"${customer.name.replace(/"/g, '""')}"`, // Escape quotes in CSV
       customer.phone,
-      customer.email || "",
+      `"${(customer.email || '').replace(/"/g, '""')}"`,
       customer.isMember ? "Member" : "Non-Member",
       customer.loyaltyPoints,
       customer.totalSpent,
       customer.totalPlayTime,
       new Date(customer.createdAt).toLocaleDateString()
     ];
-    csvContent += row.join(",") + "\n";
+    csvRows.push(row.join(","));
   });
   
+  const csvContent = csvRows.join('\n');
+  
+  // Create a Blob with the correct MIME type for CSV
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
   // Create download link
-  const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   link.setAttribute("download", "cuephoria_customers.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  
+  // Clean up the URL object
+  URL.revokeObjectURL(url);
 };
 
 export const exportBillsToCSV = (bills: Bill[], customers: Customer[]) => {
-  let csvContent = "data:text/csv;charset=utf-8,";
-  
-  // Header row
-  csvContent += "Bill ID,Customer,Date,Items,Subtotal,Discount,Loyalty Points Used,Total,Payment Method\n";
+  // Generate CSV content
+  let csvRows = ["Bill ID,Customer,Date,Items,Subtotal,Discount,Loyalty Points Used,Total,Payment Method"];
   
   // Data rows
   bills.forEach(bill => {
@@ -63,26 +67,34 @@ export const exportBillsToCSV = (bills: Bill[], customers: Customer[]) => {
     const items = bill.items.map(item => `${item.name} x${item.quantity}`).join(", ");
     const row = [
       bill.id,
-      customer ? customer.name : "Unknown",
+      `"${customer ? customer.name.replace(/"/g, '""') : "Unknown"}"`,
       new Date(bill.createdAt).toLocaleDateString(),
-      `"${items}"`,
+      `"${items.replace(/"/g, '""')}"`,
       bill.subtotal,
       bill.discount,
       bill.loyaltyPointsUsed,
       bill.total,
       bill.paymentMethod
     ];
-    csvContent += row.join(",") + "\n";
+    csvRows.push(row.join(","));
   });
+
+  const csvContent = csvRows.join('\n');
+  
+  // Create a Blob with the correct MIME type for CSV
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   
   // Create download link
-  const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   link.setAttribute("download", "cuephoria_bills.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  
+  // Clean up the URL object
+  URL.revokeObjectURL(url);
 };
 
 // Calculate cart totals
@@ -110,10 +122,8 @@ export const exportSessionsToCSV = (
   customers: Customer[], 
   stationsLookup: Record<string, string> = {}
 ) => {
-  let csvContent = "data:text/csv;charset=utf-8,";
-  
-  // Header row
-  csvContent += "Session ID,Station,Customer,Phone,Email,Start Time,End Time,Duration,Status\n";
+  // Generate CSV content
+  let csvRows = ["Session ID,Station,Customer,Phone,Email,Start Time,End Time,Duration,Status"];
   
   // Data rows
   sessions.forEach(session => {
@@ -136,25 +146,33 @@ export const exportSessionsToCSV = (
     
     const row = [
       session.id,
-      stationsLookup[session.stationId] || session.stationId,
-      customer ? customer.name : "Unknown",
-      customer ? customer.phone : "",
-      customer ? (customer.email || "") : "",
-      new Date(session.startTime).toLocaleString(),
-      session.endTime ? new Date(session.endTime).toLocaleString() : "Active",
+      `"${(stationsLookup[session.stationId] || session.stationId).replace(/"/g, '""')}"`,
+      `"${customer ? customer.name.replace(/"/g, '""') : "Unknown"}"`,
+      `"${customer ? customer.phone.replace(/"/g, '""') : ""}"`,
+      `"${customer ? (customer.email || "").replace(/"/g, '""') : ""}"`,
+      `"${new Date(session.startTime).toLocaleString()}"`,
+      `"${session.endTime ? new Date(session.endTime).toLocaleString() : "Active"}"`,
       durationDisplay,
       session.endTime ? "Completed" : "Active"
     ];
     
-    csvContent += row.join(",") + "\n";
+    csvRows.push(row.join(","));
   });
   
+  const csvContent = csvRows.join('\n');
+  
+  // Create a Blob with the correct MIME type for CSV
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
   // Create download link
-  const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   link.setAttribute("download", "cuephoria_sessions.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  
+  // Clean up the URL object
+  URL.revokeObjectURL(url);
 };
