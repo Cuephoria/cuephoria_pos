@@ -34,11 +34,11 @@ export const useStationsData = (initialSessions = [], updateCustomer = (c: Custo
         throw new Error(`Error fetching stations: ${error.message}`);
       }
       
-      // Map the stations to the correct format
+      // Map the stations to the correct format with proper type casting
       const mappedStations = data.map((station) => ({
         id: station.id,
         name: station.name,
-        type: station.type,
+        type: station.type as 'ps5' | '8ball', // Cast the type to match the union type
         hourlyRate: station.hourly_rate,
         isOccupied: station.is_occupied || false,
         currentSession: null // Will be populated later if there is an active session
