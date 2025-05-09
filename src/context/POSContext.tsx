@@ -106,7 +106,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deductMembershipHours
   } = useCustomers([]);
   
-  // Fix the stations hook usage to match what's actually exported
   const { 
     stations, 
     setStations, 
