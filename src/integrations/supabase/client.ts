@@ -57,7 +57,11 @@ export const convertFromSupabaseProduct = (item: any): any => {
     offerPrice: item.offer_price || undefined,
     studentPrice: item.student_price || undefined,
     duration: item.duration || undefined,
-    membershipHours: item.membership_hours || undefined
+    membershipHours: item.membership_hours || undefined,
+    // Add the new fields
+    buyingPrice: item.buying_price || undefined,
+    sellingPrice: item.selling_price || undefined,
+    profit: item.profit || undefined
   };
   
   console.log('Converted product from DB:', product);
@@ -76,7 +80,11 @@ export const convertToSupabaseProduct = (product: any): any => {
     offer_price: product.offerPrice,
     student_price: product.studentPrice,
     duration: product.duration,
-    membership_hours: product.membershipHours
+    membership_hours: product.membershipHours,
+    // Add the new fields
+    buying_price: product.buyingPrice,
+    selling_price: product.sellingPrice,
+    profit: product.profit
   };
   
   console.log('Converting product to Supabase format:', supabaseProduct);

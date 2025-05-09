@@ -43,8 +43,7 @@ export const useProducts = () => {
         ...product,
         id: newProductId,
         sellingPrice: product.sellingPrice || product.price,
-        profit: product.buyingPrice ? 
-          (product.sellingPrice || product.price) - product.buyingPrice : undefined
+        // Note: profit will be calculated by the database trigger
       };
       
       setProducts(prev => [...prev, newProduct]);
@@ -113,9 +112,7 @@ export const useProducts = () => {
       const updatedProduct = {
         ...product,
         sellingPrice: product.sellingPrice || product.price,
-        // Recalculate profit if both buying price and selling price exist
-        profit: product.buyingPrice ? 
-          (product.sellingPrice || product.price) - product.buyingPrice : undefined
+        // Note: profit will be calculated by the database trigger
       };
       
       setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));

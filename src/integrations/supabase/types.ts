@@ -316,6 +316,7 @@ export type Database = {
       }
       products: {
         Row: {
+          buying_price: number | null
           category: string
           created_at: string
           duration: string | null
@@ -326,10 +327,13 @@ export type Database = {
           offer_price: number | null
           original_price: number | null
           price: number
+          profit: number | null
+          selling_price: number | null
           stock: number
           student_price: number | null
         }
         Insert: {
+          buying_price?: number | null
           category: string
           created_at?: string
           duration?: string | null
@@ -340,10 +344,13 @@ export type Database = {
           offer_price?: number | null
           original_price?: number | null
           price: number
+          profit?: number | null
+          selling_price?: number | null
           stock: number
           student_price?: number | null
         }
         Update: {
+          buying_price?: number | null
           category?: string
           created_at?: string
           duration?: string | null
@@ -354,6 +361,8 @@ export type Database = {
           offer_price?: number | null
           original_price?: number | null
           price?: number
+          profit?: number | null
+          selling_price?: number | null
           stock?: number
           student_price?: number | null
         }

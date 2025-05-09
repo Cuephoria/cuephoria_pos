@@ -101,12 +101,6 @@ const ProductsPage: React.FC = () => {
       if (shouldIncludePriceFields) {
         if (buyingPrice) productData.buyingPrice = Number(buyingPrice);
         if (sellingPrice) productData.sellingPrice = Number(sellingPrice);
-        
-        // Calculate profit if both buying and selling price exist
-        if (buyingPrice && (sellingPrice || price)) {
-          const finalSellingPrice = Number(sellingPrice || price);
-          productData.profit = finalSellingPrice - Number(buyingPrice);
-        }
       }
       
       if (originalPrice) productData.originalPrice = Number(originalPrice);
