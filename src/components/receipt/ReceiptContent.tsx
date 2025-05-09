@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -324,10 +325,10 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
         // Update the context with the refreshed customer data
         await updateCustomer(refreshedCustomer);
         
-        // Force a complete UI refresh by clearing selection and reselecting
+        // Temporarily clear selection and reselect to force UI refresh without page reload
         selectCustomer(null);
         setTimeout(() => {
-          selectCustomer(refreshedCustomer.id);
+          selectCustomer(customer.id);
         }, 50);
       }
       
