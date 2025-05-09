@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,7 +53,8 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
     // Also check for data changes even if ID is the same
     else if (initialCustomer && (
       initialCustomer.totalSpent !== customer.totalSpent || 
-      initialCustomer.loyaltyPoints !== customer.loyaltyPoints
+      initialCustomer.loyaltyPoints !== customer.loyaltyPoints ||
+      JSON.stringify(initialCustomer) !== JSON.stringify(customer)
     )) {
       console.log('CustomerCard: Initial customer data updated', {
         oldTotalSpent: customer.totalSpent,
@@ -64,7 +64,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
       });
       setCustomer(initialCustomer);
     }
-  }, [initialCustomer, customer.id, customer.totalSpent, customer.loyaltyPoints]);
+  }, [initialCustomer, customer]);
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return 'N/A';
@@ -78,7 +78,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({
   };
 
   return (
-    <Card>
+    <Card className="customer-card" key={`customer-${customer.id}-${customer.loyaltyPoints}-${customer.totalSpent}`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center text-lg">
