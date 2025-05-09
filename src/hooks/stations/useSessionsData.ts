@@ -1,146 +1,109 @@
 
-import { useState, useEffect } from 'react';
-import { Session } from '@/types/pos.types';
-import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { usePOS } from '@/context/POSContext';
+import { toast } from 'sonner';
+import { exportSessionsToCSV } from '@/utils/pos.utils';
 
-/**
- * Hook to load and manage session data from Supabase
- */
 export const useSessionsData = () => {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
-  const [sessionsError, setSessionsError] = useState<Error | null>(null);
-  const { toast } = useToast();
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const { customers, stations } = usePOS();
   
-  const refreshSessions = async () => {
+  // Create a lookup for station names by ID for better display
+  const stationsLookup = stations.reduce((acc, station) => {
+    acc[station.id] = station.name;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const fetchSessions = useCallback(async () => {
     setSessionsLoading(true);
-    setSessionsError(null);
-    
     try {
-      // Fetch sessions from Supabase, including active sessions (no end_time)
       const { data, error } = await supabase
         .from('sessions')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
         
       if (error) {
         console.error('Error fetching sessions:', error);
-        setSessionsError(new Error(`Failed to fetch sessions: ${error.message}`));
-        toast({
-          title: 'Database Error',
-          description: 'Failed to fetch sessions from database',
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      // Transform data to match our Session type
-      if (data && data.length > 0) {
-        // Use type assertion to handle the TypeScript issues
-        const sessionsData = data as any[];
-        
-        const transformedSessions = sessionsData.map(item => ({
-          id: item.id,
-          stationId: item.station_id,
-          customerId: item.customer_id,
-          startTime: new Date(item.start_time),
-          endTime: item.end_time ? new Date(item.end_time) : undefined,
-          duration: item.duration
-        }));
-        
-        console.log(`Loaded ${transformedSessions.length} total sessions from Supabase`);
-        setSessions(transformedSessions);
-        
-        // Log active sessions (those without end_time)
-        const activeSessions = transformedSessions.filter(s => !s.endTime);
-        console.log(`Found ${activeSessions.length} active sessions in loaded data`);
-        activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
+        toast.error('Failed to fetch sessions');
       } else {
-        console.log("No sessions found in Supabase");
-        // Clear sessions if no data is returned to prevent stale data
-        setSessions([]);
+        setSessions(data || []);
       }
     } catch (error) {
-      console.error('Error in fetchSessions:', error);
-      setSessionsError(error instanceof Error ? error : new Error('Unknown error fetching sessions'));
-      toast({
-        title: 'Error',
-        description: 'Failed to load sessions',
-        variant: 'destructive'
-      });
+      console.error('Error in sessions fetching:', error);
+      toast.error('Failed to load sessions data');
     } finally {
       setSessionsLoading(false);
     }
-  };
+  }, []);
   
-  // Add delete session functionality
-  const deleteSession = async (sessionId: string): Promise<boolean> => {
+  const deleteSession = useCallback(async (sessionId: string) => {
     try {
-      setSessionsLoading(true);
+      // First, get the session to check if it's active
+      const { data: sessionData } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+        
+      if (sessionData && !sessionData.end_time) {
+        // If active session, update the station status to not occupied
+        await supabase
+          .from('stations')
+          .update({ is_occupied: false })
+          .eq('id', sessionData.station_id);
+      }
       
+      // Then delete the session
       const { error } = await supabase
         .from('sessions')
         .delete()
         .eq('id', sessionId);
         
       if (error) {
-        throw new Error(handleSupabaseError(error, 'delete session'));
+        console.error('Error deleting session:', error);
+        toast.error('Failed to delete session');
+        return false;
+      } else {
+        toast.success('Session deleted successfully');
+        // Refresh sessions data
+        fetchSessions();
+        return true;
       }
-      
-      // Update local state to remove the deleted session
-      setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId));
-      
-      toast({
-        title: 'Success',
-        description: 'Session deleted successfully',
-      });
-      
-      return true;
     } catch (error) {
-      console.error('Error deleting session:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete session',
-        variant: 'destructive'
-      });
+      console.error('Error in session deletion:', error);
+      toast.error('An error occurred while deleting the session');
       return false;
-    } finally {
-      setSessionsLoading(false);
     }
-  };
+  }, [fetchSessions]);
   
+  // New function to export sessions data
+  const exportSessions = useCallback(() => {
+    if (sessions.length === 0) {
+      toast.error('No sessions data to export');
+      return;
+    }
+    
+    try {
+      exportSessionsToCSV(sessions, customers, stationsLookup);
+      toast.success('Sessions exported successfully');
+    } catch (error) {
+      console.error('Error exporting sessions:', error);
+      toast.error('Failed to export sessions data');
+    }
+  }, [sessions, customers, stationsLookup]);
+  
+  // Fetch sessions on component mount
   useEffect(() => {
-    console.log('Initial session load triggered');
-    refreshSessions();
-    
-    // Add listener for page visibility changes to refresh sessions when page becomes visible again
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Page became visible, refreshing sessions...');
-        refreshSessions();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Set up a regular polling interval to refresh sessions even when page is visible
-    const intervalId = setInterval(() => {
-      console.log('Periodic session refresh');
-      refreshSessions();
-    }, 60000); // Refresh every minute
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearInterval(intervalId);
-    };
-  }, []);
+    fetchSessions();
+  }, [fetchSessions]);
   
-  return {
-    sessions,
-    setSessions,
-    sessionsLoading,
-    sessionsError,
-    refreshSessions,
-    deleteSession
+  return { 
+    sessions, 
+    sessionsLoading, 
+    fetchSessions, 
+    deleteSession,
+    exportSessions
   };
 };

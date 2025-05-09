@@ -43,7 +43,7 @@ import { useSessionsData } from '@/hooks/stations/useSessionsData';
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
   const { customers, bills, products, exportBills, exportCustomers, stations } = usePOS();
-  const { sessions, sessionsLoading, deleteSession } = useSessionsData();
+  const { sessions, sessionsLoading, deleteSession, exportSessions } = useSessionsData();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date(),
@@ -222,11 +222,14 @@ const ReportsPage: React.FC = () => {
       case 'customers':
         exportCustomers();
         break;
+      case 'sessions':
+        exportSessions();
+        break;
       default:
         // For other tabs, implement specific export functionality
         console.log(`Exporting ${activeTab} report`);
     }
-  }, [activeTab, date, exportBills, exportCustomers]);
+  }, [activeTab, date, exportBills, exportCustomers, exportSessions]);
   
   // Handle session deletion - memoized to prevent re-creation
   const handleDeleteSession = useCallback(async (sessionId: string) => {

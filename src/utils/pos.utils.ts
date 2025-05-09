@@ -1,3 +1,4 @@
+
 import { Bill, CartItem, Customer } from '@/types/pos.types';
 
 // Helper functions
@@ -101,4 +102,59 @@ export const calculateCartTotal = (
   }
   
   return Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+};
+
+// New function to export sessions data to CSV
+export const exportSessionsToCSV = (
+  sessions: any[], 
+  customers: Customer[], 
+  stationsLookup: Record<string, string> = {}
+) => {
+  let csvContent = "data:text/csv;charset=utf-8,";
+  
+  // Header row
+  csvContent += "Session ID,Station,Customer,Phone,Email,Start Time,End Time,Duration,Status\n";
+  
+  // Data rows
+  sessions.forEach(session => {
+    const customer = customers.find(c => c.id === session.customerId);
+    
+    // Calculate session duration
+    let durationDisplay = "0h 1m"; // Default duration
+    if (session.endTime) {
+      const startMs = new Date(session.startTime).getTime();
+      const endMs = new Date(session.endTime).getTime();
+      const durationMinutes = Math.max(1, Math.round((endMs - startMs) / (1000 * 60)));
+      const hours = Math.floor(durationMinutes / 60);
+      const minutes = durationMinutes % 60;
+      durationDisplay = `${hours}h ${minutes}m`;
+    } else if (session.duration) {
+      const hours = Math.floor(session.duration / 60);
+      const minutes = session.duration % 60;
+      durationDisplay = `${hours}h ${minutes}m`;
+    }
+    
+    const row = [
+      session.id,
+      stationsLookup[session.stationId] || session.stationId,
+      customer ? customer.name : "Unknown",
+      customer ? customer.phone : "",
+      customer ? (customer.email || "") : "",
+      new Date(session.startTime).toLocaleString(),
+      session.endTime ? new Date(session.endTime).toLocaleString() : "Active",
+      durationDisplay,
+      session.endTime ? "Completed" : "Active"
+    ];
+    
+    csvContent += row.join(",") + "\n";
+  });
+  
+  // Create download link
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "cuephoria_sessions.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
