@@ -21,6 +21,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
+import PublicStations from "./pages/PublicStations";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -85,6 +86,9 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
+                
+                {/* Public route for station availability */}
+                <Route path="/public/stations" element={<PublicStations />} />
                 
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
