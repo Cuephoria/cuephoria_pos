@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw } from 'lucide-react';
+import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw, Loader2 } from 'lucide-react';
 import { Station, Session } from '@/types/pos.types';
 import Logo from '@/components/Logo';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const PublicStations = () => {
   const [stations, setStations] = useState<Station[]>([]);
@@ -12,18 +12,25 @@ const PublicStations = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [timeToNextRefresh, setTimeToNextRefresh] = useState(30);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setRefreshing(true);
       
       try {
+        console.log('Fetching station data...');
+        
         // Fetch stations
         const { data: stationsData, error: stationsError } = await supabase
           .from('stations')
           .select('*');
           
-        if (stationsError) throw stationsError;
+        if (stationsError) {
+          console.error('Error fetching stations:', stationsError);
+          setLoadingError('Failed to load station data');
+          throw stationsError;
+        }
         
         // Fetch active sessions
         const { data: sessionsData, error: sessionsError } = await supabase
@@ -31,26 +38,32 @@ const PublicStations = () => {
           .select('*')
           .is('end_time', null);
           
-        if (sessionsError) throw sessionsError;
+        if (sessionsError) {
+          console.error('Error fetching sessions:', sessionsError);
+          setLoadingError('Failed to load session data');
+          throw sessionsError;
+        }
+        
+        console.log('Fetched data:', { stations: stationsData?.length, sessions: sessionsData?.length });
         
         // Transform data to match our types
-        const transformedStations: Station[] = stationsData.map(item => ({
+        const transformedStations: Station[] = stationsData?.map(item => ({
           id: item.id,
           name: item.name,
           type: item.type as 'ps5' | '8ball',
           hourlyRate: item.hourly_rate,
           isOccupied: item.is_occupied,
           currentSession: null
-        }));
+        })) || [];
         
-        const transformedSessions: Session[] = sessionsData.map(item => ({
+        const transformedSessions: Session[] = sessionsData?.map(item => ({
           id: item.id,
           stationId: item.station_id,
           customerId: item.customer_id,
           startTime: new Date(item.start_time),
           endTime: item.end_time ? new Date(item.end_time) : undefined,
           duration: item.duration
-        }));
+        })) || [];
         
         // Connect sessions to stations
         const stationsWithSessions = transformedStations.map(station => {
@@ -62,17 +75,21 @@ const PublicStations = () => {
           };
         });
         
-        // Update state with new data
+        // Update state with new data in a smooth transition
         setTimeout(() => {
           setStations(stationsWithSessions);
           setSessions(transformedSessions);
           setRefreshing(false);
           setLastRefresh(new Date());
           setTimeToNextRefresh(30);
+          setLoadingError(null);
+          setLoading(false);
         }, 300); // Small delay for smooth transition
       } catch (error) {
         console.error('Error fetching data:', error);
         setRefreshing(false);
+        setLoading(false);
+        // Keep the old data if available during error
       }
     };
 
@@ -116,12 +133,13 @@ const PublicStations = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-16 h-16 rounded-full border-4 border-cuephoria-lightpurple border-t-transparent animate-spin"></div>
-          <p className="mt-4 text-cuephoria-lightpurple">Loading stations...</p>
-        </div>
-      </div>
+      <LoadingView logo="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png" error={loadingError} />
+    );
+  }
+
+  if (stations.length === 0 && !loading) {
+    return (
+      <NoStationsView logo="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png" error={loadingError} />
     );
   }
 
@@ -152,9 +170,13 @@ const PublicStations = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-center mb-8">
             <div className="mb-6 animate-float">
-              <Logo size="lg" className="shadow-lg shadow-cuephoria-purple/30" />
+              <img 
+                src="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png" 
+                alt="Cuephoria Logo" 
+                className="h-24 shadow-lg shadow-cuephoria-purple/30"
+              />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white font-heading bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple via-cuephoria-lightpurple to-cuephoria-blue">
+            <h1 className="text-4xl md:text-5xl font-bold text-white font-heading bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple via-cuephoria-lightpurple to-cuephoria-blue animate-text-gradient">
               Station Live Status
             </h1>
             <p className="mt-2 text-xl text-gray-300 max-w-2xl text-center">
@@ -212,12 +234,16 @@ const PublicStations = () => {
         </div>
       </header>
       
-      {/* Main content */}
-      <main className="py-6 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto transition-opacity duration-300" style={{ opacity: refreshing ? 0.7 : 1 }}>
+      {/* Main content with transition effects */}
+      <main className="py-6 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto transition-all duration-500 ease-in-out" 
+        style={{ 
+          opacity: refreshing ? 0.7 : 1,
+          transform: refreshing ? 'scale(0.99)' : 'scale(1)'
+        }}>
         {/* PlayStation Section */}
         <section className="mb-12 animate-slide-up">
           <div className="flex items-center mb-6">
-            <div className="w-10 h-10 rounded-xl bg-cuephoria-purple/20 flex items-center justify-center mr-3">
+            <div className="w-10 h-10 rounded-xl bg-cuephoria-purple/20 flex items-center justify-center mr-3 animate-pulse-soft">
               <Gamepad2 className="h-5 w-5 text-cuephoria-lightpurple" />
             </div>
             <h2 className="text-2xl font-bold text-white">PlayStation 5 Consoles</h2>
@@ -243,7 +269,7 @@ const PublicStations = () => {
         {/* Pool Tables Section */}
         <section className="animate-slide-up" style={{ animationDelay: '300ms' }}>
           <div className="flex items-center mb-6">
-            <div className="w-10 h-10 rounded-xl bg-green-900/30 flex items-center justify-center mr-3">
+            <div className="w-10 h-10 rounded-xl bg-green-900/30 flex items-center justify-center mr-3 animate-pulse-soft">
               <Timer className="h-5 w-5 text-green-500" />
             </div>
             <h2 className="text-2xl font-bold text-white">8-Ball Pool Tables</h2>
@@ -271,7 +297,11 @@ const PublicStations = () => {
       <footer className="py-8 px-4 sm:px-6 md:px-8 border-t border-gray-800/50 mt-6 backdrop-blur-md bg-black/30">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
-            <Logo size="sm" className="mr-3" />
+            <img 
+              src="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png"
+              alt="Cuephoria Logo" 
+              className="h-8 mr-3" 
+            />
             <p className="text-gray-400 text-sm">
               © {new Date().getFullYear()} Cuephoria. All rights reserved.
             </p>
@@ -284,6 +314,84 @@ const PublicStations = () => {
           </div>
         </div>
       </footer>
+    </div>
+  );
+};
+
+// Enhanced Loading View Component
+const LoadingView = ({ logo, error }: { logo: string, error: string | null }) => {
+  return (
+    <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black flex items-center justify-center">
+      <div className="w-full max-w-md py-12 px-6 flex flex-col items-center justify-center animate-fade-in">
+        <img 
+          src={logo} 
+          alt="Cuephoria Logo" 
+          className="h-24 mb-8 animate-float"
+        />
+        
+        {error ? (
+          <div className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-900/20 mb-4">
+              <div className="w-8 h-8 text-red-400 animate-pulse">❌</div>
+            </div>
+            <h2 className="text-xl font-semibold text-red-400">{error}</h2>
+            <p className="text-gray-400">Please try again later or contact support</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-6 px-4 py-2 bg-cuephoria-purple text-white rounded-lg hover:bg-cuephoria-purple/90 transition-all flex items-center justify-center"
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" /> Retry
+            </button>
+          </div>
+        ) : (
+          <div className="text-center space-y-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full border-4 border-t-transparent border-cuephoria-purple animate-spin"></div>
+              <div className="w-16 h-16 rounded-full border-4 border-cuephoria-lightpurple/30 absolute top-0 animate-pulse-soft"></div>
+            </div>
+            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-purple animate-text-gradient">
+              Loading stations...
+            </h2>
+            <p className="text-gray-400">Getting real-time information</p>
+            
+            {/* Animated progress bar */}
+            <div className="w-full max-w-xs h-1 bg-gray-800 rounded-full mt-6 overflow-hidden">
+              <div className="h-full w-1/3 bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple rounded-full animate-scanner"></div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// No Stations View
+const NoStationsView = ({ logo, error }: { logo: string, error: string | null }) => {
+  return (
+    <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black flex items-center justify-center">
+      <div className="w-full max-w-md py-12 px-6 flex flex-col items-center justify-center animate-fade-in">
+        <img 
+          src={logo} 
+          alt="Cuephoria Logo" 
+          className="h-24 mb-8"
+        />
+        
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-900/20 mb-4">
+            <div className="w-8 h-8 text-yellow-400">⚠️</div>
+          </div>
+          <h2 className="text-xl font-semibold text-white">No Stations Available</h2>
+          <p className="text-gray-400">
+            {error || "There are currently no gaming stations in our system. Please check back later."}
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-4 py-2 bg-cuephoria-purple text-white rounded-lg hover:bg-cuephoria-purple/90 transition-all flex items-center justify-center"
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -334,11 +442,10 @@ const PublicStationCard = ({ station }: { station: Station }) => {
       }
       hover:shadow-lg ${isPoolTable ? 'hover:shadow-green-900/30' : 'hover:shadow-cuephoria-purple/20'}
       hover:-translate-y-1 hover:scale-[1.02]
-      ${station.isOccupied ? '' : ''}
     `}>
       {/* Animated glow effect for available stations */}
       {!station.isOccupied && (
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse-glow opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
       )}
       
       {/* Content */}

@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -178,6 +177,50 @@ export default {
             'background-size': '200% 200%',
             'background-position': 'right center'
           }
+        },
+        'flip-in': {
+          '0%': { 
+            transform: 'perspective(400px) rotateX(90deg)',
+            opacity: '0' 
+          },
+          '40%': { 
+            transform: 'perspective(400px) rotateX(-10deg)' 
+          },
+          '70%': { 
+            transform: 'perspective(400px) rotateX(10deg)' 
+          },
+          '100%': { 
+            transform: 'perspective(400px) rotateX(0deg)',
+            opacity: '1' 
+          }
+        },
+        'float-shadow': {
+          '0%, 100%': { 
+            transform: 'translateY(0)',
+            boxShadow: '0 5px 15px rgba(0,0,0,0.3)' 
+          },
+          '50%': { 
+            transform: 'translateY(-10px)',
+            boxShadow: '0 25px 15px rgba(0,0,0,0.1)' 
+          }
+        },
+        'neon-pulse': {
+          '0%, 100%': {
+            boxShadow: '0 0 5px rgba(155, 135, 245, 0.7), 0 0 10px rgba(155, 135, 245, 0.5), 0 0 15px rgba(155, 135, 245, 0.3)'
+          },
+          '50%': {
+            boxShadow: '0 0 10px rgba(155, 135, 245, 0.9), 0 0 20px rgba(155, 135, 245, 0.7), 0 0 30px rgba(155, 135, 245, 0.5)'
+          }
+        },
+        'pulse-ring': {
+          '0%': {
+            transform: 'scale(0.8)',
+            opacity: '1'
+          },
+          '100%': {
+            transform: 'scale(2)',
+            opacity: '0'
+          }
         }
       },
       animation: {
@@ -195,7 +238,11 @@ export default {
         'breathe': 'breathe 4s infinite ease-in-out',
         'ping-slow': 'ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite',
         'scanner': 'scanner 3s ease-in-out infinite',
-        'text-gradient': 'text-gradient 3s ease-in-out infinite'
+        'text-gradient': 'text-gradient 3s ease-in-out infinite',
+        'flip-in': 'flip-in 1s ease-out',
+        'float-shadow': 'float-shadow 5s infinite ease-in-out',
+        'neon-pulse': 'neon-pulse 3s infinite ease-in-out',
+        'pulse-ring': 'pulse-ring 2s cubic-bezier(0.1, 0, 0.3, 1) infinite'
       }
     }
   },
