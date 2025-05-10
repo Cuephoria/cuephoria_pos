@@ -1,9 +1,10 @@
+
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from 'context/auth';
-import Logo from 'components/Logo';
-import Button from 'components/Button';
-import Monitor from 'components/Monitor';
+import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/Logo';
+import { Button } from '@/components/ui/button';
+import { Monitor } from 'lucide-react';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
