@@ -128,6 +128,56 @@ export default {
         'scale-in': {
           '0%': { transform: 'scale(0.9)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' }
+        },
+        'glow': {
+          '0%, 100%': { 
+            boxShadow: '0 0 5px rgba(155, 135, 245, 0.5), 0 0 10px rgba(155, 135, 245, 0.3)' 
+          },
+          '50%': { 
+            boxShadow: '0 0 20px rgba(155, 135, 245, 0.8), 0 0 40px rgba(155, 135, 245, 0.5)' 
+          }
+        },
+        'shimmer': {
+          '0%': { 
+            backgroundPosition: '-500px 0' 
+          },
+          '100%': { 
+            backgroundPosition: '500px 0' 
+          }
+        },
+        'breathe': {
+          '0%, 100%': { 
+            transform: 'scale(1)' 
+          },
+          '50%': { 
+            transform: 'scale(1.03)' 
+          }
+        },
+        'ping-slow': {
+          '75%, 100%': {
+            transform: 'scale(2)',
+            opacity: '0'
+          }
+        },
+        'scanner': {
+          '0%': { 
+            transform: 'translateY(-100%)', 
+            opacity: '0.8' 
+          },
+          '100%': { 
+            transform: 'translateY(100%)', 
+            opacity: '0.2' 
+          }
+        },
+        'text-gradient': {
+          '0%, 100%': {
+            'background-size': '200% 200%',
+            'background-position': 'left center'
+          },
+          '50%': {
+            'background-size': '200% 200%',
+            'background-position': 'right center'
+          }
         }
       },
       animation: {
@@ -139,7 +189,13 @@ export default {
         'spin-slow': 'spin-slow 8s linear infinite',
         'fade-in': 'fade-in 0.6s ease-out',
         'slide-up': 'slide-up 0.8s ease-out',
-        'scale-in': 'scale-in 0.5s ease-out'
+        'scale-in': 'scale-in 0.5s ease-out',
+        'glow': 'glow 3s infinite ease-in-out',
+        'shimmer': 'shimmer 2.5s infinite linear',
+        'breathe': 'breathe 4s infinite ease-in-out',
+        'ping-slow': 'ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'scanner': 'scanner 3s ease-in-out infinite',
+        'text-gradient': 'text-gradient 3s ease-in-out infinite'
       }
     }
   },

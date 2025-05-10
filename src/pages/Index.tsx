@@ -40,7 +40,7 @@ const Index: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <h1 className="text-4xl md:text-6xl font-bold text-center text-white font-heading leading-tight">
           Welcome to{" "}
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple animate-text-gradient">
             Cuephoria
           </span>
         </h1>
@@ -58,11 +58,12 @@ const Index: React.FC = () => {
           <Button
             size="lg"
             variant="outline"
-            className="text-white border-gray-700 hover:bg-gray-800"
+            className="text-white border-gray-700 hover:bg-gray-800 group relative overflow-hidden"
             onClick={() => navigate('/public/stations')}
           >
-            <Monitor className="mr-2 h-5 w-5" />
-            View Station Availability
+            <div className="absolute inset-0 w-full bg-gradient-to-r from-cuephoria-purple/0 via-cuephoria-lightpurple/20 to-cuephoria-purple/0 animate-shimmer pointer-events-none"></div>
+            <Monitor className="mr-2 h-5 w-5 animate-pulse-soft" />
+            <span>View Station Availability</span>
           </Button>
         </div>
       </div>
