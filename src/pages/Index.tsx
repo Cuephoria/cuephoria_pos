@@ -38,6 +38,13 @@ const Index: React.FC = () => {
         </div>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <div className="mb-8 animate-float-shadow">
+          <img
+            src="/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png"
+            alt="Cuephoria Logo" 
+            className="h-32 md:h-40 animate-glow"
+          />
+        </div>
         <h1 className="text-4xl md:text-6xl font-bold text-center text-white font-heading leading-tight">
           Welcome to{" "}
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple animate-text-gradient">

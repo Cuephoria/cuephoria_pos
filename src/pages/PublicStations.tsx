@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw, Loader2 } from 'lucide-react';
@@ -133,13 +134,13 @@ const PublicStations = () => {
 
   if (loading) {
     return (
-      <LoadingView logo="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png" error={loadingError} />
+      <LoadingView logo="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png" error={loadingError} />
     );
   }
 
   if (stations.length === 0 && !loading) {
     return (
-      <NoStationsView logo="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png" error={loadingError} />
+      <NoStationsView logo="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png" error={loadingError} />
     );
   }
 
@@ -171,7 +172,7 @@ const PublicStations = () => {
           <div className="flex flex-col items-center mb-8">
             <div className="mb-6 animate-float">
               <img 
-                src="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png" 
+                src="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png" 
                 alt="Cuephoria Logo" 
                 className="h-24 shadow-lg shadow-cuephoria-purple/30"
               />
@@ -298,7 +299,7 @@ const PublicStations = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
             <img 
-              src="public/lovable-uploads/e95f4b0f-1058-42ee-99ca-f6b0d54ec7d3.png"
+              src="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png"
               alt="Cuephoria Logo" 
               className="h-8 mr-3" 
             />

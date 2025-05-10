@@ -9,7 +9,7 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   /**
-   * Use the colorful brand graphic from /lovable-uploads/1ce327a1-4c4e-4a4f-9887-ca76023e50e9.png
+   * Use the colorful brand graphic from the uploaded logo
    * for all logo purposes, scaling with prop or parent container
    */
 }
@@ -28,7 +28,7 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', className }) => {
 
   return (
     <img
-      src="/lovable-uploads/1ce327a1-4c4e-4a4f-9887-ca76023e50e9.png"
+      src="/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png"
       alt="Cuephoria 8-Ball Club Logo"
       height={height}
       width={width}
