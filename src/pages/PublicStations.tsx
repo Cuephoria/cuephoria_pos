@@ -57,8 +57,8 @@ const PublicStations = () => {
           id: item.id,
           name: item.name,
           type: item.type as 'ps5' | '8ball',
-          hourlyRate: item.hourly_rate, // Ensure this is mapped correctly from hourly_rate in Supabase to hourlyRate in our type
-          isOccupied: item.is_occupied, // Ensure this is mapped correctly from is_occupied in Supabase to isOccupied in our type
+          hourlyRate: item.hourly_rate, // Map from Supabase's hourly_rate to our hourlyRate
+          isOccupied: item.is_occupied, // Map from Supabase's is_occupied to our isOccupied
           currentSession: null,
           // New fields
           consolidatedName: item.consolidated_name || undefined,
@@ -465,9 +465,7 @@ const PublicStationCard = ({
   const isPoolTable = station.type === '8ball';
   const sessionStartTime = station.currentSession?.startTime;
   
-  // Fix the property access to match the Station type
-  // Note: This part needs to be adjusted to use the correct property names from the Station type
-  
+  // Calculate duration and other utility functions
   const calculateDuration = () => {
     if (!sessionStartTime) return null;
     
