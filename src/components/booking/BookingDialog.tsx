@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addMinutes, parse } from 'date-fns';
 import { useForm } from 'react-hook-form';
@@ -166,6 +165,7 @@ const BookingDialog: React.FC<BookingDialogProps> = ({ station, open, onOpenChan
         };
         
         const createdCustomer = addCustomer(newCustomer);
+        // Check if createdCustomer is not undefined
         if (createdCustomer) {
           customerId = createdCustomer.id;
         }

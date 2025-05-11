@@ -87,6 +87,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [categories, setCategories] = useState<string[]>([
     'food', 'drinks', 'tobacco', 'challenges', 'membership'
   ]);
+
+  // State for bookings
+  const [bookings, setBookings] = useState<Booking[]>([]);
   
   // Initialize all hooks
   const { 
@@ -883,6 +886,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (error) {
         console.error('Error adding booking:', error);
+        return null;
+      }
+
+      if (!data) {
+        console.error('No data returned from booking insert');
         return null;
       }
 

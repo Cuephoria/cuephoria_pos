@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { createBrowserRouter, RouterProvider, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+
+import React from 'react';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -63,7 +63,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "/bookings", // Add the bookings route
+        path: "/bookings",
         element: (
           <ProtectedRoute>
             <Bookings />
