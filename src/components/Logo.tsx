@@ -24,20 +24,19 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', className }) => {
   const isMobile = useIsMobile();
   // Prefer smaller logo for mobile regardless of size prop (for navbar fit)
   const height = isMobile ? 36 : imgMap[size] || 52;
-  const width = height; // keep square
+  const width = height * 1.2; // slightly wider than tall for logo aspect ratio
 
   return (
     <img
-      src="/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png"
+      src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png"
       alt="Cuephoria 8-Ball Club Logo"
       height={height}
       width={width}
       style={{
-        borderRadius: 12,
         objectFit: "contain",
         background: "transparent",
-        boxShadow: "0 2px 16px 0 rgba(110,89,165,0.07)",
-        maxHeight: height, maxWidth: width,
+        maxHeight: height, 
+        maxWidth: width,
       }}
       className={`select-none ${className || ""}`}
       draggable={false}

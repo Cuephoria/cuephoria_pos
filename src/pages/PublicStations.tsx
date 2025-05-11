@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw, Loader2 } from 'lucide-react';
+import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw } from 'lucide-react';
 import { Station, Session } from '@/types/pos.types';
 import Logo from '@/components/Logo';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -133,46 +132,22 @@ const PublicStations = () => {
   const ballStations = stations.filter(station => station.type === '8ball');
 
   if (loading) {
-    return (
-      <LoadingView logo="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png" error={loadingError} />
-    );
+    return <ImprovedLoadingView error={loadingError} />;
   }
 
   if (stations.length === 0 && !loading) {
-    return (
-      <NoStationsView logo="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png" error={loadingError} />
-    );
+    return <NoStationsView error={loadingError} />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black overflow-hidden">
-      {/* Floating particles background effect */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute inset-0">
-          {[...Array(15)].map((_, i) => (
-            <div 
-              key={i}
-              className="absolute rounded-full bg-cuephoria-lightpurple/20"
-              style={{
-                width: `${Math.random() * 10 + 5}px`,
-                height: `${Math.random() * 10 + 5}px`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animation: `float ${Math.random() * 10 + 20}s infinite linear`,
-                opacity: Math.random() * 0.5 + 0.1,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-      
       {/* Header with logo */}
       <header className="py-8 px-4 sm:px-6 md:px-8 animate-fade-in relative">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-center mb-8">
             <div className="mb-6 animate-float">
               <img 
-                src="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png" 
+                src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png" 
                 alt="Cuephoria Logo" 
                 className="h-24 shadow-lg shadow-cuephoria-purple/30"
               />
@@ -299,7 +274,7 @@ const PublicStations = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
             <img 
-              src="public/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png"
+              src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png"
               alt="Cuephoria Logo" 
               className="h-8 mr-3" 
             />
@@ -320,23 +295,40 @@ const PublicStations = () => {
 };
 
 // Enhanced Loading View Component
-const LoadingView = ({ logo, error }: { logo: string, error: string | null }) => {
+const ImprovedLoadingView = ({ error }: { error: string | null }) => {
+  // Add a state to automatically trigger auto-retry after a short delay
+  const [retryCount, setRetryCount] = useState(0);
+  
+  useEffect(() => {
+    // Attempt auto-retry only 3 times max
+    if (error && retryCount < 3) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        window.location.reload();
+      }, 3000); // Try again after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount]);
+
   return (
     <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black flex items-center justify-center">
-      <div className="w-full max-w-md py-12 px-6 flex flex-col items-center justify-center animate-fade-in">
-        <img 
-          src={logo} 
-          alt="Cuephoria Logo" 
-          className="h-24 mb-8 animate-float"
-        />
+      <div className="w-full max-w-md flex flex-col items-center justify-center animate-fade-in">
+        <div className="w-32 h-32 mb-8 flex items-center justify-center">
+          <img 
+            src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png" 
+            alt="Cuephoria Logo" 
+            className="animate-flip-in"
+          />
+        </div>
         
         {error ? (
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-4 bg-gray-900/60 p-8 rounded-xl backdrop-blur-md border border-red-900/30">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-900/20 mb-4">
               <div className="w-8 h-8 text-red-400 animate-pulse">❌</div>
             </div>
             <h2 className="text-xl font-semibold text-red-400">{error}</h2>
-            <p className="text-gray-400">Please try again later or contact support</p>
+            <p className="text-gray-400">Please try again or contact support</p>
             <button 
               onClick={() => window.location.reload()}
               className="mt-6 px-4 py-2 bg-cuephoria-purple text-white rounded-lg hover:bg-cuephoria-purple/90 transition-all flex items-center justify-center"
@@ -345,20 +337,23 @@ const LoadingView = ({ logo, error }: { logo: string, error: string | null }) =>
             </button>
           </div>
         ) : (
-          <div className="text-center space-y-4">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-full border-4 border-t-transparent border-cuephoria-purple animate-spin"></div>
-              <div className="w-16 h-16 rounded-full border-4 border-cuephoria-lightpurple/30 absolute top-0 animate-pulse-soft"></div>
+          <div className="text-center space-y-4 animate-fade-in flex flex-col items-center">
+            <div className="relative flex justify-center items-center">
+              <div className="w-20 h-20 border-t-4 border-cuephoria-lightpurple border-solid rounded-full animate-spin"></div>
+              <div className="w-16 h-16 border-t-4 border-r-4 border-transparent border-solid rounded-full border-r-cuephoria-purple absolute animate-spin-slow"></div>
+              <div className="absolute">
+                <img 
+                  src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png" 
+                  alt="Cuephoria Logo" 
+                  className="h-10 w-12 animate-pulse-soft"
+                />
+              </div>
             </div>
-            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-purple animate-text-gradient">
+            
+            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-lightpurple to-cuephoria-purple animate-text-gradient mt-4">
               Loading stations...
             </h2>
             <p className="text-gray-400">Getting real-time information</p>
-            
-            {/* Animated progress bar */}
-            <div className="w-full max-w-xs h-1 bg-gray-800 rounded-full mt-6 overflow-hidden">
-              <div className="h-full w-1/3 bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple rounded-full animate-scanner"></div>
-            </div>
           </div>
         )}
       </div>
@@ -367,17 +362,19 @@ const LoadingView = ({ logo, error }: { logo: string, error: string | null }) =>
 };
 
 // No Stations View
-const NoStationsView = ({ logo, error }: { logo: string, error: string | null }) => {
+const NoStationsView = ({ error }: { error: string | null }) => {
   return (
     <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black flex items-center justify-center">
       <div className="w-full max-w-md py-12 px-6 flex flex-col items-center justify-center animate-fade-in">
-        <img 
-          src={logo} 
-          alt="Cuephoria Logo" 
-          className="h-24 mb-8"
-        />
+        <div className="w-32 h-32 mb-8 flex items-center justify-center">
+          <img 
+            src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png" 
+            alt="Cuephoria Logo"
+            className="animate-float" 
+          />
+        </div>
         
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 bg-gray-900/60 p-8 rounded-xl backdrop-blur-md border border-gray-800/50">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-900/20 mb-4">
             <div className="w-8 h-8 text-yellow-400">⚠️</div>
           </div>

@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +39,7 @@ const Index: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="mb-8 animate-float-shadow">
           <img
-            src="/lovable-uploads/62dc79be-ba7d-428a-8991-5923d411093c.png"
+            src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png"
             alt="Cuephoria Logo" 
             className="h-32 md:h-40 animate-glow"
           />
