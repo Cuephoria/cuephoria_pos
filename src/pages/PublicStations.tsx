@@ -465,6 +465,9 @@ const PublicStationCard = ({
   const isPoolTable = station.type === '8ball';
   const sessionStartTime = station.currentSession?.startTime;
   
+  // Fix the property access to match the Station type
+  // Note: This part needs to be adjusted to use the correct property names from the Station type
+  
   const calculateDuration = () => {
     if (!sessionStartTime) return null;
     
@@ -488,6 +491,7 @@ const PublicStationCard = ({
   const [duration, setDuration] = useState(calculateDuration());
 
   useEffect(() => {
+    // Use station.isOccupied which is the property name in our Station type
     if (!station.isOccupied) return;
     
     const timer = setInterval(() => {
