@@ -57,8 +57,8 @@ const PublicStations = () => {
           id: item.id,
           name: item.name,
           type: item.type as 'ps5' | '8ball',
-          hourlyRate: item.hourly_rate,
-          isOccupied: item.is_occupied,
+          hourlyRate: item.hourly_rate, // Ensure this is mapped correctly from hourly_rate in Supabase to hourlyRate in our type
+          isOccupied: item.is_occupied, // Ensure this is mapped correctly from is_occupied in Supabase to isOccupied in our type
           currentSession: null,
           // New fields
           consolidatedName: item.consolidated_name || undefined,
