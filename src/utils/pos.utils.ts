@@ -1,5 +1,4 @@
-
-import { Bill, CartItem, Customer, TimeSlot } from '@/types/pos.types';
+import { Bill, CartItem, Customer } from '@/types/pos.types';
 
 // Helper functions
 export const generateId = (): string => {
@@ -16,42 +15,6 @@ export const generateId = (): string => {
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
-};
-
-// Generate formatted date string (YYYY-MM-DD)
-export const getFormattedDate = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-// Generate time slots for a day with given interval
-export const generateTimeSlots = (interval: number = 60): { time: string; available: boolean }[] => {
-  const slots: { time: string; available: boolean }[] = [];
-  
-  // Generate slots from 10:00 AM to 10:00 PM (business hours)
-  // Can be customized based on business requirements
-  const startHour = 10; // 10 AM
-  const endHour = 22;   // 10 PM
-  
-  for (let hour = startHour; hour < endHour; hour++) {
-    // For each hour, generate slots based on the interval
-    const intervals = 60 / interval;
-    
-    for (let i = 0; i < intervals; i++) {
-      const minutes = i * interval;
-      const formattedHour = hour.toString().padStart(2, '0');
-      const formattedMinutes = minutes.toString().padStart(2, '0');
-      
-      slots.push({
-        time: `${formattedHour}:${formattedMinutes}`,
-        available: true
-      });
-    }
-  }
-  
-  return slots;
 };
 
 // Export functions for CSV generation

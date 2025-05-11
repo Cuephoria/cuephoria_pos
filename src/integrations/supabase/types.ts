@@ -127,60 +127,6 @@ export type Database = {
           },
         ]
       }
-      bookings: {
-        Row: {
-          booking_date: string
-          created_at: string
-          customer_id: string
-          duration: number
-          end_time: string
-          id: string
-          notes: string | null
-          start_time: string
-          station_id: string
-          status: string
-        }
-        Insert: {
-          booking_date: string
-          created_at?: string
-          customer_id: string
-          duration: number
-          end_time: string
-          id?: string
-          notes?: string | null
-          start_time: string
-          station_id: string
-          status?: string
-        }
-        Update: {
-          booking_date?: string
-          created_at?: string
-          customer_id?: string
-          duration?: number
-          end_time?: string
-          id?: string
-          notes?: string | null
-          start_time?: string
-          station_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bookings_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bookings_station_id_fkey"
-            columns: ["station_id"]
-            isOneToOne: false
-            referencedRelation: "stations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       categories: {
         Row: {
           created_at: string | null
@@ -648,47 +594,30 @@ export type Database = {
       }
       stations: {
         Row: {
-          consolidated_name: string | null
           created_at: string
           hourly_rate: number
           id: string
-          is_controller: boolean | null
           is_occupied: boolean
           name: string
-          parent_station_id: string | null
           type: string
         }
         Insert: {
-          consolidated_name?: string | null
           created_at?: string
           hourly_rate: number
           id?: string
-          is_controller?: boolean | null
           is_occupied?: boolean
           name: string
-          parent_station_id?: string | null
           type: string
         }
         Update: {
-          consolidated_name?: string | null
           created_at?: string
           hourly_rate?: number
           id?: string
-          is_controller?: boolean | null
           is_occupied?: boolean
           name?: string
-          parent_station_id?: string | null
           type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "stations_parent_station_id_fkey"
-            columns: ["parent_station_id"]
-            isOneToOne: false
-            referencedRelation: "stations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tournaments: {
         Row: {
@@ -749,14 +678,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_available_slots: {
-        Args: { p_date: string; p_station_id: string; p_slot_duration?: number }
-        Returns: {
-          start_time: string
-          end_time: string
-          is_available: boolean
-        }[]
-      }
       save_bill_edit_audit: {
         Args: { p_bill_id: string; p_editor_name: string; p_changes: string }
         Returns: undefined

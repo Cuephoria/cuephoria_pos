@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;
@@ -40,9 +41,6 @@ export interface Station {
   hourlyRate: number;
   isOccupied: boolean;
   currentSession: Session | null;
-  consolidatedName?: string;
-  isController?: boolean;
-  parentStationId?: string;
 }
 
 export interface Session {
@@ -90,28 +88,6 @@ export interface SessionResult {
   updatedSession?: Session;
   sessionCartItem?: CartItem;
   customer?: Customer;
-}
-
-// New type for bookings
-export interface Booking {
-  id: string;
-  stationId: string;
-  customerId: string;
-  customerName?: string;
-  bookingDate: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  status: 'confirmed' | 'canceled' | 'completed';
-  createdAt: string;
-  notes?: string;
-}
-
-// New type for time slots
-export interface TimeSlot {
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
 }
 
 export interface POSContextType {
@@ -192,12 +168,4 @@ export interface POSContextType {
   
   // Delete bill function
   deleteBill: (billId: string, customerId: string) => Promise<boolean>;
-  
-  // New properties for bookings
-  bookings: Booking[];
-  setBookings: (bookings: Booking[] | ((prevBookings: Booking[]) => Booking[])) => void;
-  addBooking: (booking: Omit<Booking, 'id' | 'createdAt'>) => Promise<Booking | null>;
-  getStationBookings: (stationId: string, date: string) => Booking[];
-  getAvailableSlots: (stationId: string, date: string, duration?: number) => Promise<TimeSlot[]>;
-  cancelBooking: (bookingId: string) => Promise<boolean>;
 }

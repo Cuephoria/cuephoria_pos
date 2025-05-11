@@ -1,13 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  role: string;
-  isAdmin: boolean; // Add isAdmin property
-  username: string; // Add username property
-}
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 interface AdminUser {
   id: string;
@@ -16,11 +10,10 @@ interface AdminUser {
 }
 
 interface AuthContextType {
-  user: User | null;
-  login: (username: string, password: string, isAdminLogin?: boolean) => Promise<boolean>; // Update login signature
+  user: AdminUser | null;
+  login: (username: string, password: string, isAdminLogin: boolean) => Promise<boolean>;
   logout: () => void;
-  loading: boolean;
-  // Add missing methods for staff management
+  isLoading: boolean;
   addStaffMember: (username: string, password: string) => Promise<boolean>;
   getStaffMembers: () => Promise<AdminUser[]>;
   updateStaffMember: (id: string, data: Partial<AdminUser>) => Promise<boolean>;
@@ -28,107 +21,270 @@ interface AuthContextType {
   resetPassword: (username: string, newPassword: string) => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  login: async () => false,
-  logout: () => {},
-  loading: true,
-  addStaffMember: async () => false,
-  getStaffMembers: async () => [],
-  updateStaffMember: async () => false,
-  deleteStaffMember: async () => false,
-  resetPassword: async () => false,
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check if user is already logged in from localStorage
-    const storedUser = localStorage.getItem('cuephoriaUser');
-    if (storedUser) {
+    const checkExistingUser = async () => {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Error parsing stored user:', e);
-        localStorage.removeItem('cuephoriaUser');
+        const storedAdmin = localStorage.getItem('cuephoriaAdmin');
+        if (storedAdmin) {
+          setUser(JSON.parse(storedAdmin));
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id, username, is_admin')
+          .single();
+        
+        if (error) {
+          console.error('Error fetching admin user:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        if (data) {
+          const adminUser = {
+            id: data.id,
+            username: data.username,
+            isAdmin: data.is_admin
+          };
+          setUser(adminUser);
+          localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
+        }
+      } catch (error) {
+        console.error('Error checking existing user:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    checkExistingUser();
   }, []);
 
-  const login = async (username: string, password: string, isAdminLogin: boolean = true): Promise<boolean> => {
-    // For demo purposes, use mock authentication
-    // In a real app, this would be replaced with a call to an authentication API
-    if (isAdminLogin) {
-      // Admin login
-      if (username === 'admin' && password === 'admin123') {
-        const user = {
-          id: '1',
-          name: 'Admin User',
-          role: 'admin',
-          isAdmin: true,
-          username: 'admin'
+  const login = async (username: string, password: string, isAdminLogin: boolean): Promise<boolean> => {
+    try {
+      const query = supabase
+        .from('admin_users')
+        .select('id, username, is_admin, password');
+      
+      if (isAdminLogin) {
+        query.eq('is_admin', true);
+      } else {
+        query.eq('is_admin', false);
+      }
+      
+      query.eq('username', username);
+      
+      const { data, error } = await query.single();
+
+      if (error || !data) {
+        console.error('Login error:', error);
+        return false;
+      }
+
+      if (data.password === password) {
+        const adminUser = {
+          id: data.id,
+          username: data.username,
+          isAdmin: data.is_admin
         };
-        setUser(user);
-        localStorage.setItem('cuephoriaUser', JSON.stringify(user));
+        setUser(adminUser);
+        localStorage.setItem('cuephoriaAdmin', JSON.stringify(adminUser));
         return true;
       }
-    } else {
-      // Staff login
-      if (username === 'staff' && password === 'staff123') {
-        const user = {
-          id: '2',
-          name: 'Staff User',
-          role: 'staff',
-          isAdmin: false,
-          username: 'staff'
-        };
-        setUser(user);
-        localStorage.setItem('cuephoriaUser', JSON.stringify(user));
-        return true;
-      }
+      
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('cuephoriaUser');
+    localStorage.removeItem('cuephoriaAdmin');
   };
 
-  // Staff management functions
   const addStaffMember = async (username: string, password: string): Promise<boolean> => {
-    // Mock implementation - in real app, call API
-    console.log(`Creating staff member: ${username}`);
-    return true;
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can add staff members");
+        toast.error("Only admins can add staff members");
+        return false;
+      }
+
+      const { data: existingUser, error: checkError } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('username', username)
+        .single();
+      
+      if (existingUser) {
+        console.error('Username already exists');
+        toast.error('Username already exists');
+        return false;
+      }
+      
+      const basicUserData = {
+        username,
+        password,
+        is_admin: false
+      };
+      
+      const { error } = await supabase
+        .from('admin_users')
+        .insert(basicUserData);
+      
+      if (error) {
+        console.error('Error creating staff member:', error);
+        toast.error('Error creating staff member');
+        return false;
+      }
+      
+      toast.success('Staff member added successfully');
+      return true;
+    } catch (error) {
+      console.error('Error adding staff member:', error);
+      toast.error('Error adding staff member');
+      return false;
+    }
   };
 
   const getStaffMembers = async (): Promise<AdminUser[]> => {
-    // Mock implementation - in real app, fetch from API
-    return [
-      { id: '2', username: 'staff', isAdmin: false },
-      { id: '3', username: 'manager', isAdmin: false }
-    ];
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can view staff members");
+        toast.error("Only admins can view staff members");
+        return [];
+      }
+      
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id, username, is_admin')
+        .eq('is_admin', false);
+      
+      if (error) {
+        console.error('Error fetching staff members:', error);
+        toast.error('Error fetching staff members');
+        return [];
+      }
+        
+      if (!data || !Array.isArray(data)) {
+        return [];
+      }
+      
+      const staffMembers: AdminUser[] = data.map(staff => ({
+        id: staff.id || '',
+        username: staff.username || '',
+        isAdmin: staff.is_admin === true,
+      }));
+      
+      return staffMembers;
+    } catch (error) {
+      console.error('Error fetching staff members:', error);
+      toast.error('Error fetching staff members');
+      return [];
+    }
   };
 
-  const updateStaffMember = async (id: string, data: Partial<AdminUser>): Promise<boolean> => {
-    // Mock implementation - in real app, call API
-    console.log(`Updating staff member ${id} with data:`, data);
-    return true;
+  const updateStaffMember = async (id: string, updatedData: Partial<AdminUser>): Promise<boolean> => {
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can update staff members");
+        toast.error("Only admins can update staff members");
+        return false;
+      }
+
+      const dbData: Record<string, any> = {};
+      
+      if (updatedData.username) dbData.username = updatedData.username;
+
+      if (Object.keys(dbData).length > 0) {
+        const { error } = await supabase
+          .from('admin_users')
+          .update(dbData)
+          .eq('id', id);
+        
+        if (error) {
+          console.error('Error updating staff member:', error);
+          toast.error('Error updating staff member');
+          return false;
+        }
+      } else {
+        console.warn("No valid fields to update");
+      }
+      
+      toast.success('Staff member updated successfully');
+      return true;
+    } catch (error) {
+      console.error('Error updating staff member:', error);
+      toast.error('Error updating staff member');
+      return false;
+    }
   };
 
   const deleteStaffMember = async (id: string): Promise<boolean> => {
-    // Mock implementation - in real app, call API
-    console.log(`Deleting staff member ${id}`);
-    return true;
+    try {
+      if (!user?.isAdmin) {
+        console.error("Only admins can delete staff members");
+        toast.error("Only admins can delete staff members");
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error deleting staff member:', error);
+        toast.error('Error deleting staff member');
+        return false;
+      }
+      
+      toast.success('Staff member deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting staff member:', error);
+      toast.error('Error deleting staff member');
+      return false;
+    }
   };
 
   const resetPassword = async (username: string, newPassword: string): Promise<boolean> => {
-    // Mock implementation - in real app, call API
-    console.log(`Resetting password for ${username}`);
-    return true;
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('username', username)
+        .single();
+        
+      if (error || !data) {
+        console.error('Error finding user for password reset:', error);
+        return false;
+      }
+      
+      const { error: updateError } = await supabase
+        .from('admin_users')
+        .update({ password: newPassword })
+        .eq('id', data.id);
+        
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error in resetPassword:', error);
+      return false;
+    }
   };
 
   return (
@@ -136,8 +292,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       login, 
       logout, 
-      loading,
-      addStaffMember,
+      isLoading, 
+      addStaffMember, 
       getStaffMembers,
       updateStaffMember,
       deleteStaffMember,
@@ -148,4 +304,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
