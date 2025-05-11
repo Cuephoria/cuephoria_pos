@@ -7,7 +7,9 @@ import {
   Bill,
   Product,
   Station,
-  Session
+  Session,
+  Booking,
+  TimeSlot
 } from '@/types/pos.types';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
@@ -66,7 +68,13 @@ const POSContext = createContext<POSContextType>({
   exportBills: () => {},
   exportCustomers: () => {},
   resetToSampleData: () => {},
-  addSampleIndianData: () => {}
+  addSampleIndianData: () => {},
+  bookings: [],
+  setBookings: () => {},
+  addBooking: async () => null,
+  getStationBookings: () => [],
+  getAvailableSlots: async () => [],
+  cancelBooking: async () => false,
 });
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -816,6 +824,159 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return await deleteBillBase(billId, customerId);
   };
   
+  // Fetch bookings from Supabase
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*, customers(name)')
+          .order('booking_date', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching bookings:', error);
+          return;
+        }
+
+        // Transform data to match our types
+        const transformedBookings: Booking[] = data.map(item => ({
+          id: item.id,
+          stationId: item.station_id,
+          customerId: item.customer_id,
+          customerName: item.customers?.name || 'Unknown',
+          bookingDate: item.booking_date,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          duration: item.duration,
+          status: item.status as 'confirmed' | 'canceled' | 'completed',
+          createdAt: item.created_at,
+          notes: item.notes || undefined
+        }));
+
+        setBookings(transformedBookings);
+      } catch (err) {
+        console.error('Failed to fetch bookings:', err);
+      }
+    };
+
+    fetchBookings();
+  }, []);
+
+  // Add a new booking
+  const addBooking = async (bookingData: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking | null> => {
+    try {
+      // Convert to snake_case for Supabase
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          station_id: bookingData.stationId,
+          customer_id: bookingData.customerId,
+          booking_date: bookingData.bookingDate,
+          start_time: bookingData.startTime,
+          end_time: bookingData.endTime,
+          duration: bookingData.duration,
+          status: bookingData.status,
+          notes: bookingData.notes
+        })
+        .select('*, customers(name)')
+        .single();
+
+      if (error) {
+        console.error('Error adding booking:', error);
+        return null;
+      }
+
+      // Transform and add to state
+      const newBooking: Booking = {
+        id: data.id,
+        stationId: data.station_id,
+        customerId: data.customer_id,
+        customerName: data.customers?.name || 'Unknown',
+        bookingDate: data.booking_date,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        duration: data.duration,
+        status: data.status as 'confirmed' | 'canceled' | 'completed',
+        createdAt: data.created_at,
+        notes: data.notes || undefined
+      };
+
+      setBookings(prev => [...prev, newBooking]);
+      return newBooking;
+    } catch (err) {
+      console.error('Failed to add booking:', err);
+      return null;
+    }
+  };
+
+  // Get bookings for a specific station and date
+  const getStationBookings = (stationId: string, date: string): Booking[] => {
+    return bookings.filter(
+      booking => booking.stationId === stationId && 
+                booking.bookingDate === date && 
+                booking.status === 'confirmed'
+    );
+  };
+
+  // Get available time slots for a specific station and date
+  const getAvailableSlots = async (
+    stationId: string, 
+    date: string,
+    duration: number = 60
+  ): Promise<TimeSlot[]> => {
+    try {
+      // Call the get_available_slots function in Supabase
+      const { data, error } = await supabase.rpc('get_available_slots', { 
+        p_date: date,
+        p_station_id: stationId,
+        p_slot_duration: duration
+      });
+
+      if (error) {
+        console.error('Error fetching available slots:', error);
+        return [];
+      }
+
+      return data.map((slot: any) => ({
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+        isAvailable: slot.is_available
+      }));
+    } catch (err) {
+      console.error('Failed to fetch available slots:', err);
+      return [];
+    }
+  };
+
+  // Cancel a booking
+  const cancelBooking = async (bookingId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'canceled' })
+        .eq('id', bookingId);
+
+      if (error) {
+        console.error('Error canceling booking:', error);
+        return false;
+      }
+
+      // Update local state
+      setBookings(prev => 
+        prev.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, status: 'canceled' } 
+            : booking
+        )
+      );
+
+      return true;
+    } catch (err) {
+      console.error('Failed to cancel booking:', err);
+      return false;
+    }
+  };
+
   console.log('POSProvider rendering with context value'); // Debug log
   
   return (
@@ -869,7 +1030,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         exportBills,
         exportCustomers,
         resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData
+        addSampleIndianData: handleAddSampleIndianData,
+        bookings,
+        setBookings,
+        addBooking,
+        getStationBookings,
+        getAvailableSlots,
+        cancelBooking,
       }}
     >
       {children}
@@ -897,5 +1064,7 @@ export type {
   CartItem,
   Bill,
   ResetOptions,
-  POSContextType
+  POSContextType,
+  Booking,
+  TimeSlot
 } from '@/types/pos.types';

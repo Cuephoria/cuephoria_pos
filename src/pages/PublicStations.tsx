@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw } from 'lucide-react';
+import { Monitor, Clock, Timer, Wifi, Gamepad2, RefreshCcw, Calendar } from 'lucide-react';
 import { Station, Session } from '@/types/pos.types';
 import Logo from '@/components/Logo';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Button } from '@/components/ui/button';
+import BookingDialog from '@/components/booking/BookingDialog';
 
 const PublicStations = () => {
   const [stations, setStations] = useState<Station[]>([]);
@@ -13,6 +15,10 @@ const PublicStations = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [timeToNextRefresh, setTimeToNextRefresh] = useState(30);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  
+  // New state for booking dialog
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,7 +59,11 @@ const PublicStations = () => {
           type: item.type as 'ps5' | '8ball',
           hourlyRate: item.hourly_rate,
           isOccupied: item.is_occupied,
-          currentSession: null
+          currentSession: null,
+          // New fields
+          consolidatedName: item.consolidated_name || undefined,
+          isController: item.is_controller || false,
+          parentStationId: item.parent_station_id || undefined
         })) || [];
         
         const transformedSessions: Session[] = sessionsData?.map(item => ({
@@ -65,12 +75,41 @@ const PublicStations = () => {
           duration: item.duration
         })) || [];
         
+        // Group controllers by console
+        const groupedStations = transformedStations.reduce((acc, station) => {
+          // Filter out controllers
+          if (station.isController && station.parentStationId) {
+            return acc;
+          }
+          
+          // For main stations/consoles, check if controllers are attached
+          if (station.type === 'ps5' && !station.isController) {
+            // Find all controllers for this console
+            const controllers = transformedStations.filter(
+              s => s.isController && s.parentStationId === station.id
+            );
+            
+            // Combined console is occupied if any controller is occupied
+            const isAnyControllerOccupied = controllers.some(c => c.isOccupied);
+            
+            // Return the main console with updated occupied status
+            return [...acc, {
+              ...station,
+              isOccupied: station.isOccupied || isAnyControllerOccupied,
+              consolidatedName: station.consolidatedName || station.name
+            }];
+          }
+          
+          // For other types, just pass through
+          return [...acc, station];
+        }, [] as Station[]);
+        
         // Connect sessions to stations
-        const stationsWithSessions = transformedStations.map(station => {
+        const stationsWithSessions = groupedStations.map(station => {
           const activeSession = transformedSessions.find(s => s.stationId === station.id);
           return {
             ...station,
-            isOccupied: !!activeSession,
+            isOccupied: !!activeSession || station.isOccupied,
             currentSession: activeSession || null
           };
         });
@@ -111,6 +150,12 @@ const PublicStations = () => {
       clearInterval(countdownInterval);
     };
   }, []);
+
+  // Handle booking
+  const handleBookStation = (station: Station) => {
+    setSelectedStation(station);
+    setBookingDialogOpen(true);
+  };
 
   // Calculate session duration in minutes
   const getSessionDuration = (startTime: Date) => {
@@ -235,7 +280,10 @@ const PublicStations = () => {
                   className="animate-scale-in"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <PublicStationCard station={station} />
+                  <PublicStationCard 
+                    station={station} 
+                    onBookStation={handleBookStation}
+                  />
                 </div>
               ))
             )}
@@ -261,7 +309,10 @@ const PublicStations = () => {
                   className="animate-scale-in"
                   style={{ animationDelay: `${(index + ps5Stations.length) * 100}ms` }}
                 >
-                  <PublicStationCard station={station} />
+                  <PublicStationCard 
+                    station={station} 
+                    onBookStation={handleBookStation}
+                  />
                 </div>
               ))
             )}
@@ -290,6 +341,15 @@ const PublicStations = () => {
           </div>
         </div>
       </footer>
+      
+      {/* Booking Dialog */}
+      {selectedStation && (
+        <BookingDialog 
+          open={bookingDialogOpen} 
+          onOpenChange={setBookingDialogOpen}
+          station={selectedStation}
+        />
+      )}
     </div>
   );
 };
@@ -394,8 +454,14 @@ const NoStationsView = ({ error }: { error: string | null }) => {
   );
 };
 
-// Station Card Component with enhanced animations
-const PublicStationCard = ({ station }: { station: Station }) => {
+// Station Card Component with enhanced animations and booking button
+const PublicStationCard = ({ 
+  station, 
+  onBookStation 
+}: { 
+  station: Station; 
+  onBookStation: (station: Station) => void;
+}) => {
   const isPoolTable = station.type === '8ball';
   const sessionStartTime = station.currentSession?.startTime;
   
@@ -473,7 +539,7 @@ const PublicStationCard = ({ station }: { station: Station }) => {
               <Monitor className="h-6 w-6 text-cuephoria-lightpurple" />
             )}
           </div>
-          <h3 className="text-xl font-semibold text-white">{station.name}</h3>
+          <h3 className="text-xl font-semibold text-white">{station.consolidatedName || station.name}</h3>
         </div>
         
         {/* Duration if occupied */}
@@ -504,28 +570,27 @@ const PublicStationCard = ({ station }: { station: Station }) => {
           </div>
         )}
         
-        {/* Available message if not occupied */}
+        {/* Available message and booking button */}
         {!station.isOccupied && (
-          <div className="mt-4 py-3 px-2 text-center bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-lg">
-            <p className={`
-              text-sm font-medium animate-pulse-soft
-              ${isPoolTable ? 'text-green-400' : 'text-cuephoria-lightpurple'}
-            `}>
-              Ready for next player!
-            </p>
-            
-            {/* Availability indicator dots */}
-            <div className="flex items-center justify-center space-x-1 mt-2">
-              {[...Array(3)].map((_, i) => (
-                <div 
-                  key={i}
-                  className={`w-1.5 h-1.5 rounded-full ${isPoolTable ? 'bg-green-400' : 'bg-cuephoria-lightpurple'}`}
-                  style={{ 
-                    animationDelay: `${i * 200}ms`,
-                    animation: 'pulse 1.5s infinite ease-in-out'
-                  }}
-                ></div>
-              ))}
+          <div className="mt-4">
+            <div className="py-3 px-2 text-center bg-gradient-to-r from-transparent via-white/5 to-transparent rounded-lg">
+              <p className={`
+                text-sm font-medium animate-pulse-soft mb-2
+                ${isPoolTable ? 'text-green-400' : 'text-cuephoria-lightpurple'}
+              `}>
+                Ready for next player!
+              </p>
+              
+              {/* Booking button */}
+              <Button 
+                className={`w-full mt-2 ${
+                  isPoolTable ? 'bg-green-600 hover:bg-green-700' : 'bg-cuephoria-purple hover:bg-cuephoria-purple/90'
+                }`}
+                onClick={() => onBookStation(station)}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Book a Slot
+              </Button>
             </div>
           </div>
         )}
