@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -133,7 +132,7 @@
   
   /* Improved touch targets */
   button, a, [role="button"] {
-    @apply min-h-[40px] min-w-[40px];
+    @apply min-h-10 min-w-10;
   }
   
   /* Forms on mobile */
@@ -211,62 +210,6 @@
   }
 }
 
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes flip-in {
-  0% {
-    opacity: 0;
-    transform: perspective(400px) rotateX(90deg);
-  }
-  100% {
-    opacity: 1;
-    transform: perspective(400px) rotateX(0deg);
-  }
-}
-
-@keyframes text-gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes bounce-slow {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
 /* Animation classes */
 .animate-slide-up {
   animation: slideUp 0.5s ease forwards;
@@ -290,31 +233,6 @@
 
 .animate-pulse-soft {
   animation: pulse-soft 2s infinite ease-in-out;
-}
-
-.animate-shimmer {
-  animation: shimmer 3s infinite;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-spin-slow {
-  animation: spin-slow 3s linear infinite;
-}
-
-.animate-flip-in {
-  animation: flip-in 1s forwards;
-}
-
-.animate-text-gradient {
-  background-size: 200% auto;
-  animation: text-gradient 5s linear infinite;
-}
-
-.animate-bounce-slow {
-  animation: bounce-slow 2s infinite ease-in-out;
 }
 
 /* Animation delays */
@@ -525,52 +443,4 @@
     font-size: 0.98rem;
     min-width: 68px;
   }
-}
-
-/* Mobile-friendly optimizations */
-@media (max-width: 480px) {
-  html, body {
-    font-size: 14px;
-  }
-  
-  h1 {
-    @apply text-2xl;
-  }
-  
-  h2 {
-    @apply text-xl;
-  }
-  
-  .grid-cols-2 {
-    @apply grid-cols-1;
-  }
-  
-  /* Improved tap target sizes for mobile */
-  button, a, [role="button"], input, select {
-    @apply min-h-[44px] py-3;
-  }
-  
-  /* Reduced padding for mobile */
-  .p-8, .py-8, .px-8 {
-    @apply p-4 py-4 px-4;
-  }
-  
-  /* Floating contact button for embedded view */
-  .floating-contact {
-    @apply fixed bottom-4 right-4 z-50;
-  }
-}
-
-/* Embedded website optimizations */
-.embedded-view {
-  /* Remove unnecessary margins and paddings */
-  @apply p-0 m-0;
-  
-  /* Set max-height for embedded view */
-  max-height: 100vh;
-  overflow-y: auto;
-  
-  /* Add subtle border */
-  border: 1px solid rgba(155, 135, 245, 0.2);
-  border-radius: 12px;
 }
