@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -113,22 +112,42 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
             poolSales += discountedItemTotal;
           }
         } 
-        // Handle Metashot challenge items - these are products, but should count towards gaming revenue
+        // Handle products - check both product type and item names for accurate categorization
         else if (item.type === 'product') {
           // Find the product to check its category
           const product = products.find(p => p.id === item.id);
+          const itemName = (item.name || '').toLowerCase();
+          
           if (product) {
-            const category = product.category.toLowerCase();
-            const name = product.name.toLowerCase();
+            const category = (product.category || '').toLowerCase();
+            const productName = (product.name || '').toLowerCase();
             
-            if (name.includes('metashot') || name.includes('meta shot') || 
+            // Improved categorization logic for gaming products
+            if (productName.includes('metashot') || productName.includes('meta shot') || 
                 category === 'challenges' || category === 'challenge') {
               metashotSales += discountedItemTotal;
-            } else if (category === 'food' || category === 'snacks') {
+            } 
+            // Check for PS5 related products in name
+            else if (productName.includes('ps5') || productName.includes('playstation') || 
+                    itemName.includes('ps5') || itemName.includes('playstation')) {
+              ps5Sales += discountedItemTotal;
+            }
+            // Check for pool related products in name
+            else if (productName.includes('pool') || productName.includes('8-ball') || 
+                    productName.includes('8 ball') || itemName.includes('pool') || 
+                    itemName.includes('8-ball') || itemName.includes('8 ball')) {
+              poolSales += discountedItemTotal;
+            }
+            // Food categorization
+            else if (category === 'food' || category === 'snacks') {
               foodSales += discountedItemTotal;
-            } else if (category === 'beverage' || category === 'drinks') {
+            }
+            // Beverage categorization
+            else if (category === 'beverage' || category === 'drinks') {
               beverageSales += discountedItemTotal;
-            } else if (category === 'tobacco') {
+            }
+            // Tobacco categorization
+            else if (category === 'tobacco') {
               tobaccoSales += discountedItemTotal;
             }
           }
