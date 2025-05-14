@@ -14,6 +14,7 @@ import ProductCard from '@/components/ProductCard';
 import Receipt from '@/components/Receipt';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import SplitPaymentForm from '@/components/checkout/SplitPaymentForm';
 
 const POS = () => {
   const {
@@ -25,6 +26,13 @@ const POS = () => {
     discount,
     discountType,
     loyaltyPointsUsed,
+    isSplitPayment,
+    setIsSplitPayment,
+    cashAmount,
+    setCashAmount,
+    upiAmount,
+    setUpiAmount,
+    updateSplitAmounts,
     addToCart,
     removeFromCart,
     updateCartItem,
@@ -42,7 +50,7 @@ const POS = () => {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'split'>('cash');
   const [customDiscountAmount, setCustomDiscountAmount] = useState(discount.toString());
   const [customDiscountType, setCustomDiscountType] = useState<'percentage' | 'fixed'>(discountType);
   const [customLoyaltyPoints, setCustomLoyaltyPoints] = useState(loyaltyPointsUsed.toString());
@@ -162,6 +170,21 @@ const POS = () => {
     }
     
     setLoyaltyPointsUsed(points);
+  };
+
+  const handlePaymentMethodChange = (value: 'cash' | 'upi' | 'split') => {
+    setPaymentMethod(value);
+    if (value === 'split') {
+      setIsSplitPayment(true);
+      
+      // Initialize with default 50/50 split
+      const total = calculateTotal();
+      const defaultCashAmount = Math.floor(total / 2);
+      setCashAmount(defaultCashAmount);
+      setUpiAmount(total - defaultCashAmount);
+    } else {
+      setIsSplitPayment(false);
+    }
   };
 
   const handleCompleteSale = () => {
@@ -661,7 +684,7 @@ const POS = () => {
               <h4 className="font-medium font-heading">Payment Method</h4>
               <RadioGroup
                 value={paymentMethod}
-                onValueChange={(value) => setPaymentMethod(value as 'cash' | 'upi')}
+                onValueChange={(value) => handlePaymentMethodChange(value as 'cash' | 'upi' | 'split')}
                 className="flex space-x-4"
               >
                 <div className="flex items-center space-x-2">
@@ -672,8 +695,23 @@ const POS = () => {
                   <RadioGroupItem value="upi" id="upi" />
                   <Label htmlFor="upi" className="font-quicksand">UPI</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="split" id="split" />
+                  <Label htmlFor="split" className="font-quicksand">Split</Label>
+                </div>
               </RadioGroup>
             </div>
+
+            {/* Split payment form */}
+            {paymentMethod === 'split' && (
+              <div className="mt-4 animate-slide-up delay-500">
+                <SplitPaymentForm 
+                  total={total} 
+                  onSplitChange={setIsSplitPayment}
+                  onAmountChange={(cash, upi) => updateSplitAmounts(cash, upi)}
+                />
+              </div>
+            )}
           </div>
           
           <DialogFooter className="animate-slide-up delay-500">
