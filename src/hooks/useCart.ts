@@ -130,6 +130,7 @@ export const useCart = () => {
     setCart([]);
     setDiscountAmount(0);
     setLoyaltyPointsUsedAmount(0);
+    resetPaymentInfo();
     toast({
       title: "Cart Cleared",
       description: "All items removed from cart",
@@ -200,17 +201,6 @@ export const useCart = () => {
     setIsSplitPayment(false);
     setCashAmount(0);
     setUpiAmount(0);
-  };
-  
-  const clearCart = () => {
-    setCart([]);
-    setDiscountAmount(0);
-    setLoyaltyPointsUsedAmount(0);
-    resetPaymentInfo();
-    toast({
-      title: "Cart Cleared",
-      description: "All items removed from cart",
-    });
   };
   
   return {

@@ -92,7 +92,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   const [editingDiscount, setEditingDiscount] = useState<number>(0);
   const [editingDiscountType, setEditingDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [editingLoyaltyPointsUsed, setEditingLoyaltyPointsUsed] = useState<number>(0);
-  const [editingPaymentMethod, setEditingPaymentMethod] = useState<'cash' | 'upi'>('cash');
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<'cash' | 'upi' | 'split'>('cash');
   const [isEditing, setIsEditing] = useState<boolean>(false);
   
   // State for product search in add item dialog
@@ -672,7 +672,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                   <h3 className="text-sm font-medium text-gray-300">Payment Method</h3>
                   <RadioGroup 
                     value={editingPaymentMethod} 
-                    onValueChange={(value) => setEditingPaymentMethod(value as 'cash' | 'upi')}
+                    onValueChange={(value) => setEditingPaymentMethod(value as 'cash' | 'upi' | 'split')}
                     className="flex space-x-4"
                   >
                     <div className="flex items-center space-x-2">
@@ -685,6 +685,12 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                       <RadioGroupItem value="upi" id="upi" className="text-purple-400" />
                       <Label htmlFor="upi" className="flex items-center gap-1 cursor-pointer">
                         <CreditCard className="h-4 w-4" /> UPI
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="split" id="split" className="text-purple-400" />
+                      <Label htmlFor="split" className="flex items-center gap-1 cursor-pointer">
+                        <X className="h-4 w-4" /> Split
                       </Label>
                     </div>
                   </RadioGroup>
