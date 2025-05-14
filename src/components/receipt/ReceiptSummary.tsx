@@ -24,7 +24,10 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     discount: bill.discount,
     discountType: bill.discountType,
     loyaltyPointsUsed: bill.loyaltyPointsUsed,
-    paymentMethod: bill.paymentMethod
+    paymentMethod: bill.paymentMethod,
+    isSplitPayment: bill.isSplitPayment || false,
+    cashAmount: bill.cashAmount || 0,
+    upiAmount: bill.upiAmount || 0
   });
 
   const handleEditToggle = () => {
@@ -35,7 +38,10 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         discount: bill.discount,
         discountType: bill.discountType,
         loyaltyPointsUsed: bill.loyaltyPointsUsed,
-        paymentMethod: bill.paymentMethod
+        paymentMethod: bill.paymentMethod,
+        isSplitPayment: bill.isSplitPayment || false,
+        cashAmount: bill.cashAmount || 0,
+        upiAmount: bill.upiAmount || 0
       });
     }
   };
@@ -52,6 +58,15 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     // Calculate new total
     const total = Math.max(0, editValues.subtotal - discountValue - editValues.loyaltyPointsUsed);
 
+    // Validate split payment amounts if split payment is enabled
+    if (editValues.isSplitPayment) {
+      const totalPayment = editValues.cashAmount + editValues.upiAmount;
+      if (Math.abs(totalPayment - total) > 0.01) { // Allow for small rounding errors
+        alert(`Split payment amounts must sum to the total (₹${total}). Current sum: ₹${totalPayment}`);
+        return;
+      }
+    }
+
     // Calculate loyalty points earned using the membership status
     // Members: 5 points per 100 INR spent, Non-members: 2 points per 100 INR spent
     const pointsRate = customer?.isMember ? 5 : 2;
@@ -66,18 +81,32 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         loyaltyPointsUsed: editValues.loyaltyPointsUsed,
         loyaltyPointsEarned,
         total,
-        paymentMethod: editValues.paymentMethod
+        paymentMethod: editValues.isSplitPayment ? 'split' : editValues.paymentMethod,
+        isSplitPayment: editValues.isSplitPayment,
+        cashAmount: editValues.isSplitPayment ? editValues.cashAmount : (editValues.paymentMethod === 'cash' ? total : 0),
+        upiAmount: editValues.isSplitPayment ? editValues.upiAmount : (editValues.paymentMethod === 'upi' ? total : 0)
       });
     }
 
     setIsEditing(false);
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number | boolean) => {
     setEditValues(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Calculate total during edit for validation
+  const calculateEditTotal = () => {
+    let discountValue = 0;
+    if (editValues.discountType === 'percentage') {
+      discountValue = editValues.subtotal * (editValues.discount / 100);
+    } else {
+      discountValue = editValues.discount;
+    }
+    return Math.max(0, editValues.subtotal - discountValue - editValues.loyaltyPointsUsed);
   };
 
   // Read-only view
@@ -120,7 +149,18 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         </div>
         
         <div className="text-xs text-gray-600 mt-4">
-          <div>Payment Method: {bill.paymentMethod.toUpperCase()}</div>
+          {bill.isSplitPayment ? (
+            <div>
+              <div>Payment Method: Split Payment</div>
+              <div className="ml-2 mt-1">
+                <div>Cash: <CurrencyDisplay amount={bill.cashAmount || 0} /></div>
+                <div>UPI: <CurrencyDisplay amount={bill.upiAmount || 0} /></div>
+              </div>
+            </div>
+          ) : (
+            <div>Payment Method: {bill.paymentMethod.toUpperCase()}</div>
+          )}
+          
           {bill.loyaltyPointsEarned > 0 && (
             <div className="mt-1">Points Earned: {bill.loyaltyPointsEarned} 
               <span className="text-xs text-gray-500 ml-1">
@@ -141,6 +181,8 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
 
   // Maximum points that can be used (either all available points or the subtotal)
   const maxLoyaltyPointsUsed = customer ? Math.min(customer.loyaltyPoints, Math.floor(editValues.subtotal)) : bill.loyaltyPointsUsed;
+  
+  const currentTotal = calculateEditTotal();
 
   // Editable view
   return (
@@ -213,31 +255,71 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
         </div>
         
         <div>
-          <label className="text-xs text-gray-400 mb-1 block">Payment Method</label>
-          <select
-            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-            value={editValues.paymentMethod}
-            onChange={(e) => handleInputChange('paymentMethod', e.target.value as 'cash' | 'upi')}
-          >
-            <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-          </select>
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="splitPayment"
+              className="mr-2"
+              checked={editValues.isSplitPayment}
+              onChange={(e) => handleInputChange('isSplitPayment', e.target.checked)}
+            />
+            <label htmlFor="splitPayment" className="text-xs text-gray-400">Split Payment</label>
+          </div>
+          
+          {editValues.isSplitPayment ? (
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Cash Amount</label>
+                <input
+                  type="number"
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
+                  value={editValues.cashAmount}
+                  onChange={(e) => handleInputChange('cashAmount', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">UPI Amount</label>
+                <input
+                  type="number"
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
+                  value={editValues.upiAmount}
+                  onChange={(e) => {
+                    const upiAmount = parseFloat(e.target.value);
+                    // Auto-adjust cash amount to match total
+                    const cashAmount = Math.max(0, currentTotal - upiAmount);
+                    setEditValues(prev => ({
+                      ...prev,
+                      upiAmount,
+                      cashAmount
+                    }));
+                  }}
+                />
+              </div>
+              {Math.abs((editValues.cashAmount + editValues.upiAmount) - currentTotal) > 0.01 && (
+                <div className="col-span-2 text-red-400 text-xs">
+                  Split amounts must equal total: ₹{currentTotal.toFixed(2)}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Payment Method</label>
+              <select
+                className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
+                value={editValues.paymentMethod}
+                onChange={(e) => handleInputChange('paymentMethod', e.target.value as 'cash' | 'upi')}
+              >
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
       
       <div className="receipt-total flex justify-between font-bold mt-2">
         <span>New Total:</span>
-        <CurrencyDisplay 
-          amount={
-            Math.max(0, 
-              editValues.subtotal - 
-              (editValues.discountType === 'percentage' 
-                ? editValues.subtotal * (editValues.discount / 100) 
-                : editValues.discount) - 
-              editValues.loyaltyPointsUsed
-            )
-          } 
-        />
+        <CurrencyDisplay amount={currentTotal} />
       </div>
     </div>
   );

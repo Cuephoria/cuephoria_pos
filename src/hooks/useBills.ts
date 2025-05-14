@@ -39,6 +39,9 @@ export const useBills = (
                 loyalty_points_earned: bill.loyaltyPointsEarned,
                 total: bill.total,
                 payment_method: bill.paymentMethod,
+                is_split_payment: bill.isSplitPayment || false,
+                cash_amount: bill.cashAmount || 0,
+                upi_amount: bill.upiAmount || 0,
                 created_at: bill.createdAt.toISOString()
               }, { onConflict: 'id' })
               .select()
@@ -121,7 +124,10 @@ export const useBills = (
             loyaltyPointsUsed: billData.loyalty_points_used,
             loyaltyPointsEarned: billData.loyalty_points_earned,
             total: billData.total,
-            paymentMethod: billData.payment_method as 'cash' | 'upi',
+            paymentMethod: billData.payment_method as 'cash' | 'upi' | 'split',
+            isSplitPayment: billData.is_split_payment || false,
+            cashAmount: billData.cash_amount || 0,
+            upiAmount: billData.upi_amount || 0,
             createdAt: new Date(billData.created_at)
           });
         }
@@ -142,8 +148,11 @@ export const useBills = (
     discountType: 'percentage' | 'fixed',
     loyaltyPointsUsed: number,
     calculateTotal: () => number,
-    paymentMethod: 'cash' | 'upi',
-    products: Product[]
+    paymentMethod: 'cash' | 'upi' | 'split',
+    products: Product[],
+    isSplitPayment: boolean = false,
+    cashAmount: number = 0,
+    upiAmount: number = 0
   ) => {
     if (!selectedCustomer) return undefined;
     
@@ -190,6 +199,27 @@ export const useBills = (
       const billId = generateId();
       console.log("Generated bill ID:", billId);
       
+      // For split payment, validate that amounts add up to total
+      if (isSplitPayment && Math.abs((cashAmount + upiAmount) - total) > 0.01) {
+        toast({
+          title: 'Error',
+          description: `Split payment amounts (₹${cashAmount + upiAmount}) must equal total (₹${total})`,
+          variant: 'destructive'
+        });
+        return undefined;
+      }
+      
+      // If not split payment but using a specific method, set the entire amount to that method
+      if (!isSplitPayment) {
+        if (paymentMethod === 'cash') {
+          cashAmount = total;
+          upiAmount = 0;
+        } else if (paymentMethod === 'upi') {
+          cashAmount = 0;
+          upiAmount = total;
+        }
+      }
+      
       const { data: billData, error: billError } = await supabase
         .from('bills')
         .insert({
@@ -202,7 +232,10 @@ export const useBills = (
           loyalty_points_used: loyaltyPointsUsed,
           loyalty_points_earned: loyaltyPointsEarned,
           total,
-          payment_method: paymentMethod
+          payment_method: isSplitPayment ? 'split' : paymentMethod,
+          is_split_payment: isSplitPayment,
+          cash_amount: cashAmount,
+          upi_amount: upiAmount
         })
         .select()
         .single();
@@ -259,7 +292,10 @@ export const useBills = (
         loyaltyPointsUsed,
         loyaltyPointsEarned,
         total,
-        paymentMethod,
+        paymentMethod: isSplitPayment ? 'split' : paymentMethod,
+        isSplitPayment,
+        cashAmount,
+        upiAmount,
         createdAt: new Date(billData?.created_at || Date.now())
       };
       
@@ -331,6 +367,182 @@ export const useBills = (
     }
   };
   
+  const updateBill = async (
+    originalBill: Bill, 
+    updatedItems: CartItem[], 
+    customer: Customer, 
+    discount: number, 
+    discountType: 'percentage' | 'fixed', 
+    loyaltyPointsUsed: number,
+    isSplitPayment: boolean = false,
+    cashAmount: number = 0,
+    upiAmount: number = 0
+  ): Promise<Bill | null> => {
+    try {
+      // Calculate the new bill total
+      const subtotal = updatedItems.reduce((sum, item) => sum + item.total, 0);
+      
+      // Calculate discount value based on type
+      let discountValue = 0;
+      if (discountType === 'percentage') {
+        discountValue = subtotal * (discount / 100);
+      } else {
+        discountValue = discount;
+      }
+      
+      // Calculate total after discount and loyalty points
+      const total = Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+      
+      // For split payment, validate that amounts add up to total
+      if (isSplitPayment && Math.abs((cashAmount + upiAmount) - total) > 0.01) {
+        toast({
+          title: 'Error',
+          description: `Split payment amounts (₹${cashAmount + upiAmount}) must equal total (₹${total})`,
+          variant: 'destructive'
+        });
+        return null;
+      }
+      
+      // If not split payment but has a specific method, set the entire amount to that method
+      let paymentMethod: 'cash' | 'upi' | 'split' = originalBill.paymentMethod;
+      
+      if (isSplitPayment) {
+        paymentMethod = 'split';
+      } else {
+        // Single payment method
+        if (paymentMethod === 'cash') {
+          cashAmount = total;
+          upiAmount = 0;
+        } else if (paymentMethod === 'upi') {
+          cashAmount = 0;
+          upiAmount = total;
+        }
+      }
+      
+      // Calculate loyalty points earned (members: 5 points per 100 INR, non-members: 2 points per 100 INR)
+      const pointsRate = customer.isMember ? 5 : 2;
+      const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+      
+      // Calculate the difference in loyalty points used from the original bill
+      const loyaltyPointsDifference = loyaltyPointsUsed - originalBill.loyaltyPointsUsed;
+      
+      // Calculate the difference in points earned (new points earned - original points earned)
+      const pointsEarnedDifference = loyaltyPointsEarned - originalBill.loyaltyPointsEarned;
+      
+      // Calculate the net change in loyalty points for the customer
+      const netLoyaltyPointsChange = -loyaltyPointsDifference + pointsEarnedDifference;
+      
+      // Create updated bill object
+      const updatedBill: Bill = {
+        ...originalBill,
+        items: updatedItems,
+        subtotal,
+        discount,
+        discountValue,
+        discountType,
+        loyaltyPointsUsed,
+        loyaltyPointsEarned,
+        total,
+        paymentMethod,
+        isSplitPayment,
+        cashAmount,
+        upiAmount
+      };
+      
+      // Update bill in Supabase
+      const { error: billUpdateError } = await supabase
+        .from('bills')
+        .update({
+          subtotal,
+          discount,
+          discount_type: discountType,
+          discount_value: discountValue, 
+          loyalty_points_used: loyaltyPointsUsed,
+          loyalty_points_earned: loyaltyPointsEarned,
+          total,
+          payment_method: paymentMethod,
+          is_split_payment: isSplitPayment,
+          cash_amount: cashAmount,
+          upi_amount: upiAmount
+        })
+        .eq('id', originalBill.id);
+      
+      if (billUpdateError) {
+        console.error('Error updating bill:', billUpdateError);
+        throw billUpdateError;
+      }
+      
+      // Delete existing bill items
+      const { error: deleteItemsError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', originalBill.id);
+      
+      if (deleteItemsError) {
+        console.error('Error deleting bill items:', deleteItemsError);
+        throw deleteItemsError;
+      }
+      
+      // Insert updated bill items
+      const billItemsToInsert = updatedItems.map(item => ({
+        bill_id: originalBill.id,
+        item_id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total,
+        item_type: item.type
+      }));
+      
+      const { error: insertItemsError } = await supabase
+        .from('bill_items')
+        .insert(billItemsToInsert);
+      
+      if (insertItemsError) {
+        console.error('Error inserting bill items:', insertItemsError);
+        throw insertItemsError;
+      }
+      
+      // Update customer's loyalty points
+      if (netLoyaltyPointsChange !== 0) {
+        const updatedCustomer = {
+          ...customer,
+          loyaltyPoints: customer.loyaltyPoints + netLoyaltyPointsChange
+        };
+        
+        // Update customer in database
+        const { error: customerUpdateError } = await supabase
+          .from('customers')
+          .update({ loyalty_points: updatedCustomer.loyaltyPoints })
+          .eq('id', customer.id);
+        
+        if (customerUpdateError) {
+          console.error('Error updating customer loyalty points:', customerUpdateError);
+          throw customerUpdateError;
+        }
+        
+        // Update customer in state
+        updateCustomer(updatedCustomer);
+      }
+      
+      // Update local bills state
+      setBills(prevBills => prevBills.map(bill => 
+        bill.id === updatedBill.id ? updatedBill : bill
+      ));
+      
+      return updatedBill;
+      
+    } catch (error) {
+      console.error('Error in updateBill:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update the transaction.',
+        variant: 'destructive'
+      });
+      return null;
+    }
+  };
+
   const deleteBill = async (billId: string, customerId: string) => {
     try {
       const billToDelete = bills.find(bill => bill.id === billId);
@@ -554,6 +766,7 @@ export const useBills = (
     setBills,
     completeSale,
     deleteBill,
+    updateBill,
     exportBills,
     exportCustomers
   };

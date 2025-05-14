@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -105,7 +104,14 @@ export interface POSContextType {
   loyaltyPointsUsed: number;
   isStudentDiscount: boolean;
   categories: string[]; // New property to store available categories
+  isSplitPayment: boolean;
+  cashAmount: number;
+  upiAmount: number;
   setIsStudentDiscount: (value: boolean) => void;
+  setIsSplitPayment: (value: boolean) => void;
+  setCashAmount: (amount: number) => void;
+  setUpiAmount: (amount: number) => void;
+  updateSplitAmounts: (cash: number, upi: number) => boolean;
   
   // State setters (adding these to fix the TypeScript errors)
   setBills?: (bills: Bill[] | ((prevBills: Bill[]) => Bill[])) => void;

@@ -31,6 +31,9 @@ const POSContext = createContext<POSContextType>({
   discountType: 'percentage',
   loyaltyPointsUsed: 0,
   isStudentDiscount: false,
+  isSplitPayment: false,
+  cashAmount: 0,
+  upiAmount: 0,
   categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
   setIsStudentDiscount: () => {},
   setBills: () => {}, // Add default implementation
@@ -66,7 +69,11 @@ const POSContext = createContext<POSContextType>({
   exportBills: () => {},
   exportCustomers: () => {},
   resetToSampleData: () => {},
-  addSampleIndianData: () => {}
+  addSampleIndianData: () => {},
+  setIsSplitPayment: () => {},
+  setCashAmount: (amount) => {},
+  setUpiAmount: (amount) => {},
+  updateSplitAmounts: () => false
 });
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -74,7 +81,12 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   // State for student discount
   const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
-
+  
+  // State for split payment
+  const [isSplitPayment, setIsSplitPayment] = useState<boolean>(false);
+  const [cashAmount, setCashAmount] = useState<number>(0);
+  const [upiAmount, setUpiAmount] = useState<number>(0);
+  
   // State for categories
   const [categories, setCategories] = useState<string[]>([
     'food', 'drinks', 'tobacco', 'challenges', 'membership'
@@ -126,13 +138,21 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDiscountType, 
     loyaltyPointsUsed, 
     setLoyaltyPointsUsedAmount, 
+    isSplitPayment,
+    setIsSplitPayment,
+    cashAmount,
+    setCashAmount,
+    upiAmount,
+    setUpiAmount,
+    updateSplitAmounts,
     addToCart, 
     removeFromCart, 
     updateCartItem, 
     clearCart, 
     setDiscount, 
     setLoyaltyPointsUsed, 
-    calculateTotal 
+    calculateTotal,
+    resetPaymentInfo
   } = useCart();
   
   const { 
@@ -509,7 +529,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   // Modified to handle async operations but return synchronously
-  const completeSale = (paymentMethod: 'cash' | 'upi'): Bill | undefined => {
+  const completeSale = (paymentMethod: 'cash' | 'upi' | 'split'): Bill | undefined => {
     try {
       // Apply student price for membership items if student discount is enabled
       if (isStudentDiscount) {
@@ -543,8 +563,11 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountType, 
         loyaltyPointsUsed, 
         calculateTotal, 
-        paymentMethod,
-        products
+        isSplitPayment ? 'split' : paymentMethod,
+        products,
+        isSplitPayment,
+        cashAmount,
+        upiAmount
       ).then(bill => {
         // If we have a successful sale with membership items, update the customer
         if (bill && selectedCustomer && membershipItems.length > 0) {
@@ -584,6 +607,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSelectedCustomer(null);
           // Reset student discount
           setIsStudentDiscount(false);
+          // Reset split payment data
+          resetPaymentInfo();
         }
       }).catch(error => {
         console.error("Error in completeSale async:", error);
@@ -612,7 +637,10 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loyaltyPointsUsed,
           loyaltyPointsEarned,
           total,
-          paymentMethod,
+          paymentMethod: isSplitPayment ? 'split' : paymentMethod,
+          isSplitPayment,
+          cashAmount: isSplitPayment ? cashAmount : (paymentMethod === 'cash' ? total : 0),
+          upiAmount: isSplitPayment ? upiAmount : (paymentMethod === 'upi' ? total : 0),
           createdAt: new Date()
         };
         return placeholderBill;
@@ -834,6 +862,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountType,
         loyaltyPointsUsed,
         isStudentDiscount,
+        isSplitPayment,
+        cashAmount,
+        upiAmount,
+        setIsSplitPayment,
+        setCashAmount: (amount) => setCashAmount(amount),
+        setUpiAmount: (amount) => setUpiAmount(amount),
+        updateSplitAmounts,
         categories,
         setIsStudentDiscount,
         setBills,

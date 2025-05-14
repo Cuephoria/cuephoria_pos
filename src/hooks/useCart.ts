@@ -8,6 +8,9 @@ export const useCart = () => {
   const [discount, setDiscountAmount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [loyaltyPointsUsed, setLoyaltyPointsUsedAmount] = useState<number>(0);
+  const [isSplitPayment, setIsSplitPayment] = useState<boolean>(false);
+  const [cashAmount, setCashAmount] = useState<number>(0);
+  const [upiAmount, setUpiAmount] = useState<number>(0);
   const { toast } = useToast();
   
   const addToCart = (item: Omit<CartItem, 'total'>, availableStock?: number) => {
@@ -152,6 +155,32 @@ export const useCart = () => {
     }
   };
   
+  const setSplitPayment = (split: boolean) => {
+    setIsSplitPayment(split);
+    if (split) {
+      // Initialize split amounts when enabling split payment
+      const total = calculateTotal();
+      setCashAmount(Math.floor(total / 2)); // Default to half cash
+      setUpiAmount(total - Math.floor(total / 2)); // Remaining amount to UPI
+    }
+  };
+  
+  const updateSplitAmounts = (cash: number, upi: number) => {
+    const total = calculateTotal();
+    if (Math.abs((cash + upi) - total) > 0.01) { // Allow small rounding errors
+      toast({
+        title: "Invalid Split",
+        description: `Split amounts (₹${(cash + upi).toFixed(2)}) don't match total (₹${total.toFixed(2)})`,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    setCashAmount(cash);
+    setUpiAmount(upi);
+    return true;
+  };
+  
   const calculateTotal = () => {
     const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
     
@@ -167,6 +196,23 @@ export const useCart = () => {
     return Math.max(0, subtotal - discountValue - loyaltyDiscount);
   };
   
+  const resetPaymentInfo = () => {
+    setIsSplitPayment(false);
+    setCashAmount(0);
+    setUpiAmount(0);
+  };
+  
+  const clearCart = () => {
+    setCart([]);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    resetPaymentInfo();
+    toast({
+      title: "Cart Cleared",
+      description: "All items removed from cart",
+    });
+  };
+  
   return {
     cart,
     setCart,
@@ -176,12 +222,20 @@ export const useCart = () => {
     setDiscountType,
     loyaltyPointsUsed,
     setLoyaltyPointsUsedAmount,
+    isSplitPayment,
+    setIsSplitPayment: setSplitPayment,
+    cashAmount,
+    setCashAmount,
+    upiAmount,
+    setUpiAmount,
+    updateSplitAmounts,
     addToCart,
     removeFromCart,
     updateCartItem,
     clearCart,
     setDiscount,
     setLoyaltyPointsUsed,
-    calculateTotal
+    calculateTotal,
+    resetPaymentInfo
   };
 };
