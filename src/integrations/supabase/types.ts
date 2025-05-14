@@ -79,43 +79,52 @@ export type Database = {
       }
       bills: {
         Row: {
+          cash_amount: number | null
           created_at: string
           customer_id: string | null
           discount: number
           discount_type: string
           discount_value: number
           id: string
+          is_split_payment: boolean | null
           loyalty_points_earned: number
           loyalty_points_used: number
           payment_method: string
           subtotal: number
           total: number
+          upi_amount: number | null
         }
         Insert: {
+          cash_amount?: number | null
           created_at?: string
           customer_id?: string | null
           discount?: number
           discount_type?: string
           discount_value?: number
           id?: string
+          is_split_payment?: boolean | null
           loyalty_points_earned?: number
           loyalty_points_used?: number
           payment_method: string
           subtotal: number
           total: number
+          upi_amount?: number | null
         }
         Update: {
+          cash_amount?: number | null
           created_at?: string
           customer_id?: string | null
           discount?: number
           discount_type?: string
           discount_value?: number
           id?: string
+          is_split_payment?: boolean | null
           loyalty_points_earned?: number
           loyalty_points_used?: number
           payment_method?: string
           subtotal?: number
           total?: number
+          upi_amount?: number | null
         }
         Relationships: [
           {
