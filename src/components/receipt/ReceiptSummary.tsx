@@ -307,7 +307,7 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
               <select
                 className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                 value={editValues.paymentMethod}
-                onChange={(e) => handleInputChange('paymentMethod', e.target.value as 'cash' | 'upi')}
+                onChange={(e) => handleInputChange('paymentMethod', e.target.value as 'cash' | 'upi' | 'split')}
               >
                 <option value="cash">Cash</option>
                 <option value="upi">UPI</option>
