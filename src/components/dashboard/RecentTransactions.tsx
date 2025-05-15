@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Trash2, Search, Edit2, Plus, X, Save, CreditCard, Wallet } from 'lucide-react';
@@ -54,13 +55,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 // Add interface for component props
 interface RecentTransactionsProps {
   className?: string;
+  bills: Bill[];
+  customers: Customer[];
 }
 
-const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) => {
+const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className, bills, customers }) => {
   const { 
-    bills, 
     setBills, 
-    customers, 
     setCustomers, 
     deleteBill, 
     products, 
@@ -94,6 +95,11 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
   const [editingLoyaltyPointsUsed, setEditingLoyaltyPointsUsed] = useState<number>(0);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<'cash' | 'upi' | 'split'>('cash');
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  
+  // Added split payment fields
+  const [editingSplitPayment, setEditingSplitPayment] = useState<boolean>(false);
+  const [editingCashAmount, setEditingCashAmount] = useState<number>(0);
+  const [editingUpiAmount, setEditingUpiAmount] = useState<number>(0);
   
   // State for product search in add item dialog
   const [productSearchQuery, setProductSearchQuery] = useState<string>('');
@@ -215,6 +221,12 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
     setEditingDiscountType(bill.discountType);
     setEditingLoyaltyPointsUsed(bill.loyaltyPointsUsed);
     setEditingPaymentMethod(bill.paymentMethod);
+    
+    // Initialize split payment state
+    setEditingSplitPayment(bill.isSplitPayment || false);
+    setEditingCashAmount(bill.cashAmount || 0);
+    setEditingUpiAmount(bill.upiAmount || 0);
+    
     setEditingCustomer(customers.find(c => c.id === bill.customerId) || null);
     setIsEditing(true);
     setIsEditDialogOpen(true);
@@ -339,6 +351,36 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
     setIsAddItemDialogOpen(false);
   };
   
+  // Handle split payment fields
+  const handlePaymentMethodChange = (value: 'cash' | 'upi' | 'split') => {
+    setEditingPaymentMethod(value);
+    
+    if (value === 'split') {
+      setEditingSplitPayment(true);
+      const total = calculateUpdatedBill().total;
+      // Initialize split amounts to half and half if not previously set
+      if (editingCashAmount === 0 && editingUpiAmount === 0) {
+        setEditingCashAmount(Math.floor(total / 2));
+        setEditingUpiAmount(total - Math.floor(total / 2));
+      }
+    } else {
+      setEditingSplitPayment(false);
+    }
+  };
+  
+  // Function to update split amounts when one changes
+  const handleSplitAmountChange = (type: 'cash' | 'upi', amount: number) => {
+    const total = calculateUpdatedBill().total;
+    
+    if (type === 'cash') {
+      setEditingCashAmount(amount);
+      setEditingUpiAmount(Math.max(0, total - amount));
+    } else {
+      setEditingUpiAmount(amount);
+      setEditingCashAmount(Math.max(0, total - amount));
+    }
+  };
+  
   // Calculate updated bill values
   const calculateUpdatedBill = () => {
     if (!editingBill) return { subtotal: 0, discountValue: 0, total: 0 };
@@ -375,6 +417,23 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
     setIsSaving(true);
     
     try {
+      // Calculate new values
+      const { subtotal, discountValue, total } = calculateUpdatedBill();
+      
+      // Check if split payment amounts match total
+      if (editingSplitPayment) {
+        const totalSplitAmount = editingCashAmount + editingUpiAmount;
+        if (Math.abs(totalSplitAmount - total) > 0.01) {
+          toast({
+            title: "Invalid Split",
+            description: `Split amounts (₹${totalSplitAmount.toFixed(2)}) don't match total (₹${total.toFixed(2)})`,
+            variant: "destructive"
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+      
       // Use the updateBill function to update the bill and automatically handle loyalty points
       if (updateBill) {
         const updatedBill = await updateBill(
@@ -383,7 +442,10 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
           editingCustomer,
           editingDiscount,
           editingDiscountType,
-          editingLoyaltyPointsUsed
+          editingLoyaltyPointsUsed,
+          editingSplitPayment,
+          editingCashAmount,
+          editingUpiAmount
         );
         
         if (updatedBill) {
@@ -672,7 +734,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                   <h3 className="text-sm font-medium text-gray-300">Payment Method</h3>
                   <RadioGroup 
                     value={editingPaymentMethod} 
-                    onValueChange={(value) => setEditingPaymentMethod(value as 'cash' | 'upi' | 'split')}
+                    onValueChange={(value) => handlePaymentMethodChange(value as 'cash' | 'upi' | 'split')}
                     className="flex space-x-4"
                   >
                     <div className="flex items-center space-x-2">
@@ -696,6 +758,45 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({ className }) =>
                   </RadioGroup>
                 </div>
               </div>
+
+              {/* Split payment fields */}
+              {editingPaymentMethod === 'split' && (
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-800/40 rounded-md border border-gray-700">
+                  <div className="space-y-2">
+                    <Label htmlFor="cashAmount" className="text-sm text-gray-300">Cash Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-gray-400">₹</span>
+                      <Input 
+                        id="cashAmount"
+                        type="number" 
+                        value={editingCashAmount} 
+                        onChange={(e) => handleSplitAmountChange('cash', parseFloat(e.target.value) || 0)}
+                        className="pl-7 bg-gray-700 border-gray-600 text-white"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="upiAmount" className="text-sm text-gray-300">UPI Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-gray-400">₹</span>
+                      <Input 
+                        id="upiAmount"
+                        type="number" 
+                        value={editingUpiAmount} 
+                        onChange={(e) => handleSplitAmountChange('upi', parseFloat(e.target.value) || 0)}
+                        className="pl-7 bg-gray-700 border-gray-600 text-white"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  {Math.abs((editingCashAmount + editingUpiAmount) - calculateUpdatedBill().total) > 0.01 && (
+                    <div className="col-span-2 text-red-400 text-xs">
+                      Split amounts must equal total: ₹{calculateUpdatedBill().total.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div className="flex justify-between pt-4 border-t border-gray-700 mt-4">
                 <div>

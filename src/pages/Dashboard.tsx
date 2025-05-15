@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -322,7 +323,7 @@ const Dashboard = () => {
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             <ActiveSessions />
-            <RecentTransactions />
+            <RecentTransactions bills={bills} customers={customers} />
           </div>
         </TabsContent>
         
