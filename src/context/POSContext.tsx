@@ -16,6 +16,7 @@ import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, handleSupabaseError } from '@/integrations/supabase/client';
+import { useCustomerCarts } from '@/hooks/useCustomerCarts';
 
 const POSContext = createContext<POSContextType>({
   products: [],
@@ -79,8 +80,23 @@ const POSContext = createContext<POSContextType>({
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('POSProvider initialized'); // Debug log
   
-  // State for student discount
-  const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
+  // Initialize customer carts system
+  const {
+    customerCarts,
+    activeCustomerId,
+    setActiveCustomerId,
+    getCustomerCart,
+    clearCustomerCart,
+    addToCustomerCart,
+    removeFromCustomerCart,
+    updateCustomerCartItem,
+    setCustomerDiscount,
+    setCustomerLoyaltyPointsUsed,
+    setCustomerStudentDiscount,
+    setCustomerSplitPayment,
+    updateCustomerSplitAmounts,
+    calculateCustomerCartTotal
+  } = useCustomerCarts();
   
   // State for categories
   const [categories, setCategories] = useState<string[]>([
@@ -108,7 +124,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateCustomer,
     updateCustomerMembership,
     deleteCustomer, 
-    selectCustomer,
+    selectCustomer: baseSelectCustomer,
     checkMembershipValidity,
     deductMembershipHours
   } = useCustomers([]);
@@ -124,6 +140,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateStation
   } = useStations([], updateCustomer);
   
+  // We still use useCart for some base operations
   const { 
     cart, 
     setCart, 
@@ -139,14 +156,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCashAmount,
     upiAmount,
     setUpiAmount,
-    updateSplitAmounts,
-    addToCart, 
-    removeFromCart, 
-    updateCartItem, 
-    clearCart, 
-    setDiscount, 
-    setLoyaltyPointsUsed, 
-    calculateTotal,
     resetPaymentInfo
   } = useCart();
   
@@ -442,12 +451,205 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
+  // Modified select customer to use customer carts
+  const selectCustomer = (id: string | null) => {
+    if (activeCustomerId) {
+      // Save the current cart for the previously selected customer
+      const currentCart = {
+        cart,
+        discount,
+        discountType,
+        loyaltyPointsUsed,
+        isStudentDiscount: false,  // Default value
+        isSplitPayment,
+        cashAmount,
+        upiAmount
+      };
+      
+      // We don't modify the original useCustomerCarts state here
+      // as it's already updated by our actions, this is just fallback
+    }
+    
+    // Clear the current cart before switching customers
+    setCart([]);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    setIsSplitPayment(false);
+    setCashAmount(0);
+    setUpiAmount(0);
+    
+    // Call base select customer to set the selected customer
+    baseSelectCustomer(id);
+    
+    // Update the active customer ID in our customer carts system
+    setActiveCustomerId(id);
+    
+    if (id) {
+      // Load the cart for this customer
+      const customerCart = getCustomerCart(id);
+      
+      // Update the actual cart
+      setCart(customerCart.cart);
+      setDiscountAmount(customerCart.discount);
+      setDiscountType(customerCart.discountType);
+      setLoyaltyPointsUsedAmount(customerCart.loyaltyPointsUsed);
+      setIsSplitPayment(customerCart.isSplitPayment);
+      setCashAmount(customerCart.cashAmount);
+      setUpiAmount(customerCart.upiAmount);
+    }
+  };
+  
+  // Modified addToCart to store in customer cart
+  const addToCart = (item: Omit<CartItem, 'total'>, availableStock?: number) => {
+    if (!selectedCustomer) {
+      toast({
+        title: "No Customer Selected",
+        description: "Please select a customer before adding items to cart",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    addToCustomerCart(selectedCustomer.id, item, availableStock);
+    
+    // Also update the current cart state
+    const existingItem = cart.find(i => i.id === item.id && i.type === item.type);
+    
+    if (existingItem) {
+      const updatedCart = cart.map(i => 
+        i.id === item.id && i.type === item.type
+          ? { ...i, quantity: i.quantity + item.quantity, total: (i.quantity + item.quantity) * i.price }
+          : i
+      );
+      setCart(updatedCart);
+    } else {
+      const newItem = { ...item, total: item.quantity * item.price };
+      setCart([...cart, newItem]);
+    }
+  };
+  
+  // Modified removeFromCart to update customer cart
+  const removeFromCart = (id: string) => {
+    if (selectedCustomer) {
+      removeFromCustomerCart(selectedCustomer.id, id);
+    }
+    
+    // Also update the current cart state
+    setCart(cart.filter(i => i.id !== id));
+  };
+  
+  // Modified updateCartItem to update customer cart
+  const updateCartItem = (id: string, quantity: number) => {
+    if (selectedCustomer) {
+      updateCustomerCartItem(selectedCustomer.id, id, quantity);
+    }
+    
+    if (quantity <= 0) {
+      setCart(cart.filter(i => i.id !== id));
+    } else {
+      setCart(cart.map(i => 
+        i.id === id
+          ? { ...i, quantity, total: quantity * i.price }
+          : i
+      ));
+    }
+  };
+  
+  // Modified clearCart to update customer cart
+  const clearCart = () => {
+    if (selectedCustomer) {
+      clearCustomerCart(selectedCustomer.id);
+    }
+    
+    setCart([]);
+    setDiscountAmount(0);
+    setLoyaltyPointsUsedAmount(0);
+    resetPaymentInfo();
+  };
+  
+  // Modified setDiscount to update customer cart
+  const setDiscount = (amount: number, type: 'percentage' | 'fixed') => {
+    if (selectedCustomer) {
+      setCustomerDiscount(selectedCustomer.id, amount, type);
+    }
+    
+    setDiscountAmount(amount);
+    setDiscountType(type);
+  };
+  
+  // Modified setLoyaltyPointsUsed to update customer cart
+  const setLoyaltyPointsUsed = (points: number) => {
+    if (selectedCustomer) {
+      setCustomerLoyaltyPointsUsed(selectedCustomer.id, points);
+    }
+    
+    setLoyaltyPointsUsedAmount(points);
+  };
+  
+  // Set student discount
+  const setIsStudentDiscount = (value: boolean) => {
+    if (selectedCustomer) {
+      setCustomerStudentDiscount(selectedCustomer.id, value);
+    }
+  };
+  
+  // Modified methods for split payment to update customer cart
+  const handleSetIsSplitPayment = (value: boolean) => {
+    if (selectedCustomer) {
+      setCustomerSplitPayment(selectedCustomer.id, value, calculateTotal());
+    }
+    
+    setIsSplitPayment(value);
+    
+    if (value) {
+      // Initialize split amounts when enabling split payment
+      const total = calculateTotal();
+      setCashAmount(Math.floor(total / 2)); // Default to half cash
+      setUpiAmount(total - Math.floor(total / 2)); // Remaining amount to UPI
+    } else {
+      setCashAmount(0);
+      setUpiAmount(0);
+    }
+  };
+  
+  const handleUpdateSplitAmounts = (cash: number, upi: number) => {
+    const total = calculateTotal();
+    if (selectedCustomer) {
+      const result = updateCustomerSplitAmounts(selectedCustomer.id, cash, upi, total);
+      if (!result) return false;
+    }
+    
+    setCashAmount(cash);
+    setUpiAmount(upi);
+    return true;
+  };
+  
+  // Calculate total
+  const calculateTotal = () => {
+    if (selectedCustomer) {
+      return calculateCustomerCartTotal(selectedCustomer.id);
+    }
+    
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    
+    let discountValue = 0;
+    if (discountType === 'percentage') {
+      discountValue = subtotal * (discount / 100);
+    } else {
+      discountValue = discount;
+    }
+    
+    const loyaltyDiscount = loyaltyPointsUsed;
+    
+    return Math.max(0, subtotal - discountValue - loyaltyDiscount);
+  };
+  
   // Wrapper functions that combine functionality from multiple hooks
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
     await startSessionBase(stationId, customerId);
   };
   
-  // Make endSession return a Promise<void> to match type definition
+  // Modified endSession to add session to correct customer's cart
   const endSession = async (stationId: string): Promise<void> => {
     try {
       // Get the current station
@@ -466,19 +668,28 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (result) {
         const { sessionCartItem, customer } = result;
         
-        // Clear cart before adding the new session
-        clearCart();
-        
-        // Auto-select customer
-        if (customer) {
-          console.log("Auto-selecting customer:", customer.name);
-          selectCustomer(customer.id);
-        }
-        
-        // Add the session to cart
-        if (sessionCartItem) {
-          console.log("Adding session to cart:", sessionCartItem);
-          addToCart(sessionCartItem);
+        if (sessionCartItem && customer) {
+          // Add the session directly to the customer's cart
+          addToCustomerCart(customer.id, sessionCartItem);
+          
+          // If this customer is currently selected, update the active cart too
+          if (selectedCustomer && selectedCustomer.id === customer.id) {
+            // Add to the current cart
+            const newItem = { ...sessionCartItem, total: sessionCartItem.quantity * sessionCartItem.price };
+            setCart(prev => [...prev, newItem]);
+          }
+          
+          // Auto-select customer if none is selected
+          if (!selectedCustomer) {
+            console.log("Auto-selecting customer:", customer.name);
+            selectCustomer(customer.id);
+          } else if (selectedCustomer.id !== customer.id) {
+            // Notify that session was added to a different customer
+            toast({
+              title: "Session Added",
+              description: `Session was added to ${customer.name}'s cart`,
+            });
+          }
         }
       }
     } catch (error) {
@@ -527,8 +738,18 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Modified to handle async operations but return synchronously
   const completeSale = (paymentMethod: 'cash' | 'upi' | 'split'): Bill | undefined => {
     try {
+      if (!selectedCustomer) {
+        toast({
+          title: "No Customer Selected",
+          description: "Please select a customer before completing the sale",
+          variant: "destructive"
+        });
+        return undefined;
+      }
+      
       // Apply student price for membership items if student discount is enabled
-      if (isStudentDiscount) {
+      const currentCart = getCustomerCart(selectedCustomer.id);
+      if (currentCart.isStudentDiscount) {
         const updatedCart = cart.map(item => {
           const product = products.find(p => p.id === item.id) as Product;
           if (product && product.category === 'membership' && product.studentPrice) {
@@ -597,14 +818,19 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         
         if (bill) {
-          // Clear the cart after successful sale
+          // Clear the cart for this customer after successful sale
+          clearCustomerCart(selectedCustomer.id);
+          
+          // Clear the cart
           clearCart();
+          
           // Reset selected customer
           setSelectedCustomer(null);
-          // Reset student discount
-          setIsStudentDiscount(false);
-          // Reset split payment data
-          resetPaymentInfo();
+          setActiveCustomerId(null);
+          
+          // Reset student discount and split payment
+          setCustomerStudentDiscount(selectedCustomer.id, false);
+          setCustomerSplitPayment(selectedCustomer.id, false, 0);
         }
       }).catch(error => {
         console.error("Error in completeSale async:", error);
@@ -742,14 +968,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discount,
         discountType,
         loyaltyPointsUsed,
-        isStudentDiscount,
+        isStudentDiscount: selectedCustomer ? getCustomerCart(selectedCustomer.id).isStudentDiscount : false,
         isSplitPayment,
         cashAmount,
         upiAmount,
-        setIsSplitPayment,
+        setIsSplitPayment: handleSetIsSplitPayment,
         setCashAmount: (amount) => setCashAmount(amount),
         setUpiAmount: (amount) => setUpiAmount(amount),
-        updateSplitAmounts,
+        updateSplitAmounts: handleUpdateSplitAmounts,
         categories,
         setIsStudentDiscount,
         setBills,
