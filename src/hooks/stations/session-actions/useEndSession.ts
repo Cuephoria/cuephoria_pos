@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SessionActionsProps } from '../session-actions/types';
 import { generateId } from '@/utils/pos.utils';
 import React from 'react';
+import { isMembershipActive } from '@/utils/membership.utils';
 
 /**
  * Hook to provide session end functionality

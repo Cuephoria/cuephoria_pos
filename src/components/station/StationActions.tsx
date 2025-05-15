@@ -71,17 +71,20 @@ const StationActions: React.FC<StationActionsProps> = ({
         const customerId = station.currentSession.customerId;
         console.log('Ending session for station:', station.id, 'customer:', customerId);
         
+        // Find the customer for this session
         const customer = customers.find(c => c.id === customerId);
         if (customer) {
           console.log('Auto-selecting customer:', customer.name);
+          // Select the customer first - this ensures their cart is activated
           selectCustomer(customer.id);
         }
         
+        // End the session - this automatically adds it to the customer's cart
         await onEndSession(station.id);
         
         toast({
           title: "Session Ended",
-          description: "Session has been ended and added to cart. Redirecting to checkout...",
+          description: `Session has been added to ${customer?.name || ''}'s cart.`,
         });
         
         setTimeout(() => {
