@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -25,7 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
-import { Indian, MoreHorizontal, Receipt, ReceiptIndianRupee, Split } from 'lucide-react';
+import { MoreHorizontal, Receipt, ReceiptIndianRupee, Split } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import { toast } from '@/hooks/use-toast';
 import ReceiptContent from '@/components/receipt/ReceiptContent';
@@ -393,7 +392,11 @@ export const RecentTransactions: React.FC<TransactionsProps> = ({
           
           {viewingBill && (
             <div className="space-y-4">
-              <ReceiptContent items={viewingBill.items} />
+              <ReceiptContent 
+                bill={viewingBill} 
+                customer={getCustomer(viewingBill) || { id: "", name: "", phone: "", loyaltyPoints: 0, totalSpent: 0, createdAt: new Date() }}
+                receiptRef={{ current: null }}
+              />
               <ReceiptSummary 
                 bill={viewingBill}
                 customer={getCustomer(viewingBill)}

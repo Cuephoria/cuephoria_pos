@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
@@ -6,7 +7,7 @@ import ActionButtonSection from '@/components/dashboard/ActionButtonSection';
 import SalesChart from '@/components/dashboard/SalesChart';
 import BusinessSummarySection from '@/components/dashboard/BusinessSummarySection';
 import ActiveSessions from '@/components/dashboard/ActiveSessions';
-import RecentTransactions from '@/components/dashboard/RecentTransactions';
+import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import CustomerActivityChart from '@/components/dashboard/CustomerActivityChart';
 import ProductInventoryChart from '@/components/dashboard/ProductInventoryChart';
 import CustomerSpendingCorrelation from '@/components/dashboard/CustomerSpendingCorrelation';
