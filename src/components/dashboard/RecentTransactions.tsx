@@ -58,6 +58,19 @@ export const RecentTransactions: React.FC<TransactionsProps> = ({
     return customers.find(c => c.id === bill.customerId);
   };
   
+  // Create a complete customer default object for when no customer is found
+  const defaultCustomer: Customer = {
+    id: "",
+    name: "Unknown Customer",
+    phone: "",
+    email: undefined,
+    isMember: false,
+    loyaltyPoints: 0,
+    totalSpent: 0,
+    totalPlayTime: 0,
+    createdAt: new Date()
+  };
+  
   // View receipt
   const handleViewReceipt = (bill: Bill) => {
     setViewingBill(bill);
@@ -322,7 +335,7 @@ export const RecentTransactions: React.FC<TransactionsProps> = ({
                       <div className="text-sm text-muted-foreground">{formatTime(bill.createdAt)}</div>
                     </TableCell>
                     <TableCell onClick={() => handleViewReceipt(bill)}>
-                      <div className="font-medium">{customer?.name || "Unknown"}</div>
+                      <div className="font-medium">{customer?.name || defaultCustomer.name}</div>
                       <div className="text-sm text-muted-foreground truncate max-w-[150px]">
                         {customer?.phone || "—"}
                       </div>
@@ -394,7 +407,7 @@ export const RecentTransactions: React.FC<TransactionsProps> = ({
             <div className="space-y-4">
               <ReceiptContent 
                 bill={viewingBill} 
-                customer={getCustomer(viewingBill) || { id: "", name: "", phone: "", loyaltyPoints: 0, totalSpent: 0, createdAt: new Date() }}
+                customer={getCustomer(viewingBill) || defaultCustomer}
                 receiptRef={{ current: null }}
               />
               <ReceiptSummary 
