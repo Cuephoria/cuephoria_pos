@@ -2,71 +2,71 @@
 import { useSessionsData } from './useSessionsData';
 import { useStationsData } from './useStationsData';
 import { useSessionActions } from './session-actions';
-import { Customer, Station, Session, CartItem, SessionResult } from '@/types/pos.types';
-import { calculateSessionDuration } from '@/utils/pos.utils';
+import { Customer, Station, Session, SessionResult } from '@/types/pos.types';
+import { useState } from 'react';
 
-export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => Promise<Customer | null>) => {
+export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => void) => {
   const { 
     stations, 
     setStations,
+    stationsLoading,
+    stationsError,
+    refreshStations,
     deleteStation: deleteStationData,
     updateStation: updateStationData
-  } = useStationsData(initialStations);
+  } = useStationsData();
   
   const {
     sessions,
     setSessions,
-    addSession,
-    updateSession,
+    sessionsLoading,
+    sessionsError,
+    refreshSessions,
     deleteSession
   } = useSessionsData();
   
-  const {
-    startSession: startSessionAction,
-    endSession: endSessionAction
-  } = useSessionActions(
-    stations, 
-    sessions,
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Get actions from session-actions hook
+  const sessionActions = useSessionActions({
+    stations,
     setStations,
+    sessions,
     setSessions,
-    addSession,
-    updateSession
-  );
+    updateCustomer
+  });
   
   const startSession = async (stationId: string, customerId: string): Promise<void> => {
     try {
-      await startSessionAction(stationId, customerId);
+      setIsLoading(true);
+      await sessionActions.startSession(stationId, customerId);
     } catch (error) {
       console.error('Error in useStations.startSession:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
   
-  const endSession = async (stationId: string, customersList: Customer[]): Promise<SessionResult | null> => {
+  const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
+      setIsLoading(true);
+      
       // Find the station being ended
       const station = stations.find(s => s.id === stationId);
       if (!station || !station.isOccupied || !station.currentSession) {
         console.log('No active session found for this station in useStations');
-        return null;
+        return undefined;
       }
       
-      // Get customer info if available
-      const customerId = station.currentSession.customerId;
-      const customer = customerId ? customersList.find(c => c.id === customerId) : null;
+      const result = await sessionActions.endSession(stationId, customersList);
+      return result;
       
-      const sessionResult = await endSessionAction(
-        stationId,
-        station,
-        station.currentSession,
-        customer,
-        updateCustomer
-      );
-      
-      return sessionResult;
     } catch (error) {
       console.error('Error in useStations.endSession:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -111,6 +111,13 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     startSession,
     endSession,
     deleteStation,
-    updateStation
+    updateStation,
+    stationsLoading,
+    stationsError,
+    sessionsLoading,
+    sessionsError,
+    refreshStations,
+    refreshSessions,
+    isLoading
   };
 };
