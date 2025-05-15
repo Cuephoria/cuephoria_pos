@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -614,6 +615,7 @@ const ReportsPage: React.FC = () => {
               <TableHead>Points Used</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Payment</TableHead>
+              <TableHead>Split</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -650,10 +652,28 @@ const ReportsPage: React.FC = () => {
                     <Badge variant="outline" className={
                       bill.paymentMethod === 'upi'
                         ? "bg-blue-900/30 text-blue-400 border-blue-800"
+                        : bill.paymentMethod === 'split'
+                        ? "bg-purple-900/30 text-purple-400 border-purple-800"
                         : "bg-green-900/30 text-green-400 border-green-800"
                     }>
-                      {bill.paymentMethod === 'upi' ? 'UPI' : 'Cash'}
+                      {bill.paymentMethod === 'upi' 
+                        ? 'UPI' 
+                        : bill.paymentMethod === 'split'
+                        ? 'Split'
+                        : 'Cash'}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {bill.isSplitPayment && (
+                      <div className="text-xs">
+                        <div className="text-green-400">
+                          Cash: <CurrencyDisplay amount={bill.cashAmount || 0} />
+                        </div>
+                        <div className="text-blue-400 mt-1">
+                          UPI: <CurrencyDisplay amount={bill.upiAmount || 0} />
+                        </div>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               );
@@ -661,7 +681,7 @@ const ReportsPage: React.FC = () => {
             
             {paginatedData.bills.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-16 text-gray-400">
+                <TableCell colSpan={10} className="text-center py-16 text-gray-400">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 mb-2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
                     <p className="text-lg font-medium">No bills available</p>
