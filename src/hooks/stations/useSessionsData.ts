@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 /**
  * Hook to load and manage session data from Supabase
@@ -11,34 +10,34 @@ export const useSessionsData = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
   const [sessionsError, setSessionsError] = useState<Error | null>(null);
-  const { toast } = useToast();
   
   const refreshSessions = async () => {
     setSessionsLoading(true);
     setSessionsError(null);
     
     try {
-      // Fetch sessions from Supabase, including active sessions (no end_time)
+      // Optimize query by selecting only necessary fields
       const { data, error } = await supabase
         .from('sessions')
-        .select('*');
+        .select('id, station_id, customer_id, start_time, end_time, duration')
+        .order('start_time', { ascending: false });
         
       if (error) {
         console.error('Error fetching sessions:', error);
         setSessionsError(new Error(`Failed to fetch sessions: ${error.message}`));
-        toast({
-          title: 'Database Error',
+        toast.error('Database Error', {
           description: 'Failed to fetch sessions from database',
-          variant: 'destructive'
+          duration: 4000
         });
         return;
       }
       
       // Transform data to match our Session type
       if (data && data.length > 0) {
-        // Use type assertion to handle the TypeScript issues
+        // Use type assertion to handle TypeScript issues
         const sessionsData = data as any[];
         
+        // Transform data in a more optimized way using map
         const transformedSessions = sessionsData.map(item => ({
           id: item.id,
           stationId: item.station_id,
@@ -48,32 +47,25 @@ export const useSessionsData = () => {
           duration: item.duration
         }));
         
-        console.log(`Loaded ${transformedSessions.length} total sessions from Supabase`);
+        console.log(`Loaded ${transformedSessions.length} sessions (optimized query)`);
         setSessions(transformedSessions);
-        
-        // Log active sessions (those without end_time)
-        const activeSessions = transformedSessions.filter(s => !s.endTime);
-        console.log(`Found ${activeSessions.length} active sessions in loaded data`);
-        activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
-        // Clear sessions if no data is returned to prevent stale data
         setSessions([]);
       }
     } catch (error) {
       console.error('Error in fetchSessions:', error);
       setSessionsError(error instanceof Error ? error : new Error('Unknown error fetching sessions'));
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to load sessions',
-        variant: 'destructive'
+        duration: 4000
       });
     } finally {
       setSessionsLoading(false);
     }
   };
   
-  // Add delete session functionality
+  // Delete session functionality
   const deleteSession = async (sessionId: string): Promise<boolean> => {
     try {
       setSessionsLoading(true);
@@ -123,11 +115,11 @@ export const useSessionsData = () => {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Set up a regular polling interval to refresh sessions even when page is visible
+    // Set up a regular polling interval with a longer interval to reduce server load
     const intervalId = setInterval(() => {
       console.log('Periodic session refresh');
       refreshSessions();
-    }, 60000); // Refresh every minute
+    }, 120000); // Refresh every 2 minutes instead of 1 minute
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
