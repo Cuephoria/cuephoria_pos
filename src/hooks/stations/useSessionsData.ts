@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
@@ -83,7 +84,6 @@ export const useSessionsData = () => {
       setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId));
       
       toast({
-        title: 'Success',
         description: 'Session deleted successfully',
       });
       
@@ -91,7 +91,6 @@ export const useSessionsData = () => {
     } catch (error) {
       console.error('Error deleting session:', error);
       toast({
-        title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to delete session',
         variant: 'destructive'
       });

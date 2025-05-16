@@ -28,7 +28,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
           error: "bg-gradient-to-r from-red-500 to-red-600 text-white border-none shadow-lg shadow-red-500/20",
           info: "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-none shadow-lg shadow-blue-500/20",
           warning: "bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-none shadow-lg shadow-yellow-500/20",
-          title: "font-medium text-sm pb-1", 
         },
       }}
       {...props}

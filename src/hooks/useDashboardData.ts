@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Bill, Customer, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +18,7 @@ export const useDashboardData = () => {
       // Optimize by limiting and only selecting required fields
       const { data: billsData, error: billsError } = await supabase
         .from('bills')
-        .select('id, created_at, total, subtotal, discount, customer_id, payment_method')
+        .select('id, created_at, total, subtotal, discount, discount_value, discount_type, loyalty_points_used, loyalty_points_earned, customer_id, payment_method, is_split_payment, cash_amount, upi_amount')
         .order('created_at', { ascending: false })
         .limit(100); // Limit to the most recent 100 bills for dashboard calculations
       
@@ -32,11 +33,18 @@ export const useDashboardData = () => {
         total: bill.total,
         subtotal: bill.subtotal,
         discount: bill.discount,
+        discountValue: bill.discount_value,
+        discountType: bill.discount_type,
+        loyaltyPointsUsed: bill.loyalty_points_used,
+        loyaltyPointsEarned: bill.loyalty_points_earned,
         customerId: bill.customer_id,
         paymentMethod: bill.payment_method,
+        isSplitPayment: bill.is_split_payment,
+        cashAmount: bill.cash_amount,
+        upiAmount: bill.upi_amount,
         // Simplified items array for dashboard (will be populated if needed later)
         items: []
-      }));
+      })) as Bill[];
       
       console.log(`Loaded ${transformedBills.length} bills for dashboard`);
       setDashboardBills(transformedBills);
