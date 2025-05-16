@@ -611,13 +611,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   // Process products when completing a sale
-  const processProductsInBill = (items: CartItem[]) => {
+  const processProductsInBill = async (items: CartItem[]) => {
     const productItems = items.filter(item => item.type === 'product');
     
-    productItems.forEach(item => {
+    for (const item of productItems) {
       // Find the product to update
       const product = products.find(p => p.id === item.id);
-      if (!product) return;
+      if (!product) continue;
       
       // Check for membership items
       if (item.category === 'membership' && selectedCustomer) {
@@ -625,12 +625,14 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const membershipHours = product.membershipHours || 0;
         const membershipDuration = product.duration;
         
-        // Update the customer's membership
-        updateCustomerMembership(selectedCustomer.id, {
-          membershipPlan: product.name,
-          membershipDuration,
-          membershipHoursLeft: membershipHours
-        });
+        // Update the customer's membership - now properly awaited
+        if (updateCustomerMembership) {
+          await updateCustomerMembership(selectedCustomer.id, {
+            membershipPlan: product.name,
+            membershipDuration,
+            membershipHoursLeft: membershipHours
+          });
+        }
       }
       
       // Update stock for non-membership products
@@ -639,13 +641,13 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const newStock = Math.max(0, product.stock - item.quantity);
         updateProduct({ ...product, stock: newStock });
       }
-    });
+    }
     
     return productItems;
   };
   
   // Complete sale
-  const completeSale = (paymentMethod: 'cash' | 'upi' | 'split'): Bill | undefined => {
+  const completeSale = async (paymentMethod: 'cash' | 'upi' | 'split'): Promise<Bill | undefined> => {
     try {
       // Ensure we have a customer and items
       if (!selectedCustomer) {
@@ -708,7 +710,18 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: new Date()
       };
       
-      // Call async version but don't wait for it
+      // Process products (update inventory, membership, etc.)
+      await processProductsInBill(cartItems);
+      
+      // Update customer loyalty points
+      const updatedCustomer: Customer = {
+        ...selectedCustomer,
+        loyaltyPoints: selectedCustomer.loyaltyPoints + loyaltyPointsEarned - customerCart.loyaltyPointsUsed,
+        totalSpent: selectedCustomer.totalSpent + total
+      };
+      updateCustomer(updatedCustomer);
+      
+      // Save bill to database
       completeSaleBase(
         cartItems,
         selectedCustomer,
@@ -722,17 +735,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         customerCart.cashAmount,
         customerCart.upiAmount
       );
-      
-      // Process products (update inventory, membership, etc.)
-      processProductsInBill(cartItems);
-      
-      // Update customer loyalty points
-      const updatedCustomer: Customer = {
-        ...selectedCustomer,
-        loyaltyPoints: selectedCustomer.loyaltyPoints + loyaltyPointsEarned - customerCart.loyaltyPointsUsed,
-        totalSpent: selectedCustomer.totalSpent + total
-      };
-      updateCustomer(updatedCustomer);
       
       // Clear the customer's cart
       clearCustomerCart(selectedCustomer.id);
@@ -842,7 +844,8 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteStation,
     updateStation,
     addCustomer,
-    updateCustomerMembership,
+    updateCustomer,
+    updateCustomerMembership, // This now correctly has the Promise<Customer | null> type
     deleteCustomer,
     selectCustomer,
     checkMembershipValidity,

@@ -147,7 +147,7 @@ export interface POSContextType {
     membershipPlan?: string;
     membershipDuration?: 'weekly' | 'monthly';
     membershipHoursLeft?: number;
-  }) => Customer | null;
+  }) => Promise<Customer | null>;  // Updated to return Promise<Customer | null>
   deleteCustomer: (id: string) => void;
   selectCustomer: (id: string | null) => void;
   
