@@ -42,7 +42,7 @@ const StationActions: React.FC<StationActionsProps> = ({
     
     try {
       setIsLoading(true);
-      console.log(`Starting session - Station ID: ${station.id} (${typeof station.id}), Customer ID: ${selectedCustomerId} (${typeof selectedCustomerId})`);
+      console.log(`Starting session - Station ID: ${station.id}, Customer ID: ${selectedCustomerId}`);
       
       await onStartSession(station.id, selectedCustomerId);
       
@@ -68,22 +68,16 @@ const StationActions: React.FC<StationActionsProps> = ({
       try {
         setIsLoading(true);
         
-        const customerId = station.currentSession.customerId;
-        console.log('Ending session for station:', station.id, 'customer:', customerId);
-        
-        const customer = customers.find(c => c.id === customerId);
-        if (customer) {
-          console.log('Auto-selecting customer:', customer.name);
-          selectCustomer(customer.id);
-        }
-        
+        // The session will be automatically added to the correct customer's cart
+        // by the useCustomerSessionsManager hook
         await onEndSession(station.id);
         
         toast({
           title: "Session Ended",
-          description: "Session has been ended and added to cart. Redirecting to checkout...",
+          description: "Session ended and added to customer's cart",
         });
         
+        // Navigate to POS page
         setTimeout(() => {
           navigate('/pos');
         }, 1500);
