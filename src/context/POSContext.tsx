@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  POSContextType,
+  POSContextType, 
   ResetOptions, 
   Customer, 
   CartItem, 
@@ -11,14 +11,70 @@ import {
 } from '@/types/pos.types';
 import { useProducts } from '@/hooks/useProducts';
 import { useCustomers } from '@/hooks/useCustomers';
-import { useCustomerSessionsManager } from '@/hooks/useCustomerSessionsManager';
+import { useStations } from '@/hooks/useStations';
 import { useCart } from '@/hooks/useCart';
 import { useBills } from '@/hooks/useBills';
 import { useToast } from '@/hooks/use-toast';
 import { supabase, handleSupabaseError } from '@/integrations/supabase/client';
-import { generateId } from '@/utils/pos.utils';
 
-const POSContext = createContext<POSContextType>({} as POSContextType);
+const POSContext = createContext<POSContextType>({
+  products: [],
+  productsLoading: false,
+  productsError: null,
+  stations: [],
+  customers: [],
+  sessions: [],
+  bills: [],
+  cart: [],
+  selectedCustomer: null,
+  discount: 0,
+  discountType: 'percentage',
+  loyaltyPointsUsed: 0,
+  isStudentDiscount: false,
+  isSplitPayment: false,
+  cashAmount: 0,
+  upiAmount: 0,
+  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
+  setIsStudentDiscount: () => {},
+  setBills: () => {}, // Add default implementation
+  setCustomers: () => {}, // Add default implementation
+  setStations: () => {},
+  addProduct: () => ({}),
+  updateProduct: () => ({}),
+  deleteProduct: () => {},
+  addCategory: () => {},
+  updateCategory: () => {},
+  deleteCategory: () => {},
+  startSession: async () => {},
+  endSession: async () => {},
+  deleteStation: async () => false,
+  updateStation: async () => false,  // Add default implementation
+  addCustomer: () => ({}),
+  updateCustomer: () => ({}),
+  updateCustomerMembership: () => null,
+  deleteCustomer: () => {},
+  selectCustomer: () => {},
+  checkMembershipValidity: () => false,
+  deductMembershipHours: () => false,
+  addToCart: () => {},
+  removeFromCart: () => {},
+  updateCartItem: () => {},
+  clearCart: () => {},
+  setDiscount: () => {},
+  setLoyaltyPointsUsed: () => {},
+  calculateTotal: () => 0,
+  completeSale: () => undefined,
+  updateBill: async () => null, // Changed from optional to a required function with default implementation
+  deleteBill: async () => false,
+  exportBills: () => {},
+  exportCustomers: () => {},
+  resetToSampleData: () => {},
+  addSampleIndianData: () => {},
+  setIsSplitPayment: () => {},
+  setCashAmount: () => {},
+  setUpiAmount: () => {},
+  updateSplitAmounts: () => false
+});
 
 export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('POSProvider initialized'); // Debug log
@@ -31,7 +87,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     'food', 'drinks', 'tobacco', 'challenges', 'membership'
   ]);
   
-  // Initialize product-related hooks
+  // Initialize all hooks
   const { 
     products, 
     loading: productsLoading,
@@ -43,7 +99,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshFromDB
   } = useProducts();
   
-  // Initialize customer-related hooks
   const { 
     customers, 
     setCustomers, 
@@ -53,38 +108,48 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateCustomer,
     updateCustomerMembership,
     deleteCustomer, 
+    selectCustomer,
     checkMembershipValidity,
     deductMembershipHours
   } = useCustomers([]);
   
-  // Customer session manager - combines station management with multi-customer carts
-  const {
-    // Station management
+  const { 
     stations, 
     setStations, 
-    startSession, 
-    endSession,
+    sessions, 
+    setSessions, 
+    startSession: startSessionBase, 
+    endSession: endSessionBase,
     deleteStation,
-    updateStation,
-    
-    // Multi-customer cart management
-    customerCarts,
-    activeCustomerId,
-    setActiveCustomerId,
-    getCurrentCart,
-    addToCustomerCart,
-    removeFromCustomerCart,
-    updateCustomerCartItem,
-    clearCustomerCart,
-    calculateCustomerCartTotal,
-    setCustomerDiscount,
-    setCustomerLoyaltyPointsUsed,
-    setCustomerStudentDiscount,
-    setCustomerSplitPayment,
-    updateCustomerSplitAmounts,
-  } = useCustomerSessionsManager([], updateCustomer);
+    updateStation
+  } = useStations([], updateCustomer);
   
-  // Initialize bills-related hooks
+  const { 
+    cart, 
+    setCart, 
+    discount, 
+    setDiscountAmount, 
+    discountType, 
+    setDiscountType, 
+    loyaltyPointsUsed, 
+    setLoyaltyPointsUsedAmount, 
+    isSplitPayment,
+    setIsSplitPayment,
+    cashAmount,
+    setCashAmount,
+    upiAmount,
+    setUpiAmount,
+    updateSplitAmounts,
+    addToCart, 
+    removeFromCart, 
+    updateCartItem, 
+    clearCart, 
+    setDiscount, 
+    setLoyaltyPointsUsed, 
+    calculateTotal,
+    resetPaymentInfo
+  } = useCart();
+  
   const { 
     bills, 
     setBills, 
@@ -96,43 +161,6 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useBills(updateCustomer, updateProduct);
 
   const { toast } = useToast();
-
-  // Legacy cart system - we'll keep this for backward compatibility
-  const {
-    cart,
-    setCart,
-    discount,
-    discountType,
-    loyaltyPointsUsed,
-    isSplitPayment,
-    cashAmount,
-    upiAmount,
-    setIsSplitPayment: setLegacySplitPayment,
-    setCashAmount: setLegacyCashAmount,
-    setUpiAmount: setLegacyUpiAmount,
-    updateSplitAmounts: updateLegacySplitAmounts,
-    addToCart: addToLegacyCart,
-    removeFromCart: removeFromLegacyCart,
-    updateCartItem: updateLegacyCartItem,
-    clearCart: clearLegacyCart,
-    setDiscount: setLegacyDiscount,
-    setLoyaltyPointsUsed: setLegacyLoyaltyPointsUsed,
-    calculateTotal: calculateLegacyTotal
-  } = useCart();
-
-  // When selectedCustomer changes, update the active customer ID and sync carts
-  useEffect(() => {
-    if (selectedCustomer) {
-      setActiveCustomerId(selectedCustomer.id);
-      
-      // Load this customer's cart into the legacy cart system
-      const customerCart = getCurrentCart(selectedCustomer.id);
-      setCart(customerCart);
-    } else {
-      setActiveCustomerId(null);
-      clearLegacyCart();
-    }
-  }, [selectedCustomer]);
 
   // Fetch categories from Supabase on initial load
   useEffect(() => {
@@ -414,471 +442,223 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
-  // Select customer
-  const selectCustomer = (id: string | null) => {
-    if (id) {
-      const customer = customers.find(c => c.id === id);
-      if (customer) {
-        setSelectedCustomer(customer);
-        setActiveCustomerId(id);
-        
-        // Load this customer's cart into the legacy cart system
-        const customerCart = getCurrentCart(id);
-        setCart(customerCart);
-        
-        // Also load any customer-specific settings
-        const customerCartData = customerCarts[id];
-        if (customerCartData) {
-          setLegacyDiscount(customerCartData.discount, customerCartData.discountType);
-          setLegacyLoyaltyPointsUsed(customerCartData.loyaltyPointsUsed);
-          setIsStudentDiscount(customerCartData.isStudentDiscount);
-          setLegacySplitPayment(customerCartData.isSplitPayment);
-          setLegacyCashAmount(customerCartData.cashAmount);
-          setLegacyUpiAmount(customerCartData.upiAmount);
-        }
-      }
-    } else {
-      setSelectedCustomer(null);
-      setActiveCustomerId(null);
-      clearLegacyCart();
-    }
+  // Wrapper functions that combine functionality from multiple hooks
+  const startSession = async (stationId: string, customerId: string): Promise<void> => {
+    await startSessionBase(stationId, customerId);
   };
   
-  // Add item to cart
-  const addToCart = (item: Omit<CartItem, 'total'>) => {
-    if (!selectedCustomer) {
-      toast({
-        title: "Error",
-        description: "No customer selected. Please select a customer first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // For products that have stock, get the available stock
-    let availableStock;
-    if (item.type === 'product' && item.category !== 'membership') {
-      const product = products.find(p => p.id === item.id);
-      if (product) {
-        availableStock = product.stock;
-      }
-    }
-    
-    // Add to the customer-specific cart
-    addToCustomerCart(selectedCustomer.id, item, availableStock);
-    
-    // Update the legacy cart to reflect current customer's cart
-    const updatedCustomerCart = getCurrentCart(selectedCustomer.id);
-    setCart(updatedCustomerCart);
-  };
-  
-  // Remove item from cart
-  const removeFromCart = (id: string) => {
-    if (!selectedCustomer) {
-      console.error('No customer selected for removing from cart');
-      return;
-    }
-    
-    // Remove from customer-specific cart
-    removeFromCustomerCart(selectedCustomer.id, id);
-    
-    // Update the legacy cart
-    const updatedCustomerCart = getCurrentCart(selectedCustomer.id);
-    setCart(updatedCustomerCart);
-  };
-  
-  // Update cart item quantity
-  const updateCartItem = (id: string, quantity: number) => {
-    if (!selectedCustomer) {
-      console.error('No customer selected for updating cart');
-      return;
-    }
-    
-    // Update in customer-specific cart
-    updateCustomerCartItem(selectedCustomer.id, id, quantity);
-    
-    // Update the legacy cart
-    const updatedCustomerCart = getCurrentCart(selectedCustomer.id);
-    setCart(updatedCustomerCart);
-  };
-  
-  // Clear cart
-  const clearCart = () => {
-    if (!selectedCustomer) {
-      console.error('No customer selected for clearing cart');
-      clearLegacyCart();
-      return;
-    }
-    
-    // Clear customer-specific cart
-    clearCustomerCart(selectedCustomer.id);
-    
-    // Clear legacy cart
-    clearLegacyCart();
-  };
-  
-  // Set discount
-  const setDiscount = (amount: number, type: 'percentage' | 'fixed') => {
-    if (!selectedCustomer) {
-      setLegacyDiscount(amount, type);
-      return;
-    }
-    
-    // Set in customer-specific cart
-    setCustomerDiscount(selectedCustomer.id, amount, type);
-    
-    // Also set in legacy cart for compatibility
-    setLegacyDiscount(amount, type);
-  };
-  
-  // Set loyalty points used
-  const setLoyaltyPointsUsed = (points: number) => {
-    if (!selectedCustomer) {
-      setLegacyLoyaltyPointsUsed(points);
-      return;
-    }
-    
-    // Set in customer-specific cart
-    setCustomerLoyaltyPointsUsed(selectedCustomer.id, points);
-    
-    // Also set in legacy cart for compatibility
-    setLegacyLoyaltyPointsUsed(points);
-  };
-  
-  // Update split payment settings
-  const setIsSplitPayment = (split: boolean) => {
-    if (!selectedCustomer) {
-      setLegacySplitPayment(split);
-      return;
-    }
-    
-    // Set in customer-specific cart
-    setCustomerSplitPayment(selectedCustomer.id, split);
-    
-    // Also set in legacy cart for compatibility
-    setLegacySplitPayment(split);
-  };
-  
-  // Update split amounts
-  const updateSplitAmounts = (cash: number, upi: number) => {
-    if (!selectedCustomer) {
-      return updateLegacySplitAmounts(cash, upi);
-    }
-    
-    const total = calculateTotal();
-    const result = updateCustomerSplitAmounts(selectedCustomer.id, cash, upi, total);
-    
-    if (result) {
-      // Also update in legacy cart
-      updateLegacySplitAmounts(cash, upi);
-    }
-    
-    return result;
-  };
-  
-  // Set cash amount
-  const setCashAmount = (amount: number) => {
-    if (!selectedCustomer) {
-      setLegacyCashAmount(amount);
-      return;
-    }
-    
-    // For now we'll just use the legacy functions
-    // This will be synced back to the customer cart during the split payment logic
-    setLegacyCashAmount(amount);
-  };
-  
-  // Set UPI amount
-  const setUpiAmount = (amount: number) => {
-    if (!selectedCustomer) {
-      setLegacyUpiAmount(amount);
-      return;
-    }
-    
-    // For now we'll just use the legacy functions
-    // This will be synced back to the customer cart during the split payment logic
-    setLegacyUpiAmount(amount);
-  };
-  
-  // Calculate total
-  const calculateTotal = () => {
-    if (!selectedCustomer) {
-      return calculateLegacyTotal();
-    }
-    
-    // Calculate from customer-specific cart
-    return calculateCustomerCartTotal(selectedCustomer.id);
-  };
-  
-  // Process products when completing a sale
-  const processProductsInBill = async (items: CartItem[]) => {
-    const productItems = items.filter(item => item.type === 'product');
-    
-    for (const item of productItems) {
-      // Find the product to update
-      const product = products.find(p => p.id === item.id);
-      if (!product) continue;
-      
-      // Check for membership items
-      if (item.category === 'membership' && selectedCustomer) {
-        // Handle membership purchase separately
-        const membershipHours = product.membershipHours || 0;
-        const membershipDuration = product.duration;
-        
-        // Update the customer's membership - now properly awaited
-        if (updateCustomerMembership) {
-          await updateCustomerMembership(selectedCustomer.id, {
-            membershipPlan: product.name,
-            membershipDuration,
-            membershipHoursLeft: membershipHours
-          });
-        }
-      }
-      
-      // Update stock for non-membership products
-      if (item.category !== 'membership') {
-        // Update stock
-        const newStock = Math.max(0, product.stock - item.quantity);
-        updateProduct({ ...product, stock: newStock });
-      }
-    }
-    
-    return productItems;
-  };
-  
-  // Complete sale
-  const completeSale = async (paymentMethod: 'cash' | 'upi' | 'split'): Promise<Bill | undefined> => {
+  // Make endSession return a Promise<void> to match type definition
+  const endSession = async (stationId: string): Promise<void> => {
     try {
-      // Ensure we have a customer and items
-      if (!selectedCustomer) {
-        throw new Error('No customer selected');
+      // Get the current station
+      const station = stations.find(s => s.id === stationId);
+      if (!station || !station.isOccupied || !station.currentSession) {
+        console.log("No active session found for this station in wrapper");
+        throw new Error("No active session found");
       }
       
-      // Get items from customer's cart
-      const cartItems = getCurrentCart(selectedCustomer.id);
-      if (cartItems.length === 0) {
-        throw new Error('Cart is empty');
+      // Get the customer ID before ending the session
+      const customerId = station.currentSession.customerId;
+      
+      // Call the base endSession function
+      const result = await endSessionBase(stationId, customers);
+      
+      if (result) {
+        const { sessionCartItem, customer } = result;
+        
+        // Clear cart before adding the new session
+        clearCart();
+        
+        // Auto-select customer
+        if (customer) {
+          console.log("Auto-selecting customer:", customer.name);
+          selectCustomer(customer.id);
+        }
+        
+        // Add the session to cart
+        if (sessionCartItem) {
+          console.log("Adding session to cart:", sessionCartItem);
+          addToCart(sessionCartItem);
+        }
       }
-      
-      // Get customer's cart details
-      const customerCart = customerCarts[selectedCustomer.id] || {
-        customerId: selectedCustomer.id,
-        cart: cartItems,
-        discount: discount,
-        discountType: discountType,
-        loyaltyPointsUsed: loyaltyPointsUsed,
-        isStudentDiscount: isStudentDiscount,
-        isSplitPayment: isSplitPayment,
-        cashAmount: cashAmount,
-        upiAmount: upiAmount
-      };
-      
-      const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
-      
-      // Calculate discount value
-      let discountValue = 0;
-      if (customerCart.discountType === 'percentage') {
-        discountValue = subtotal * (customerCart.discount / 100);
-      } else {
-        discountValue = customerCart.discount;
-      }
-      
-      // Calculate total after discounts and loyalty points
-      const total = Math.max(0, subtotal - discountValue - customerCart.loyaltyPointsUsed);
-      
-      // Calculate loyalty points earned (members: 5 points per 100 INR, non-members: 2 points per 100 INR)
-      const pointsRate = selectedCustomer.isMember ? 5 : 2;
-      const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
-      
-      // Create the bill
-      const billId = generateId();
-      const bill: Bill = {
-        id: billId,
-        customerId: selectedCustomer.id,
-        items: cartItems,
-        subtotal,
-        discount: customerCart.discount,
-        discountValue,
-        discountType: customerCart.discountType,
-        loyaltyPointsUsed: customerCart.loyaltyPointsUsed,
-        loyaltyPointsEarned,
-        total,
-        paymentMethod,
-        isSplitPayment: paymentMethod === 'split' ? customerCart.isSplitPayment : false,
-        cashAmount: paymentMethod === 'split' ? customerCart.cashAmount : (paymentMethod === 'cash' ? total : 0),
-        upiAmount: paymentMethod === 'split' ? customerCart.upiAmount : (paymentMethod === 'upi' ? total : 0),
-        createdAt: new Date()
-      };
-      
-      // Process products (update inventory, membership, etc.)
-      await processProductsInBill(cartItems);
-      
-      // Update customer loyalty points
-      const updatedCustomer: Customer = {
-        ...selectedCustomer,
-        loyaltyPoints: selectedCustomer.loyaltyPoints + loyaltyPointsEarned - customerCart.loyaltyPointsUsed,
-        totalSpent: selectedCustomer.totalSpent + total
-      };
-      updateCustomer(updatedCustomer);
-      
-      // Save bill to database
-      completeSaleBase(
-        cartItems,
-        selectedCustomer,
-        customerCart.discount,
-        customerCart.discountType,
-        customerCart.loyaltyPointsUsed,
-        () => total,
-        paymentMethod,
-        products,
-        customerCart.isSplitPayment,
-        customerCart.cashAmount,
-        customerCart.upiAmount
-      );
-      
-      // Clear the customer's cart
-      clearCustomerCart(selectedCustomer.id);
-      
-      // Clear the legacy cart
-      clearLegacyCart();
-      
-      // Reset customer selections
-      setSelectedCustomer(null);
-      setActiveCustomerId(null);
-      
-      return bill;
     } catch (error) {
-      console.error("Error in completeSale:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
-      });
-      return undefined;
+      console.error('Error in endSession:', error);
+      throw error;
     }
   };
   
-  // Complete sale with synchronous signature
-  const completeSaleSync = async (
-    cartItems: CartItem[],
-    customer: Customer,
-    discount: number,
-    discountType: 'percentage' | 'fixed',
-    loyaltyPointsUsed: number,
-    isSplitPayment: boolean,
-    paymentMethod: 'cash' | 'upi' | 'split',
-    cashAmount: number,
-    upiAmount: number
-  ): Promise<Bill | undefined> => {
-    // Check for membership products
-    const membershipItems = cartItems.filter(item => {
-      const product = products.find(p => p.id === item.id);
-      return product && product.category === 'membership';
-    });
-    
-    // Calculate totals
-    const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
-    
-    // Calculate discount value
-    let discountValue = 0;
-    if (discountType === 'percentage') {
-      discountValue = subtotal * (discount / 100);
-    } else {
-      discountValue = discount;
+  // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
+  const updateCustomerMembershipWrapper = (
+    customerId: string, 
+    membershipData: {
+      membershipPlan?: string;
+      membershipDuration?: 'weekly' | 'monthly';
+      membershipHoursLeft?: number;
     }
+  ): Customer | null => {
+    // Create a placeholder customer with the minimum required fields
+    const customer = customers.find(c => c.id === customerId);
     
-    // Calculate total after discount and loyalty points
-    const total = Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+    if (!customer) return null;
     
-    // Calculate loyalty points earned
-    const pointsRate = customer.isMember ? 5 : 2;
-    const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+    // Start the async update process but don't wait for it
+    updateCustomerMembership(customerId, membershipData)
+      .then((updatedCustomer) => {
+        if (updatedCustomer) {
+          console.log("Customer membership updated:", updatedCustomer.id);
+        }
+      })
+      .catch(error => {
+        console.error("Error updating customer membership:", error);
+      });
     
-    // Create bill
-    const billId = generateId();
-    const bill: Bill = {
-      id: billId,
-      customerId: customer.id,
-      items: cartItems,
-      subtotal,
-      discount,
-      discountValue,
-      discountType,
-      loyaltyPointsUsed,
-      loyaltyPointsEarned,
-      total,
-      paymentMethod,
-      isSplitPayment,
-      cashAmount: isSplitPayment ? cashAmount : (paymentMethod === 'cash' ? total : 0),
-      upiAmount: isSplitPayment ? upiAmount : (paymentMethod === 'upi' ? total : 0),
-      createdAt: new Date()
+    // Return a modified version of the existing customer to satisfy the synchronous interface
+    return {
+      ...customer,
+      membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
+      membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
+      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
+        ? membershipData.membershipHoursLeft 
+        : customer.membershipHoursLeft,
+      isMember: true
     };
-    
-    // Add bill to bills
+  };
+  
+  // Modified to handle async operations but return synchronously
+  const completeSale = (paymentMethod: 'cash' | 'upi' | 'split'): Bill | undefined => {
     try {
-      await completeSaleBase(
-        cartItems,
-        customer,
-        discount,
-        discountType,
-        loyaltyPointsUsed,
-        () => total,
-        paymentMethod,
+      // Apply student price for membership items if student discount is enabled
+      if (isStudentDiscount) {
+        const updatedCart = cart.map(item => {
+          const product = products.find(p => p.id === item.id) as Product;
+          if (product && product.category === 'membership' && product.studentPrice) {
+            return {
+              ...item,
+              price: product.studentPrice,
+              total: product.studentPrice * item.quantity
+            };
+          }
+          return item;
+        });
+        
+        // Temporarily update cart with student prices
+        setCart(updatedCart);
+      }
+      
+      // Look for membership products in cart
+      const membershipItems = cart.filter(item => {
+        const product = products.find(p => p.id === item.id);
+        return product && product.category === 'membership';
+      });
+      
+      // This is async but we're handling it internally and returning a synchronous Bill
+      completeSaleBase(
+        cart, 
+        selectedCustomer, 
+        discount, 
+        discountType, 
+        loyaltyPointsUsed, 
+        calculateTotal, 
+        isSplitPayment ? 'split' : paymentMethod,
         products,
         isSplitPayment,
         cashAmount,
         upiAmount
-      );
-      
-      // Update customer if membership was purchased
-      if (membershipItems.length > 0) {
-        for (const item of membershipItems) {
-          const product = products.find(p => p.id === item.id);
-          
-          if (product) {
-            // Default values
-            let membershipHours = product.membershipHours || 4;
-            let membershipDuration: 'weekly' | 'monthly' = 'weekly';
+      ).then(bill => {
+        // If we have a successful sale with membership items, update the customer
+        if (bill && selectedCustomer && membershipItems.length > 0) {
+          for (const item of membershipItems) {
+            const product = products.find(p => p.id === item.id);
             
-            // Set duration based on product
-            if (product.duration) {
-              membershipDuration = product.duration;
-            } else if (product.name.toLowerCase().includes('weekly')) {
-              membershipDuration = 'weekly';
-            } else if (product.name.toLowerCase().includes('monthly')) {
-              membershipDuration = 'monthly';
+            if (product) {
+              // Default values
+              let membershipHours = product.membershipHours || 4; // Default hours from product or fallback to 4
+              let membershipDuration: 'weekly' | 'monthly' = 'weekly';
+              
+              // Set duration based on product
+              if (product.duration) {
+                membershipDuration = product.duration;
+              } else if (product.name.toLowerCase().includes('weekly')) {
+                membershipDuration = 'weekly';
+              } else if (product.name.toLowerCase().includes('monthly')) {
+                membershipDuration = 'monthly';
+              }
+              
+              // Update customer's membership
+              updateCustomerMembership(selectedCustomer.id, {
+                membershipPlan: product.name,
+                membershipDuration: membershipDuration,
+                membershipHoursLeft: membershipHours
+              });
+              
+              break; // Only apply the first membership found
             }
-            
-            // Update customer's membership
-            await updateCustomerMembership(customer.id, {
-              membershipPlan: product.name,
-              membershipDuration: membershipDuration,
-              membershipHoursLeft: membershipHours
-            });
-            
-            break; // Only apply the first membership found
           }
         }
+        
+        if (bill) {
+          // Clear the cart after successful sale
+          clearCart();
+          // Reset selected customer
+          setSelectedCustomer(null);
+          // Reset student discount
+          setIsStudentDiscount(false);
+          // Reset split payment data
+          resetPaymentInfo();
+        }
+      }).catch(error => {
+        console.error("Error in completeSale async:", error);
+      });
+      
+      // Return a synchronous bill for the UI
+      if (selectedCustomer) {
+        // Calculate loyalty points earned using the new rule
+        // Members: 5 points per 100 INR spent
+        // Non-members: 2 points per 100 INR spent
+        const pointsRate = selectedCustomer.isMember ? 5 : 2;
+        const total = calculateTotal();
+        const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+        
+        const placeholderBill: Bill = {
+          id: `temp-${new Date().getTime()}`,
+          customerId: selectedCustomer.id,
+          items: [...cart],
+          subtotal: cart.reduce((sum, item) => sum + item.total, 0),
+          discount,
+          discountValue: discount > 0 ? 
+            (discountType === 'percentage' ? 
+              (cart.reduce((sum, item) => sum + item.total, 0) * discount / 100) : 
+              discount) : 0,
+          discountType,
+          loyaltyPointsUsed,
+          loyaltyPointsEarned,
+          total,
+          paymentMethod: isSplitPayment ? 'split' : paymentMethod,
+          isSplitPayment,
+          cashAmount: isSplitPayment ? cashAmount : (paymentMethod === 'cash' ? total : 0),
+          upiAmount: isSplitPayment ? upiAmount : (paymentMethod === 'upi' ? total : 0),
+          createdAt: new Date()
+        };
+        return placeholderBill;
       }
       
-      return bill;
+      return undefined;
+      
     } catch (error) {
-      console.error("Error in completeSaleSync:", error);
+      console.error("Error in completeSale:", error);
       return undefined;
     }
   };
   
-  // Export bills
   const exportBills = () => {
     exportBillsBase(customers);
   };
   
-  // Export customers
   const exportCustomers = () => {
     exportCustomersBase(customers);
   };
   
-  // Update bill
+  // Implement the updateBill function with split payment support
   const updateBill = async (
     originalBill: Bill, 
     updatedItems: CartItem[], 
@@ -903,101 +683,128 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
   
-  // Delete bill
+  // Simplified reset function - only resets local state
+  const handleResetToSampleData = async (options?: ResetOptions) => {
+    try {
+      // Import the reset function from services
+      const { resetToSampleData } = await import('@/services/dataOperations');
+      
+      // Call the async reset function
+      await resetToSampleData(
+        options,
+        setProducts,
+        setCustomers,
+        setBills,
+        setSessions,
+        setStations,
+        setCart,
+        setDiscountAmount,
+        setLoyaltyPointsUsedAmount,
+        setSelectedCustomer,
+        refreshFromDB
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error in handleResetToSampleData:', error);
+      throw error;
+    }
+  };
+  
+  // Remove sample data functionality
+  const handleAddSampleIndianData = () => {
+    const { toast } = useToast();
+    toast({
+      title: "Info",
+      description: "Sample data functionality has been removed. Please add products manually or through database import.",
+    });
+  };
+  
+  // Update the deleteBill function to handle bill deletion even if customer has been deleted
   const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
     return await deleteBillBase(billId, customerId);
   };
   
-  // Reset to sample data
-  const resetToSampleData = (options?: ResetOptions) => {
-    console.log('Reset to sample data functionality not implemented');
-  };
-  
-  // Add sample Indian data
-  const addSampleIndianData = () => {
-    console.log('Sample data functionality has been removed. Please add products manually or through database import.');
-  };
-  
-  console.log("POSProvider rendering with context value"); // Debug log
-  
-  // Create the context value object
-  const contextValue: POSContextType = {
-    products,
-    productsLoading,
-    productsError,
-    stations,
-    customers,
-    sessions: [], // Not used directly in the UI
-    bills,
-    cart,
-    selectedCustomer,
-    discount,
-    discountType,
-    loyaltyPointsUsed,
-    isStudentDiscount,
-    categories,
-    isSplitPayment,
-    cashAmount,
-    upiAmount,
-    setIsStudentDiscount,
-    setBills,
-    setCustomers,
-    setStations,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    startSession,
-    endSession,
-    deleteStation,
-    updateStation,
-    addCustomer,
-    updateCustomer,
-    updateCustomerMembership, // This now correctly has the Promise<Customer | null> type
-    deleteCustomer,
-    selectCustomer,
-    checkMembershipValidity,
-    deductMembershipHours,
-    addToCart,
-    removeFromCart,
-    updateCartItem,
-    clearCart,
-    setDiscount,
-    setLoyaltyPointsUsed,
-    calculateTotal,
-    completeSale,
-    completeSaleSync,
-    updateBill,
-    deleteBill,
-    exportBills,
-    exportCustomers,
-    resetToSampleData,
-    addSampleIndianData,
-    setIsSplitPayment,
-    setCashAmount,
-    setUpiAmount,
-    updateSplitAmounts
-  };
+  console.log('POSProvider rendering with context value'); // Debug log
   
   return (
-    <POSContext.Provider value={contextValue}>
+    <POSContext.Provider
+      value={{
+        products,
+        productsLoading,
+        productsError,
+        stations,
+        customers,
+        sessions,
+        bills,
+        cart,
+        selectedCustomer,
+        discount,
+        discountType,
+        loyaltyPointsUsed,
+        isStudentDiscount,
+        isSplitPayment,
+        cashAmount,
+        upiAmount,
+        setIsSplitPayment,
+        setCashAmount: (amount) => setCashAmount(amount),
+        setUpiAmount: (amount) => setUpiAmount(amount),
+        updateSplitAmounts,
+        categories,
+        setIsStudentDiscount,
+        setBills,
+        setCustomers,
+        setStations,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        addCategory,
+        updateCategory,
+        deleteCategory,
+        startSession,
+        endSession,
+        deleteStation,
+        updateStation,
+        addCustomer,
+        updateCustomer,
+        updateCustomerMembership: updateCustomerMembershipWrapper,
+        deleteCustomer,
+        selectCustomer,
+        checkMembershipValidity,
+        deductMembershipHours,
+        addToCart,
+        removeFromCart,
+        updateCartItem,
+        clearCart,
+        setDiscount,
+        setLoyaltyPointsUsed,
+        calculateTotal,
+        completeSale,
+        updateBill,
+        deleteBill,
+        exportBills,
+        exportCustomers,
+        resetToSampleData: handleResetToSampleData,
+        addSampleIndianData: handleAddSampleIndianData
+      }}
+    >
       {children}
     </POSContext.Provider>
   );
 };
 
-// Export the usePOS hook
 export const usePOS = () => {
+  console.log('usePOS hook called'); // Debug log
   const context = useContext(POSContext);
   if (context === undefined) {
+    console.error('usePOS must be used within a POSProvider'); // Debug log
     throw new Error('usePOS must be used within a POSProvider');
   }
+  console.log('usePOS hook returning context'); // Debug log
   return context;
 };
 
-// Export types
+// Re-export types from types file for convenience
 export type { 
   Product,
   Station,
