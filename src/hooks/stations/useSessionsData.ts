@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * Hook to load and manage session data from Supabase
@@ -11,34 +11,34 @@ export const useSessionsData = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
   const [sessionsError, setSessionsError] = useState<Error | null>(null);
+  const { toast } = useToast();
   
   const refreshSessions = async () => {
     setSessionsLoading(true);
     setSessionsError(null);
     
     try {
-      // Optimize query by selecting only necessary fields
+      // Fetch sessions from Supabase, including active sessions (no end_time)
       const { data, error } = await supabase
         .from('sessions')
-        .select('id, station_id, customer_id, start_time, end_time, duration')
-        .order('start_time', { ascending: false });
+        .select('*');
         
       if (error) {
         console.error('Error fetching sessions:', error);
         setSessionsError(new Error(`Failed to fetch sessions: ${error.message}`));
-        toast.error('Database Error', {
+        toast({
+          title: 'Database Error',
           description: 'Failed to fetch sessions from database',
-          duration: 4000
+          variant: 'destructive'
         });
         return;
       }
       
       // Transform data to match our Session type
       if (data && data.length > 0) {
-        // Use type assertion to handle TypeScript issues
+        // Use type assertion to handle the TypeScript issues
         const sessionsData = data as any[];
         
-        // Transform data in a more optimized way using map
         const transformedSessions = sessionsData.map(item => ({
           id: item.id,
           stationId: item.station_id,
@@ -48,25 +48,32 @@ export const useSessionsData = () => {
           duration: item.duration
         }));
         
-        console.log(`Loaded ${transformedSessions.length} sessions (optimized query)`);
+        console.log(`Loaded ${transformedSessions.length} total sessions from Supabase`);
         setSessions(transformedSessions);
+        
+        // Log active sessions (those without end_time)
+        const activeSessions = transformedSessions.filter(s => !s.endTime);
+        console.log(`Found ${activeSessions.length} active sessions in loaded data`);
+        activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
+        // Clear sessions if no data is returned to prevent stale data
         setSessions([]);
       }
     } catch (error) {
       console.error('Error in fetchSessions:', error);
       setSessionsError(error instanceof Error ? error : new Error('Unknown error fetching sessions'));
-      toast.error('Error', {
+      toast({
+        title: 'Error',
         description: 'Failed to load sessions',
-        duration: 4000
+        variant: 'destructive'
       });
     } finally {
       setSessionsLoading(false);
     }
   };
   
-  // Delete session functionality
+  // Add delete session functionality
   const deleteSession = async (sessionId: string): Promise<boolean> => {
     try {
       setSessionsLoading(true);
@@ -83,12 +90,19 @@ export const useSessionsData = () => {
       // Update local state to remove the deleted session
       setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId));
       
-      toast.success('Session deleted successfully');
+      toast({
+        title: 'Success',
+        description: 'Session deleted successfully',
+      });
       
       return true;
     } catch (error) {
       console.error('Error deleting session:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete session');
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete session',
+        variant: 'destructive'
+      });
       return false;
     } finally {
       setSessionsLoading(false);
@@ -109,11 +123,11 @@ export const useSessionsData = () => {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Set up a regular polling interval with a longer interval to reduce server load
+    // Set up a regular polling interval to refresh sessions even when page is visible
     const intervalId = setInterval(() => {
       console.log('Periodic session refresh');
       refreshSessions();
-    }, 120000); // Refresh every 2 minutes instead of 1 minute
+    }, 60000); // Refresh every minute
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);

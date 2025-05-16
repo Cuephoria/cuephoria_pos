@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -34,26 +35,28 @@ const StationActions: React.FC<StationActionsProps> = ({
       toast({
         title: "Selection Required",
         description: "Please select a customer to start the session",
-        variant: "destructive",
-        duration: 4000
+        variant: "destructive"
       });
       return;
     }
     
     try {
       setIsLoading(true);
+      console.log(`Starting session - Station ID: ${station.id} (${typeof station.id}), Customer ID: ${selectedCustomerId} (${typeof selectedCustomerId})`);
       
       await onStartSession(station.id, selectedCustomerId);
       
       setSelectedCustomerId('');
-      // We don't need a toast here as the parent component already handles it
+      toast({
+        title: "Session Started",
+        description: `Session started successfully for station ${station.name}`,
+      });
     } catch (error) {
       console.error("Error starting session:", error);
       toast({
         title: "Error",
         description: "Failed to start session. Please try again.",
-        variant: "destructive",
-        duration: 5000
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -66,9 +69,11 @@ const StationActions: React.FC<StationActionsProps> = ({
         setIsLoading(true);
         
         const customerId = station.currentSession.customerId;
+        console.log('Ending session for station:', station.id, 'customer:', customerId);
         
         const customer = customers.find(c => c.id === customerId);
         if (customer) {
+          console.log('Auto-selecting customer:', customer.name);
           selectCustomer(customer.id);
         }
         
@@ -76,21 +81,18 @@ const StationActions: React.FC<StationActionsProps> = ({
         
         toast({
           title: "Session Ended",
-          description: "Session added to cart",
-          variant: "success",
-          duration: 3000
+          description: "Session has been ended and added to cart. Redirecting to checkout...",
         });
         
         setTimeout(() => {
           navigate('/pos');
-        }, 1000);
+        }, 1500);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({
           title: "Error",
           description: "Failed to end session. Please try again.",
-          variant: "destructive",
-          duration: 5000
+          variant: "destructive"
         });
       } finally {
         setIsLoading(false);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
 import StatCardSection from '@/components/dashboard/StatCardSection';
@@ -14,20 +15,10 @@ import HourlyRevenueDistribution from '@/components/dashboard/HourlyRevenueDistr
 import ProductPerformance from '@/components/dashboard/ProductPerformance';
 import ExpenseList from '@/components/expenses/ExpenseList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSessionsData } from '@/hooks/stations/useSessionsData';
-import { useDashboardData } from '@/hooks/useDashboardData';
 
 const Dashboard = () => {
-  const { customers, stations, products } = usePOS();
+  const { customers, bills, stations, sessions, products } = usePOS();
   const { expenses, businessSummary } = useExpenses();
-  const { sessions } = useSessionsData();
-  const { 
-    dashboardBills, 
-    isLoading, 
-    recentTransactions, 
-    calculateTotalSales,
-    generateChartData 
-  } = useDashboardData();
   
   const [activeTab, setActiveTab] = useState('daily');
   const [chartData, setChartData] = useState([]);
@@ -40,39 +31,203 @@ const Dashboard = () => {
     lowStockItems: []
   });
   
-  // Memoize low stock items calculation
-  const lowStockItems = useMemo(() => {
-    return products.filter(p => p.stock < 5)
-      .sort((a, b) => a.stock - b.stock);
-  }, [products]);
-  
-  // Update dashboard stats based on selected period
   useEffect(() => {
-    if (isLoading) return;
+    setChartData(generateChartData());
     
-    // Generate chart data based on active tab
-    const generatedChartData = generateChartData(activeTab as any);
-    setChartData(generatedChartData || []);
-    
-    // Calculate total sales for the period
-    const totalSales = calculateTotalSales(activeTab as any);
-    
-    // Calculate percent change
-    const percentChange = calculatePercentChange(activeTab, dashboardBills);
+    const lowStockItems = products.filter(p => p.stock < 5)
+      .sort((a, b) => a.stock - b.stock);
     
     setDashboardStats({
-      totalSales: totalSales,
-      salesChange: percentChange,
+      totalSales: calculateTotalSales(),
+      salesChange: calculatePercentChange(),
       activeSessionsCount: getActiveSessionsCount(),
       newMembersCount: getNewMembersCount(),
       lowStockCount: lowStockItems.length,
       lowStockItems: lowStockItems
     });
-  }, [dashboardBills, customers, stations, sessions, lowStockItems, activeTab, isLoading, generateChartData, calculateTotalSales]);
+  }, [bills, customers, stations, sessions, products, activeTab]);
   
-  // Helper function to calculate percent change
-  const calculatePercentChange = (activeTab, bills) => {
-    const currentPeriodSales = calculateTotalSales(activeTab as any);
+  const generateChartData = () => {
+    if (activeTab === 'hourly') {
+      return generateHourlyChartData();
+    } else if (activeTab === 'daily') {
+      return generateDailyChartData();
+    } else if (activeTab === 'weekly') {
+      return generateWeeklyChartData();
+    } else {
+      return generateMonthlyChartData();
+    }
+  };
+  
+  const generateHourlyChartData = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    
+    if (bills.length > 0) {
+      const hourlyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const billDate = new Date(bill.createdAt);
+        
+        if (billDate >= today) {
+          const hour = billDate.getHours();
+          const current = hourlyTotals.get(hour) || 0;
+          hourlyTotals.set(hour, current + bill.total);
+        }
+      });
+      
+      return hours.map(hour => {
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const formattedHour = `${hour12}${ampm}`;
+        
+        return {
+          name: formattedHour,
+          amount: hourlyTotals.get(hour) || 0
+        };
+      });
+    }
+    
+    return hours.map(hour => {
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      const formattedHour = `${hour12}${ampm}`;
+      
+      return {
+        name: formattedHour,
+        amount: 0
+      };
+    });
+  };
+  
+  const generateDailyChartData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    if (bills.length > 0) {
+      const dailyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const date = new Date(bill.createdAt);
+        const day = days[date.getDay()];
+        const current = dailyTotals.get(day) || 0;
+        dailyTotals.set(day, current + bill.total);
+      });
+      
+      return days.map(day => ({
+        name: day,
+        amount: dailyTotals.get(day) || 0
+      }));
+    }
+    
+    return [
+      { name: 'Sun', amount: 0 },
+      { name: 'Mon', amount: 0 },
+      { name: 'Tue', amount: 0 },
+      { name: 'Wed', amount: 0 },
+      { name: 'Thu', amount: 0 },
+      { name: 'Fri', amount: 0 },
+      { name: 'Sat', amount: 0 }
+    ];
+  };
+  
+  const generateWeeklyChartData = () => {
+    const weeks = [];
+    const now = new Date();
+    
+    for (let i = 3; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - (i * 7) - now.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      const weekLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()} - ${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`;
+      
+      weeks.push({
+        start: weekStart,
+        end: weekEnd,
+        label: weekLabel
+      });
+    }
+    
+    if (bills.length > 0) {
+      return weeks.map(week => {
+        const weeklyTotal = bills.reduce((sum, bill) => {
+          const billDate = new Date(bill.createdAt);
+          if (billDate >= week.start && billDate <= week.end) {
+            return sum + bill.total;
+          }
+          return sum;
+        }, 0);
+        
+        return {
+          name: week.label,
+          amount: weeklyTotal
+        };
+      });
+    }
+    
+    return weeks.map(week => ({
+      name: week.label,
+      amount: 0
+    }));
+  };
+  
+  const generateMonthlyChartData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    if (bills.length > 0) {
+      const monthlyTotals = new Map();
+      
+      bills.forEach(bill => {
+        const date = new Date(bill.createdAt);
+        const month = months[date.getMonth()];
+        const current = monthlyTotals.get(month) || 0;
+        monthlyTotals.set(month, current + bill.total);
+      });
+      
+      return months.map(month => ({
+        name: month,
+        amount: monthlyTotals.get(month) || 0
+      }));
+    }
+    
+    return months.map(month => ({
+      name: month,
+      amount: 0
+    }));
+  };
+  
+  const calculateTotalSales = () => {
+    let startDate = new Date();
+    const now = new Date();
+    
+    if (activeTab === 'hourly') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'daily') {
+      const dayOfWeek = startDate.getDay();
+      startDate.setDate(startDate.getDate() - dayOfWeek);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'weekly') {
+      startDate.setDate(startDate.getDate() - 28);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'monthly') {
+      startDate = new Date(startDate.getFullYear(), 0, 1);
+    }
+    
+    const filteredBills = bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return billDate >= startDate && billDate <= now;
+    });
+    
+    const total = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
+    
+    return total;
+  };
+  
+  const calculatePercentChange = () => {
+    const currentPeriodSales = calculateTotalSales();
     
     let previousPeriodStart = new Date();
     let previousPeriodEnd = new Date();
@@ -104,7 +259,7 @@ const Dashboard = () => {
     }
     
     const previousPeriodBills = bills.filter(bill => {
-      const billDate = bill.createdAt;
+      const billDate = new Date(bill.createdAt);
       return billDate >= previousPeriodStart && billDate < previousPeriodEnd;
     });
     
@@ -120,9 +275,12 @@ const Dashboard = () => {
     return (percentChange >= 0 ? "+" : "") + formattedChange + "% from last period";
   };
   
+  const getLowStockCount = () => {
+    return products.filter(p => p.stock < 5).length;
+  };
+  
   const getActiveSessionsCount = () => {
-    // Count active sessions more efficiently
-    return sessions.filter(s => !s.endTime).length;
+    return stations.filter(s => s.isOccupied).length;
   };
   
   const getNewMembersCount = () => {
@@ -161,12 +319,11 @@ const Dashboard = () => {
             data={chartData}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            isLoading={isLoading}
           />
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             <ActiveSessions />
-            <RecentTransactions bills={recentTransactions} customers={customers} />
+            <RecentTransactions bills={bills} customers={customers} />
           </div>
         </TabsContent>
         
