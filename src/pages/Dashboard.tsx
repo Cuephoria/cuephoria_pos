@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
 import StatCardSection from '@/components/dashboard/StatCardSection';
@@ -31,11 +30,40 @@ const Dashboard = () => {
     lowStockItems: []
   });
   
+  // Memoize filtered bills to improve performance
+  const filteredBills = useMemo(() => {
+    const now = new Date();
+    
+    let startDate = new Date();
+    
+    if (activeTab === 'hourly') {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'daily') {
+      const dayOfWeek = startDate.getDay();
+      startDate.setDate(startDate.getDate() - dayOfWeek);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'weekly') {
+      startDate.setDate(startDate.getDate() - 28);
+      startDate.setHours(0, 0, 0, 0);
+    } else if (activeTab === 'monthly') {
+      startDate = new Date(startDate.getFullYear(), 0, 1);
+    }
+    
+    return bills.filter(bill => {
+      const billDate = new Date(bill.createdAt);
+      return billDate >= startDate && billDate <= now;
+    });
+  }, [bills, activeTab]);
+  
+  // Memoize low stock items calculation
+  const lowStockItems = useMemo(() => {
+    return products.filter(p => p.stock < 5)
+      .sort((a, b) => a.stock - b.stock);
+  }, [products]);
+  
+  // Generate chart data only when necessary
   useEffect(() => {
     setChartData(generateChartData());
-    
-    const lowStockItems = products.filter(p => p.stock < 5)
-      .sort((a, b) => a.stock - b.stock);
     
     setDashboardStats({
       totalSales: calculateTotalSales(),
@@ -45,7 +73,7 @@ const Dashboard = () => {
       lowStockCount: lowStockItems.length,
       lowStockItems: lowStockItems
     });
-  }, [bills, customers, stations, sessions, products, activeTab]);
+  }, [filteredBills, customers, stations, sessions, lowStockItems, activeTab]);
   
   const generateChartData = () => {
     if (activeTab === 'hourly') {
@@ -65,10 +93,10 @@ const Dashboard = () => {
     
     const hours = Array.from({ length: 24 }, (_, i) => i);
     
-    if (bills.length > 0) {
+    if (filteredBills.length > 0) {
       const hourlyTotals = new Map();
       
-      bills.forEach(bill => {
+      filteredBills.forEach(bill => {
         const billDate = new Date(bill.createdAt);
         
         if (billDate >= today) {
@@ -105,10 +133,10 @@ const Dashboard = () => {
   const generateDailyChartData = () => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
-    if (bills.length > 0) {
+    if (filteredBills.length > 0) {
       const dailyTotals = new Map();
       
-      bills.forEach(bill => {
+      filteredBills.forEach(bill => {
         const date = new Date(bill.createdAt);
         const day = days[date.getDay()];
         const current = dailyTotals.get(day) || 0;
@@ -121,15 +149,10 @@ const Dashboard = () => {
       }));
     }
     
-    return [
-      { name: 'Sun', amount: 0 },
-      { name: 'Mon', amount: 0 },
-      { name: 'Tue', amount: 0 },
-      { name: 'Wed', amount: 0 },
-      { name: 'Thu', amount: 0 },
-      { name: 'Fri', amount: 0 },
-      { name: 'Sat', amount: 0 }
-    ];
+    return days.map(day => ({
+      name: day,
+      amount: 0
+    }));
   };
   
   const generateWeeklyChartData = () => {
@@ -200,30 +223,7 @@ const Dashboard = () => {
   };
   
   const calculateTotalSales = () => {
-    let startDate = new Date();
-    const now = new Date();
-    
-    if (activeTab === 'hourly') {
-      startDate.setHours(0, 0, 0, 0);
-    } else if (activeTab === 'daily') {
-      const dayOfWeek = startDate.getDay();
-      startDate.setDate(startDate.getDate() - dayOfWeek);
-      startDate.setHours(0, 0, 0, 0);
-    } else if (activeTab === 'weekly') {
-      startDate.setDate(startDate.getDate() - 28);
-      startDate.setHours(0, 0, 0, 0);
-    } else if (activeTab === 'monthly') {
-      startDate = new Date(startDate.getFullYear(), 0, 1);
-    }
-    
-    const filteredBills = bills.filter(bill => {
-      const billDate = new Date(bill.createdAt);
-      return billDate >= startDate && billDate <= now;
-    });
-    
-    const total = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
-    
-    return total;
+    return filteredBills.reduce((sum, bill) => sum + bill.total, 0);
   };
   
   const calculatePercentChange = () => {
@@ -276,7 +276,7 @@ const Dashboard = () => {
   };
   
   const getLowStockCount = () => {
-    return products.filter(p => p.stock < 5).length;
+    return lowStockItems.length;
   };
   
   const getActiveSessionsCount = () => {
@@ -323,7 +323,7 @@ const Dashboard = () => {
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             <ActiveSessions />
-            <RecentTransactions bills={bills} customers={customers} />
+            <RecentTransactions bills={filteredBills.slice(0, 5)} customers={customers} />
           </div>
         </TabsContent>
         

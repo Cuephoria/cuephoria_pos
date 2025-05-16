@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import {
   Toast,
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 5;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 5000; // Reduced from 1000000 (extremely long) to 5 seconds
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -130,16 +131,20 @@ function dispatch(action: Action) {
   });
 }
 
-interface Toast extends Omit<ToasterToast, "id"> {}
+interface Toast extends Omit<ToasterToast, "id"> {
+  duration?: number; // Added custom duration option
+}
 
 function toast(props: Toast) {
   const id = genId();
+  const { duration = 5000 } = props; // Default to 5 seconds if not specified
 
   const update = (props: ToasterToast) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
     });
+    
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id });
 
   dispatch({
@@ -153,6 +158,13 @@ function toast(props: Toast) {
       },
     },
   });
+  
+  // Auto-dismiss after the specified duration
+  const timeout = setTimeout(() => {
+    dismiss();
+  }, duration);
+  
+  toastTimeouts.set(id, timeout);
 
   return {
     id: id,
