@@ -1,4 +1,3 @@
-
 // Types for the POS system
 export interface Product {
   id: string;
@@ -165,7 +164,7 @@ export interface POSContextType {
   setDiscount: (amount: number, type: 'percentage' | 'fixed') => void;
   setLoyaltyPointsUsed: (points: number) => void;
   calculateTotal: () => number;
-  completeSale: (paymentMethod: 'cash' | 'upi' | 'split') => Promise<Bill | undefined>;
+  completeSale: (paymentMethod: 'cash' | 'upi' | 'split') => Bill | undefined;
   updateBill: (originalBill: Bill, updatedItems: CartItem[], customer: Customer, discount: number, discountType: 'percentage' | 'fixed', loyaltyPointsUsed: number, isSplitPayment?: boolean, cashAmount?: number, upiAmount?: number) => Promise<Bill | null>;
   
   // Data export

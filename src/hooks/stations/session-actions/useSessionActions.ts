@@ -4,18 +4,17 @@ import { useStartSession } from './useStartSession';
 import { useEndSession } from './useEndSession';
 import { SessionActionsProps } from './types';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { generateId } from '@/utils/pos.utils';
 import { Session, SessionResult, Customer } from '@/types/pos.types';
 import { isMembershipActive } from '@/utils/membership.utils';
 
 export const useSessionActions = (props: SessionActionsProps) => {
   const { stations, setStations, sessions, setSessions, updateCustomer } = props;
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
   // Get the functionality from existing hooks
-  const startSessionHook = useStartSession(props);
+  const startSessionHook = useStartSession();
   const endSessionHook = useEndSession({...props, updateCustomer});
   
   // Start a new session
@@ -111,19 +110,18 @@ export const useSessionActions = (props: SessionActionsProps) => {
       setStations(stations.map(s => s.id === stationId ? updatedStation : s));
       setSessions([...sessions, newSession]);
       
-      toast({
-        title: 'Session Started',
+      toast.success('Session Started', {
         description: `Session started for station ${station.name}`,
+        duration: 3000
       });
       
       console.log('Session started successfully');
       
     } catch (error) {
       console.error('Error in startSession:', error);
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error instanceof Error ? error.message : 'Failed to start session',
-        variant: 'destructive'
+        duration: 5000
       });
       throw error;
     } finally {
@@ -157,10 +155,9 @@ export const useSessionActions = (props: SessionActionsProps) => {
       
     } catch (error) {
       console.error('Error in endSession:', error);
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error instanceof Error ? error.message : 'Failed to end session',
-        variant: 'destructive'
+        duration: 5000
       });
       throw error;
     } finally {

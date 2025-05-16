@@ -187,7 +187,7 @@ const POS = () => {
     }
   };
 
-  const handleCompleteSale = () => {
+  const handleCompleteSale = async () => {
     if (!selectedCustomer) {
       toast({
         title: 'No Customer Selected',
