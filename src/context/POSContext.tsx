@@ -758,6 +758,116 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   
+  // Complete sale with synchronous signature
+  const completeSaleSync = async (
+    cartItems: CartItem[],
+    customer: Customer,
+    discount: number,
+    discountType: 'percentage' | 'fixed',
+    loyaltyPointsUsed: number,
+    isSplitPayment: boolean,
+    paymentMethod: 'cash' | 'upi' | 'split',
+    cashAmount: number,
+    upiAmount: number
+  ): Promise<Bill | undefined> => {
+    // Check for membership products
+    const membershipItems = cartItems.filter(item => {
+      const product = products.find(p => p.id === item.id);
+      return product && product.category === 'membership';
+    });
+    
+    // Calculate totals
+    const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
+    
+    // Calculate discount value
+    let discountValue = 0;
+    if (discountType === 'percentage') {
+      discountValue = subtotal * (discount / 100);
+    } else {
+      discountValue = discount;
+    }
+    
+    // Calculate total after discount and loyalty points
+    const total = Math.max(0, subtotal - discountValue - loyaltyPointsUsed);
+    
+    // Calculate loyalty points earned
+    const pointsRate = customer.isMember ? 5 : 2;
+    const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
+    
+    // Create bill
+    const billId = generateId();
+    const bill: Bill = {
+      id: billId,
+      customerId: customer.id,
+      items: cartItems,
+      subtotal,
+      discount,
+      discountValue,
+      discountType,
+      loyaltyPointsUsed,
+      loyaltyPointsEarned,
+      total,
+      paymentMethod,
+      isSplitPayment,
+      cashAmount: isSplitPayment ? cashAmount : (paymentMethod === 'cash' ? total : 0),
+      upiAmount: isSplitPayment ? upiAmount : (paymentMethod === 'upi' ? total : 0),
+      createdAt: new Date()
+    };
+    
+    // Add bill to bills
+    try {
+      await completeSaleBase(
+        cartItems,
+        customer,
+        discount,
+        discountType,
+        loyaltyPointsUsed,
+        () => total,
+        paymentMethod,
+        products,
+        isSplitPayment,
+        cashAmount,
+        upiAmount
+      );
+      
+      // Update customer if membership was purchased
+      if (membershipItems.length > 0) {
+        for (const item of membershipItems) {
+          const product = products.find(p => p.id === item.id);
+          
+          if (product) {
+            // Default values
+            let membershipHours = product.membershipHours || 4;
+            let membershipDuration: 'weekly' | 'monthly' = 'weekly';
+            
+            // Set duration based on product
+            if (product.duration) {
+              membershipDuration = product.duration;
+            } else if (product.name.toLowerCase().includes('weekly')) {
+              membershipDuration = 'weekly';
+            } else if (product.name.toLowerCase().includes('monthly')) {
+              membershipDuration = 'monthly';
+            }
+            
+            // Update customer's membership
+            await updateCustomerMembership(customer.id, {
+              membershipPlan: product.name,
+              membershipDuration: membershipDuration,
+              membershipHoursLeft: membershipHours
+            });
+            
+            break; // Only apply the first membership found
+          }
+        }
+      }
+      
+      return bill;
+    } catch (error) {
+      console.error("Error in completeSaleSync:", error);
+      return undefined;
+    }
+  };
+  
   // Export bills
   const exportBills = () => {
     exportBillsBase(customers);
@@ -858,6 +968,7 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoyaltyPointsUsed,
     calculateTotal,
     completeSale,
+    completeSaleSync,
     updateBill,
     deleteBill,
     exportBills,
