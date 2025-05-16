@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
+import { 
+  Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, 
+  User, Users, Shield, KeyRound, Lock, Eye, EyeOff, Home, ArrowLeft, 
+  CheckCircle, Coffee, BarChart4
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -15,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 interface LocationState {
@@ -440,18 +443,34 @@ const Login = () => {
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
       </div>
       
+      {/* Back to Home Button */}
+      <div className="absolute top-4 left-4 z-20">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-black/30 backdrop-blur-sm border-cuephoria-lightpurple/30 text-white hover:bg-black/50 hover:text-cuephoria-lightpurple transition-all flex items-center gap-2 rounded-full px-4"
+          asChild
+        >
+          <Link to="/">
+            <ArrowLeft size={16} />
+            <span>Back to Home</span>
+          </Link>
+        </Button>
+      </div>
+      
       <div className={`w-full max-w-md z-10 ${animationClass}`}>
         <div className="mb-8 text-center">
           <div className="relative mx-auto w-full max-w-[220px] h-auto sm:w-64 sm:h-64">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
             <img 
-              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
+              src="/lovable-uploads/3172ae80-de25-4aea-9917-39912d0d3d0c.png" 
               alt="Cuephoria 8-Ball Club" 
               className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
             />
           </div>
+          <h2 className="text-xl sm:text-2xl font-bold mt-4 text-white">Cuephoria Management Portal</h2>
           <p className="mt-2 text-muted-foreground font-bold tracking-wider animate-fade-in bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent text-sm sm:text-base">
-            ADMINISTRATOR PORTAL
+            SECURE ACCESS ONLY
           </p>
         </div>
         
@@ -460,8 +479,10 @@ const Login = () => {
           <div className="absolute w-full h-full bg-grid-pattern opacity-5"></div>
           
           <CardHeader className="text-center relative z-10 p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Game Master Login</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the control panel</CardDescription>
+            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Staff Authentication</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">
+              Enter your credentials to access the management system
+            </CardDescription>
           </CardHeader>
           
           <form onSubmit={handleSubmit}>
@@ -533,6 +554,14 @@ const Login = () => {
                   Forgot password?
                 </Button>
               </div>
+              
+              {/* Security Notice */}
+              <div className="pt-2 text-center">
+                <div className="bg-black/20 rounded-md py-2 px-3 flex items-center justify-center gap-2 text-xs text-muted-foreground border border-cuephoria-lightpurple/20">
+                  <Lock size={12} className="text-cuephoria-orange" />
+                  <span>Authentication is secured with 256-bit encryption</span>
+                </div>
+              </div>
             </CardContent>
             
             <CardFooter className="relative z-10 p-4 sm:p-6 pt-0 sm:pt-0">
@@ -548,12 +577,12 @@ const Login = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Accessing...
+                      Authenticating...
                     </>
                   ) : (
                     <>
                       {loginType === 'admin' ? <Shield size={16} /> : <Users size={16} />}
-                      {loginType === 'admin' ? 'Admin Login' : 'Staff Login'}
+                      {loginType === 'admin' ? 'Admin Access' : 'Staff Access'}
                     </>
                   )}
                 </span>
@@ -561,6 +590,29 @@ const Login = () => {
             </CardFooter>
           </form>
         </Card>
+        
+        {/* System Features */}
+        <div className="mt-8 grid grid-cols-3 gap-3 text-center animate-fade-in delay-200">
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg p-3 border border-cuephoria-lightpurple/20">
+            <BarChart4 size={20} className="mx-auto text-cuephoria-orange mb-2" />
+            <p className="text-xs text-white">Advanced Analytics</p>
+          </div>
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg p-3 border border-cuephoria-lightpurple/20">
+            <CheckCircle size={20} className="mx-auto text-cuephoria-green mb-2" />
+            <p className="text-xs text-white">Real-time Data</p>
+          </div>
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg p-3 border border-cuephoria-lightpurple/20">
+            <Coffee size={20} className="mx-auto text-cuephoria-blue mb-2" />
+            <p className="text-xs text-white">Inventory Control</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Copyright Footer */}
+      <div className="absolute bottom-4 text-center w-full z-10">
+        <p className="text-muted-foreground/60 text-xs">
+          &copy; {new Date().getFullYear()} Cuephoria 8-Ball Club. All rights reserved.
+        </p>
       </div>
 
       <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>
