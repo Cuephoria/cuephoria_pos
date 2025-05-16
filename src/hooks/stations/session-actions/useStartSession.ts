@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { usePOS } from '@/context/POSContext';
-import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 
 export const useStartSession = () => {
@@ -16,10 +15,9 @@ export const useStartSession = () => {
       setIsLoading(true);
       await startSession(stationId, customerId);
       
-      // Use shorter duration for success toast (3 seconds)
       toast.success("Session Started", {
         description: "Session started successfully",
-        duration: 3000
+        duration: 2500, // Short duration for success messages
       });
       
       return true;
@@ -28,7 +26,7 @@ export const useStartSession = () => {
       
       toast.error("Error", {
         description: "Failed to start session",
-        duration: 5000
+        duration: 4000 // Slightly longer for errors
       });
       
       return false;
