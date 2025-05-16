@@ -187,7 +187,7 @@ const POS = () => {
     }
   };
 
-  const handleCompleteSale = () => {
+  const handleCompleteSale = async () => {
     if (!selectedCustomer) {
       toast({
         title: 'No Customer Selected',
@@ -207,7 +207,7 @@ const POS = () => {
     }
     
     try {
-      const bill = completeSale(paymentMethod);
+      const bill = await completeSale(paymentMethod);
       if (bill) {
         setIsCheckoutDialogOpen(false);
         setLastCompletedBill(bill);
