@@ -83,17 +83,12 @@ export const useSessionsData = () => {
       // Update local state to remove the deleted session
       setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId));
       
-      toast({
-        description: 'Session deleted successfully',
-      });
+      toast.success('Session deleted successfully');
       
       return true;
     } catch (error) {
       console.error('Error deleting session:', error);
-      toast({
-        description: error instanceof Error ? error.message : 'Failed to delete session',
-        variant: 'destructive'
-      });
+      toast.error(error instanceof Error ? error.message : 'Failed to delete session');
       return false;
     } finally {
       setSessionsLoading(false);
