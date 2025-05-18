@@ -125,12 +125,10 @@ export const getSalesByTimeRange = async (
     // Now handle the data safely
     if (data && Array.isArray(data)) {
       // Ensure we only process records with valid structure and total value
-      const validData = data.filter(bill => 
-        bill !== null && 
-        typeof bill === 'object' && 
-        'total' in bill && 
-        typeof bill.total === 'number'
-      );
+      const validData = data.filter(bill => {
+        if (bill === null || typeof bill !== 'object') return false;
+        return 'total' in bill && typeof bill.total === 'number';
+      });
       
       if (validData.length > 0) {
         const totalSales = validData.reduce((sum, bill) => {
@@ -211,12 +209,10 @@ export const getTotalSales = async () => {
     }
     
     // Use safe type checking and null handling before reducing
-    const validBills = data.filter(bill => 
-      bill !== null && 
-      typeof bill === 'object' && 
-      'total' in bill && 
-      typeof bill.total === 'number'
-    );
+    const validBills = data.filter(bill => {
+      if (bill === null || typeof bill !== 'object') return false;
+      return 'total' in bill && typeof bill.total === 'number';
+    });
     
     const totalSales = validBills.reduce((sum, bill) => {
       // We know 'total' exists because of the filter above
