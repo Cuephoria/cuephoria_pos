@@ -132,8 +132,10 @@ export const getSalesByTimeRange = async (
       
       if (validData.length > 0) {
         const totalSales = validData.reduce((sum, currentBill) => {
-          // We verified currentBill has a total property in the filter above
-          return sum + Number(currentBill.total);
+          if (currentBill && typeof currentBill === 'object' && 'total' in currentBill) {
+            return sum + Number(currentBill.total);
+          }
+          return sum;
         }, 0);
         console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
       } else {
@@ -215,8 +217,10 @@ export const getTotalSales = async () => {
     });
     
     const totalSales = validBills.reduce((sum, currentBill) => {
-      // We know 'total' exists because of the filter above
-      return sum + Number(currentBill.total);
+      if (currentBill && typeof currentBill === 'object' && 'total' in currentBill) {
+        return sum + Number(currentBill.total);
+      }
+      return sum;
     }, 0);
     
     console.log(`Total sales from all ${validBills.length} bills: ${totalSales}`);
