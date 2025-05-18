@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -125,17 +124,15 @@ export const getSalesByTimeRange = async (
     // Now handle the data safely
     if (data && Array.isArray(data)) {
       // Ensure we only process records with valid structure and total value
-      const validData = data.filter(bill => {
+      const validData = data.filter((bill): bill is {total: number, [key: string]: any} => {
         if (bill === null || typeof bill !== 'object') return false;
         return 'total' in bill && typeof bill.total === 'number';
       });
       
       if (validData.length > 0) {
         const totalSales = validData.reduce((sum, currentBill) => {
-          if (currentBill && typeof currentBill === 'object' && 'total' in currentBill) {
-            return sum + Number(currentBill.total);
-          }
-          return sum;
+          // We've already verified using a type guard that currentBill has total
+          return sum + Number(currentBill.total);
         }, 0);
         console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
       } else {
@@ -210,17 +207,15 @@ export const getTotalSales = async () => {
       return { totalSales: 0, error: null };
     }
     
-    // Use safe type checking and null handling before reducing
-    const validBills = data.filter(bill => {
+    // Use TypeScript type guard with filter
+    const validBills = data.filter((bill): bill is {total: number, [key: string]: any} => {
       if (bill === null || typeof bill !== 'object') return false;
       return 'total' in bill && typeof bill.total === 'number';
     });
     
     const totalSales = validBills.reduce((sum, currentBill) => {
-      if (currentBill && typeof currentBill === 'object' && 'total' in currentBill) {
-        return sum + Number(currentBill.total);
-      }
-      return sum;
+      // We've already verified in the filter that currentBill has total
+      return sum + Number(currentBill.total);
     }, 0);
     
     console.log(`Total sales from all ${validBills.length} bills: ${totalSales}`);
