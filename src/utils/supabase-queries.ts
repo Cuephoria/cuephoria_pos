@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -123,15 +124,23 @@ export const getSalesByTimeRange = async (
     
     // Now handle the data safely
     if (data && Array.isArray(data)) {
+      // Define a proper type for bills
+      type BillWithTotal = {
+        id: string;
+        total: number;
+        [key: string]: any;
+      };
+      
       // Ensure we only process records with valid structure and total value
-      const validData = data.filter((bill): bill is {total: number, [key: string]: any} => {
-        if (bill === null || typeof bill !== 'object') return false;
-        return 'total' in bill && typeof bill.total === 'number';
+      const validData = data.filter((bill): bill is BillWithTotal => {
+        return bill !== null && 
+               typeof bill === 'object' && 
+               'total' in bill && 
+               typeof bill.total === 'number';
       });
       
       if (validData.length > 0) {
         const totalSales = validData.reduce((sum, currentBill) => {
-          // We've already verified using a type guard that currentBill has total
           return sum + Number(currentBill.total);
         }, 0);
         console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
@@ -207,14 +216,21 @@ export const getTotalSales = async () => {
       return { totalSales: 0, error: null };
     }
     
+    // Define a proper type for bills
+    type BillWithTotal = {
+      total: number;
+      [key: string]: any;
+    };
+    
     // Use TypeScript type guard with filter
-    const validBills = data.filter((bill): bill is {total: number, [key: string]: any} => {
-      if (bill === null || typeof bill !== 'object') return false;
-      return 'total' in bill && typeof bill.total === 'number';
+    const validBills = data.filter((bill): bill is BillWithTotal => {
+      return bill !== null && 
+             typeof bill === 'object' && 
+             'total' in bill && 
+             typeof bill.total === 'number';
     });
     
     const totalSales = validBills.reduce((sum, currentBill) => {
-      // We've already verified in the filter that currentBill has total
       return sum + Number(currentBill.total);
     }, 0);
     
