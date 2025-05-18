@@ -124,11 +124,19 @@ export const getSalesByTimeRange = async (
     
     // Now handle the data safely
     if (data && Array.isArray(data)) {
-      // Filter out any records where bill is not valid or total is not a number
-      const validData = data.filter(bill => bill && typeof bill?.total === 'number');
+      // Ensure we only process records with valid structure and total value
+      const validData = data.filter(bill => 
+        bill !== null && 
+        typeof bill === 'object' && 
+        'total' in bill && 
+        typeof bill.total === 'number'
+      );
       
       if (validData.length > 0) {
-        const totalSales = validData.reduce((sum, bill) => sum + (Number(bill?.total) || 0), 0);
+        const totalSales = validData.reduce((sum, bill) => {
+          // We know 'total' exists because of the filter above
+          return sum + Number(bill.total);
+        }, 0);
         console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
       } else {
         console.log('No valid bills with total values found');
@@ -203,8 +211,17 @@ export const getTotalSales = async () => {
     }
     
     // Use safe type checking and null handling before reducing
-    const validBills = data.filter(bill => bill && typeof bill?.total === 'number');
-    const totalSales = validBills.reduce((sum, bill) => sum + (Number(bill?.total) || 0), 0);
+    const validBills = data.filter(bill => 
+      bill !== null && 
+      typeof bill === 'object' && 
+      'total' in bill && 
+      typeof bill.total === 'number'
+    );
+    
+    const totalSales = validBills.reduce((sum, bill) => {
+      // We know 'total' exists because of the filter above
+      return sum + Number(bill.total);
+    }, 0);
     
     console.log(`Total sales from all ${validBills.length} bills: ${totalSales}`);
     
