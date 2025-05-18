@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
+import { Gamepad, ZapIcon, Stars, Dice1, Dice3, Dice5, Trophy, Joystick, User, Users, Shield, KeyRound, Lock, Eye, EyeOff, Home, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -401,6 +401,16 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cuephoria-dark overflow-hidden relative px-4">
+      {/* Back button to home page */}
+      <Button 
+        variant="ghost" 
+        className="absolute top-4 left-4 text-gray-400 hover:text-white hover:bg-cuephoria-darker/50 z-50 flex items-center gap-2"
+        onClick={() => navigate('/')}
+      >
+        <ArrowLeft size={18} />
+        <span>Back to Home</span>
+      </Button>
+
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/20 via-transparent to-transparent"></div>
         <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/20 via-transparent to-transparent"></div>
@@ -445,14 +455,17 @@ const Login = () => {
           <div className="relative mx-auto w-full max-w-[220px] h-auto sm:w-64 sm:h-64">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cuephoria-lightpurple/20 to-accent/10 blur-lg"></div>
             <img 
-              src="/lovable-uploads/edbcb263-8fde-45a9-b66b-02f664772425.png" 
+              src="/lovable-uploads/53af0330-cafd-49f9-b4c6-a08c55940cc3.png" 
               alt="Cuephoria 8-Ball Club" 
               className="relative w-full h-auto mx-auto drop-shadow-[0_0_15px_rgba(155,135,245,0.3)]"
             />
           </div>
-          <p className="mt-2 text-muted-foreground font-bold tracking-wider animate-fade-in bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent text-sm sm:text-base">
-            ADMINISTRATOR PORTAL
-          </p>
+          <div className="mt-2 text-center">
+            <h2 className="text-2xl font-bold text-white">Cuephoria Management</h2>
+            <p className="mt-2 text-muted-foreground font-bold tracking-wider animate-fade-in bg-gradient-to-r from-cuephoria-lightpurple via-accent to-cuephoria-lightpurple bg-clip-text text-transparent text-sm sm:text-base">
+              SECURE AUTHENTICATION PORTAL
+            </p>
+          </div>
         </div>
         
         <Card className="bg-cuephoria-darker/90 border border-cuephoria-lightpurple/30 shadow-xl shadow-cuephoria-lightpurple/20 backdrop-blur-lg animate-fade-in delay-100 rounded-xl overflow-hidden">
@@ -460,8 +473,8 @@ const Login = () => {
           <div className="absolute w-full h-full bg-grid-pattern opacity-5"></div>
           
           <CardHeader className="text-center relative z-10 p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Game Master Login</CardTitle>
-            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the control panel</CardDescription>
+            <CardTitle className="text-xl sm:text-2xl gradient-text font-bold">Management Login</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium text-xs sm:text-sm">Enter your credentials to access the management portal</CardDescription>
           </CardHeader>
           
           <form onSubmit={handleSubmit}>
@@ -548,12 +561,12 @@ const Login = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Accessing...
+                      Authenticating...
                     </>
                   ) : (
                     <>
                       {loginType === 'admin' ? <Shield size={16} /> : <Users size={16} />}
-                      {loginType === 'admin' ? 'Admin Login' : 'Staff Login'}
+                      {loginType === 'admin' ? 'Access Admin Portal' : 'Access Staff Portal'}
                     </>
                   )}
                 </span>
@@ -561,6 +574,15 @@ const Login = () => {
             </CardFooter>
           </form>
         </Card>
+
+        {/* Security note */}
+        <div className="mt-6 text-center text-xs text-gray-500">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Shield size={14} className="text-cuephoria-purple" />
+            <span>Secure Authentication</span>
+          </div>
+          <p>This portal is protected with enterprise-grade encryption.<br />Unauthorized access attempts will be logged.</p>
+        </div>
       </div>
 
       <Dialog open={forgotDialogOpen} onOpenChange={setForgotDialogOpen}>
