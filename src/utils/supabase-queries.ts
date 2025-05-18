@@ -115,17 +115,24 @@ export const getSalesByTimeRange = async (
       .gte('created_at', startDate.toISOString())
       .lte('created_at', now.toISOString());
       
-    const { data, error } = await query;
+    const response = await query;
     
-    if (error) throw error;
+    // Check for errors first
+    if (response.error) throw response.error;
     
-    // Ensure we're safely handling the data before working with it
+    const data = response.data;
+    
+    // Now handle the data safely
     if (data && Array.isArray(data)) {
-      // Filter out any records where total is not a valid number
-      const validData = data.filter(bill => bill && typeof bill.total === 'number');
+      // Filter out any records where bill is not valid or total is not a number
+      const validData = data.filter(bill => bill && typeof bill?.total === 'number');
       
-      const totalSales = validData.reduce((sum, bill) => sum + (bill.total as number), 0);
-      console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
+      if (validData.length > 0) {
+        const totalSales = validData.reduce((sum, bill) => sum + (Number(bill?.total) || 0), 0);
+        console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
+      } else {
+        console.log('No valid bills with total values found');
+      }
     }
     
     return { data, error: null };
@@ -158,19 +165,17 @@ export const getAggregatedSalesData = async (
         break;
     }
     
-    // Using a workaround for TypeScript RPC function name validation
-    // We know this function exists in the database (from get_aggregated_sales_function.sql)
-    const { data, error } = await (supabase
-      .rpc as any)('get_aggregated_sales', {
-        p_group_by: groupBy,
-        p_start_date: startDate.toISOString(),
-        p_end_date: endDate.toISOString(),
-        p_time_format: timeFormat
-      });
+    // Using type assertion to handle the RPC function name validation
+    const response = await (supabase.rpc as any)('get_aggregated_sales', {
+      p_group_by: groupBy,
+      p_start_date: startDate.toISOString(),
+      p_end_date: endDate.toISOString(),
+      p_time_format: timeFormat
+    });
       
-    if (error) throw error;
+    if (response.error) throw response.error;
     
-    return { data, error: null };
+    return { data: response.data, error: null };
   } catch (error) {
     console.error('Error fetching aggregated sales data:', error);
     return { data: null, error };
@@ -183,17 +188,23 @@ export const getAggregatedSalesData = async (
  */
 export const getTotalSales = async () => {
   try {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('bills')
       .select('total');
       
-    if (error) throw error;
+    // Check for errors first
+    if (response.error) throw response.error;
     
-    if (!data || !Array.isArray(data) || data.length === 0) return { totalSales: 0, error: null };
+    const data = response.data;
+    
+    // Make sure we have data, it's an array, and it's not empty
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return { totalSales: 0, error: null };
+    }
     
     // Use safe type checking and null handling before reducing
-    const validBills = data.filter(bill => bill && typeof bill.total === 'number');
-    const totalSales = validBills.reduce((sum, bill) => sum + (bill.total as number), 0);
+    const validBills = data.filter(bill => bill && typeof bill?.total === 'number');
+    const totalSales = validBills.reduce((sum, bill) => sum + (Number(bill?.total) || 0), 0);
     
     console.log(`Total sales from all ${validBills.length} bills: ${totalSales}`);
     
