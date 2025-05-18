@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SalesChartProps {
   data: {
@@ -13,9 +14,26 @@ interface SalesChartProps {
   }[];
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  isLoading?: boolean;
 }
 
-const SalesChart: React.FC<SalesChartProps> = ({ data, activeTab, setActiveTab }) => {
+const SalesChart: React.FC<SalesChartProps> = ({ data, activeTab, setActiveTab, isLoading = false }) => {
+  if (isLoading) {
+    return (
+      <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-white font-heading">Sales Overview</CardTitle>
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </CardHeader>
+        <CardContent className="h-[350px] pt-4">
+          <Skeleton className="h-full w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-[#1A1F2C] border-gray-700 shadow-xl">
       <CardHeader>

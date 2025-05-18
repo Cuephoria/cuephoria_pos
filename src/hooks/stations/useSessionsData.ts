@@ -80,8 +80,17 @@ export const useSessionsData = () => {
         }));
         
         // Combine active and completed sessions
+        const transformedActiveSessions = activeSessions ? activeSessions.map(item => ({
+          id: item.id,
+          stationId: item.station_id,
+          customerId: item.customer_id,
+          startTime: new Date(item.start_time),
+          endTime: undefined,
+          duration: item.duration
+        })) : [];
+        
         const allSessions = [
-          ...(activeSessions ? transformedActiveSessions : []),
+          ...transformedActiveSessions,
           ...transformedRecentSessions
         ];
         
@@ -94,8 +103,8 @@ export const useSessionsData = () => {
     } catch (error) {
       console.error('Error in fetchSessions:', error);
       setSessionsError(error instanceof Error ? error : new Error('Unknown error fetching sessions'));
-      toast.error('Failed to load sessions', {
-        description: 'Please try again later'
+      toast.error('Failed to load sessions', { 
+        description: error instanceof Error ? error.message : 'Please try again later'
       });
     } finally {
       setSessionsLoading(false);

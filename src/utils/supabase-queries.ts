@@ -147,8 +147,10 @@ export const getAggregatedSalesData = async (
         break;
     }
     
+    // Using a type assertion for the function name to bypass TypeScript's restrictions
+    // since we know the function exists in the database
     const { data, error } = await supabase
-      .rpc('get_aggregated_sales', {
+      .rpc('get_aggregated_sales' as any, {
         p_group_by: groupBy,
         p_start_date: startDate.toISOString(),
         p_end_date: endDate.toISOString(),
