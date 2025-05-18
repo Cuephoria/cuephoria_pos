@@ -78,6 +78,7 @@ export const getBillWithItems = async (billId: string) => {
 
 /**
  * Get sales data for dashboard with time range filtering
+ * Updated to ensure all sales data is properly captured
  */
 export const getSalesByTimeRange = async (
   range: 'today' | 'week' | 'month' | 'year',
@@ -102,6 +103,8 @@ export const getSalesByTimeRange = async (
         break;
     }
     
+    console.log(`Fetching sales from ${startDate.toISOString()} to ${now.toISOString()}`);
+    
     let query = supabase
       .from('bills')
       .select(
@@ -110,12 +113,15 @@ export const getSalesByTimeRange = async (
           'id, subtotal, total, created_at'
       )
       .gte('created_at', startDate.toISOString())
-      .lte('created_at', now.toISOString())
-      .order('created_at', { ascending: false });
+      .lte('created_at', now.toISOString());
       
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     
     if (error) throw error;
+    
+    if (data) {
+      console.log(`Retrieved ${data.length} bills, total sales: ${data.reduce((sum, bill) => sum + bill.total, 0)}`);
+    }
     
     return { data, error: null };
   } catch (error) {
@@ -163,5 +169,30 @@ export const getAggregatedSalesData = async (
   } catch (error) {
     console.error('Error fetching aggregated sales data:', error);
     return { data: null, error };
+  }
+};
+
+/**
+ * Get total sales amount without filtering
+ * This ensures we get the true total of all sales
+ */
+export const getTotalSales = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('bills')
+      .select('total')
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    if (!data) return { totalSales: 0, error: null };
+    
+    const totalSales = data.reduce((sum, bill) => sum + (bill.total || 0), 0);
+    console.log(`Total sales from all ${data.length} bills: ${totalSales}`);
+    
+    return { totalSales, error: null };
+  } catch (error) {
+    console.error('Error calculating total sales:', error);
+    return { totalSales: 0, error };
   }
 };

@@ -47,6 +47,9 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
     );
   }
   
+  // Log the exact value to help with debugging
+  console.log('Displaying total sales value:', totalSales);
+  
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
