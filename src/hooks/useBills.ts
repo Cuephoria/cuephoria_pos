@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -9,211 +9,138 @@ export const useBills = (
   updateProduct: (product: Product) => void
 ) => {
   const [bills, setBills] = useState<Bill[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const { toast } = useToast();
 
-  // Optimized fetchBills with pagination, cache control and field selection
-  const fetchBills = useCallback(async (limit = 50, offset = 0) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Check local storage cache first
-      const storedBills = localStorage.getItem('cuephoriaBills');
-      if (storedBills) {
-        const parsedBills = JSON.parse(storedBills);
-        
-        const billsWithDates = parsedBills.map((bill: any) => ({
-          ...bill,
-          createdAt: new Date(bill.createdAt)
-        }));
-        
-        setBills(billsWithDates);
-        
-        for (const bill of billsWithDates) {
-          const { data: billData, error: billError } = await supabase
-            .from('bills')
-            .upsert({
-              id: bill.id,
-              customer_id: bill.customerId,
-              subtotal: bill.subtotal,
-              discount: bill.discount,
-              discount_value: bill.discountValue,
-              discount_type: bill.discountType,
-              loyalty_points_used: bill.loyaltyPointsUsed,
-              loyalty_points_earned: bill.loyaltyPointsEarned,
-              total: bill.total,
-              payment_method: bill.paymentMethod,
-              is_split_payment: bill.isSplitPayment || false,
-              cash_amount: bill.cashAmount || 0,
-              upi_amount: bill.upiAmount || 0,
-              created_at: bill.createdAt.toISOString()
-            }, { onConflict: 'id' })
-            .select()
-            .single();
+  useEffect(() => {
+    const fetchBills = async () => {
+      try {
+        const storedBills = localStorage.getItem('cuephoriaBills');
+        if (storedBills) {
+          const parsedBills = JSON.parse(storedBills);
           
-          if (billError) {
-            console.error('Error migrating bill:', billError);
+          const billsWithDates = parsedBills.map((bill: any) => ({
+            ...bill,
+            createdAt: new Date(bill.createdAt)
+          }));
+          
+          setBills(billsWithDates);
+          
+          for (const bill of billsWithDates) {
+            const { data: billData, error: billError } = await supabase
+              .from('bills')
+              .upsert({
+                id: bill.id,
+                customer_id: bill.customerId,
+                subtotal: bill.subtotal,
+                discount: bill.discount,
+                discount_value: bill.discountValue,
+                discount_type: bill.discountType,
+                loyalty_points_used: bill.loyaltyPointsUsed,
+                loyalty_points_earned: bill.loyaltyPointsEarned,
+                total: bill.total,
+                payment_method: bill.paymentMethod,
+                is_split_payment: bill.isSplitPayment || false,
+                cash_amount: bill.cashAmount || 0,
+                upi_amount: bill.upiAmount || 0,
+                created_at: bill.createdAt.toISOString()
+              }, { onConflict: 'id' })
+              .select()
+              .single();
+            
+            if (billError) {
+              console.error('Error migrating bill:', billError);
+              continue;
+            }
+            
+            for (const item of bill.items) {
+              await supabase
+                .from('bill_items')
+                .insert({
+                  bill_id: bill.id,
+                  item_id: item.id,
+                  item_type: item.type,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  total: item.total
+                });
+            }
+          }
+          
+          localStorage.removeItem('cuephoriaBills');
+          return;
+        }
+        
+        const { data: billsData, error: billsError } = await supabase
+          .from('bills')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (billsError) {
+          console.error('Error fetching bills:', billsError);
+          return;
+        }
+        
+        if (!billsData) {
+          console.log('No bills found in database');
+          return;
+        }
+        
+        const transformedBills: Bill[] = [];
+        
+        for (const billData of billsData) {
+          const { data: itemsData, error: itemsError } = await supabase
+            .from('bill_items')
+            .select('*')
+            .eq('bill_id', billData.id);
+            
+          if (itemsError) {
+            console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
             continue;
           }
           
-          for (const item of bill.items) {
-            await supabase
-              .from('bill_items')
-              .insert({
-                bill_id: bill.id,
-                item_id: item.id,
-                item_type: item.type,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                total: item.total
-              });
+          if (!itemsData) {
+            console.log(`No items found for bill ${billData.id}`);
+            continue;
           }
+          
+          const items: CartItem[] = itemsData.map(item => ({
+            id: item.item_id,
+            type: item.item_type as 'product' | 'session',
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          }));
+          
+          transformedBills.push({
+            id: billData.id,
+            customerId: billData.customer_id,
+            items,
+            subtotal: billData.subtotal,
+            discount: billData.discount,
+            discountValue: billData.discount_value,
+            discountType: billData.discount_type as 'percentage' | 'fixed',
+            loyaltyPointsUsed: billData.loyalty_points_used,
+            loyaltyPointsEarned: billData.loyalty_points_earned,
+            total: billData.total,
+            paymentMethod: billData.payment_method as 'cash' | 'upi' | 'split',
+            isSplitPayment: billData.is_split_payment || false,
+            cashAmount: billData.cash_amount || 0,
+            upiAmount: billData.upi_amount || 0,
+            createdAt: new Date(billData.created_at)
+          });
         }
         
-        localStorage.removeItem('cuephoriaBills');
-        setLoading(false);
-        setLastFetch(new Date());
-        return;
+        setBills(transformedBills);
+      } catch (error) {
+        console.error('Error in fetchBills:', error);
       }
-      
-      console.time('billsQuery');
-      
-      // Use count query to get total without fetching all data
-      const { count } = await supabase
-        .from('bills')
-        .select('*', { count: 'exact', head: true });
-      
-      console.log(`Total bills in database: ${count}`);
-      
-      // Optimize by selecting only what we need and using pagination
-      const { data: billsData, error: billsError } = await supabase
-        .from('bills')
-        .select('id, customer_id, subtotal, discount, discount_value, discount_type, loyalty_points_used, loyalty_points_earned, total, payment_method, is_split_payment, cash_amount, upi_amount, created_at')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-      
-      console.timeEnd('billsQuery');
-        
-      if (billsError) {
-        console.error('Error fetching bills:', billsError);
-        setError(new Error(billsError.message));
-        setLoading(false);
-        return;
-      }
-      
-      if (!billsData || billsData.length === 0) {
-        console.log('No bills found in database');
-        setBills([]);
-        setLoading(false);
-        setLastFetch(new Date());
-        return;
-      }
-      
-      console.log(`Fetched ${billsData.length} bills`);
-      console.time('transformBills');
-      
-      const transformedBills: Bill[] = [];
-      
-      // Process bills in batches to avoid blocking the UI thread
-      const processBillsBatch = async (startIdx: number, batchSize: number) => {
-        const endIdx = Math.min(startIdx + batchSize, billsData.length);
-        const batchPromises = [];
-        
-        for (let i = startIdx; i < endIdx; i++) {
-          const billData = billsData[i];
-          batchPromises.push((async () => {
-            const { data: itemsData, error: itemsError } = await supabase
-              .from('bill_items')
-              .select('item_id, item_type, name, price, quantity, total')
-              .eq('bill_id', billData.id);
-              
-            if (itemsError) {
-              console.error(`Error fetching items for bill ${billData.id}:`, itemsError);
-              return null;
-            }
-            
-            if (!itemsData) {
-              console.log(`No items found for bill ${billData.id}`);
-              return null;
-            }
-            
-            const items: CartItem[] = itemsData.map(item => ({
-              id: item.item_id,
-              type: item.item_type as 'product' | 'session',
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              total: item.total
-            }));
-            
-            return {
-              id: billData.id,
-              customerId: billData.customer_id,
-              items,
-              subtotal: billData.subtotal,
-              discount: billData.discount,
-              discountValue: billData.discount_value,
-              discountType: billData.discount_type as 'percentage' | 'fixed',
-              loyaltyPointsUsed: billData.loyalty_points_used,
-              loyaltyPointsEarned: billData.loyalty_points_earned,
-              total: billData.total,
-              paymentMethod: billData.payment_method as 'cash' | 'upi' | 'split',
-              isSplitPayment: billData.is_split_payment || false,
-              cashAmount: billData.cash_amount || 0,
-              upiAmount: billData.upi_amount || 0,
-              createdAt: new Date(billData.created_at)
-            };
-          })());
-        }
-        
-        const results = await Promise.all(batchPromises);
-        return results.filter(Boolean) as Bill[];
-      };
-      
-      // Process bills in batches of 10
-      const BATCH_SIZE = 10;
-      for (let i = 0; i < billsData.length; i += BATCH_SIZE) {
-        const batchBills = await processBillsBatch(i, BATCH_SIZE);
-        transformedBills.push(...batchBills);
-        
-        // Update state incrementally for better UX
-        if (i === 0) {
-          setBills(batchBills); // Show first batch immediately
-        } else {
-          setBills(prev => [...prev, ...batchBills]);
-        }
-      }
-      
-      console.timeEnd('transformBills');
-      
-      // Cache the first page results in memory
-      setLastFetch(new Date());
-    } catch (error) {
-      console.error('Error in fetchBills:', error);
-      setError(error instanceof Error ? error : new Error('Unknown error fetching bills'));
-    } finally {
-      setLoading(false);
-    }
+    };
+    
+    fetchBills();
   }, []);
   
-  // Run initial fetch
-  useEffect(() => {
-    fetchBills();
-    
-    // Set up refresh interval - fetch new data periodically rather than on every visibility change
-    const refreshInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchBills();
-      }
-    }, 300000); // Refresh every 5 minutes instead of every minute
-    
-    return () => clearInterval(refreshInterval);
-  }, [fetchBills]);
-
   const completeSale = async (
     cart: CartItem[],
     selectedCustomer: Customer | null,
@@ -837,9 +764,6 @@ export const useBills = (
   return {
     bills,
     setBills,
-    loading,
-    error,
-    fetchBills,
     completeSale,
     deleteBill,
     updateBill,

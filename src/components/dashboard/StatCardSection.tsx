@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { ShoppingCart, Users, AlertTriangle, Clock } from 'lucide-react';
-import StatCard from '@/components/StatCard';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import React, { useEffect, useState } from 'react';
+import StatsCard from './StatsCard';
+import { CreditCard, Users, PlayCircle, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Product } from '@/context/POSContext';
+import { CurrencyDisplay } from '@/components/ui/currency';
+import { useSessionsData } from '@/hooks/stations/useSessionsData';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -13,8 +14,7 @@ interface StatCardSectionProps {
   customersCount: number;
   newMembersCount: number;
   lowStockCount: number;
-  lowStockItems: any[];
-  isLoading?: boolean;
+  lowStockItems: Product[];
 }
 
 const StatCardSection: React.FC<StatCardSectionProps> = ({
@@ -25,75 +25,99 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
   customersCount,
   newMembersCount,
   lowStockCount,
-  lowStockItems,
-  isLoading = false
+  lowStockItems
 }) => {
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded-full" />
-              </div>
-              <Skeleton className="h-8 w-20 mb-2" />
-              <Skeleton className="h-4 w-32" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
+  const { sessions } = useSessionsData();
+  const [realActiveSessionsCount, setRealActiveSessionsCount] = useState(activeSessionsCount);
+
+  // Determine whether the sales trend is positive or negative
+  const isSalesTrendPositive = salesChange.includes('+');
   
-  // Log the exact value to help with debugging
-  console.log('Displaying total sales value:', totalSales);
+  // Calculate real-time active sessions count
+  useEffect(() => {
+    // Count sessions that don't have an end time
+    const activeSessions = sessions.filter(session => !session.endTime).length;
+    setRealActiveSessionsCount(activeSessions);
+  }, [sessions]);
+  
+  // Determine color for sales trend
+  const getTrendIconAndClass = () => {
+    if (isSalesTrendPositive) {
+      return {
+        icon: TrendingUp,
+        class: 'text-green-500'
+      };
+    } else if (salesChange.includes('-')) {
+      return {
+        icon: TrendingDown,
+        class: 'text-red-500'
+      };
+    }
+    return {
+      icon: null,
+      class: ''
+    };
+  };
+  
+  const { icon: TrendIcon, class: trendClass } = getTrendIconAndClass();
+  
+  // Format low stock items for display
+  const formatLowStockItems = () => {
+    if (lowStockItems.length === 0) return "All inventory levels are good";
+    
+    if (lowStockItems.length <= 2) {
+      return lowStockItems.map(item => `${item.name}: ${item.stock} left`).join(", ");
+    }
+    
+    return `${lowStockItems[0].name}: ${lowStockItems[0].stock} left, ${lowStockItems[1].name}: ${lowStockItems[1].stock} left, +${lowStockItems.length - 2} more`;
+  };
   
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <StatCard
-        title="Revenue"
-        value={totalSales}
-        icon={ShoppingCart}
-        description={salesChange}
-        isCurrency={true}
-        color="text-cuephoria-purple"
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <StatsCard
+        title="Total Sales"
+        value={<CurrencyDisplay amount={totalSales} />}
+        icon={CreditCard}
+        subValue={
+          <div className="flex items-center space-x-1">
+            <span>{salesChange}</span>
+            {TrendIcon && <TrendIcon className={`h-3 w-3 ${trendClass}`} />}
+          </div>
+        }
+        iconColor="text-[#9b87f5]"
+        iconBgColor="bg-[#6E59A5]/20"
+        className="hover:shadow-purple-900/10"
       />
-      
-      <StatCard
+
+      <StatsCard
         title="Active Sessions"
-        value={`${activeSessionsCount}/${totalStations}`}
-        icon={Clock}
-        description={`${Math.round((activeSessionsCount / totalStations) * 100)}% occupancy rate`}
-        color="text-green-500"
+        value={realActiveSessionsCount}
+        icon={PlayCircle}
+        subValue={`${totalStations} stations available`}
+        iconColor="text-[#0EA5E9]"
+        iconBgColor="bg-[#0EA5E9]/20"
+        className="hover:shadow-blue-900/10"
       />
-      
-      <StatCard
-        title="Total Customers"
+
+      <StatsCard
+        title="Customers"
         value={customersCount}
         icon={Users}
-        description={`${newMembersCount} new today`}
-        color="text-cuephoria-blue"
+        subValue={`${newMembersCount || 'No'} new member${newMembersCount !== 1 ? 's' : ''} today`}
+        iconColor="text-[#10B981]"
+        iconBgColor="bg-[#10B981]/20"
+        className="hover:shadow-green-900/10"
       />
-      
-      {lowStockCount > 0 ? (
-        <StatCard
-          title="Low Stock Items"
-          value={lowStockCount}
-          icon={AlertTriangle}
-          description={`${lowStockItems[0]?.name} is lowest (${lowStockItems[0]?.stock})`}
-          color="text-orange-500"
-        />
-      ) : (
-        <StatCard
-          title="Low Stock Items"
-          value={0}
-          icon={AlertTriangle}
-          description="No items with low stock"
-          color="text-green-500"
-        />
-      )}
+
+      <StatsCard
+        title="Inventory Alert"
+        value={`${lowStockCount} item${lowStockCount !== 1 ? 's' : ''}`}
+        icon={AlertTriangle}
+        subValue={formatLowStockItems()}
+        iconColor="text-[#F97316]"
+        iconBgColor="bg-[#F97316]/20"
+        className="hover:shadow-red-900/10"
+      />
     </div>
   );
 };

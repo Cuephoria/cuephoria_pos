@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
 import StatCardSection from '@/components/dashboard/StatCardSection';
@@ -15,13 +15,10 @@ import HourlyRevenueDistribution from '@/components/dashboard/HourlyRevenueDistr
 import ProductPerformance from '@/components/dashboard/ProductPerformance';
 import ExpenseList from '@/components/expenses/ExpenseList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getSalesByTimeRange, getTotalSales } from '@/utils/supabase-queries';
-import { useToast } from '@/hooks/use-toast';
 
 const Dashboard = () => {
   const { customers, bills, stations, sessions, products } = usePOS();
   const { expenses, businessSummary } = useExpenses();
-  const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState('daily');
   const [chartData, setChartData] = useState([]);
@@ -33,9 +30,24 @@ const Dashboard = () => {
     lowStockCount: 0,
     lowStockItems: []
   });
-  const [isLoading, setIsLoading] = useState(true);
   
-  const generateChartData = useCallback(() => {
+  useEffect(() => {
+    setChartData(generateChartData());
+    
+    const lowStockItems = products.filter(p => p.stock < 5)
+      .sort((a, b) => a.stock - b.stock);
+    
+    setDashboardStats({
+      totalSales: calculateTotalSales(),
+      salesChange: calculatePercentChange(),
+      activeSessionsCount: getActiveSessionsCount(),
+      newMembersCount: getNewMembersCount(),
+      lowStockCount: lowStockItems.length,
+      lowStockItems: lowStockItems
+    });
+  }, [bills, customers, stations, sessions, products, activeTab]);
+  
+  const generateChartData = () => {
     if (activeTab === 'hourly') {
       return generateHourlyChartData();
     } else if (activeTab === 'daily') {
@@ -45,87 +57,7 @@ const Dashboard = () => {
     } else {
       return generateMonthlyChartData();
     }
-  }, [activeTab, bills]);
-  
-  // Use memoized calculations to prevent recalculations
-  const calculateDashboardStats = useCallback(async () => {
-    // Get accurate total sales from the database
-    const { totalSales, error } = await getTotalSales();
-    
-    if (error) {
-      toast({
-        title: "Error loading sales data",
-        description: "Could not load total sales information",
-        variant: "destructive"
-      });
-    }
-    
-    const lowStockItems = products.filter(p => p.stock < 5)
-      .sort((a, b) => a.stock - b.stock);
-      
-    return {
-      totalSales: totalSales || calculateTotalSales(), // Fallback to local calculation if API fails
-      salesChange: calculatePercentChange(),
-      activeSessionsCount: getActiveSessionsCount(),
-      newMembersCount: getNewMembersCount(),
-      lowStockCount: lowStockItems.length,
-      lowStockItems: lowStockItems
-    };
-  }, [bills, customers, stations, sessions, products, activeTab, toast]);
-  
-  // Load optimized sales data based on selected timeframe
-  const loadSalesData = useCallback(async () => {
-    setIsLoading(true);
-    
-    let range: 'today' | 'week' | 'month' | 'year';
-    switch (activeTab) {
-      case 'hourly':
-        range = 'today';
-        break;
-      case 'daily':
-        range = 'week';
-        break;
-      case 'weekly':
-        range = 'month';
-        break;
-      default:
-        range = 'year';
-    }
-    
-    try {
-      const { data } = await getSalesByTimeRange(range);
-      if (data) {
-        // We'll continue using the existing chart generation functions
-        // but with optimized data from the server
-        setChartData(generateChartData());
-        const stats = await calculateDashboardStats();
-        setDashboardStats(stats);
-      }
-    } catch (err) {
-      console.error('Error loading sales data:', err);
-      toast({
-        title: "Error loading data",
-        description: "Failed to load sales data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeTab, generateChartData, calculateDashboardStats, toast]);
-  
-  // Load data when tab changes
-  useEffect(() => {
-    loadSalesData();
-  }, [loadSalesData, activeTab]);
-  
-  useEffect(() => {
-    if (!isLoading) {
-      setChartData(generateChartData());
-      calculateDashboardStats().then(stats => {
-        setDashboardStats(stats);
-      });
-    }
-  }, [bills, customers, stations, sessions, products, activeTab, isLoading, generateChartData, calculateDashboardStats]);
+  };
   
   const generateHourlyChartData = () => {
     const today = new Date();
@@ -290,7 +222,6 @@ const Dashboard = () => {
     });
     
     const total = filteredBills.reduce((sum, bill) => sum + bill.total, 0);
-    console.log(`Local calculation - Total sales for ${activeTab}: ${total} (filtered ${filteredBills.length} bills)`);
     
     return total;
   };
@@ -380,7 +311,6 @@ const Dashboard = () => {
             newMembersCount={dashboardStats.newMembersCount}
             lowStockCount={dashboardStats.lowStockCount}
             lowStockItems={dashboardStats.lowStockItems}
-            isLoading={isLoading}
           />
           
           <ActionButtonSection />
@@ -389,12 +319,11 @@ const Dashboard = () => {
             data={chartData}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            isLoading={isLoading}
           />
           
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             <ActiveSessions />
-            <RecentTransactions bills={bills} customers={customers} isLoading={isLoading} />
+            <RecentTransactions bills={bills} customers={customers} />
           </div>
         </TabsContent>
         
