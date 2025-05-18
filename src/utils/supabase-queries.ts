@@ -115,17 +115,17 @@ export const getSalesByTimeRange = async (
       .gte('created_at', startDate.toISOString())
       .lte('created_at', now.toISOString());
       
-    const { data, error, count } = await query;
+    const { data, error } = await query;
     
     if (error) throw error;
     
-    if (data) {
-      const totalSales = data.reduce((sum, bill) => {
-        // Safely access the total property with type checking
-        const billTotal = typeof bill.total === 'number' ? bill.total : 0;
-        return sum + billTotal;
-      }, 0);
-      console.log(`Retrieved ${data.length} bills, total sales: ${totalSales}`);
+    // Ensure we're safely handling the data before working with it
+    if (data && Array.isArray(data)) {
+      // Filter out any records where total is not a valid number
+      const validData = data.filter(bill => bill && typeof bill.total === 'number');
+      
+      const totalSales = validData.reduce((sum, bill) => sum + (bill.total as number), 0);
+      console.log(`Retrieved ${validData.length} bills, total sales: ${totalSales}`);
     }
     
     return { data, error: null };
@@ -189,7 +189,7 @@ export const getTotalSales = async () => {
       
     if (error) throw error;
     
-    if (!data || data.length === 0) return { totalSales: 0, error: null };
+    if (!data || !Array.isArray(data) || data.length === 0) return { totalSales: 0, error: null };
     
     // Use safe type checking and null handling before reducing
     const validBills = data.filter(bill => bill && typeof bill.total === 'number');
