@@ -120,7 +120,12 @@ export const getSalesByTimeRange = async (
     if (error) throw error;
     
     if (data) {
-      console.log(`Retrieved ${data.length} bills, total sales: ${data.reduce((sum, bill) => sum + bill.total, 0)}`);
+      const totalSales = data.reduce((sum, bill) => {
+        // Safely access the total property with type checking
+        const billTotal = typeof bill.total === 'number' ? bill.total : 0;
+        return sum + billTotal;
+      }, 0);
+      console.log(`Retrieved ${data.length} bills, total sales: ${totalSales}`);
     }
     
     return { data, error: null };
@@ -153,14 +158,15 @@ export const getAggregatedSalesData = async (
         break;
     }
     
-    // Using a more type-safe approach to call the function
-    const { data, error } = await supabase
-      .rpc('get_aggregated_sales', {
+    // Using a workaround for TypeScript RPC function name validation
+    // We know this function exists in the database (from get_aggregated_sales_function.sql)
+    const { data, error } = await (supabase
+      .rpc as any)('get_aggregated_sales', {
         p_group_by: groupBy,
         p_start_date: startDate.toISOString(),
         p_end_date: endDate.toISOString(),
         p_time_format: timeFormat
-      } as any); // Type assertion needed due to the function not being recognized
+      });
       
     if (error) throw error;
     
@@ -187,7 +193,7 @@ export const getTotalSales = async () => {
     
     // Use safe type checking and null handling before reducing
     const validBills = data.filter(bill => bill && typeof bill.total === 'number');
-    const totalSales = validBills.reduce((sum, bill) => sum + bill.total, 0);
+    const totalSales = validBills.reduce((sum, bill) => sum + (bill.total as number), 0);
     
     console.log(`Total sales from all ${validBills.length} bills: ${totalSales}`);
     
