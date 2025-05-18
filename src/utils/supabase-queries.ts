@@ -153,15 +153,14 @@ export const getAggregatedSalesData = async (
         break;
     }
     
-    // Using a type assertion for the function name to bypass TypeScript's restrictions
-    // since we know the function exists in the database
+    // Using a more type-safe approach to call the function
     const { data, error } = await supabase
-      .rpc('get_aggregated_sales' as any, {
+      .rpc('get_aggregated_sales', {
         p_group_by: groupBy,
         p_start_date: startDate.toISOString(),
         p_end_date: endDate.toISOString(),
         p_time_format: timeFormat
-      });
+      } as any); // Type assertion needed due to the function not being recognized
       
     if (error) throw error;
     
@@ -180,15 +179,17 @@ export const getTotalSales = async () => {
   try {
     const { data, error } = await supabase
       .from('bills')
-      .select('total')
-      .order('created_at', { ascending: false });
+      .select('total');
       
     if (error) throw error;
     
-    if (!data) return { totalSales: 0, error: null };
+    if (!data || data.length === 0) return { totalSales: 0, error: null };
     
-    const totalSales = data.reduce((sum, bill) => sum + (bill.total || 0), 0);
-    console.log(`Total sales from all ${data.length} bills: ${totalSales}`);
+    // Use safe type checking and null handling before reducing
+    const validBills = data.filter(bill => bill && typeof bill.total === 'number');
+    const totalSales = validBills.reduce((sum, bill) => sum + bill.total, 0);
+    
+    console.log(`Total sales from all ${validBills.length} bills: ${totalSales}`);
     
     return { totalSales, error: null };
   } catch (error) {
