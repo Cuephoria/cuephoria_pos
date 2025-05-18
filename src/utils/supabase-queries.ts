@@ -124,12 +124,12 @@ export const getSalesByTimeRange = async (
     
     // Now handle the data safely
     if (data && Array.isArray(data)) {
-      // Define a proper type for bills
-      type BillWithTotal = {
+      // Define a proper type for bills with all possible fields
+      interface BillWithTotal {
         id: string;
         total: number;
         [key: string]: any;
-      };
+      }
       
       // Ensure we only process records with valid structure and total value
       const validData = data.filter((bill): bill is BillWithTotal => {
@@ -217,10 +217,10 @@ export const getTotalSales = async () => {
     }
     
     // Define a proper type for bills
-    type BillWithTotal = {
+    interface BillWithTotal {
       total: number;
       [key: string]: any;
-    };
+    }
     
     // Use TypeScript type guard with filter
     const validBills = data.filter((bill): bill is BillWithTotal => {
