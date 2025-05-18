@@ -26,10 +26,9 @@ const Logo: React.FC<LogoProps> = ({ size = 'md', className }) => {
   const height = isMobile ? 36 : imgMap[size] || 52;
   const width = height * 1.2; // slightly wider than tall for logo aspect ratio
 
-  // Updated to use the new logo
   return (
     <img
-      src="/lovable-uploads/53af0330-cafd-49f9-b4c6-a08c55940cc3.png"
+      src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png"
       alt="Cuephoria 8-Ball Club Logo"
       height={height}
       width={width}
