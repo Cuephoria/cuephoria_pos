@@ -37,7 +37,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [editHistory, setEditHistory] = useState<BillEditInfo[]>([]);
   const [editorName, setEditorName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { updateCustomer, selectCustomer, customers } = usePOS();
+  const { updateCustomer, selectCustomer, customers, updateBill: contextUpdateBill } = usePOS();
   const { toast } = useToast();
   
   // Update local bill and customer state if props change
@@ -98,6 +98,9 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
 
   const handleBillUpdate = (updatedBill: Partial<Bill>) => {
     console.log("Updating bill with:", updatedBill);
+    console.log("Current payment method:", bill.paymentMethod);
+    console.log("New payment method:", updatedBill.paymentMethod);
+    
     setBill({
       ...bill,
       ...updatedBill
@@ -174,8 +177,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       console.log('UPI amount:', bill.upiAmount);
       
       // Update bill in database using the context's updateBill function 
-      const { updateBill } = usePOS();
-      const updatedBill = await updateBill(
+      const updatedBill = await contextUpdateBill(
         initialBill,
         bill.items,
         latestCustomer,
@@ -205,7 +207,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           .rpc('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
-            p_changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
+            p_changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}, Payment method: ${initialBill.paymentMethod} to ${bill.paymentMethod}`
           });
           
         if (auditError) {
@@ -217,7 +219,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
             .insert({
               bill_id: bill.id,
               editor_name: editorName,
-              changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
+              changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}, Payment method: ${initialBill.paymentMethod} to ${bill.paymentMethod}`
             });
             
           if (fallbackError) {

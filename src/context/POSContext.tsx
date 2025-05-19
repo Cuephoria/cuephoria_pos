@@ -1,676 +1,242 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  POSContextType, 
-  ResetOptions, 
-  Customer, 
-  CartItem, 
-  Bill,
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+} from "react";
+import {
   Product,
-  Station,
-  Session
-} from '@/types/pos.types';
-import { useProducts } from '@/hooks/useProducts';
-import { useCustomers } from '@/hooks/useCustomers';
-import { useStations } from '@/hooks/useStations';
-import { useCart } from '@/hooks/useCart';
-import { useBills } from '@/hooks/useBills';
-import { useToast } from '@/hooks/use-toast';
-import { supabase, handleSupabaseError } from '@/integrations/supabase/client';
+  Customer,
+  CartItem,
+  Bill,
+  Session,
+} from "@/types/pos.types";
+import { useProducts } from "@/hooks/useProducts";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useBills } from "@/hooks/useBills";
 
-const POSContext = createContext<POSContextType>({
-  products: [],
-  productsLoading: false,
-  productsError: null,
-  stations: [],
-  customers: [],
-  sessions: [],
-  bills: [],
-  cart: [],
-  selectedCustomer: null,
-  discount: 0,
-  discountType: 'percentage',
-  loyaltyPointsUsed: 0,
-  isStudentDiscount: false,
-  isSplitPayment: false,
-  cashAmount: 0,
-  upiAmount: 0,
-  categories: ['food', 'drinks', 'tobacco', 'challenges', 'membership'], // Default categories
-  setIsStudentDiscount: () => {},
-  setBills: () => {}, // Add default implementation
-  setCustomers: () => {}, // Add default implementation
-  setStations: () => {},
-  addProduct: () => ({}),
-  updateProduct: () => ({}),
-  deleteProduct: () => {},
-  addCategory: () => {},
-  updateCategory: () => {},
-  deleteCategory: () => {},
-  startSession: async () => {},
-  endSession: async () => {},
-  deleteStation: async () => false,
-  updateStation: async () => false,  // Add default implementation
-  addCustomer: () => ({}),
-  updateCustomer: () => ({}),
-  updateCustomerMembership: () => null,
-  deleteCustomer: () => {},
-  selectCustomer: () => {},
-  checkMembershipValidity: () => false,
-  deductMembershipHours: () => false,
-  addToCart: () => {},
-  removeFromCart: () => {},
-  updateCartItem: () => {},
-  clearCart: () => {},
-  setDiscount: () => {},
-  setLoyaltyPointsUsed: () => {},
-  calculateTotal: () => 0,
-  completeSale: () => undefined,
-  updateBill: async () => null, // Changed from optional to a required function with default implementation
-  deleteBill: async () => false,
-  exportBills: () => {},
-  exportCustomers: () => {},
-  resetToSampleData: () => {},
-  addSampleIndianData: () => {},
-  setIsSplitPayment: () => {},
-  setCashAmount: () => {},
-  setUpiAmount: () => {},
-  updateSplitAmounts: () => false
-});
+interface POSContextType {
+  products: Product[];
+  customers: Customer[];
+  bills: Bill[];
+  cart: CartItem[];
+  selectedCustomer: Customer | null;
+  addProduct: (product: Product) => void;
+  updateProduct: (product: Product) => void;
+  deleteProduct: (id: string) => void;
+  addCustomer: (customer: Customer) => void;
+  updateCustomer: (customer: Customer) => void;
+  deleteCustomer: (id: string) => void;
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (id: string) => void;
+  updateCartItemQuantity: (id: string, quantity: number) => void;
+  clearCart: () => void;
+  selectCustomer: (customerId: string | null) => void;
+  completeSale: (
+    cart: CartItem[],
+    selectedCustomer: Customer | null,
+    discount: number,
+    discountType: "percentage" | "fixed",
+    loyaltyPointsUsed: number,
+    calculateTotal: () => number,
+    paymentMethod: "cash" | "upi" | "split",
+    products: Product[],
+    isSplitPayment: boolean,
+    cashAmount: number,
+    upiAmount: number
+  ) => Promise<Bill | undefined>;
+  deleteBill: (billId: string, customerId: string) => Promise<boolean>;
+  updateBill: (
+    originalBill: Bill,
+    updatedItems: CartItem[],
+    customer: Customer,
+    discount: number,
+    discountType: "percentage" | "fixed",
+    loyaltyPointsUsed: number,
+    isSplitPayment: boolean,
+    cashAmount: number,
+    upiAmount: number
+  ) => Promise<Bill | null>;
+  exportBills: (customers: Customer[]) => void;
+  exportCustomers: (customers: Customer[]) => void;
+  sessions: Session[];
+  addSession: (session: Session) => void;
+  deleteSession: (id: string) => void;
+  updateSession: (session: Session) => void;
+}
 
-export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log('POSProvider initialized'); // Debug log
-  
-  // State for student discount
-  const [isStudentDiscount, setIsStudentDiscount] = useState<boolean>(false);
-  
-  // State for categories
-  const [categories, setCategories] = useState<string[]>([
-    'food', 'drinks', 'tobacco', 'challenges', 'membership'
-  ]);
-  
-  // Initialize all hooks
-  const { 
-    products, 
-    loading: productsLoading,
-    error: productsError,
-    setProducts, 
-    addProduct, 
-    updateProduct, 
-    deleteProduct,
-    refreshFromDB
-  } = useProducts();
-  
-  const { 
-    customers, 
-    setCustomers, 
-    selectedCustomer, 
-    setSelectedCustomer, 
-    addCustomer, 
-    updateCustomer,
-    updateCustomerMembership,
-    deleteCustomer, 
-    selectCustomer,
-    checkMembershipValidity,
-    deductMembershipHours
-  } = useCustomers([]);
-  
-  const { 
-    stations, 
-    setStations, 
-    sessions, 
-    setSessions, 
-    startSession: startSessionBase, 
-    endSession: endSessionBase,
-    deleteStation,
-    updateStation
-  } = useStations([], updateCustomer);
-  
-  const { 
-    cart, 
-    setCart, 
-    discount, 
-    setDiscountAmount, 
-    discountType, 
-    setDiscountType, 
-    loyaltyPointsUsed, 
-    setLoyaltyPointsUsedAmount, 
-    isSplitPayment,
-    setIsSplitPayment,
-    cashAmount,
-    setCashAmount,
-    upiAmount,
-    setUpiAmount,
-    updateSplitAmounts,
-    addToCart, 
-    removeFromCart, 
-    updateCartItem, 
-    clearCart, 
-    setDiscount, 
-    setLoyaltyPointsUsed, 
-    calculateTotal,
-    resetPaymentInfo
-  } = useCart();
-  
-  const { 
-    bills, 
-    setBills, 
-    completeSale: completeSaleBase, 
-    deleteBill: deleteBillBase,
-    updateBill: updateBillBase,
-    exportBills: exportBillsBase, 
-    exportCustomers: exportCustomersBase 
+const POSContext = createContext<POSContextType | undefined>(undefined);
+
+interface POSProviderProps {
+  children: ReactNode;
+}
+
+export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
+  const [sessions, setSessions] = useState<Session[]>([]);
+
+  const {
+    addProduct: addProductUtils,
+    deleteProduct: deleteProductUtils,
+    updateProduct: updateProductUtils,
+  } = useProducts(setProducts);
+
+  const {
+    addCustomer: addCustomerUtils,
+    deleteCustomer: deleteCustomerUtils,
+    updateCustomer: updateCustomerUtils,
+  } = useCustomers(setCustomers);
+
+  const {
+    bills,
+    setBills,
+    completeSale: completeSaleUtils,
+    deleteBill: deleteBillUtils,
+    updateBill: updateBillUtils,
+    exportBills: exportBillsUtils,
+    exportCustomers: exportCustomersUtils,
   } = useBills(updateCustomer, updateProduct);
 
-  const { toast } = useToast();
-
-  // Fetch categories from Supabase on initial load
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // Get categories from Supabase
-        const { data, error } = await supabase
-          .from('categories')
-          .select('name');
-        
-        if (error) {
-          console.error('Error fetching categories:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          // Use categories from DB
-          const dbCategories = data.map(item => item.name.toLowerCase());
-          
-          // Ensure "uncategorized" exists
-          if (!dbCategories.includes('uncategorized')) {
-            try {
-              await supabase
-                .from('categories')
-                .insert({ name: 'uncategorized' });
-                
-              dbCategories.push('uncategorized');
-            } catch (err) {
-              console.error('Error creating uncategorized category:', err);
-            }
-          }
-          
-          setCategories(dbCategories);
-          localStorage.setItem('cuephoriaCategories', JSON.stringify(dbCategories));
-          console.log('Categories loaded from database:', dbCategories);
-        } else {
-          // If no categories in DB, create default ones
-          const defaultCategories = ['food', 'drinks', 'tobacco', 'challenges', 'membership', 'uncategorized'];
-          
-          // Insert all default categories
-          for (const category of defaultCategories) {
-            try {
-              await supabase
-                .from('categories')
-                .insert({ name: category.toLowerCase() });
-            } catch (err) {
-              console.error(`Error creating category ${category}:`, err);
-            }
-          }
-          
-          setCategories(defaultCategories);
-          localStorage.setItem('cuephoriaCategories', JSON.stringify(defaultCategories));
-          console.log('Default categories created:', defaultCategories);
-        }
-      } catch (error) {
-        console.error('Error in fetchCategories:', error);
-      }
-    };
-
-    fetchCategories();
+    const storedCart = localStorage.getItem("cuephoriaCart");
+    if (storedCart) {
+      setCart(JSON.parse(storedCart));
+    }
   }, []);
 
-  // Category management functions
-  const addCategory = async (category: string) => {
-    try {
-      const trimmedCategory = category.trim().toLowerCase();
-      
-      if (!trimmedCategory) {
-        return; // Empty category
-      }
-      
-      // Check if category already exists (case insensitive)
-      if (categories.some(cat => cat.toLowerCase() === trimmedCategory)) {
-        toast({
-          title: 'Error',
-          description: `Category "${trimmedCategory}" already exists`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // First, add to Supabase
-      const { error } = await supabase
-        .from('categories')
-        .insert({ name: trimmedCategory });
-        
-      if (error) {
-        console.error('Error adding category to Supabase:', error);
-        toast({
-          title: 'Error',
-          description: `Failed to add category "${trimmedCategory}" to database: ${handleSupabaseError(error, 'insert')}`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Update local state if database operation was successful
-      setCategories(prev => {
-        const updated = [...prev, trimmedCategory];
-        localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
-        return updated;
-      });
-      
-      toast({
-        title: 'Success',
-        description: `Category "${trimmedCategory}" has been added`,
-      });
-    } catch (error) {
-      console.error('Error in addCategory:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add category. Please try again.',
-        variant: 'destructive',
-      });
-    }
+  useEffect(() => {
+    localStorage.setItem("cuephoriaCart", JSON.stringify(cart));
+  }, [cart]);
+
+  const addProduct = (product: Product) => {
+    addProductUtils(product);
   };
 
-  const updateCategory = async (oldCategory: string, newCategory: string) => {
-    try {
-      // Don't allow changing the uncategorized category
-      if (oldCategory.toLowerCase() === 'uncategorized') {
-        toast({
-          title: 'Error',
-          description: `The "uncategorized" category cannot be renamed`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      const trimmedNewCategory = newCategory.trim().toLowerCase();
-      
-      if (oldCategory === newCategory || !trimmedNewCategory) {
-        return; // No change or empty category
-      }
-      
-      // Check if new name already exists (case insensitive)
-      if (categories.some(cat => cat.toLowerCase() === trimmedNewCategory && cat.toLowerCase() !== oldCategory.toLowerCase())) {
-        toast({
-          title: 'Error',
-          description: `Category "${trimmedNewCategory}" already exists`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // First update in Supabase
-      const { error } = await supabase
-        .from('categories')
-        .update({ name: trimmedNewCategory })
-        .eq('name', oldCategory.toLowerCase());
-        
-      if (error) {
-        console.error('Error updating category in Supabase:', error);
-        toast({
-          title: 'Error',
-          description: `Failed to update category from "${oldCategory}" to "${trimmedNewCategory}": ${handleSupabaseError(error, 'update')}`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Update products with this category
-      setProducts(prev =>
-        prev.map(product => 
-          product.category.toLowerCase() === oldCategory.toLowerCase() 
-            ? { ...product, category: trimmedNewCategory } 
-            : product
-        )
-      );
-      
-      // Also update products in database
-      const { error: updateProductsError } = await supabase
-        .from('products')
-        .update({ category: trimmedNewCategory })
-        .eq('category', oldCategory);
-        
-      if (updateProductsError) {
-        console.error('Error updating products category in Supabase:', updateProductsError);
-      }
-      
-      // Update category list
-      setCategories(prev => {
-        const updated = prev.map(cat => 
-          cat.toLowerCase() === oldCategory.toLowerCase() ? trimmedNewCategory : cat
-        );
-        localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
-        return updated;
-      });
-      
-      toast({
-        title: 'Success',
-        description: `Category updated from "${oldCategory}" to "${trimmedNewCategory}"`,
-      });
-    } catch (error) {
-      console.error('Error in updateCategory:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update category. Please try again.',
-        variant: 'destructive',
-      });
-    }
+  const updateProduct = (product: Product) => {
+    updateProductUtils(product);
   };
 
-  const deleteCategory = async (category: string) => {
-    try {
-      const lowerCategory = category.toLowerCase();
-      
-      // Don't allow deleting the uncategorized category
-      if (lowerCategory === 'uncategorized') {
-        toast({
-          title: 'Error',
-          description: `The "uncategorized" category cannot be deleted`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Check if products use this category
-      const productsWithCategory = products.filter(
-        p => p.category.toLowerCase() === lowerCategory
+  const deleteProduct = (id: string) => {
+    deleteProductUtils(id);
+  };
+
+  const addCustomer = (customer: Customer) => {
+    addCustomerUtils(customer);
+  };
+
+  const updateCustomer = (customer: Customer) => {
+    updateCustomerUtils(customer);
+  };
+
+  const deleteCustomer = (id: string) => {
+    deleteCustomerUtils(id);
+  };
+
+  const addToCart = (item: CartItem) => {
+    setCart((currentCart) => {
+      const existingItemIndex = currentCart.findIndex(
+        (cartItem) => cartItem.id === item.id
       );
-      
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('name', lowerCategory);
-        
-      if (error) {
-        console.error('Error deleting category from Supabase:', error);
-        toast({
-          title: 'Error',
-          description: `Failed to delete category "${category}" from database: ${handleSupabaseError(error, 'delete')}`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Update products with this category to 'uncategorized'
-      if (productsWithCategory.length > 0) {
-        // Update products
-        setProducts(prev =>
-          prev.map(product => 
-            product.category.toLowerCase() === lowerCategory
-              ? { ...product, category: 'uncategorized' } 
-              : product
-          )
-        );
-        
-        // Update products in database
-        const { error: updateProductsError } = await supabase
-          .from('products')
-          .update({ category: 'uncategorized' })
-          .eq('category', lowerCategory);
-          
-        if (updateProductsError) {
-          console.error('Error updating products category in Supabase:', updateProductsError);
-        }
-      }
-      
-      // Remove from local categories list
-      setCategories(prev => {
-        const updated = prev.filter(cat => cat.toLowerCase() !== lowerCategory);
-        localStorage.setItem('cuephoriaCategories', JSON.stringify(updated));
-        return updated;
-      });
-      
-      toast({
-        title: 'Success',
-        description: `Category "${category}" has been deleted`,
-      });
-    } catch (error) {
-      console.error('Error in deleteCategory:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete category. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Wrapper functions that combine functionality from multiple hooks
-  const startSession = async (stationId: string, customerId: string): Promise<void> => {
-    await startSessionBase(stationId, customerId);
-  };
-  
-  // Make endSession return a Promise<void> to match type definition
-  const endSession = async (stationId: string): Promise<void> => {
-    try {
-      // Get the current station
-      const station = stations.find(s => s.id === stationId);
-      if (!station || !station.isOccupied || !station.currentSession) {
-        console.log("No active session found for this station in wrapper");
-        throw new Error("No active session found");
-      }
-      
-      // Get the customer ID before ending the session
-      const customerId = station.currentSession.customerId;
-      
-      // Call the base endSession function
-      const result = await endSessionBase(stationId, customers);
-      
-      if (result) {
-        const { sessionCartItem, customer } = result;
-        
-        // Clear cart before adding the new session
-        clearCart();
-        
-        // Auto-select customer
-        if (customer) {
-          console.log("Auto-selecting customer:", customer.name);
-          selectCustomer(customer.id);
-        }
-        
-        // Add the session to cart
-        if (sessionCartItem) {
-          console.log("Adding session to cart:", sessionCartItem);
-          addToCart(sessionCartItem);
-        }
-      }
-    } catch (error) {
-      console.error('Error in endSession:', error);
-      throw error;
-    }
-  };
-  
-  // Fix for the Promise<Customer> error - wrap in a synchronous function that returns Customer | null
-  const updateCustomerMembershipWrapper = (
-    customerId: string, 
-    membershipData: {
-      membershipPlan?: string;
-      membershipDuration?: 'weekly' | 'monthly';
-      membershipHoursLeft?: number;
-    }
-  ): Customer | null => {
-    // Create a placeholder customer with the minimum required fields
-    const customer = customers.find(c => c.id === customerId);
-    
-    if (!customer) return null;
-    
-    // Start the async update process but don't wait for it
-    updateCustomerMembership(customerId, membershipData)
-      .then((updatedCustomer) => {
-        if (updatedCustomer) {
-          console.log("Customer membership updated:", updatedCustomer.id);
-        }
-      })
-      .catch(error => {
-        console.error("Error updating customer membership:", error);
-      });
-    
-    // Return a modified version of the existing customer to satisfy the synchronous interface
-    return {
-      ...customer,
-      membershipPlan: membershipData.membershipPlan || customer.membershipPlan,
-      membershipDuration: membershipData.membershipDuration || customer.membershipDuration,
-      membershipHoursLeft: membershipData.membershipHoursLeft !== undefined 
-        ? membershipData.membershipHoursLeft 
-        : customer.membershipHoursLeft,
-      isMember: true
-    };
-  };
-  
-  // Modified to handle async operations but return synchronously
-  const completeSale = (paymentMethod: 'cash' | 'upi' | 'split'): Bill | undefined => {
-    try {
-      // Apply student price for membership items if student discount is enabled
-      if (isStudentDiscount) {
-        const updatedCart = cart.map(item => {
-          const product = products.find(p => p.id === item.id) as Product;
-          if (product && product.category === 'membership' && product.studentPrice) {
-            return {
-              ...item,
-              price: product.studentPrice,
-              total: product.studentPrice * item.quantity
-            };
-          }
-          return item;
-        });
-        
-        // Temporarily update cart with student prices
-        setCart(updatedCart);
-      }
-      
-      // Look for membership products in cart
-      const membershipItems = cart.filter(item => {
-        const product = products.find(p => p.id === item.id);
-        return product && product.category === 'membership';
-      });
-      
-      // This is async but we're handling it internally and returning a synchronous Bill
-      completeSaleBase(
-        cart, 
-        selectedCustomer, 
-        discount, 
-        discountType, 
-        loyaltyPointsUsed, 
-        calculateTotal, 
-        isSplitPayment ? 'split' : paymentMethod,
-        products,
-        isSplitPayment,
-        cashAmount,
-        upiAmount
-      ).then(bill => {
-        // If we have a successful sale with membership items, update the customer
-        if (bill && selectedCustomer && membershipItems.length > 0) {
-          for (const item of membershipItems) {
-            const product = products.find(p => p.id === item.id);
-            
-            if (product) {
-              // Default values
-              let membershipHours = product.membershipHours || 4; // Default hours from product or fallback to 4
-              let membershipDuration: 'weekly' | 'monthly' = 'weekly';
-              
-              // Set duration based on product
-              if (product.duration) {
-                membershipDuration = product.duration;
-              } else if (product.name.toLowerCase().includes('weekly')) {
-                membershipDuration = 'weekly';
-              } else if (product.name.toLowerCase().includes('monthly')) {
-                membershipDuration = 'monthly';
-              }
-              
-              // Update customer's membership
-              updateCustomerMembership(selectedCustomer.id, {
-                membershipPlan: product.name,
-                membershipDuration: membershipDuration,
-                membershipHoursLeft: membershipHours
-              });
-              
-              break; // Only apply the first membership found
-            }
-          }
-        }
-        
-        if (bill) {
-          // Clear the cart after successful sale
-          clearCart();
-          // Reset selected customer
-          setSelectedCustomer(null);
-          // Reset student discount
-          setIsStudentDiscount(false);
-          // Reset split payment data
-          resetPaymentInfo();
-        }
-      }).catch(error => {
-        console.error("Error in completeSale async:", error);
-      });
-      
-      // Return a synchronous bill for the UI
-      if (selectedCustomer) {
-        // Calculate loyalty points earned using the new rule
-        // Members: 5 points per 100 INR spent
-        // Non-members: 2 points per 100 INR spent
-        const pointsRate = selectedCustomer.isMember ? 5 : 2;
-        const total = calculateTotal();
-        const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
-        
-        const placeholderBill: Bill = {
-          id: `temp-${new Date().getTime()}`,
-          customerId: selectedCustomer.id,
-          items: [...cart],
-          subtotal: cart.reduce((sum, item) => sum + item.total, 0),
-          discount,
-          discountValue: discount > 0 ? 
-            (discountType === 'percentage' ? 
-              (cart.reduce((sum, item) => sum + item.total, 0) * discount / 100) : 
-              discount) : 0,
-          discountType,
-          loyaltyPointsUsed,
-          loyaltyPointsEarned,
-          total,
-          paymentMethod: isSplitPayment ? 'split' : paymentMethod,
-          isSplitPayment,
-          cashAmount: isSplitPayment ? cashAmount : (paymentMethod === 'cash' ? total : 0),
-          upiAmount: isSplitPayment ? upiAmount : (paymentMethod === 'upi' ? total : 0),
-          createdAt: new Date()
+
+      if (existingItemIndex !== -1) {
+        const newCart = [...currentCart];
+        newCart[existingItemIndex] = {
+          ...newCart[existingItemIndex],
+          quantity: newCart[existingItemIndex].quantity + item.quantity,
+          total: (newCart[existingItemIndex].quantity + item.quantity) * item.price,
         };
-        return placeholderBill;
+        return newCart;
+      } else {
+        return [...currentCart, item];
       }
-      
-      return undefined;
-      
-    } catch (error) {
-      console.error("Error in completeSale:", error);
-      return undefined;
+    });
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart((currentCart) => currentCart.filter((item) => item.id !== id));
+  };
+
+  const updateCartItemQuantity = (id: string, quantity: number) => {
+    setCart((currentCart) => {
+      return currentCart.map((item) => {
+        if (item.id === id) {
+          return { ...item, quantity: quantity, total: item.price * quantity };
+        }
+        return item;
+      });
+    });
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  const selectCustomer = (customerId: string | null) => {
+    if (customerId) {
+      const customer = customers.find((c) => c.id === customerId) || null;
+      setSelectedCustomer(customer);
+    } else {
+      setSelectedCustomer(null);
     }
   };
-  
-  const exportBills = () => {
-    exportBillsBase(customers);
-  };
-  
-  const exportCustomers = () => {
-    exportCustomersBase(customers);
-  };
-  
-  // Implement the updateBill function with split payment support
-  const updateBill = async (
-    originalBill: Bill, 
-    updatedItems: CartItem[], 
-    customer: Customer, 
-    discount: number, 
-    discountType: 'percentage' | 'fixed', 
+
+  const completeSale = async (
+    cart: CartItem[],
+    selectedCustomer: Customer | null,
+    discount: number,
+    discountType: "percentage" | "fixed",
     loyaltyPointsUsed: number,
-    isSplitPayment: boolean = false,
-    cashAmount: number = 0,
-    upiAmount: number = 0
-  ): Promise<Bill | null> => {
-    return updateBillBase(
+    calculateTotal: () => number,
+    paymentMethod: "cash" | "upi" | "split",
+    products: Product[],
+    isSplitPayment: boolean,
+    cashAmount: number,
+    upiAmount: number
+  ) => {
+    return completeSaleUtils(
+      cart,
+      selectedCustomer,
+      discount,
+      discountType,
+      loyaltyPointsUsed,
+      calculateTotal,
+      paymentMethod,
+      products,
+      isSplitPayment,
+      cashAmount,
+      upiAmount
+    );
+  };
+
+  const deleteBill = async (billId: string, customerId: string) => {
+    return deleteBillUtils(billId, customerId);
+  };
+
+  const updateBill = async (
+    originalBill: Bill,
+    updatedItems: CartItem[],
+    customer: Customer,
+    discount: number,
+    discountType: "percentage" | "fixed",
+    loyaltyPointsUsed: number,
+    isSplitPayment: boolean,
+    cashAmount: number,
+    upiAmount: number
+  ) => {
+    console.log('POSContext updateBill called with payment info:', {
+      paymentMethod: isSplitPayment ? 'split' : (cashAmount > 0 ? 'cash' : 'upi'),
+      isSplitPayment,
+      cashAmount,
+      upiAmount
+    });
+    
+    return updateBillUtils(
       originalBill,
       updatedItems,
       customer,
@@ -682,110 +248,57 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       upiAmount
     );
   };
-  
-  // Simplified reset function - only resets local state
-  const handleResetToSampleData = async (options?: ResetOptions) => {
-    try {
-      // Import the reset function from services
-      const { resetToSampleData } = await import('@/services/dataOperations');
-      
-      // Call the async reset function
-      await resetToSampleData(
-        options,
-        setProducts,
-        setCustomers,
-        setBills,
-        setSessions,
-        setStations,
-        setCart,
-        setDiscountAmount,
-        setLoyaltyPointsUsedAmount,
-        setSelectedCustomer,
-        refreshFromDB
-      );
-      
-      return true;
-    } catch (error) {
-      console.error('Error in handleResetToSampleData:', error);
-      throw error;
-    }
+
+  const exportBills = (customers: Customer[]) => {
+    exportBillsUtils(customers);
   };
-  
-  // Remove sample data functionality
-  const handleAddSampleIndianData = () => {
-    const { toast } = useToast();
-    toast({
-      title: "Info",
-      description: "Sample data functionality has been removed. Please add products manually or through database import.",
-    });
+
+  const exportCustomers = (customers: Customer[]) => {
+    exportCustomersUtils(customers);
   };
-  
-  // Update the deleteBill function to handle bill deletion even if customer has been deleted
-  const deleteBill = async (billId: string, customerId: string): Promise<boolean> => {
-    return await deleteBillBase(billId, customerId);
+
+  const addSession = (session: Session) => {
+    setSessions((prevSessions) => [session, ...prevSessions]);
   };
-  
-  console.log('POSProvider rendering with context value'); // Debug log
-  
+
+  const deleteSession = (id: string) => {
+    setSessions((prevSessions) => prevSessions.filter((session) => session.id !== id));
+  };
+
+  const updateSession = (session: Session) => {
+    setSessions((prevSessions) =>
+      prevSessions.map((s) => (s.id === session.id ? session : s))
+    );
+  };
+
   return (
     <POSContext.Provider
       value={{
         products,
-        productsLoading,
-        productsError,
-        stations,
         customers,
-        sessions,
         bills,
         cart,
         selectedCustomer,
-        discount,
-        discountType,
-        loyaltyPointsUsed,
-        isStudentDiscount,
-        isSplitPayment,
-        cashAmount,
-        upiAmount,
-        setIsSplitPayment,
-        setCashAmount: (amount) => setCashAmount(amount),
-        setUpiAmount: (amount) => setUpiAmount(amount),
-        updateSplitAmounts,
-        categories,
-        setIsStudentDiscount,
-        setBills,
-        setCustomers,
-        setStations,
         addProduct,
         updateProduct,
         deleteProduct,
-        addCategory,
-        updateCategory,
-        deleteCategory,
-        startSession,
-        endSession,
-        deleteStation,
-        updateStation,
         addCustomer,
         updateCustomer,
-        updateCustomerMembership: updateCustomerMembershipWrapper,
         deleteCustomer,
-        selectCustomer,
-        checkMembershipValidity,
-        deductMembershipHours,
         addToCart,
         removeFromCart,
-        updateCartItem,
+        updateCartItemQuantity,
         clearCart,
-        setDiscount,
-        setLoyaltyPointsUsed,
-        calculateTotal,
+        selectCustomer,
         completeSale,
-        updateBill,
         deleteBill,
+        updateBill,
         exportBills,
         exportCustomers,
-        resetToSampleData: handleResetToSampleData,
-        addSampleIndianData: handleAddSampleIndianData
+        sessions,
+        addSession,
+        deleteSession,
+        updateSession,
       }}
     >
       {children}
@@ -794,24 +307,9 @@ export const POSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export const usePOS = () => {
-  console.log('usePOS hook called'); // Debug log
   const context = useContext(POSContext);
-  if (context === undefined) {
-    console.error('usePOS must be used within a POSProvider'); // Debug log
-    throw new Error('usePOS must be used within a POSProvider');
+  if (!context) {
+    throw new Error("usePOS must be used within a POSProvider");
   }
-  console.log('usePOS hook returning context'); // Debug log
   return context;
 };
-
-// Re-export types from types file for convenience
-export type { 
-  Product,
-  Station,
-  Customer,
-  Session,
-  CartItem,
-  Bill,
-  ResetOptions,
-  POSContextType
-} from '@/types/pos.types';
