@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Bill, Customer, CartItem, Product } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -403,13 +404,18 @@ export const useBills = (
         return null;
       }
       
-      // If not split payment but has a specific method, set the entire amount to that method
-      let paymentMethod: 'cash' | 'upi' | 'split' = originalBill.paymentMethod;
+      // Determine payment method based on the input parameters
+      let paymentMethod: 'cash' | 'upi' | 'split';
       
       if (isSplitPayment) {
         paymentMethod = 'split';
       } else {
-        // Single payment method
+        // Use the payment method from the original bill unless specifically changed
+        paymentMethod = originalBill.paymentMethod;
+      }
+      
+      // If not split payment but has a specific method, set the entire amount to that method
+      if (!isSplitPayment) {
         if (paymentMethod === 'cash') {
           cashAmount = total;
           upiAmount = 0;
@@ -448,6 +454,8 @@ export const useBills = (
         cashAmount,
         upiAmount
       };
+      
+      console.log('Updating bill in Supabase with payment method:', paymentMethod);
       
       // Update bill in Supabase
       const { error: billUpdateError } = await supabase
