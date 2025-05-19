@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -67,7 +66,7 @@ export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
     exportCustomers: exportCustomersUtils,
   } = useBills(updateCustomerUtils, updateProductUtils);
 
-  // Initialize stations with useStations hook
+  // Fix: Initialize stations with useStations hook, passing initial state and updateCustomer
   const {
     stations,
     setStations,
@@ -75,7 +74,7 @@ export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
     endSession: endSessionUtils,
     deleteStation: deleteStationUtils,
     updateStation: updateStationUtils
-  } = useStations([], updateCustomerUtils); // Fix: Pass both required arguments
+  } = useStations([], updateCustomerUtils);
 
   useEffect(() => {
     const storedCart = localStorage.getItem("cuephoriaCart");
