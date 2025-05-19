@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -203,7 +204,6 @@ export const useStationsData = () => {
     refreshStations();
   }, []);
   
-  // Make sure all properties are properly exported
   return {
     stations,
     setStations,
