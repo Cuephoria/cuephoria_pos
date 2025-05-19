@@ -3,8 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { usePOS } from '@/context/POSContext';
-import { Product } from '@/types/pos.types';
+import { usePOS, Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { ShoppingCart, Edit, Trash, Tag, Clock, GraduationCap } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -53,7 +52,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
       }
     }
     
-    // addToCart now calculates total within POSContext
     addToCart({
       id: product.id,
       type: 'product',

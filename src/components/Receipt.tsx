@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Bill, Customer } from '@/types/pos.types';
+import { Bill, Customer } from '@/context/POSContext';
 import { generatePDF, handlePrint } from './receipt/receiptUtils';
 import ReceiptContainer from './receipt/ReceiptContainer';
 import ReceiptTitle from './receipt/ReceiptTitle';

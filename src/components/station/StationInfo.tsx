@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Station, Customer } from '@/types/pos.types';
+import { Station } from '@/context/POSContext';
 import { Badge } from '@/components/ui/badge';
-import { Gamepad2, Table2, UserCheck, User } from 'lucide-react';
+import { Gamepad2, CircleOff, UserCheck, User } from 'lucide-react';
 import { CurrencyDisplay } from '@/components/ui/currency';
+import { Customer } from '@/types/pos.types';
 import { isMembershipActive, getMembershipBadgeText } from '@/utils/membership.utils';
 
 interface StationInfoProps {
@@ -20,10 +21,6 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
   const isMember = customerData ? isMembershipActive(customerData) : false;
   const membershipText = customerData && customerData.isMember ? getMembershipBadgeText(customerData) : 'Non-Member';
   
-  // Extract station number for consistent display
-  const stationNumber = parseInt(station.name.replace(/\D/g, '')) || 0;
-  const formattedName = isPoolTable ? `Table ${stationNumber}` : `Console ${stationNumber}`;
-  
   return (
     <>
       <div className="flex justify-between items-center">
@@ -31,7 +28,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
           {isPoolTable ? (
             <div className="relative w-10 h-10 flex items-center justify-center">
               <div className="absolute inset-0 bg-gradient-to-br from-green-800 to-green-900 rounded-md"></div>
-              <Table2 className="h-6 w-6 text-green-300 z-10" />
+              <CircleOff className="h-6 w-6 text-green-300 z-10" />
               <div className="absolute inset-0 border-2 border-green-700 rounded-md"></div>
             </div>
           ) : (
@@ -42,7 +39,7 @@ const StationInfo: React.FC<StationInfoProps> = ({ station, customerName, custom
             </div>
           )}
           <span className={`ml-2 font-bold ${isPoolTable ? 'text-green-500' : 'text-cuephoria-lightpurple'}`}>
-            {formattedName}
+            {station.name}
           </span>
         </div>
         <Badge 

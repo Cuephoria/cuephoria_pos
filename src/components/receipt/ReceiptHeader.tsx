@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Bill } from '@/types/pos.types';
+import { Bill } from '@/context/POSContext';
 
 interface ReceiptHeaderProps {
   bill: Bill;

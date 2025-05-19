@@ -1,3 +1,4 @@
+
 import React, { ReactNode, RefObject, useState, useEffect } from 'react';
 import { Bill, Customer, CartItem } from '@/types/pos.types';
 import ReceiptHeader from './ReceiptHeader';
@@ -37,7 +38,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   const [editHistory, setEditHistory] = useState<BillEditInfo[]>([]);
   const [editorName, setEditorName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const { updateCustomer, selectCustomer, customers, updateBill: contextUpdateBill } = usePOS();
+  const { updateCustomer, selectCustomer, customers } = usePOS();
   const { toast } = useToast();
   
   // Update local bill and customer state if props change
@@ -97,10 +98,6 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
   };
 
   const handleBillUpdate = (updatedBill: Partial<Bill>) => {
-    console.log("Updating bill with:", updatedBill);
-    console.log("Current payment method:", bill.paymentMethod);
-    console.log("New payment method:", updatedBill.paymentMethod);
-    
     setBill({
       ...bill,
       ...updatedBill
@@ -171,26 +168,53 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       console.log('Bill total difference:', totalDifference);
       console.log('Initial bill total:', initialBill.total);
       console.log('Updated bill total:', bill.total);
-      console.log('Updated payment method:', bill.paymentMethod);
-      console.log('Is split payment:', bill.isSplitPayment);
-      console.log('Cash amount:', bill.cashAmount);
-      console.log('UPI amount:', bill.upiAmount);
       
-      // Update bill in database using the context's updateBill function 
-      const updatedBill = await contextUpdateBill(
-        initialBill,
-        bill.items,
-        latestCustomer,
-        bill.discount,
-        bill.discountType,
-        bill.loyaltyPointsUsed,
-        bill.isSplitPayment,
-        bill.cashAmount,
-        bill.upiAmount
-      );
+      // Update bill in database
+      const { error: billError } = await supabase
+        .from('bills')
+        .update({
+          subtotal: bill.subtotal,
+          discount: bill.discount,
+          discount_value: bill.discountValue,
+          discount_type: bill.discountType,
+          loyalty_points_used: bill.loyaltyPointsUsed,
+          loyalty_points_earned: bill.loyaltyPointsEarned,
+          total: bill.total,
+          payment_method: bill.paymentMethod
+        })
+        .eq('id', bill.id);
+        
+      if (billError) {
+        throw new Error(`Failed to update bill: ${billError.message}`);
+      }
       
-      if (!updatedBill) {
-        throw new Error('Failed to update transaction');
+      // Delete existing bill items and insert new ones
+      const { error: deleteError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', bill.id);
+        
+      if (deleteError) {
+        throw new Error(`Failed to update bill items: ${deleteError.message}`);
+      }
+      
+      // Insert updated items
+      for (const item of bill.items) {
+        const { error: itemError } = await supabase
+          .from('bill_items')
+          .insert({
+            bill_id: bill.id,
+            item_id: item.id,
+            item_type: item.type,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.total
+          });
+          
+        if (itemError) {
+          console.error('Error creating bill item:', itemError);
+        }
       }
       
       // Save edit history using the RPC function
@@ -207,7 +231,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
           .rpc('save_bill_edit_audit', {
             p_bill_id: bill.id,
             p_editor_name: editorName,
-            p_changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}, Payment method: ${initialBill.paymentMethod} to ${bill.paymentMethod}`
+            p_changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
           });
           
         if (auditError) {
@@ -219,7 +243,7 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
             .insert({
               bill_id: bill.id,
               editor_name: editorName,
-              changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}, Payment method: ${initialBill.paymentMethod} to ${bill.paymentMethod}`
+              changes: `Bill edited: Total changed from ${initialBill.total} to ${bill.total}`
             });
             
           if (fallbackError) {
@@ -229,6 +253,49 @@ const ReceiptContent: React.FC<ReceiptContentProps> = ({
       } catch (auditError) {
         console.error('Error saving edit audit:', auditError);
       }
+      
+      // Calculate loyalty points delta
+      const loyaltyPointsDelta = 
+        bill.loyaltyPointsEarned - initialBill.loyaltyPointsEarned - 
+        (bill.loyaltyPointsUsed - initialBill.loyaltyPointsUsed);
+
+      console.log('Loyalty points delta:', loyaltyPointsDelta);
+      console.log('Latest customer data from DB:', {
+        points: latestCustomer.loyaltyPoints,
+        spent: latestCustomer.totalSpent
+      });
+      
+      // Create updated customer with new values based on the latest data
+      const updatedCustomer = {
+        ...latestCustomer,
+        loyaltyPoints: latestCustomer.loyaltyPoints + loyaltyPointsDelta,
+        totalSpent: latestCustomer.totalSpent + totalDifference
+      };
+
+      console.log('Updating customer in database with:', {
+        points: updatedCustomer.loyaltyPoints,
+        spent: updatedCustomer.totalSpent,
+        difference: totalDifference
+      });
+      
+      // Update local state first for immediate UI update
+      setCustomer(updatedCustomer);
+      
+      // Update customer in database
+      const { error: customerError } = await supabase
+        .from('customers')
+        .update({
+          loyalty_points: updatedCustomer.loyaltyPoints,
+          total_spent: updatedCustomer.totalSpent
+        })
+        .eq('id', customer.id);
+        
+      if (customerError) {
+        console.error('Error updating customer:', customerError);
+        throw new Error(`Failed to update customer: ${customerError.message}`);
+      } 
+      
+      console.log('Successfully updated customer in database');
       
       // Get the updated customer from the database to ensure we have the most recent data
       const { data: refreshedCustomerData, error: refreshError } = await supabase

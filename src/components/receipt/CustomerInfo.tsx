@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Customer } from '@/types/pos.types';
+import { Customer } from '@/context/POSContext';
 import { CalendarCheck, Award, Clock, Calendar, AlertTriangle } from 'lucide-react';
 import { isMembershipActive, getHoursLeftColor } from '@/utils/membership.utils';
 

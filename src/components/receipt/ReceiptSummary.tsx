@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Bill, Customer } from '@/types/pos.types';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { Button } from '@/components/ui/button';
@@ -29,22 +29,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     cashAmount: bill.cashAmount || 0,
     upiAmount: bill.upiAmount || 0
   });
-
-  // Update edit values when bill changes
-  useEffect(() => {
-    if (bill) {
-      setEditValues({
-        subtotal: bill.subtotal,
-        discount: bill.discount,
-        discountType: bill.discountType,
-        loyaltyPointsUsed: bill.loyaltyPointsUsed,
-        paymentMethod: bill.paymentMethod,
-        isSplitPayment: bill.isSplitPayment || false,
-        cashAmount: bill.cashAmount || 0,
-        upiAmount: bill.upiAmount || 0
-      });
-    }
-  }, [bill]);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -89,8 +73,6 @@ const ReceiptSummary: React.FC<ReceiptSummaryProps> = ({
     const loyaltyPointsEarned = Math.floor((total / 100) * pointsRate);
 
     if (onUpdateBill) {
-      console.log('Saving payment method:', editValues.isSplitPayment ? 'split' : editValues.paymentMethod);
-      
       onUpdateBill({
         subtotal: editValues.subtotal,
         discount: editValues.discount,

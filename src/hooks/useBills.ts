@@ -403,23 +403,13 @@ export const useBills = (
         return null;
       }
       
-      // Determine payment method based on the input parameters
-      let paymentMethod: 'cash' | 'upi' | 'split' = 'cash';
+      // If not split payment but has a specific method, set the entire amount to that method
+      let paymentMethod: 'cash' | 'upi' | 'split' = originalBill.paymentMethod;
       
       if (isSplitPayment) {
         paymentMethod = 'split';
       } else {
-        // Use the provided paymentMethod, not the one from the original bill
-        paymentMethod = isSplitPayment ? 'split' : (cashAmount > 0 ? 'cash' : 'upi');
-      }
-      
-      console.log('Setting payment method to:', paymentMethod);
-      console.log('Is split payment:', isSplitPayment);
-      console.log('Cash amount:', cashAmount);
-      console.log('UPI amount:', upiAmount);
-      
-      // If not split payment but has a specific method, set the entire amount to that method
-      if (!isSplitPayment) {
+        // Single payment method
         if (paymentMethod === 'cash') {
           cashAmount = total;
           upiAmount = 0;
@@ -458,8 +448,6 @@ export const useBills = (
         cashAmount,
         upiAmount
       };
-      
-      console.log('Updating bill in Supabase with payment method:', paymentMethod);
       
       // Update bill in Supabase
       const { error: billUpdateError } = await supabase
