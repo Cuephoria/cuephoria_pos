@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { usePOS, Station } from '@/context/POSContext';
+import { usePOS } from '@/context/POSContext';
+import { Station } from '@/types/pos.types';
 import StationInfo from '@/components/station/StationInfo';
 import StationTimer from '@/components/station/StationTimer';
 import StationActions from '@/components/station/StationActions';
