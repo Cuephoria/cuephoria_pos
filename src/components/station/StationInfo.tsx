@@ -1,11 +1,5 @@
-
 import React from 'react';
-import { Station } from '@/context/POSContext';
-import { Badge } from '@/components/ui/badge';
-import { Gamepad2, CircleOff, UserCheck, User } from 'lucide-react';
-import { CurrencyDisplay } from '@/components/ui/currency';
-import { Customer } from '@/types/pos.types';
-import { isMembershipActive, getMembershipBadgeText } from '@/utils/membership.utils';
+import { Station } from '@/types/pos.types';
 
 interface StationInfoProps {
   station: Station;

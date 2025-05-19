@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ShoppingCart, X, User, Plus, Search, ArrowRight, Trash2, ReceiptIcon, Download, Check, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { usePOS, Customer, Product, Bill } from '@/context/POSContext';
+import { usePOS } from '@/context/POSContext';
+import { Customer, Product, Bill } from '@/types/pos.types';
 import { CurrencyDisplay, formatCurrency } from '@/components/ui/currency';
 import CustomerCard from '@/components/CustomerCard';
 import ProductCard from '@/components/ProductCard';

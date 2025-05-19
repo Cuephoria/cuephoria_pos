@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { usePOS, Customer } from '@/context/POSContext';
+import { usePOS } from '@/context/POSContext';
+import { Customer } from '@/types/pos.types';
 import CustomerCard from '@/components/CustomerCard';
 import { useToast } from '@/hooks/use-toast';
 

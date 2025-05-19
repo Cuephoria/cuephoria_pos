@@ -12,13 +12,17 @@ import {
   CartItem, 
   Bill, 
   Session, 
-  Station, 
+  Station,
+  SessionResult,
   POSContextType 
 } from "@/types/pos.types";
 import { useProducts } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useBills } from "@/hooks/useBills";
 import { useStations } from "@/hooks/stations";
+
+// Export the types so they can be imported from this file
+export type { Product, Customer, CartItem, Bill, Session, Station, SessionResult, POSContextType };
 
 interface POSProviderProps {
   children: ReactNode;
@@ -67,10 +71,10 @@ export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
   const {
     stations,
     setStations,
-    startSession,
-    endSession,
-    deleteStation,
-    updateStation
+    startSession: startSessionUtils,
+    endSession: endSessionUtils,
+    deleteStation: deleteStationUtils,
+    updateStation: updateStationUtils
   } = useStations([], updateCustomerUtils);
 
   useEffect(() => {
@@ -208,7 +212,8 @@ export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
     return false;
   };
 
-  const completeSale = (paymentMethod: "cash" | "upi" | "split") => {
+  // Fix the return type to match the type definition in POSContextType
+  const completeSale = (paymentMethod: "cash" | "upi" | "split"): Bill | undefined => {
     return completeSaleUtils(
       cart,
       selectedCustomer,
@@ -279,6 +284,24 @@ export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
     setSessions((prevSessions) =>
       prevSessions.map((s) => (s.id === session.id ? session : s))
     );
+  };
+
+  // Fix the function signatures to match the type definitions
+  const startSession = async (stationId: string): Promise<void> => {
+    if (!selectedCustomer) return;
+    await startSessionUtils(stationId, selectedCustomer.id);
+  };
+
+  const endSession = async (stationId: string): Promise<void> => {
+    await endSessionUtils(stationId);
+  };
+
+  const deleteStation = async (stationId: string): Promise<boolean> => {
+    return deleteStationUtils(stationId);
+  };
+
+  const updateStation = async (stationId: string, name: string, hourlyRate: number): Promise<boolean> => {
+    return updateStationUtils(stationId, name, hourlyRate);
   };
 
   // Mock functions for membership handling
@@ -411,4 +434,3 @@ export const usePOS = () => {
   }
   return context;
 };
-
