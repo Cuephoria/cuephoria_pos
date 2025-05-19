@@ -6,7 +6,7 @@ import { useSessionActions } from './session-actions';
 import { Station, Session, Customer } from '@/types/pos.types';
 import { useState, useEffect } from 'react';
 
-export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => void) => {
+export const useStations = (initialStations: Station[] = [], updateCustomer?: (customer: Customer) => void) => {
   const { 
     stations, 
     setStations,
@@ -15,7 +15,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
     refreshStations,
     deleteStation,
     updateStation
-  } = useStationsData();
+  } = useStationsData(initialStations);
   
   const {
     sessions,
@@ -62,7 +62,7 @@ export const useStations = (initialStations: Station[], updateCustomer: (custome
         }
       }));
     }
-  }, [sessions, stations.length]);
+  }, [sessions, stations.length, setStations]);
   
   const {
     startSession,
