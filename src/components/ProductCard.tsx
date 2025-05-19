@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleAddToCart = () => {
+    // Check stock only for non-membership products
     if (product.category !== 'membership') {
       const existingCartItem = cart.find(item => item.id === product.id && item.type === 'product');
       const cartQuantity = existingCartItem ? existingCartItem.quantity : 0;

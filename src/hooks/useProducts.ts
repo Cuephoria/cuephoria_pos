@@ -48,24 +48,22 @@ export const useProducts = () => {
       
       setProducts(prev => [...prev, newProduct]);
       
-      if (product.category !== 'membership') {
-        supabase
-          .from('products')
-          .insert(convertToSupabaseProduct(newProduct))
-          .then(({ error }) => {
-            if (error) {
-              console.error('Error adding product to DB:', error);
-              setError(`Failed to add product to database: ${error.message}`);
-              toast({
-                title: 'Database Error',
-                description: `Product added locally but failed to sync with database: ${error.message}`,
-                variant: 'destructive'
-              });
-            } else {
-              console.log('Product added to DB:', newProduct.name);
-            }
-          });
-      }
+      supabase
+        .from('products')
+        .insert(convertToSupabaseProduct(newProduct))
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error adding product to DB:', error);
+            setError(`Failed to add product to database: ${error.message}`);
+            toast({
+              title: 'Database Error',
+              description: `Product added locally but failed to sync with database: ${error.message}`,
+              variant: 'destructive'
+            });
+          } else {
+            console.log('Product added to DB:', newProduct.name);
+          }
+        });
       
       toast({
         title: 'Success',
@@ -91,14 +89,6 @@ export const useProducts = () => {
   
   const updateProduct = (product: Product) => {
     try {
-      if (product.category === 'membership' || product.id.startsWith('mem')) {
-        toast({
-          title: "Info",
-          description: "Membership products are managed by the system and cannot be modified.",
-        });
-        return product;
-      }
-      
       if (isProductDuplicate(product.name, product.id)) {
         toast({
           title: 'Error',
@@ -168,14 +158,6 @@ export const useProducts = () => {
   
   const deleteProduct = (id: string) => {
     try {
-      if (id.startsWith('mem')) {
-        toast({
-          title: "Info",
-          description: "Membership products are managed by the system and cannot be deleted.",
-        });
-        return;
-      }
-      
       setProducts(prev => prev.filter(p => p.id !== id));
       
       supabase
