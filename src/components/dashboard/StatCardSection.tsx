@@ -5,7 +5,6 @@ import { CreditCard, Users, PlayCircle, AlertTriangle, TrendingUp, TrendingDown 
 import { Product } from '@/context/POSContext';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { useSessionsData } from '@/hooks/stations/useSessionsData';
-import { usePOS } from '@/context/POSContext';
 
 interface StatCardSectionProps {
   totalSales: number;
@@ -29,13 +28,8 @@ const StatCardSection: React.FC<StatCardSectionProps> = ({
   lowStockItems
 }) => {
   const { sessions } = useSessionsData();
-  const { stations, customers } = usePOS();
   const [realActiveSessionsCount, setRealActiveSessionsCount] = useState(activeSessionsCount);
 
-  // Get count of stations by type
-  const ps5StationsCount = stations.filter(station => station.type === 'ps5').length;
-  const poolTablesCount = stations.filter(station => station.type === '8ball').length;
-  
   // Determine whether the sales trend is positive or negative
   const isSalesTrendPositive = salesChange.includes('+');
   
