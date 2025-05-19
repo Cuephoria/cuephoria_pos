@@ -118,8 +118,8 @@ export interface POSContextType {
   updateSplitAmounts: (cash: number, upi: number) => boolean;
   
   // State setters (adding these to fix the TypeScript errors)
-  setBills?: (bills: Bill[] | ((prevBills: Bill[]) => Bill[])) => void;
-  setCustomers?: (customers: Customer[] | ((prevCustomers: Customer[]) => Customer[])) => void;
+  setBills: (bills: Bill[] | ((prevBills: Bill[]) => Bill[])) => void;
+  setCustomers: (customers: Customer[] | ((prevCustomers: Customer[]) => Customer[])) => void;
   
   // Station state setter
   setStations: (stations: Station[]) => void;
