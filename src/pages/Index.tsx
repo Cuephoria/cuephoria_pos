@@ -1,69 +1,14 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
-import { Monitor, Gamepad, Trophy, Users, Star, ZapIcon } from 'lucide-react';
-import ContentModal from '@/components/modals/ContentModal';
-import TermsContent from '@/components/content/TermsContent';
-import PrivacyContent from '@/components/content/PrivacyContent';
-import ContactContent from '@/components/content/ContactContent';
-import { supabase } from '@/integrations/supabase/client';
+import { Monitor, Gamepad, Trophy, Users, Star, ZapIcon, ShieldCheck } from 'lucide-react';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
-  // Modals state
-  const [showTerms, setShowTerms] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showContact, setShowContact] = useState(false);
-  
-  // Real data states
-  const [ps5Count, setPs5Count] = useState(6);
-  const [poolTableCount, setPoolTableCount] = useState(3);
-  const [customerCount, setCustomerCount] = useState(83);
-
-  // Load real station and customer counts
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch PS5 stations
-        const { data: ps5Stations, error: ps5Error } = await supabase
-          .from('stations')
-          .select('count')
-          .eq('type', 'ps5');
-          
-        if (!ps5Error && ps5Stations) {
-          setPs5Count(ps5Stations.length || 6);
-        }
-        
-        // Fetch pool tables
-        const { data: poolTables, error: poolError } = await supabase
-          .from('stations')
-          .select('count')
-          .eq('type', '8ball');
-          
-        if (!poolError && poolTables) {
-          setPoolTableCount(poolTables.length || 3);
-        }
-        
-        // Fetch customers
-        const { data: customers, error: customersError } = await supabase
-          .from('customers')
-          .select('count');
-          
-        if (!customersError && customers) {
-          setCustomerCount(customers.length || 83);
-        }
-      } catch (error) {
-        console.error('Error fetching real data:', error);
-      }
-    };
-
-    fetchData();
-  }, []);
 
   useEffect(() => {
     if (user) {
@@ -73,34 +18,42 @@ const Index: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cuephoria-dark flex flex-col relative overflow-hidden">
-      {/* Background effects - modified to center animations and remove lines */}
+      {/* Background effects */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent"></div>
         
-        {/* Animated glow spots instead of lines */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full bg-cuephoria-purple/10 blur-3xl animate-pulse-soft"></div>
-        <div className="absolute bottom-1/3 left-1/3 h-48 w-48 rounded-full bg-cuephoria-blue/10 blur-3xl animate-pulse-soft delay-200"></div>
-        <div className="absolute top-2/3 right-1/4 h-56 w-56 rounded-full bg-cuephoria-orange/10 blur-3xl animate-pulse-soft delay-300"></div>
+        {/* Grid effect */}
+        <div className="absolute inset-0 opacity-5" 
+          style={{ 
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', 
+            backgroundSize: '30px 30px' 
+          }}>
+        </div>
+        
+        {/* Animated glow lines */}
+        <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent animate-pulse-soft"></div>
+        <div className="absolute top-0 left-1/3 h-full w-px bg-gradient-to-b from-transparent via-accent/20 to-transparent animate-pulse-soft delay-300"></div>
+        <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent animate-pulse-soft delay-200"></div>
       </div>
 
-      {/* Header - updated with new buttons */}
+      {/* Header */}
       <header className="h-20 flex items-center px-6 border-b border-gray-800 relative z-10 backdrop-blur-sm bg-cuephoria-dark/80">
         <Logo />
         <div className="ml-auto space-x-4">
           <Button
             variant="outline"
             className="text-white border-gray-700 hover:bg-gray-800"
-            onClick={() => window.open('https://cuephoria.in', '_blank')}
+            onClick={() => navigate('/login')}
           >
-            Official Website
+            Log In
           </Button>
           <Button
             variant="default"
             className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90"
-            onClick={() => window.open('https://cuephoria.in/book', '_blank')}
+            onClick={() => navigate('/login')}
           >
-            Book Now
+            Get Started
           </Button>
         </div>
       </header>
@@ -182,23 +135,23 @@ const Index: React.FC = () => {
           </div>
         </div>
         
-        {/* Stats - Updated with real data */}
+        {/* Stats */}
         <div className="w-full max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
           <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
             <Star className="h-6 w-6 text-cuephoria-purple mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{ps5Count}</div>
+            <div className="text-2xl font-bold text-white">12+</div>
             <div className="text-sm text-gray-400">Gaming Stations</div>
           </div>
           
           <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
             <Trophy className="h-6 w-6 text-cuephoria-orange mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{poolTableCount}</div>
+            <div className="text-2xl font-bold text-white">8</div>
             <div className="text-sm text-gray-400">Pool Tables</div>
           </div>
           
           <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
             <Users className="h-6 w-6 text-cuephoria-blue mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">{customerCount}</div>
+            <div className="text-2xl font-bold text-white">500+</div>
             <div className="text-sm text-gray-400">Members</div>
           </div>
           
@@ -211,6 +164,7 @@ const Index: React.FC = () => {
         
         {/* CTA Section */}
         <div className="w-full max-w-4xl mx-auto bg-gradient-to-br from-cuephoria-darker to-cuephoria-dark border border-gray-800 rounded-2xl p-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
           <div className="absolute top-0 right-0 h-64 w-64 bg-cuephoria-purple/10 blur-3xl rounded-full"></div>
           
           <div className="relative z-10">
@@ -221,10 +175,11 @@ const Index: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button
                 size="lg"
-                className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 shadow-md"
-                onClick={() => window.open('https://cuephoria.in/book', '_blank')}
+                className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 shadow-md group"
+                onClick={() => navigate('/login')}
               >
-                Book a Station Now
+                <ShieldCheck className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                Admin Access
               </Button>
               <Button
                 size="lg"
@@ -233,14 +188,14 @@ const Index: React.FC = () => {
                 onClick={() => navigate('/public/stations')}
               >
                 <Monitor className="mr-2 h-5 w-5" />
-                Check Availability
+                Public Station View
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer - Updated with modal triggers */}
+      {/* Footer */}
       <footer className="py-8 border-t border-gray-800 relative z-10 mt-auto">
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
@@ -249,50 +204,26 @@ const Index: React.FC = () => {
               <span className="ml-2 text-gray-400">© {new Date().getFullYear()} Cuephoria. All rights reserved.</span>
             </div>
             
-            <div className="flex flex-wrap justify-center space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={() => setShowTerms(true)}>
-                Terms
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={() => setShowPrivacy(true)}>
-                Privacy
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" onClick={() => setShowContact(true)}>
-                Contact
-              </Button>
+            <div className="flex space-x-4">
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Terms</Button>
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Privacy</Button>
+              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Contact</Button>
             </div>
-          </div>
-          
-          {/* RK Branding */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            Designed and Developed by RK
           </div>
         </div>
       </footer>
       
-      {/* Modals */}
-      <ContentModal isOpen={showTerms} onClose={() => setShowTerms(false)} title="Terms and Conditions">
-        <TermsContent />
-      </ContentModal>
-      
-      <ContentModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} title="Privacy Policy">
-        <PrivacyContent />
-      </ContentModal>
-      
-      <ContentModal isOpen={showContact} onClose={() => setShowContact(false)} title="Contact Us">
-        <ContactContent />
-      </ContentModal>
-      
-      {/* Animated elements - centered and improved */}
-      <div className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 text-cuephoria-lightpurple opacity-20 animate-float">
+      {/* Animated elements */}
+      <div className="fixed top-[10%] left-[10%] text-cuephoria-lightpurple opacity-20 animate-float">
         <Gamepad size={24} className="animate-wiggle" />
       </div>
-      <div className="fixed bottom-1/3 left-1/2 -translate-x-1/2 translate-y-1/2 text-accent opacity-20 animate-float delay-300">
+      <div className="fixed bottom-[15%] right-[15%] text-accent opacity-20 animate-float delay-300">
         <ZapIcon size={24} className="animate-pulse-soft" />
       </div>
-      <div className="fixed top-1/2 right-1/3 text-cuephoria-orange opacity-20 animate-float delay-150">
+      <div className="fixed top-[30%] right-[10%] text-cuephoria-orange opacity-20 animate-float delay-150">
         <Trophy size={20} className="animate-wiggle" />
       </div>
-      <div className="fixed bottom-1/2 left-1/3 text-cuephoria-blue opacity-20 animate-float delay-200">
+      <div className="fixed bottom-[25%] left-[20%] text-cuephoria-blue opacity-20 animate-float delay-200">
         <Star size={22} className="animate-pulse-soft" />
       </div>
     </div>
