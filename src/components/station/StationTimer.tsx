@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { differenceInMinutes } from 'date-fns';
 import { Station } from '@/types/pos.types';
@@ -25,4 +26,3 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
 };
 
 export default StationTimer;
-

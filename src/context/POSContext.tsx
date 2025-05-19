@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -22,7 +21,7 @@ import { useBills } from "@/hooks/useBills";
 import { useStations } from "@/hooks/stations";
 
 // Export the types so they can be imported from this file
-export type { Product, Customer, CartItem, Bill, Session, Station, SessionResult, POSContextType };
+export type { Product, Customer, CartItem, Bill, Session, Station, SessionResult };
 
 interface POSProviderProps {
   children: ReactNode;
