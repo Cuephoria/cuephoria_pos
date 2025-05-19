@@ -1,14 +1,29 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { usePOS } from '@/context/POSContext';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Monitor, Gamepad, Trophy, Users, Star, ZapIcon, ShieldCheck } from 'lucide-react';
+import TermsModal from '@/components/modals/TermsModal';
+import PrivacyModal from '@/components/modals/PrivacyModal';
+import ContactModal from '@/components/modals/ContactModal';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { stations, customers } = usePOS();
+  
+  // State for modals
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  
+  // Get real counts from context
+  const controllersCount = stations.filter(station => station.type === 'ps5').length || 6;
+  const poolTablesCount = stations.filter(station => station.type === '8ball').length || 3;
+  const membersCount = customers.length || 83;
 
   useEffect(() => {
     if (user) {
@@ -18,10 +33,10 @@ const Index: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cuephoria-dark flex flex-col relative overflow-hidden">
-      {/* Background effects */}
+      {/* Background effects - simplified and centered */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent"></div>
+        <div className="absolute top-0 left-0 right-0 bottom-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
+        <div className="absolute bottom-0 right-0 left-0 top-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent"></div>
         
         {/* Grid effect */}
         <div className="absolute inset-0 opacity-5" 
@@ -30,11 +45,6 @@ const Index: React.FC = () => {
             backgroundSize: '30px 30px' 
           }}>
         </div>
-        
-        {/* Animated glow lines */}
-        <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent animate-pulse-soft"></div>
-        <div className="absolute top-0 left-1/3 h-full w-px bg-gradient-to-b from-transparent via-accent/20 to-transparent animate-pulse-soft delay-300"></div>
-        <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent animate-pulse-soft delay-200"></div>
       </div>
 
       {/* Header */}
@@ -135,23 +145,23 @@ const Index: React.FC = () => {
           </div>
         </div>
         
-        {/* Stats */}
+        {/* Stats - with actual data */}
         <div className="w-full max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
           <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
-            <Star className="h-6 w-6 text-cuephoria-purple mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">12+</div>
-            <div className="text-sm text-gray-400">Gaming Stations</div>
+            <Gamepad className="h-6 w-6 text-cuephoria-purple mx-auto mb-2" />
+            <div className="text-2xl font-bold text-white">{controllersCount}</div>
+            <div className="text-sm text-gray-400">Gaming Controllers</div>
           </div>
           
           <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
             <Trophy className="h-6 w-6 text-cuephoria-orange mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">8</div>
+            <div className="text-2xl font-bold text-white">{poolTablesCount}</div>
             <div className="text-sm text-gray-400">Pool Tables</div>
           </div>
           
           <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
             <Users className="h-6 w-6 text-cuephoria-blue mx-auto mb-2" />
-            <div className="text-2xl font-bold text-white">500+</div>
+            <div className="text-2xl font-bold text-white">{membersCount}</div>
             <div className="text-sm text-gray-400">Members</div>
           </div>
           
@@ -205,27 +215,44 @@ const Index: React.FC = () => {
             </div>
             
             <div className="flex space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Terms</Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Privacy</Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Contact</Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => setTermsModalOpen(true)}
+              >
+                Terms
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => setPrivacyModalOpen(true)}
+              >
+                Privacy
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => setContactModalOpen(true)}
+              >
+                Contact
+              </Button>
             </div>
+          </div>
+          
+          {/* RK Branding */}
+          <div className="mt-6 text-center text-xs text-gray-500">
+            Designed and Developed by RK
           </div>
         </div>
       </footer>
       
-      {/* Animated elements */}
-      <div className="fixed top-[10%] left-[10%] text-cuephoria-lightpurple opacity-20 animate-float">
-        <Gamepad size={24} className="animate-wiggle" />
-      </div>
-      <div className="fixed bottom-[15%] right-[15%] text-accent opacity-20 animate-float delay-300">
-        <ZapIcon size={24} className="animate-pulse-soft" />
-      </div>
-      <div className="fixed top-[30%] right-[10%] text-cuephoria-orange opacity-20 animate-float delay-150">
-        <Trophy size={20} className="animate-wiggle" />
-      </div>
-      <div className="fixed bottom-[25%] left-[20%] text-cuephoria-blue opacity-20 animate-float delay-200">
-        <Star size={22} className="animate-pulse-soft" />
-      </div>
+      {/* Modals */}
+      <TermsModal open={termsModalOpen} onOpenChange={setTermsModalOpen} />
+      <PrivacyModal open={privacyModalOpen} onOpenChange={setPrivacyModalOpen} />
+      <ContactModal open={contactModalOpen} onOpenChange={setContactModalOpen} />
     </div>
   );
 };
