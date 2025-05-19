@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -66,7 +67,7 @@ export const POSProvider: React.FC<POSProviderProps> = ({ children }) => {
     exportCustomers: exportCustomersUtils,
   } = useBills(updateCustomerUtils, updateProductUtils);
 
-  // Fix: Initialize stations with useStations hook, passing initial state and updateCustomer
+  // Fix: Initialize stations with useStations hook, passing the required arguments
   const {
     stations,
     setStations,
