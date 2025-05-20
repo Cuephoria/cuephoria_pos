@@ -52,11 +52,12 @@ const ReportsPage: React.FC = () => {
   
   // Set default range to "this month"
   const today = new Date();
-  const [date, setDate] = useState({
+  // Changed to use DateRange type to match the Calendar component
+  const [date, setDate] = useState<DateRange | undefined>({
     from: startOfMonth(today),
     to: endOfMonth(today)
   });
-  const [dateRangeKey, setDateRangeKey] = useState('thisMonth');
+  const [dateRangeKey, setDateRangeKey] = useState<string>('thisMonth');
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   const [searchQuery, setSearchQuery] = useState<string>('');
   
@@ -1360,12 +1361,7 @@ const ReportsPage: React.FC = () => {
                 mode="range"
                 defaultMonth={date?.from}
                 selected={date}
-                onSelect={(newDate) => {
-                  setDate(newDate);
-                  if (newDate?.from && newDate?.to) {
-                    setDateRangeKey('custom');
-                  }
-                }}
+                onSelect={setDate}
                 numberOfMonths={2}
                 className="p-3 pointer-events-auto bg-gray-800 text-white"
               />
