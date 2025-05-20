@@ -1327,6 +1327,14 @@ const ReportsPage: React.FC = () => {
     </div>
   );
   
+  // Handle calendar date changes while ensuring proper types
+  const handleCalendarSelect = (newDate: DateRange | undefined) => {
+    setDate(newDate);
+    if (newDate?.from && newDate?.to) {
+      setDateRangeKey('custom');
+    }
+  };
+  
   return (
     <div className="p-6 space-y-6 bg-[#1A1F2C] min-h-screen text-white">
       {/* Header with title, date range, and export button */}
@@ -1361,7 +1369,7 @@ const ReportsPage: React.FC = () => {
                 mode="range"
                 defaultMonth={date?.from}
                 selected={date}
-                onSelect={setDate}
+                onSelect={handleCalendarSelect}
                 numberOfMonths={2}
                 className="p-3 pointer-events-auto bg-gray-800 text-white"
               />

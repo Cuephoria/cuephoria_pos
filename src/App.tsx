@@ -9,6 +9,7 @@ import { POSProvider } from "@/context/POSContext";
 import { ExpenseProvider } from "@/context/ExpenseContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 // Pages
 import Login from "./pages/Login";
@@ -32,6 +33,12 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// App auto-refresh wrapper component
+const AutoRefreshApp = ({ children }: { children: React.ReactNode }) => {
+  useAutoRefresh(); // Apply auto-refresh to the entire app
+  return <>{children}</>;
+};
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -82,59 +89,61 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                
-                {/* Public routes */}
-                <Route path="/public/stations" element={<PublicStations />} />
-                
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/pos" element={
-                  <ProtectedRoute>
-                    <POS />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/stations" element={
-                  <ProtectedRoute>
-                    <Stations />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/products" element={
-                  <ProtectedRoute>
-                    <Products />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/customers" element={
-                  <ProtectedRoute>
-                    <Customers />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+            <AutoRefreshApp>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  
+                  {/* Public routes */}
+                  <Route path="/public/stations" element={<PublicStations />} />
+                  
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/pos" element={
+                    <ProtectedRoute>
+                      <POS />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/stations" element={
+                    <ProtectedRoute>
+                      <Stations />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/products" element={
+                    <ProtectedRoute>
+                      <Products />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/customers" element={
+                    <ProtectedRoute>
+                      <Customers />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/reports" element={
+                    <ProtectedRoute>
+                      <Reports />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/settings" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </AutoRefreshApp>
           </TooltipProvider>
         </ExpenseProvider>
       </POSProvider>
