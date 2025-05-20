@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -18,23 +17,28 @@ const Index: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cuephoria-dark flex flex-col relative overflow-hidden">
-      {/* Background effects */}
+      {/* New fancy background effect */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent"></div>
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-purple-500/10 via-transparent to-transparent"></div>
+        {/* Animated gradient orbs */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-purple-500/20 via-cuephoria-purple/20 to-blue-500/20 blur-3xl animate-float"></div>
         
-        {/* Grid effect */}
-        <div className="absolute inset-0 opacity-5" 
+        {/* Subtle grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-5"
           style={{ 
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', 
-            backgroundSize: '30px 30px' 
+            backgroundImage: 'linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px)',
+            backgroundSize: '40px 40px' 
           }}>
         </div>
         
-        {/* Animated glow lines */}
-        <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-lightpurple/30 to-transparent animate-pulse-soft"></div>
-        <div className="absolute top-0 left-1/3 h-full w-px bg-gradient-to-b from-transparent via-accent/20 to-transparent animate-pulse-soft delay-300"></div>
-        <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent animate-pulse-soft delay-200"></div>
+        {/* Light flare effect */}
+        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-purple-800/5 via-transparent to-transparent"></div>
+        
+        {/* Light paths */}
+        <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-purple/20 to-transparent animate-pulse-slow"></div>
+        <div className="absolute top-1/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-blue/20 to-transparent animate-pulse-slow delay-300"></div>
+        <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent animate-pulse-slow delay-100"></div>
       </div>
 
       {/* Header */}
@@ -44,16 +48,16 @@ const Index: React.FC = () => {
           <Button
             variant="outline"
             className="text-white border-gray-700 hover:bg-gray-800"
-            onClick={() => navigate('/login')}
+            onClick={() => window.open('https://cuephoria.in', '_blank')}
           >
-            Log In
+            Official Website
           </Button>
           <Button
             variant="default"
             className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90"
-            onClick={() => navigate('/login')}
+            onClick={() => window.open('https://cuephoria.in/book', '_blank')}
           >
-            Get Started
+            Book Now
           </Button>
         </div>
       </header>
@@ -198,16 +202,55 @@ const Index: React.FC = () => {
       {/* Footer */}
       <footer className="py-8 border-t border-gray-800 relative z-10 mt-auto">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
             <div className="flex items-center mb-4 md:mb-0">
               <Logo size="sm" />
               <span className="ml-2 text-gray-400">© {new Date().getFullYear()} Cuephoria. All rights reserved.</span>
             </div>
             
             <div className="flex space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Terms</Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Privacy</Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">Contact</Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => navigate('/terms')}
+              >
+                Terms
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => navigate('/privacy')}
+              >
+                Privacy
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => navigate('/contact')}
+              >
+                Contact
+              </Button>
+            </div>
+          </div>
+          
+          <div className="text-xs text-center text-gray-500">
+            <p className="mb-1">Designed and developed by RK™</p>
+            <div className="flex flex-col md:flex-row justify-center items-center gap-4 text-gray-400">
+              <div className="flex items-center gap-2">
+                <span>Phone: </span>
+                <a href="tel:+918637625155" className="hover:text-white transition-colors">+91 86376 25155</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Email: </span>
+                <a href="mailto:contact@cuephoria.in" className="hover:text-white transition-colors">contact@cuephoria.in</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Hours: </span>
+                <span>11:00 AM - 11:00 PM</span>
+              </div>
             </div>
           </div>
         </div>

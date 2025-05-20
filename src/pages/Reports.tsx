@@ -1,9 +1,11 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
 import { Calendar } from '@/components/ui/calendar';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
+import { 
+  format, startOfDay, endOfDay, startOfWeek, endOfWeek, 
+  startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays 
+} from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { 
@@ -47,11 +49,14 @@ const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
   const { customers, bills, products, exportBills, exportCustomers, stations } = usePOS();
   const { sessions, sessionsLoading, deleteSession } = useSessionsData();
+  
+  // Initialize with "thisMonth" as the default date range
+  const today = new Date();
   const [date, setDate] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 30),
-    to: new Date(),
+    from: startOfMonth(today),
+    to: endOfMonth(today),
   });
-  const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
+  const [dateRangeKey, setDateRangeKey] = useState<string>('thisMonth');
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   const [searchQuery, setSearchQuery] = useState<string>('');
