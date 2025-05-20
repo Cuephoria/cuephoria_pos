@@ -14,6 +14,10 @@ import {
 import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
 import { usePOS } from '@/context/POSContext';
+import { utils, write } from 'xlsx';
+import { saveAs } from 'file-saver';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 
 interface BusinessSummaryReportProps {
   startDate?: Date;
@@ -198,21 +202,40 @@ const BusinessSummaryReport: React.FC<BusinessSummaryReportProps> = ({
     
     return categoryMap[category] || category;
   };
+
+  // Handle download of the Excel report
+  const handleDownloadExcel = () => {
+    try {
+      // Call the passed onDownload function
+      onDownload();
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+    }
+  };
   
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-xl">Business Summary Report</CardTitle>
-        <CardDescription>
-          {startDate && endDate 
-            ? `From ${format(startDate, 'PP')} to ${format(endDate, 'PP')}`
-            : startDate
-              ? `From ${format(startDate, 'PP')}`
-              : endDate
-                ? `Until ${format(endDate, 'PP')}`
-                : `${format(currentDate, 'MMMM yyyy')}`
-          }
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-xl">Business Summary Report</CardTitle>
+          <CardDescription>
+            {startDate && endDate 
+              ? `From ${format(startDate, 'PP')} to ${format(endDate, 'PP')}`
+              : startDate
+                ? `From ${format(startDate, 'PP')}`
+                : endDate
+                  ? `Until ${format(endDate, 'PP')}`
+                  : `${format(currentDate, 'MMMM yyyy')}`
+            }
+          </CardDescription>
+        </div>
+        <Button
+          onClick={handleDownloadExcel}
+          className="gap-2 bg-purple-500 hover:bg-purple-600"
+        >
+          <Download className="h-4 w-4" />
+          Export to Excel
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="grid gap-6 md:grid-cols-3 mb-6">

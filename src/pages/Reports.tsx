@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { CurrencyDisplay } from '@/components/ui/currency';
 import { 
@@ -40,13 +39,15 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 import { useSessionsData } from '@/hooks/stations/useSessionsData';
+import { utils, write } from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const ReportsPage: React.FC = () => {
   const { expenses, businessSummary } = useExpenses();
   const { customers, bills, products, exportBills, exportCustomers, stations } = usePOS();
   const { sessions, sessionsLoading, deleteSession } = useSessionsData();
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    from: subDays(new Date(), 30),
     to: new Date(),
   });
   const [dateRangeKey, setDateRangeKey] = useState<string>('30days');
@@ -54,7 +55,7 @@ const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // Handle date range selection from dropdown - memoized to prevent re-creation
+  // Handle date range selection from dropdown with improved options
   const handleDateRangeChange = useCallback((value: string) => {
     setDateRangeKey(value);
     
@@ -63,20 +64,29 @@ const ReportsPage: React.FC = () => {
     let to: Date | undefined = today;
     
     switch (value) {
-      case '7days':
-        from = new Date(today);
-        from.setDate(today.getDate() - 7);
+      case 'today':
+        from = startOfDay(today);
+        to = endOfDay(today);
         break;
-      case '30days':
-        from = new Date(today);
-        from.setDate(today.getDate() - 30);
+      case 'yesterday':
+        from = startOfDay(subDays(today, 1));
+        to = endOfDay(subDays(today, 1));
         break;
-      case '90days':
-        from = new Date(today);
-        from.setDate(today.getDate() - 90);
+      case 'thisWeek':
+        from = startOfWeek(today, { weekStartsOn: 1 }); // Week starts on Monday
+        to = endOfWeek(today, { weekStartsOn: 1 });
         break;
-      case 'year':
-        from = new Date(today.getFullYear(), 0, 1); // Start of current year
+      case 'thisMonth':
+        from = startOfMonth(today);
+        to = endOfMonth(today);
+        break;
+      case 'last3Months':
+        from = startOfMonth(subMonths(today, 2));
+        to = endOfMonth(today);
+        break;
+      case 'thisYear':
+        from = startOfYear(today);
+        to = endOfYear(today);
         break;
       case 'custom':
         // Keep the current date range for custom
@@ -84,8 +94,8 @@ const ReportsPage: React.FC = () => {
         to = date?.to;
         break;
       default:
-        from = new Date(today);
-        from.setDate(today.getDate() - 30);
+        from = subDays(today, 30);
+        to = today;
     }
     
     setDate({ from, to });
@@ -98,6 +108,100 @@ const ReportsPage: React.FC = () => {
     }
     return 'Select date range';
   }, [date]);
+  
+  // Export data to Excel file
+  const exportToExcel = (data: any[], fileName: string) => {
+    try {
+      // Create a new workbook and worksheet
+      const ws = utils.json_to_sheet(data);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, 'Sheet1');
+      
+      // Write to buffer and save as xlsx
+      const excelBuffer = write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+      
+      // Save file
+      saveAs(blob, `${fileName}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+    }
+  };
+
+  // Function to handle downloading reports as Excel
+  const handleDownloadReport = useCallback(() => {
+    console.log('Downloading report with date range:', date);
+    switch (activeTab) {
+      case 'bills':
+        // Prepare bills data for Excel export
+        const billsData = filteredData.filteredBills.map(bill => ({
+          Date: format(new Date(bill.createdAt), 'yyyy-MM-dd'),
+          Time: format(new Date(bill.createdAt), 'HH:mm:ss'),
+          BillID: bill.id,
+          Customer: getCustomerName(bill.customerId),
+          ItemsCount: bill.items.length,
+          Subtotal: bill.subtotal,
+          DiscountValue: bill.discountValue || 0,
+          PointsUsed: bill.loyaltyPointsUsed || 0,
+          Total: bill.total,
+          PaymentMethod: bill.paymentMethod
+        }));
+        exportToExcel(billsData, 'Bills_Report');
+        break;
+      case 'customers':
+        // Prepare customer data for Excel export
+        const customersData = filteredData.filteredCustomers.map(customer => ({
+          Name: customer.name,
+          Phone: customer.phone || '',
+          Email: customer.email || '',
+          MemberStatus: customer.isMember ? 'Member' : 'Non-Member',
+          TotalSpent: getCustomerTotalSpent(customer.id),
+          PlayTime: getCustomerPlayTime(customer.id),
+          LoyaltyPoints: customer.loyaltyPoints || 0,
+          JoinedOn: customer.createdAt ? format(new Date(customer.createdAt), 'yyyy-MM-dd') : 'N/A'
+        }));
+        exportToExcel(customersData, 'Customers_Report');
+        break;
+      case 'sessions':
+        // Prepare sessions data for Excel export
+        const sessionsData = filteredData.filteredSessions.map(session => {
+          const durationInMinutes = session.endTime ? 
+            Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60)) :
+            session.duration || 0;
+          
+          return {
+            Station: session.stationId,
+            Customer: getCustomerName(session.customerId),
+            Contact: getCustomerPhone(session.customerId),
+            StartDate: format(new Date(session.startTime), 'yyyy-MM-dd'),
+            StartTime: format(new Date(session.startTime), 'HH:mm:ss'),
+            EndDate: session.endTime ? format(new Date(session.endTime), 'yyyy-MM-dd') : '-',
+            EndTime: session.endTime ? format(new Date(session.endTime), 'HH:mm:ss') : '-',
+            DurationMinutes: durationInMinutes,
+            Status: session.endTime ? 'Completed' : 'Active'
+          };
+        });
+        exportToExcel(sessionsData, 'Sessions_Report');
+        break;
+      case 'summary':
+        // Prepare summary data for Excel export
+        const summaryData = [{
+          TotalRevenue: summaryMetrics.financial.totalRevenue,
+          GrossProfit: summaryMetrics.financial.grossProfit,
+          ProfitMargin: `${summaryMetrics.financial.profitMargin.toFixed(1)}%`,
+          TotalTransactions: summaryMetrics.operational.totalTransactions,
+          ActiveSessions: summaryMetrics.operational.activeSessions,
+          CompletedSessions: summaryMetrics.operational.completedSessions,
+          TotalCustomers: summaryMetrics.customer.totalCustomers,
+          MembershipRate: `${summaryMetrics.customer.membershipRate.toFixed(1)}%`,
+          GeneratedOn: format(new Date(), 'yyyy-MM-dd HH:mm:ss')
+        }];
+        exportToExcel(summaryData, 'Business_Summary_Report');
+        break;
+      default:
+        console.log(`Exporting ${activeTab} report`);
+    }
+  }, [activeTab, date, filteredData]);
   
   // Memoize filtered data to prevent recalculation on every render
   const filteredData = useMemo(() => {
@@ -209,25 +313,9 @@ const ReportsPage: React.FC = () => {
     
     return lookup;
   }, [customers, filteredData.filteredSessions, filteredData.filteredBills]);
-  
+
   // Pre-calculate summary metrics once when filtered data changes
   const summaryMetrics = useMemo(() => calculateSummaryMetrics(), [filteredData]);
-  
-  // Function to handle downloading reports
-  const handleDownloadReport = useCallback(() => {
-    console.log('Downloading report with date range:', date);
-    switch (activeTab) {
-      case 'bills':
-        exportBills();
-        break;
-      case 'customers':
-        exportCustomers();
-        break;
-      default:
-        // For other tabs, implement specific export functionality
-        console.log(`Exporting ${activeTab} report`);
-    }
-  }, [activeTab, date, exportBills, exportCustomers]);
   
   // Handle session deletion - memoized to prevent re-creation
   const handleDeleteSession = useCallback(async (sessionId: string) => {
@@ -1236,13 +1324,15 @@ const ReportsPage: React.FC = () => {
         <div className="flex items-center gap-4">
           <Select value={dateRangeKey} onValueChange={handleDateRangeChange}>
             <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
-              <SelectValue placeholder="Last 30 days" />
+              <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700 text-white">
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="90days">Last 90 days</SelectItem>
-              <SelectItem value="year">This year</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="yesterday">Yesterday</SelectItem>
+              <SelectItem value="thisWeek">This week</SelectItem>
+              <SelectItem value="thisMonth">This month</SelectItem>
+              <SelectItem value="last3Months">Last 3 months</SelectItem>
+              <SelectItem value="thisYear">This year</SelectItem>
               <SelectItem value="custom">Custom range</SelectItem>
             </SelectContent>
           </Select>
