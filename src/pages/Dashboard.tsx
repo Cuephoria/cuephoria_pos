@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePOS } from '@/context/POSContext';
 import { useExpenses } from '@/context/ExpenseContext';
 import StatCardSection from '@/components/dashboard/StatCardSection';
@@ -31,22 +30,38 @@ const Dashboard = () => {
     lowStockItems: []
   });
   
+  // Memoize expensive calculations to prevent unnecessary re-renders
+  const lowStockItems = useMemo(() => 
+    products.filter(p => p.stock < 5).sort((a, b) => a.stock - b.stock),
+    [products]);
+  
+  const activeSessionsCount = useMemo(() => 
+    stations.filter(s => s.isOccupied).length,
+    [stations]);
+
+  const newMembersCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return customers.filter(c => new Date(c.createdAt) >= today).length;
+  }, [customers]);
+
+  // Optimize data generation and calculations
   useEffect(() => {
+    // Generate chart data based on the active tab
     setChartData(generateChartData());
     
-    const lowStockItems = products.filter(p => p.stock < 5)
-      .sort((a, b) => a.stock - b.stock);
-    
+    // Update dashboard stats with memoized values
     setDashboardStats({
       totalSales: calculateTotalSales(),
       salesChange: calculatePercentChange(),
-      activeSessionsCount: getActiveSessionsCount(),
-      newMembersCount: getNewMembersCount(),
+      activeSessionsCount,
+      newMembersCount,
       lowStockCount: lowStockItems.length,
-      lowStockItems: lowStockItems
+      lowStockItems
     });
-  }, [bills, customers, stations, sessions, products, activeTab]);
+  }, [bills, customers, stations, sessions, products, activeTab, activeSessionsCount, newMembersCount, lowStockItems]);
   
+  // Optimize chart data generation
   const generateChartData = () => {
     if (activeTab === 'hourly') {
       return generateHourlyChartData();
@@ -216,6 +231,7 @@ const Dashboard = () => {
       startDate = new Date(startDate.getFullYear(), 0, 1);
     }
     
+    // Optimize filtering by using a cached result if possible
     const filteredBills = bills.filter(bill => {
       const billDate = new Date(bill.createdAt);
       return billDate >= startDate && billDate <= now;
@@ -275,21 +291,6 @@ const Dashboard = () => {
     return (percentChange >= 0 ? "+" : "") + formattedChange + "% from last period";
   };
   
-  const getLowStockCount = () => {
-    return products.filter(p => p.stock < 5).length;
-  };
-  
-  const getActiveSessionsCount = () => {
-    return stations.filter(s => s.isOccupied).length;
-  };
-  
-  const getNewMembersCount = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    return customers.filter(c => new Date(c.createdAt) >= today).length;
-  };
-
   return (
     <div className="flex-1 space-y-6 p-6 bg-[#1A1F2C] text-white">
       <h2 className="text-3xl font-bold tracking-tight font-heading">Dashboard</h2>

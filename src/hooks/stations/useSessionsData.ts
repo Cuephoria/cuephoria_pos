@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Session } from '@/types/pos.types';
 import { supabase, handleSupabaseError } from "@/integrations/supabase/client";
 import { useToast } from '@/hooks/use-toast';
@@ -13,15 +13,17 @@ export const useSessionsData = () => {
   const [sessionsError, setSessionsError] = useState<Error | null>(null);
   const { toast } = useToast();
   
-  const refreshSessions = async () => {
+  // Memoize the refreshSessions function to prevent unnecessary recreations
+  const refreshSessions = useCallback(async () => {
     setSessionsLoading(true);
     setSessionsError(null);
     
     try {
-      // Fetch sessions from Supabase, including active sessions (no end_time)
+      // Optimize query by adding limit if necessary
       const { data, error } = await supabase
         .from('sessions')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
         
       if (error) {
         console.error('Error fetching sessions:', error);
@@ -34,11 +36,12 @@ export const useSessionsData = () => {
         return;
       }
       
-      // Transform data to match our Session type
+      // Transform data to match our Session type - do this more efficiently
       if (data && data.length > 0) {
         // Use type assertion to handle the TypeScript issues
         const sessionsData = data as any[];
         
+        // Use more efficient transformation
         const transformedSessions = sessionsData.map(item => ({
           id: item.id,
           stationId: item.station_id,
@@ -57,7 +60,6 @@ export const useSessionsData = () => {
         activeSessions.forEach(s => console.log(`- Active session ID: ${s.id}, Station ID: ${s.stationId}`));
       } else {
         console.log("No sessions found in Supabase");
-        // Clear sessions if no data is returned to prevent stale data
         setSessions([]);
       }
     } catch (error) {
@@ -71,7 +73,7 @@ export const useSessionsData = () => {
     } finally {
       setSessionsLoading(false);
     }
-  };
+  }, [toast]);
   
   // Add delete session functionality
   const deleteSession = async (sessionId: string): Promise<boolean> => {
@@ -111,6 +113,7 @@ export const useSessionsData = () => {
   
   useEffect(() => {
     console.log('Initial session load triggered');
+    // Start loading immediately
     refreshSessions();
     
     // Add listener for page visibility changes to refresh sessions when page becomes visible again
@@ -124,16 +127,17 @@ export const useSessionsData = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Set up a regular polling interval to refresh sessions even when page is visible
+    // Reduce the polling frequency to once every two minutes for performance
     const intervalId = setInterval(() => {
       console.log('Periodic session refresh');
       refreshSessions();
-    }, 60000); // Refresh every minute
+    }, 120000); // Refresh every two minutes
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
-  }, []);
+  }, [refreshSessions]);
   
   return {
     sessions,

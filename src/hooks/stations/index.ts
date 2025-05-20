@@ -6,7 +6,7 @@ import { useSessionActions } from './session-actions';
 import { Station, Session, Customer } from '@/types/pos.types';
 import { useState, useEffect } from 'react';
 
-export const useStations = (initialStations: Station[], updateCustomer: (customer: Customer) => void) => {
+export const useStations = (initialStations: Station[] = [], updateCustomer: (customer: Customer) => void) => {
   const { 
     stations, 
     setStations,
