@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useExpenses } from '@/context/ExpenseContext';
 import { usePOS } from '@/context/POSContext';
@@ -39,7 +40,7 @@ import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import BusinessSummaryReport from '@/components/dashboard/BusinessSummaryReport';
 import { useSessionsData } from '@/hooks/stations/useSessionsData';
-import { utils, write } from 'xlsx';
+import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
 const ReportsPage: React.FC = () => {
@@ -54,6 +55,72 @@ const ReportsPage: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Memoize filtered data to prevent recalculation on every render
+  const filteredData = useMemo(() => {
+    // Filter function applied to any collection with createdAt
+    const filterByDateRange = <T extends { createdAt: Date | string }>(items: T[]): T[] => {
+      if (!date?.from && !date?.to) return items;
+      
+      return items.filter(item => {
+        const itemDate = item.createdAt instanceof Date 
+          ? item.createdAt 
+          : new Date(item.createdAt);
+        
+        if (date?.from && date?.to) {
+          return itemDate >= date.from && itemDate <= date.to;
+        } else if (date?.from) {
+          return itemDate >= date.from;
+        } else if (date?.to) {
+          return itemDate <= date.to;
+        }
+        
+        return true;
+      });
+    };
+
+    // Apply filters to all datasets at once
+    const filteredCustomers = filterByDateRange(customers);
+    const filteredBills = filterByDateRange(bills);
+    
+    // Filter sessions (special case since sessions use startTime instead of createdAt)
+    let filteredSessions = sessions.filter(session => {
+      if (!date?.from && !date?.to) return true;
+      
+      const startTime = new Date(session.startTime);
+      
+      if (date?.from && date?.to) {
+        return startTime >= date.from && startTime <= date.to;
+      } else if (date?.from) {
+        return startTime >= date.from;
+      } else if (date?.to) {
+        return startTime <= date.to;
+      }
+      
+      return true;
+    });
+    
+    // Apply search filtering if search query exists
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filteredSessions = filteredSessions.filter(session => {
+        const customer = customers.find(c => c.id === session.customerId);
+        if (!customer) return false;
+        
+        return (
+          customer.name.toLowerCase().includes(query) || 
+          (customer.email && customer.email.toLowerCase().includes(query)) || 
+          customer.phone.includes(query)
+        );
+      });
+    }
+    
+    return { 
+      filteredCustomers, 
+      filteredBills, 
+      filteredSessions 
+    };
+  }, [bills, customers, sessions, date, searchQuery]);
   
   // Handle date range selection from dropdown with improved options
   const handleDateRangeChange = useCallback((value: string) => {
@@ -113,12 +180,12 @@ const ReportsPage: React.FC = () => {
   const exportToExcel = (data: any[], fileName: string) => {
     try {
       // Create a new workbook and worksheet
-      const ws = utils.json_to_sheet(data);
-      const wb = utils.book_new();
-      utils.book_append_sheet(wb, ws, 'Sheet1');
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
       
       // Write to buffer and save as xlsx
-      const excelBuffer = write(wb, { bookType: 'xlsx', type: 'array' });
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
       
       // Save file
@@ -127,6 +194,51 @@ const ReportsPage: React.FC = () => {
       console.error("Error exporting to Excel:", error);
     }
   };
+
+  // Memoize customer lookup functions to prevent expensive recalculations
+  const customerLookup = useMemo(() => {
+    const lookup: Record<string, { 
+      name: string, 
+      email: string | undefined, 
+      phone: string | undefined,
+      playTime: string,
+      totalSpent: number
+    }> = {};
+    
+    // Pre-calculate play times and total spent for each customer
+    customers.forEach(customer => {
+      const customerSessions = filteredData.filteredSessions.filter(
+        session => session.customerId === customer.id
+      );
+      
+      const totalMinutes = customerSessions.reduce((total, session) => {
+        if (session.endTime) {
+          const start = new Date(session.startTime).getTime();
+          const end = new Date(session.endTime).getTime();
+          return total + (end - start) / (1000 * 60);
+        }
+        return total;
+      }, 0);
+      
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = Math.floor(totalMinutes % 60);
+      const playTime = `${hours}h ${minutes}m`;
+      
+      const totalSpent = filteredData.filteredBills
+        .filter(bill => bill.customerId === customer.id)
+        .reduce((total, bill) => total + bill.total, 0);
+      
+      lookup[customer.id] = {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        playTime,
+        totalSpent
+      };
+    });
+    
+    return lookup;
+  }, [customers, filteredData.filteredSessions, filteredData.filteredBills]);
 
   // Function to handle downloading reports as Excel
   const handleDownloadReport = useCallback(() => {
@@ -202,117 +314,6 @@ const ReportsPage: React.FC = () => {
         console.log(`Exporting ${activeTab} report`);
     }
   }, [activeTab, date, filteredData]);
-  
-  // Memoize filtered data to prevent recalculation on every render
-  const filteredData = useMemo(() => {
-    // Filter function applied to any collection with createdAt
-    const filterByDateRange = <T extends { createdAt: Date | string }>(items: T[]): T[] => {
-      if (!date?.from && !date?.to) return items;
-      
-      return items.filter(item => {
-        const itemDate = item.createdAt instanceof Date 
-          ? item.createdAt 
-          : new Date(item.createdAt);
-        
-        if (date?.from && date?.to) {
-          return itemDate >= date.from && itemDate <= date.to;
-        } else if (date?.from) {
-          return itemDate >= date.from;
-        } else if (date?.to) {
-          return itemDate <= date.to;
-        }
-        
-        return true;
-      });
-    };
-
-    // Apply filters to all datasets at once
-    const filteredCustomers = filterByDateRange(customers);
-    const filteredBills = filterByDateRange(bills);
-    
-    // Filter sessions (special case since sessions use startTime instead of createdAt)
-    let filteredSessions = sessions.filter(session => {
-      if (!date?.from && !date?.to) return true;
-      
-      const startTime = new Date(session.startTime);
-      
-      if (date?.from && date?.to) {
-        return startTime >= date.from && startTime <= date.to;
-      } else if (date?.from) {
-        return startTime >= date.from;
-      } else if (date?.to) {
-        return startTime <= date.to;
-      }
-      
-      return true;
-    });
-    
-    // Apply search filtering if search query exists
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filteredSessions = filteredSessions.filter(session => {
-        const customer = customers.find(c => c.id === session.customerId);
-        if (!customer) return false;
-        
-        return (
-          customer.name.toLowerCase().includes(query) || 
-          (customer.email && customer.email.toLowerCase().includes(query)) || 
-          customer.phone.includes(query)
-        );
-      });
-    }
-    
-    return { 
-      filteredCustomers, 
-      filteredBills, 
-      filteredSessions 
-    };
-  }, [bills, customers, sessions, date, searchQuery]);
-  
-  // Memoize customer lookup functions to prevent expensive recalculations
-  const customerLookup = useMemo(() => {
-    const lookup: Record<string, { 
-      name: string, 
-      email: string | undefined, 
-      phone: string | undefined,
-      playTime: string,
-      totalSpent: number
-    }> = {};
-    
-    // Pre-calculate play times and total spent for each customer
-    customers.forEach(customer => {
-      const customerSessions = filteredData.filteredSessions.filter(
-        session => session.customerId === customer.id
-      );
-      
-      const totalMinutes = customerSessions.reduce((total, session) => {
-        if (session.endTime) {
-          const start = new Date(session.startTime).getTime();
-          const end = new Date(session.endTime).getTime();
-          return total + (end - start) / (1000 * 60);
-        }
-        return total;
-      }, 0);
-      
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = Math.floor(totalMinutes % 60);
-      const playTime = `${hours}h ${minutes}m`;
-      
-      const totalSpent = filteredData.filteredBills
-        .filter(bill => bill.customerId === customer.id)
-        .reduce((total, bill) => total + bill.total, 0);
-      
-      lookup[customer.id] = {
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        playTime,
-        totalSpent
-      };
-    });
-    
-    return lookup;
-  }, [customers, filteredData.filteredSessions, filteredData.filteredBills]);
 
   // Pre-calculate summary metrics once when filtered data changes
   const summaryMetrics = useMemo(() => calculateSummaryMetrics(), [filteredData]);
@@ -324,6 +325,13 @@ const ReportsPage: React.FC = () => {
       console.log(`Session ${sessionId} deleted successfully`);
     }
   }, [deleteSession]);
+  
+  // Use customer lookup for performance
+  const getCustomerName = (customerId: string) => customerLookup[customerId]?.name || 'Unknown';
+  const getCustomerEmail = (customerId: string) => customerLookup[customerId]?.email || '';
+  const getCustomerPhone = (customerId: string) => customerLookup[customerId]?.phone || '';
+  const getCustomerPlayTime = (customerId: string) => customerLookup[customerId]?.playTime || '0h 0m';
+  const getCustomerTotalSpent = (customerId: string) => customerLookup[customerId]?.totalSpent || 0;
   
   // Calculate business summary metrics function with enhanced metrics
   function calculateSummaryMetrics() {
@@ -606,13 +614,6 @@ const ReportsPage: React.FC = () => {
     const minutes = durationInMinutes % 60;
     return `${hours}h ${minutes}m`;
   };
-  
-  // Use customer lookup for performance
-  const getCustomerName = (customerId: string) => customerLookup[customerId]?.name || 'Unknown';
-  const getCustomerEmail = (customerId: string) => customerLookup[customerId]?.email || '';
-  const getCustomerPhone = (customerId: string) => customerLookup[customerId]?.phone || '';
-  const getCustomerPlayTime = (customerId: string) => customerLookup[customerId]?.playTime || '0h 0m';
-  const getCustomerTotalSpent = (customerId: string) => customerLookup[customerId]?.totalSpent || 0;
   
   // Only display a limited number of items at once for better performance
   const itemsPerPage = 50;

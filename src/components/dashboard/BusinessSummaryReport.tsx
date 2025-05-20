@@ -14,7 +14,7 @@ import {
 import { Expense } from '@/types/expense.types';
 import { format } from 'date-fns';
 import { usePOS } from '@/context/POSContext';
-import { utils, write } from 'xlsx';
+import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
