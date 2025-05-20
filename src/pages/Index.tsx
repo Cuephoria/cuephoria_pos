@@ -1,13 +1,18 @@
-import { useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Monitor, Gamepad, Trophy, Users, Star, ZapIcon, ShieldCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Mail, Phone, Clock, MapPin } from 'lucide-react';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [openDialog, setOpenDialog] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -17,28 +22,30 @@ const Index: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-cuephoria-dark flex flex-col relative overflow-hidden">
-      {/* New fancy background effect */}
-      <div className="absolute inset-0 z-0">
-        {/* Animated gradient orbs */}
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl animate-pulse-slow"></div>
-        <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-purple-500/20 via-cuephoria-purple/20 to-blue-500/20 blur-3xl animate-float"></div>
-        
+      {/* Minimalistic animated background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
         {/* Subtle grid pattern */}
         <div 
-          className="absolute inset-0 opacity-5"
+          className="absolute inset-0 opacity-10"
           style={{ 
-            backgroundImage: 'linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px)',
-            backgroundSize: '40px 40px' 
+            backgroundImage: 'linear-gradient(to right, rgb(40, 44, 52) 1px, transparent 1px), linear-gradient(to bottom, rgb(40, 44, 52) 1px, transparent 1px)',
+            backgroundSize: '50px 50px' 
           }}>
         </div>
         
-        {/* Light flare effect */}
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-purple-800/5 via-transparent to-transparent"></div>
+        {/* Animated gradients */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-cuephoria-purple/10 to-transparent blur-[100px] animate-float opacity-20"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-cuephoria-blue/10 to-transparent blur-[80px] animate-float opacity-20" style={{animationDelay: '2s'}}></div>
         
-        {/* Light paths */}
-        <div className="absolute top-1/2 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-purple/20 to-transparent animate-pulse-slow"></div>
-        <div className="absolute top-1/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-blue/20 to-transparent animate-pulse-slow delay-300"></div>
-        <div className="absolute top-2/3 left-0 h-px w-full bg-gradient-to-r from-transparent via-cuephoria-orange/20 to-transparent animate-pulse-slow delay-100"></div>
+        {/* Light streaks */}
+        <div className="absolute top-[30%] w-full h-px bg-gradient-to-r from-transparent via-cuephoria-purple/20 to-transparent"></div>
+        <div className="absolute top-[60%] w-full h-px bg-gradient-to-r from-transparent via-cuephoria-blue/20 to-transparent"></div>
+        
+        {/* Floating particles */}
+        <div className="absolute w-1 h-1 bg-cuephoria-purple/30 rounded-full top-1/4 left-1/4 animate-float"></div>
+        <div className="absolute w-1 h-1 bg-cuephoria-blue/30 rounded-full top-3/4 right-1/4 animate-float" style={{animationDelay: '1s'}}></div>
+        <div className="absolute w-1 h-1 bg-cuephoria-lightpurple/30 rounded-full top-1/2 left-3/4 animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute w-1 h-1 bg-cuephoria-orange/30 rounded-full top-1/3 right-1/3 animate-float" style={{animationDelay: '3s'}}></div>
       </div>
 
       {/* Header */}
@@ -209,35 +216,208 @@ const Index: React.FC = () => {
             </div>
             
             <div className="flex space-x-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-gray-400 hover:text-white"
-                onClick={() => navigate('/terms')}
-              >
-                Terms
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-gray-400 hover:text-white"
-                onClick={() => navigate('/privacy')}
-              >
-                Privacy
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-gray-400 hover:text-white"
-                onClick={() => navigate('/contact')}
-              >
-                Contact
-              </Button>
+              <Dialog open={openDialog === 'terms'} onOpenChange={(open) => setOpenDialog(open ? 'terms' : null)}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-400 hover:text-white"
+                  onClick={() => setOpenDialog('terms')}
+                >
+                  Terms
+                </Button>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-cuephoria-dark border-gray-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold text-white">Terms and Conditions</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 text-gray-300 mt-4">
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">1. Acceptance of Terms</h2>
+                      <p>
+                        By accessing and using Cuephoria's services, you agree to be bound by these Terms and Conditions. 
+                        If you do not agree to these terms, please do not use our services.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">2. Membership and Gaming Sessions</h2>
+                      <p>
+                        Cuephoria provides gaming facilities and services on a pre-booking or walk-in basis, subject to availability.
+                        Members may receive preferential rates and privileges as communicated in our membership plans.
+                      </p>
+                      <p>
+                        All gaming sessions are charged according to our current rate card. Time extensions may be 
+                        subject to availability and additional charges.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">3. Conduct and Responsibilities</h2>
+                      <p>
+                        Users must maintain appropriate conduct within our premises. Cuephoria reserves the right to refuse service 
+                        to anyone engaging in disruptive, abusive, or inappropriate behavior.
+                      </p>
+                      <p>
+                        Users are responsible for any damage caused to equipment, furniture, or fixtures through improper use.
+                        Such damage may result in charges equivalent to repair or replacement costs.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">4. Refunds and Cancellations</h2>
+                      <p>
+                        Bookings may be cancelled or rescheduled at least 2 hours prior to the reserved time without penalty.
+                        Late cancellations or no-shows may be charged a fee equivalent to 50% of the booking amount.
+                      </p>
+                      <p>
+                        Refunds for technical issues or service interruptions will be assessed on a case-by-case basis by management.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">5. Modifications to Terms</h2>
+                      <p>
+                        Cuephoria reserves the right to modify these terms at any time. Changes will be effective immediately 
+                        upon posting on our website or premises. Continued use of our services constitutes acceptance of modified terms.
+                      </p>
+                    </section>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={openDialog === 'privacy'} onOpenChange={(open) => setOpenDialog(open ? 'privacy' : null)}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-400 hover:text-white"
+                  onClick={() => setOpenDialog('privacy')}
+                >
+                  Privacy
+                </Button>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-cuephoria-dark border-gray-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold text-white">Privacy Policy</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 text-gray-300 mt-4">
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">1. Information We Collect</h2>
+                      <p>
+                        Cuephoria may collect personal information including but not limited to name, contact details, 
+                        and payment information when you register or book our services.
+                      </p>
+                      <p>
+                        We also collect usage data such as gaming preferences, session duration, and purchase history 
+                        to improve our services and customize your experience.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">2. How We Use Your Information</h2>
+                      <p>
+                        We use collected information to:
+                      </p>
+                      <ul className="list-disc pl-6 space-y-2">
+                        <li>Process bookings and payments</li>
+                        <li>Personalize your gaming experience</li>
+                        <li>Communicate regarding services and promotions</li>
+                        <li>Improve our facilities and offerings</li>
+                        <li>Maintain security and prevent fraud</li>
+                      </ul>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">3. Information Sharing</h2>
+                      <p>
+                        We do not sell or rent your personal information to third parties. We may share information with:
+                      </p>
+                      <ul className="list-disc pl-6 space-y-2">
+                        <li>Service providers who assist in our operations</li>
+                        <li>Legal authorities when required by law</li>
+                        <li>Business partners with your explicit consent</li>
+                      </ul>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">4. Your Rights</h2>
+                      <p>
+                        You have the right to:
+                      </p>
+                      <ul className="list-disc pl-6 space-y-2">
+                        <li>Access your personal information</li>
+                        <li>Request correction of inaccurate information</li>
+                        <li>Request deletion of your information</li>
+                        <li>Opt-out of marketing communications</li>
+                        <li>Lodge a complaint with relevant authorities</li>
+                      </ul>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">5. Changes to Privacy Policy</h2>
+                      <p>
+                        Cuephoria reserves the right to update this privacy policy at any time. Changes will be posted on our website, 
+                        and your continued use of our services after such modifications constitutes acceptance of the updated policy.
+                      </p>
+                    </section>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-gray-400 hover:text-white"
+                  >
+                    Contact
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 bg-cuephoria-dark border-gray-800 text-white p-4">
+                  <h3 className="font-semibold text-lg mb-3 text-white">Contact Us</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <Phone className="h-5 w-5 text-cuephoria-purple mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Phone</p>
+                        <a href="tel:+918637625155" className="text-gray-300 text-sm hover:text-white transition-colors">
+                          +91 86376 25155
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <Mail className="h-5 w-5 text-cuephoria-blue mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Email</p>
+                        <a href="mailto:contact@cuephoria.in" className="text-gray-300 text-sm hover:text-white transition-colors">
+                          contact@cuephoria.in
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <Clock className="h-5 w-5 text-cuephoria-orange mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Hours</p>
+                        <span className="text-gray-300 text-sm">11:00 AM - 11:00 PM</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <MapPin className="h-5 w-5 text-cuephoria-green mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Location</p>
+                        <span className="text-gray-300 text-sm">Cuephoria Gaming Lounge</span>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           
           <div className="text-xs text-center text-gray-500">
-            <p className="mb-1">Designed and developed by RK™</p>
+            <p className="mb-1">Designed and developed by RK<sup>™</sup></p>
             <div className="flex flex-col md:flex-row justify-center items-center gap-4 text-gray-400">
               <div className="flex items-center gap-2">
                 <span>Phone: </span>

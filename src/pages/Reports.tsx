@@ -50,16 +50,20 @@ const ReportsPage: React.FC = () => {
   const { customers, bills, products, exportBills, exportCustomers, stations } = usePOS();
   const { sessions, sessionsLoading, deleteSession } = useSessionsData();
   
-  // Initialize with "thisMonth" as the default date range
+  // Set default range to "this month"
   const today = new Date();
-  const [date, setDate] = useState<DateRange | undefined>({
+  const [date, setDate] = useState({
     from: startOfMonth(today),
-    to: endOfMonth(today),
+    to: endOfMonth(today)
   });
-  const [dateRangeKey, setDateRangeKey] = useState<string>('thisMonth');
-  
+  const [dateRangeKey, setDateRangeKey] = useState('thisMonth');
   const [activeTab, setActiveTab] = useState<'bills' | 'customers' | 'sessions' | 'summary'>('bills');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  
+  // Initialize with "thisMonth" as the default date range
+  useEffect(() => {
+    handleDateRangeChange('thisMonth');
+  }, []);
   
   // Memoize filtered data to prevent recalculation on every render
   const filteredData = useMemo(() => {
