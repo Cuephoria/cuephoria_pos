@@ -27,7 +27,6 @@ const StationActions: React.FC<StationActionsProps> = ({
   const { toast } = useToast();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isEndingSession, setIsEndingSession] = useState(false);
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
 
@@ -67,13 +66,6 @@ const StationActions: React.FC<StationActionsProps> = ({
   const handleEndSession = async () => {
     if (station.isOccupied && station.currentSession) {
       try {
-        // Prevent multiple clicks
-        if (isEndingSession) {
-          console.log("Already processing end session request");
-          return;
-        }
-        
-        setIsEndingSession(true);
         setIsLoading(true);
         
         const customerId = station.currentSession.customerId;
@@ -104,10 +96,6 @@ const StationActions: React.FC<StationActionsProps> = ({
         });
       } finally {
         setIsLoading(false);
-        // Reset ending session flag after a delay to prevent rapid clicks
-        setTimeout(() => {
-          setIsEndingSession(false);
-        }, 2000);
       }
     }
   };
@@ -118,7 +106,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         variant="destructive" 
         className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
         onClick={handleEndSession}
-        disabled={isLoading || isEndingSession}
+        disabled={isLoading}
       >
         {isLoading ? "Processing..." : "End Session"}
       </Button>

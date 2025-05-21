@@ -11,7 +11,6 @@ export * from './useStations';  // Add the new useStations hook
 
 // This hook periodically updates booking statuses
 export const useUpdateBookingStatuses = () => {
-  // Only call hooks inside React function components
   React.useEffect(() => {
     // Function to update booking statuses
     const updateBookingStatuses = async () => {

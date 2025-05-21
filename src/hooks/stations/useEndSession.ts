@@ -56,15 +56,15 @@ export const useEndSession = ({
       
       console.log("Updated session with end time and duration:", updatedSession);
       
-      // Update local state immediately for UI responsiveness - IMPORTANT: Update stations state first
+      // Update local state immediately for UI responsiveness
+      setSessions(prev => prev.map(s => 
+        s.id === session.id ? updatedSession : s
+      ));
+      
       setStations(prev => prev.map(s => 
         s.id === stationId 
           ? { ...s, isOccupied: false, currentSession: null } 
           : s
-      ));
-      
-      setSessions(prev => prev.map(s => 
-        s.id === session.id ? updatedSession : s
       ));
       
       // Try to update session in Supabase

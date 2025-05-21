@@ -6,19 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { formatTimeDisplay, calculateElapsedTime, calculateSessionCost } from '@/utils/booking/formatters';
-import { Clock, DollarSign } from 'lucide-react';
 
 interface StationTimerProps {
   station: Station;
-  compact?: boolean;
 }
 
-const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false }) => {
+const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const { toast } = useToast();
   const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
@@ -42,6 +39,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
   // Re-initialize timer when station data changes
   useEffect(() => {
+    console.log("StationTimer: Station data changed", {
+      stationId: station.id,
+      isOccupied: station.isOccupied,
+      hasSession: !!station.currentSession,
+      sessionId: station.currentSession?.id
+    });
+
     if (!station.isOccupied || !station.currentSession) {
       // Reset timer state when station is not occupied
       setHours(0);
@@ -61,6 +65,11 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
     // Store the session data in ref to maintain persistence across renders
     if (station.currentSession) {
+      console.log("StationTimer: Initializing with session data", {
+        sessionId: station.currentSession.id,
+        startTime: new Date(station.currentSession.startTime).toISOString()
+      });
+      
       sessionDataRef.current = {
         sessionId: station.currentSession.id,
         startTime: new Date(station.currentSession.startTime),
@@ -83,6 +92,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
     // Set up interval for regular updates if not already running
     if (timerRef.current === null && station.currentSession) {
+      console.log("StationTimer: Setting up timer interval for station", station.id);
+      
       timerRef.current = window.setInterval(() => {
         updateTimerCalculation();
       }, 1000);
@@ -125,10 +136,10 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
   // Fetch the latest session data from Supabase
   const fetchSessionData = async () => {
     try {
-      setIsRefreshing(true);
       if (!station.currentSession) return;
       
       const sessionId = station.currentSession.id;
+      console.log("StationTimer: Fetching session data for ID:", sessionId);
       
       const { data, error } = await supabase
         .from('sessions')
@@ -139,7 +150,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
       if (error) {
         console.error("StationTimer: Error fetching session data", error);
         // Fallback to current data
-        setIsRefreshing(false);
         return;
       }
       
@@ -149,6 +159,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
         
         if (sessionData && sessionData.start_time) {
           const startTime = new Date(sessionData.start_time);
+          console.log("StationTimer: Updated start time from Supabase", startTime.toISOString());
           
           // Update the sessionDataRef with data from Supabase
           if (sessionDataRef.current) {
@@ -167,10 +178,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
           updateTimerCalculation();
         }
       }
-      setIsRefreshing(false);
     } catch (error) {
       console.error("StationTimer: Error in fetchSessionData", error);
-      setIsRefreshing(false);
     }
   };
 
@@ -178,43 +187,15 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
     return null;
   }
 
-  if (compact) {
-    return (
-      <div className="text-center flex flex-col items-center">
-        <div className="relative inline-block">
-          <span className={`font-mono text-base ${seconds % 2 === 0 ? 'text-white' : 'text-white/90'} 
-            bg-black bg-opacity-80 px-3 py-1 rounded text-white font-medium inline-block
-            border border-gray-700/50 shadow-[0_0_15px_rgba(14,165,233,0.2)]`}
-          >
-            {formatTimeDisplay(hours, minutes, seconds)}
-          </span>
-          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-cuephoria-blue to-transparent"></div>
-        </div>
-        <div className="mt-1 text-xs font-medium text-cuephoria-orange">
-          <CurrencyDisplay amount={cost} className="text-xs" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4 bg-gradient-to-b from-black/80 to-gray-900/80 p-4 rounded-lg border border-gray-700/30 shadow-lg relative overflow-hidden group">
-      <div className="absolute inset-0 bg-gradient-to-r from-cuephoria-purple/5 to-cuephoria-blue/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-      
-      <div className="text-center relative">
-        <Clock className="h-4 w-4 text-gray-400 absolute left-1/2 -translate-x-1/2 -top-2" />
-        <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full
-          ${seconds % 2 === 0 ? 'text-white' : 'text-white/90'} border border-gray-700/50 shadow-inner`}
-        >
+    <div className="space-y-4 bg-black/70 p-3 rounded-lg">
+      <div className="text-center">
+        <span className="font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full">
           {formatTimeDisplay(hours, minutes, seconds)}
         </span>
-        <div className="h-[2px] w-3/4 mx-auto mt-1 bg-gradient-to-r from-transparent via-cuephoria-blue/50 to-transparent"></div>
       </div>
-      
-      <div className="flex justify-between items-center relative">
-        <span className="text-white flex items-center">
-          <DollarSign className="h-4 w-4 text-cuephoria-orange mr-1" /> Current Cost:
-        </span>
+      <div className="flex justify-between items-center">
+        <span className="text-white">Current Cost:</span>
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
     </div>
