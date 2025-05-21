@@ -106,20 +106,12 @@ const ActiveSessions: React.FC<ActiveSessionsProps> = ({ limit, publicView = fal
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                      customer?.avatarUrl ? '' : isPS5 ? 'bg-[#0EA5E9]/20' : 'bg-[#10B981]/20'
+                      isPS5 ? 'bg-[#0EA5E9]/20' : 'bg-[#10B981]/20'
                     }`}>
-                      {customer?.avatarUrl ? (
-                        <img 
-                          src={customer.avatarUrl} 
-                          alt={customer.name} 
-                          className="h-10 w-10 rounded-full" 
-                        />
+                      {isPS5 ? (
+                        <Gamepad2 className="h-5 w-5 text-blue-400" />
                       ) : (
-                        isPS5 ? (
-                          <Gamepad2 className="h-5 w-5 text-blue-400" />
-                        ) : (
-                          <Table2 className="h-5 w-5 text-green-400" />
-                        )
+                        <Table2 className="h-5 w-5 text-green-400" />
                       )}
                     </div>
                     <div>
