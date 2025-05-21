@@ -156,55 +156,6 @@ export const useStationBooking = ({
         }
       }
       
-      // Send booking confirmation email
-      if (customerInfo.email) {
-        try {
-          const primaryBookingId = createdBookingIds[0];
-          const stationNames = selectedStations.map(s => s.name).join(", ");
-          
-          console.log('Sending booking confirmation email to:', customerInfo.email);
-          console.log('Booking details:', {
-            bookingId: primaryBookingId,
-            groupId,
-            customerName: customerInfo.name,
-            stationNames
-          });
-          
-          const { data: emailData, error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
-            body: {
-              bookingId: primaryBookingId,
-              bookingGroupId: groupId,
-              customerName: customerInfo.name,
-              stationName: stationNames,
-              bookingDate: format(selectedDate, 'EEEE, MMMM d, yyyy'),
-              startTime: selectedTimeSlot.startTime,
-              endTime: selectedTimeSlot.endTime,
-              duration: bookingDuration,
-              bookingReference: bookingAccessCode || createdBookingIds[0].substring(0, 8).toUpperCase(),
-              recipientEmail: customerInfo.email,
-              discount: discountPercentage > 0 ? `${discountPercentage}% discount applied` : null,
-              finalPrice: selectedStations.reduce((sum, station) => 
-                sum + ((station.hourlyRate * (bookingDuration / 60)) * (1 - (discountPercentage/100))), 0
-              ).toFixed(2),
-              totalStations: selectedStations.length
-            }
-          });
-          
-          if (emailError) {
-            console.error('Error sending email:', emailError);
-            // We don't want to fail the booking if email fails
-            toast.error('Booking confirmed but email notification failed');
-          } else {
-            console.log('Email sent successfully:', emailData);
-            toast.success('Booking confirmation email sent');
-          }
-        } catch (emailError) {
-          console.error('Error invoking email function:', emailError);
-          // We don't want to fail the booking if email fails
-          toast.error('Booking confirmed but there was a problem sending the confirmation email');
-        }
-      }
-      
       if (onBookingConfirmed) {
         onBookingConfirmed(createdBookingIds, groupId, bookingAccessCode);
       }
