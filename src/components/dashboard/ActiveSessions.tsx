@@ -5,6 +5,7 @@ import { Clock, User, Gamepad2, Table2, X } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
 import { motion } from 'framer-motion';
 import RunningTimer from '@/components/station/RunningTimer';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
 interface ActiveSessionsProps {
   limit?: number;
@@ -34,79 +35,89 @@ const ActiveSessions: React.FC<ActiveSessionsProps> = ({ limit, publicView = fal
     show: { y: 0, opacity: 1 }
   };
   
+  if (activeStations.length === 0) {
+    return (
+      <motion.div 
+        className="flex flex-col items-center justify-center p-8 text-gray-400 border border-dashed border-gray-700 rounded-lg"
+        variants={item}
+        initial="hidden"
+        animate="show"
+      >
+        <X className="h-8 w-8 mb-2 opacity-40" />
+        <p className="text-center">No active sessions</p>
+        <p className="text-xs text-gray-500 mt-1 text-center">Book a session to get started</p>
+      </motion.div>
+    );
+  }
+  
   return (
     <motion.div 
-      className="space-y-4"
       initial="hidden"
       animate="show"
       variants={container}
+      className="rounded-md"
     >
-      {activeStations.length > 0 ? (
-        activeStations.map((station, index) => {
-          const session = station.currentSession;
-          if (!session) return null;
-          
-          const customer = customers.find(c => c.id === session.customerId);
-          const isPS5 = station.type === 'ps5';
-          
-          return (
-            <motion.div 
-              key={station.id} 
-              className={`flex items-center justify-between p-4 rounded-lg border hover:border-opacity-70 transition-colors ${
-                isPS5 
-                  ? 'bg-gradient-to-r from-blue-900/40 to-blue-800/30 border-blue-700/50 hover:shadow-blue-900/20 hover:shadow-lg' 
-                  : 'bg-gradient-to-r from-green-900/40 to-green-800/30 border-green-700/50 hover:shadow-green-900/20 hover:shadow-lg'
-              }`}
-              variants={item}
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
-              <div className="flex items-center space-x-4">
-                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                  isPS5 ? 'bg-[#0EA5E9]/20' : 'bg-[#10B981]/20'
-                }`}>
-                  {isPS5 ? (
-                    <Gamepad2 className="h-5 w-5 text-blue-400" />
-                  ) : (
-                    <Table2 className="h-5 w-5 text-green-400" />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center">
-                    <p className="font-medium">{station.name}</p>
-                    <span className={`text-xs ml-2 px-2 py-0.5 rounded-full ${
-                      isPS5 ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'
+      <Table>
+        <TableHeader className="bg-gray-900/60">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[100px]">Station</TableHead>
+            <TableHead>Type</TableHead>
+            {!publicView && <TableHead>Customer</TableHead>}
+            <TableHead className="text-right">Duration</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {activeStations.map((station) => {
+            const session = station.currentSession;
+            if (!session) return null;
+            
+            const customer = customers.find(c => c.id === session.customerId);
+            const isPS5 = station.type === 'ps5';
+            
+            return (
+              <TableRow 
+                key={station.id} 
+                className="border-gray-800 hover:bg-gray-800/40"
+              >
+                <TableCell className="font-medium">
+                  <div className="flex items-center space-x-2">
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                      isPS5 ? 'bg-[#0EA5E9]/20' : 'bg-[#10B981]/20'
                     }`}>
-                      {isPS5 ? 'PS5' : '8-Ball'}
-                    </span>
-                  </div>
-                  {!publicView && customer && (
-                    <div className="flex items-center text-xs text-gray-400 mt-1">
-                      <User className="h-3 w-3 mr-1" />
-                      <p className="truncate max-w-[120px]">{customer?.name || 'Walk-in Customer'}</p>
+                      {isPS5 ? (
+                        <Gamepad2 className="h-4 w-4 text-blue-400" />
+                      ) : (
+                        <Table2 className="h-4 w-4 text-green-400" />
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-300 font-medium">
-                {session && session.startTime && (
-                  <RunningTimer startTime={session.startTime} compact={publicView} />
+                    <span>{station.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    isPS5 ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'
+                  }`}>
+                    {isPS5 ? 'PS5' : '8-Ball'}
+                  </span>
+                </TableCell>
+                {!publicView && (
+                  <TableCell>
+                    <div className="flex items-center text-sm text-gray-300">
+                      <User className="h-3 w-3 mr-2 text-gray-400" />
+                      <span className="truncate max-w-[120px]">{customer?.name || 'Walk-in Customer'}</span>
+                    </div>
+                  </TableCell>
                 )}
-              </div>
-            </motion.div>
-          );
-        })
-      ) : (
-        <motion.div 
-          className="flex flex-col items-center justify-center p-8 text-gray-400 border border-dashed border-gray-700 rounded-lg"
-          variants={item}
-        >
-          <X className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-center">No active sessions</p>
-          <p className="text-xs text-gray-500 mt-1 text-center">Book a session to get started</p>
-        </motion.div>
-      )}
+                <TableCell className="text-right">
+                  {session && session.startTime && (
+                    <RunningTimer startTime={session.startTime} compact={publicView} />
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </motion.div>
   );
 };

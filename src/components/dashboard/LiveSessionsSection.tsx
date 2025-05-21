@@ -36,7 +36,7 @@ const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({ publicView = 
   }, []);
 
   return (
-    <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-800 overflow-hidden shadow-xl hover:shadow-purple-900/20 transition-all duration-500">
+    <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-800 overflow-hidden shadow-xl">
       <CardHeader className="pb-2 flex flex-row justify-between items-center">
         <div>
           <CardTitle className="flex items-center text-lg md:text-left">
@@ -78,8 +78,6 @@ const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({ publicView = 
       
       <CardContent>
         <div className="relative">
-          <div className="absolute -top-6 -right-6 w-32 h-32 bg-cuephoria-purple/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-cuephoria-blue/10 rounded-full blur-3xl"></div>
           <ActiveSessions publicView={publicView} />
         </div>
       </CardContent>
