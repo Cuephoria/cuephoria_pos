@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isBefore, isToday } from 'date-fns';
 import { CalendarIcon, Clock, Edit, Trash2, Search, Filter, ChevronDown, ChevronUp, Users } from 'lucide-react';
@@ -25,49 +25,144 @@ import {
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useBookings } from '@/hooks/booking/useBookings';
+
+// Booking type definition
+interface Booking {
+  id: string;
+  station_id: string;
+  customer_id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  duration: number;
+  status: 'confirmed' | 'cancelled' | 'completed' | 'no-show';
+  notes: string | null;
+  created_at: string;
+  station: {
+    name: string;
+    type: string;
+  };
+  customer: {
+    name: string;
+    phone: string;
+    email: string | null;
+  };
+}
+
+// Customer with bookings type
+interface CustomerWithBookings {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  bookings: Booking[];
+}
+
+// Date with customers type
+interface DateWithCustomers {
+  date: string;
+  formattedDate: string;
+  customers: CustomerWithBookings[];
+}
+
+// Filter options
+type FilterOption = 'all' | 'today' | 'upcoming' | 'past' | 'cancelled';
+type StatusOption = 'all' | 'confirmed' | 'cancelled' | 'completed' | 'no-show';
+type StationType = 'all' | 'ps5' | '8ball';
 
 const BookingsPage = () => {
   // Get auth context
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   
   // States for bookings and filters
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'upcoming' | 'past' | 'cancelled'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'confirmed' | 'cancelled' | 'completed' | 'no-show'>('all');
-  const [selectedType, setSelectedType] = useState<'all' | 'ps5' | '8ball'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<FilterOption>('all');
+  const [selectedStatus, setSelectedStatus] = useState<StatusOption>('all');
+  const [selectedType, setSelectedType] = useState<StationType>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
-  
   // States for editing and deleting bookings
-  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editedStatus, setEditedStatus] = useState<'confirmed' | 'cancelled' | 'completed' | 'no-show'>('confirmed');
+  const [editedStatus, setEditedStatus] = useState<Booking['status']>('confirmed');
   const [editedNotes, setEditedNotes] = useState('');
   
   // State for tracking the latest booking ID we've seen
   const [latestBookingId, setLatestBookingId] = useState<string | null>(null);
   
-  // Use our optimized custom hook for bookings
-  const {
-    bookings,
-    isLoading,
-    error,
-    refetch,
-    stats,
-    deleteBooking,
-    updateBooking
-  } = useBookings();
+  // Fetch bookings with relevant join tables
+  const { data: bookings, isLoading, error, refetch } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          station:station_id (name, type),
+          customer:customer_id (name, phone, email)
+        `)
+        .order('booking_date', { ascending: false })
+        .order('start_time', { ascending: true });
+      
+      if (error) throw error;
+      return data as Booking[];
+    }
+  });
 
-  // Apply filters and generate date-grouped bookings with memoization
-  const dateGroupedBookings = useMemo(() => {
+  // Check for new bookings and notify admin
+  useEffect(() => {
+    if (!bookings || bookings.length === 0 || !user || user.username !== 'admin') return;
+    
+    // Find the most recent booking
+    const sortedBookings = [...bookings].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    const mostRecentBooking = sortedBookings[0];
+    
+    // If we have a previous latest booking and the current most recent booking is different
+    if (latestBookingId && mostRecentBooking.id !== latestBookingId) {
+      // Show notification
+      toast.success(`New booking received from ${mostRecentBooking.customer.name}`, {
+        description: `Date: ${mostRecentBooking.booking_date}, Time: ${mostRecentBooking.start_time}`,
+        duration: 5000,
+      });
+    }
+    
+    // Update the latest booking ID we've seen
+    setLatestBookingId(mostRecentBooking.id);
+  }, [bookings, user, latestBookingId]);
+
+  // Subscribe to realtime updates for the bookings table
+  useEffect(() => {
+    if (!user || user.username !== 'admin') return;
+    
+    const channel = supabase
+      .channel('bookings-channel')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'bookings' 
+        }, 
+        (payload) => {
+          console.log('New booking received:', payload);
+          // Refetch bookings when a new booking is created
+          refetch();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch, user]);
+
+  // Group bookings by date and then by customer
+  const dateGroupedBookings = React.useMemo(() => {
     if (!bookings) return [];
     
     // Apply filters first
@@ -107,13 +202,13 @@ const BookingsPage = () => {
       return true;
     });
     
-    // Group by date first using a more efficient approach
-    const dateMap = new Map<string, Map<string, any>>();
+    // Group by date first
+    const dateMap = new Map<string, Map<string, CustomerWithBookings>>();
     
     filteredBookings.forEach(booking => {
       // Add the date if it doesn't exist
       if (!dateMap.has(booking.booking_date)) {
-        dateMap.set(booking.booking_date, new Map<string, any>());
+        dateMap.set(booking.booking_date, new Map<string, CustomerWithBookings>());
       }
       
       const customersForDate = dateMap.get(booking.booking_date)!;
@@ -134,7 +229,7 @@ const BookingsPage = () => {
     });
     
     // Convert to array of dates with customers
-    const result = [];
+    const result: DateWithCustomers[] = [];
     
     dateMap.forEach((customersMap, date) => {
       const customers = Array.from(customersMap.values())
@@ -154,67 +249,6 @@ const BookingsPage = () => {
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }, [bookings, selectedFilter, selectedStatus, selectedType, searchTerm, dateFilter]);
-  
-  // Implement pagination for the date groups
-  const paginatedDateGroups = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return dateGroupedBookings.slice(startIndex, endIndex);
-  }, [dateGroupedBookings, currentPage, pageSize]);
-
-  // Check for new bookings and notify admin
-  useEffect(() => {
-    if (!bookings || bookings.length === 0 || !user || user.username !== 'admin') return;
-    
-    // Find the most recent booking more efficiently
-    let mostRecentBooking = bookings[0];
-    let mostRecentTime = new Date(mostRecentBooking.created_at).getTime();
-    
-    for (let i = 1; i < bookings.length; i++) {
-      const bookingTime = new Date(bookings[i].created_at).getTime();
-      if (bookingTime > mostRecentTime) {
-        mostRecentTime = bookingTime;
-        mostRecentBooking = bookings[i];
-      }
-    }
-    
-    // If we have a previous latest booking and the current most recent booking is different
-    if (latestBookingId && mostRecentBooking.id !== latestBookingId) {
-      // Show notification
-      toast.success(`New booking received from ${mostRecentBooking.customer.name}`, {
-        description: `Date: ${mostRecentBooking.booking_date}, Time: ${mostRecentBooking.start_time}`,
-        duration: 5000,
-      });
-    }
-    
-    // Update the latest booking ID we've seen
-    setLatestBookingId(mostRecentBooking.id);
-  }, [bookings, user, latestBookingId]);
-
-  // Subscribe to realtime updates for the bookings table
-  useEffect(() => {
-    if (!user || user.username !== 'admin') return;
-    
-    const channel = supabase
-      .channel('bookings-channel')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'bookings' 
-        }, 
-        (payload) => {
-          console.log('New booking received:', payload);
-          // Invalidate booking queries to trigger a refetch
-          queryClient.invalidateQueries({ queryKey: ['bookings'] });
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, user]);
   
   // Toggle date expansion
   const toggleDate = (date: string) => {
@@ -244,7 +278,7 @@ const BookingsPage = () => {
   
   // Expand all dates
   const expandAllDates = () => {
-    const allDates = paginatedDateGroups.map(date => date.date);
+    const allDates = dateGroupedBookings.map(date => date.date);
     setExpandedDates(new Set(allDates));
   };
   
@@ -253,32 +287,77 @@ const BookingsPage = () => {
     setExpandedDates(new Set());
   };
   
+  // Statistics
+  const stats = React.useMemo(() => {
+    if (!bookings) return { total: 0, upcoming: 0, today: 0, ps5: 0, pool: 0 };
+    
+    return bookings.reduce((acc, booking) => {
+      const bookingDate = parseISO(booking.booking_date);
+      const isUpcoming = isBefore(new Date(), bookingDate) || 
+                        (isToday(bookingDate) && booking.start_time > format(new Date(), 'HH:mm'));
+      
+      acc.total++;
+      if (isUpcoming && booking.status === 'confirmed') acc.upcoming++;
+      if (isToday(bookingDate)) acc.today++;
+      if (booking.station.type === 'ps5') acc.ps5++;
+      if (booking.station.type === '8ball') acc.pool++;
+      
+      return acc;
+    }, { total: 0, upcoming: 0, today: 0, ps5: 0, pool: 0 });
+  }, [bookings]);
+  
   // Handle booking edit
   const handleEditBooking = async () => {
     if (!selectedBooking) return;
     
     try {
-      await updateBooking(selectedBooking.id, {
-        status: editedStatus,
-        notes: editedNotes || null
-      });
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          status: editedStatus,
+          notes: editedNotes || null
+        })
+        .eq('id', selectedBooking.id);
+      
+      if (error) throw error;
       
       toast.success('Booking updated successfully');
       setIsEditDialogOpen(false);
+      refetch();
     } catch (error) {
       console.error('Error updating booking:', error);
       toast.error('Failed to update booking');
     }
   };
   
-  // Handle booking deletion
+  // Modified to handle booking view deletion first
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
     
     try {
-      await deleteBooking(selectedBooking.id);
+      // First, delete associated booking_views
+      const { error: viewsError } = await supabase
+        .from('booking_views')
+        .delete()
+        .eq('booking_id', selectedBooking.id);
+      
+      if (viewsError) {
+        console.error('Error deleting booking views:', viewsError);
+        toast.error('Failed to delete booking: ' + viewsError.message);
+        return;
+      }
+      
+      // After successfully deleting booking_views, delete the booking
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', selectedBooking.id);
+      
+      if (error) throw error;
+      
       toast.success('Booking deleted successfully');
       setIsDeleteDialogOpen(false);
+      refetch();
     } catch (error) {
       console.error('Error deleting booking:', error);
       toast.error('Failed to delete booking');
@@ -286,7 +365,7 @@ const BookingsPage = () => {
   };
   
   // Open edit dialog with booking data
-  const openEditDialog = (booking: any) => {
+  const openEditDialog = (booking: Booking) => {
     setSelectedBooking(booking);
     setEditedStatus(booking.status);
     setEditedNotes(booking.notes || '');
@@ -294,7 +373,7 @@ const BookingsPage = () => {
   };
   
   // Open delete confirmation dialog
-  const openDeleteDialog = (booking: any) => {
+  const openDeleteDialog = (booking: Booking) => {
     setSelectedBooking(booking);
     setIsDeleteDialogOpen(true);
   };
@@ -306,11 +385,10 @@ const BookingsPage = () => {
     setSelectedType('all');
     setSearchTerm('');
     setDateFilter(undefined);
-    setCurrentPage(1);
   };
   
   // Get status badge class
-  const getStatusBadgeClass = (status: string) => {
+  const getStatusBadgeClass = (status: Booking['status']) => {
     switch (status) {
       case 'confirmed':
         return 'bg-green-500/20 text-green-400 border-green-500/30';
@@ -324,22 +402,6 @@ const BookingsPage = () => {
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
-  
-  // Handle pagination
-  const handleNextPage = () => {
-    if (currentPage * pageSize < dateGroupedBookings.length) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-  
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
-  };
-  
-  // Calculate total pages
-  const totalPages = Math.ceil(dateGroupedBookings.length / pageSize);
   
   if (error) {
     return (
@@ -406,10 +468,7 @@ const BookingsPage = () => {
               <label className="text-sm text-gray-400 mb-1 block">Time Period</label>
               <Select 
                 value={selectedFilter} 
-                onValueChange={(value) => {
-                  setSelectedFilter(value as any);
-                  setCurrentPage(1); // Reset to first page on filter change
-                }}
+                onValueChange={(value) => setSelectedFilter(value as FilterOption)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by" />
@@ -428,10 +487,7 @@ const BookingsPage = () => {
               <label className="text-sm text-gray-400 mb-1 block">Status</label>
               <Select 
                 value={selectedStatus} 
-                onValueChange={(value) => {
-                  setSelectedStatus(value as any);
-                  setCurrentPage(1); // Reset to first page on filter change
-                }}
+                onValueChange={(value) => setSelectedStatus(value as StatusOption)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
@@ -450,10 +506,7 @@ const BookingsPage = () => {
               <label className="text-sm text-gray-400 mb-1 block">Station Type</label>
               <Select 
                 value={selectedType} 
-                onValueChange={(value) => {
-                  setSelectedType(value as any);
-                  setCurrentPage(1); // Reset to first page on filter change
-                }}
+                onValueChange={(value) => setSelectedType(value as StationType)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Station type" />
@@ -470,10 +523,7 @@ const BookingsPage = () => {
               <label className="text-sm text-gray-400 mb-1 block">Date</label>
               <DatePicker
                 date={dateFilter}
-                onDateChange={(date) => {
-                  setDateFilter(date);
-                  setCurrentPage(1); // Reset to first page on filter change
-                }}
+                onDateChange={setDateFilter}
                 placeholder="Pick a date"
               />
             </div>
@@ -485,10 +535,7 @@ const BookingsPage = () => {
                 <Input 
                   placeholder="Search bookings..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1); // Reset to first page on search change
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -526,7 +573,7 @@ const BookingsPage = () => {
             <div className="flex justify-center items-center h-64">
               <LoadingSpinner className="h-8 w-8" />
             </div>
-          ) : paginatedDateGroups.length === 0 ? (
+          ) : dateGroupedBookings.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-gray-400">No bookings found matching the current filters</p>
               {(selectedFilter !== 'all' || selectedStatus !== 'all' || selectedType !== 'all' || searchTerm || dateFilter) && (
@@ -534,165 +581,138 @@ const BookingsPage = () => {
               )}
             </div>
           ) : (
-            <>
-              <div className="space-y-4 p-4">
-                {paginatedDateGroups.map((dateGroup) => (
-                  <Collapsible 
-                    key={dateGroup.date} 
-                    open={expandedDates.has(dateGroup.date)} 
-                    onOpenChange={() => toggleDate(dateGroup.date)}
-                    className="border border-gray-800 rounded-lg overflow-hidden"
-                  >
-                    <CollapsibleTrigger asChild>
-                      <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-800/50">
-                        <div>
-                          <h3 className="font-medium">{dateGroup.formattedDate}</h3>
-                          <div className="text-sm text-gray-400">
-                            {dateGroup.customers.length} customer{dateGroup.customers.length !== 1 ? 's' : ''}, 
-                            {dateGroup.customers.reduce((total, customer) => total + customer.bookings.length, 0)} booking{dateGroup.customers.reduce((total, customer) => total + customer.bookings.length, 0) !== 1 ? 's' : ''}
-                          </div>
-                        </div>
-                        <div className="flex items-center">
-                          {expandedDates.has(dateGroup.date) ? (
-                            <ChevronUp className="h-5 w-5 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-5 w-5 text-gray-400" />
-                          )}
+            <div className="space-y-4 p-4">
+              {dateGroupedBookings.map((dateGroup) => (
+                <Collapsible 
+                  key={dateGroup.date} 
+                  open={expandedDates.has(dateGroup.date)} 
+                  onOpenChange={() => toggleDate(dateGroup.date)}
+                  className="border border-gray-800 rounded-lg overflow-hidden"
+                >
+                  <CollapsibleTrigger asChild>
+                    <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-800/50">
+                      <div>
+                        <h3 className="font-medium">{dateGroup.formattedDate}</h3>
+                        <div className="text-sm text-gray-400">
+                          {dateGroup.customers.length} customer{dateGroup.customers.length !== 1 ? 's' : ''}, 
+                          {dateGroup.customers.reduce((total, customer) => total + customer.bookings.length, 0)} booking{dateGroup.customers.reduce((total, customer) => total + customer.bookings.length, 0) !== 1 ? 's' : ''}
                         </div>
                       </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="p-4 space-y-4">
-                        {dateGroup.customers.map((customer) => (
-                          <Collapsible 
-                            key={`${dateGroup.date}-${customer.id}`} 
-                            open={expandedCustomers.has(customer.id)} 
-                            onOpenChange={() => toggleCustomer(customer.id)}
-                            className="border border-gray-700 rounded-lg overflow-hidden"
-                          >
-                            <CollapsibleTrigger asChild>
-                              <div className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-700/50">
-                                <div>
-                                  <h4 className="font-medium">{customer.name}</h4>
-                                  <div className="text-sm text-gray-400 flex flex-col sm:flex-row sm:gap-2">
-                                    <span>{customer.phone}</span>
-                                    {customer.email && (
-                                      <span className="hidden sm:inline text-gray-500">•</span>
-                                    )}
-                                    {customer.email && <span>{customer.email}</span>}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-400 text-sm">
-                                    {customer.bookings.length} booking{customer.bookings.length !== 1 ? 's' : ''}
-                                  </span>
-                                  {expandedCustomers.has(customer.id) ? (
-                                    <ChevronUp className="h-5 w-5 text-gray-400" />
-                                  ) : (
-                                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                      <div className="flex items-center">
+                        {expandedDates.has(dateGroup.date) ? (
+                          <ChevronUp className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="p-4 space-y-4">
+                      {dateGroup.customers.map((customer) => (
+                        <Collapsible 
+                          key={`${dateGroup.date}-${customer.id}`} 
+                          open={expandedCustomers.has(customer.id)} 
+                          onOpenChange={() => toggleCustomer(customer.id)}
+                          className="border border-gray-700 rounded-lg overflow-hidden"
+                        >
+                          <CollapsibleTrigger asChild>
+                            <div className="flex justify-between items-center p-3 cursor-pointer hover:bg-gray-700/50">
+                              <div>
+                                <h4 className="font-medium">{customer.name}</h4>
+                                <div className="text-sm text-gray-400 flex flex-col sm:flex-row sm:gap-2">
+                                  <span>{customer.phone}</span>
+                                  {customer.email && (
+                                    <span className="hidden sm:inline text-gray-500">•</span>
                                   )}
+                                  {customer.email && <span>{customer.email}</span>}
                                 </div>
                               </div>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <div className="overflow-x-auto">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Booking ID</TableHead>
-                                      <TableHead>Station</TableHead>
-                                      <TableHead>Time</TableHead>
-                                      <TableHead>Duration</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {customer.bookings.map((booking) => (
-                                      <TableRow key={booking.id}>
-                                        <TableCell className="font-mono text-xs">
-                                          {booking.id.substring(0, 8).toUpperCase()}
-                                        </TableCell>
-                                        <TableCell>
-                                          <div className="flex items-center">
-                                            <span className={`w-2 h-2 rounded-full mr-2 ${booking.station.type === 'ps5' ? 'bg-blue-400' : 'bg-green-400'}`} />
-                                            {booking.station.name}
-                                          </div>
-                                          <div className="text-xs text-gray-400">
-                                            {booking.station.type === 'ps5' ? 'PlayStation 5' : 'Pool Table'}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          <div className="flex items-center">
-                                            <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                                            {booking.start_time} - {booking.end_time}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          {booking.duration} mins
-                                        </TableCell>
-                                        <TableCell>
-                                          <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeClass(booking.status)}`}>
-                                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                                          </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <div className="flex justify-end gap-2">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => openEditDialog(booking)}
-                                            >
-                                              <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              onClick={() => openDeleteDialog(booking)}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400 text-sm">
+                                  {customer.bookings.length} booking{customer.bookings.length !== 1 ? 's' : ''}
+                                </span>
+                                {expandedCustomers.has(customer.id) ? (
+                                  <ChevronUp className="h-5 w-5 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                                )}
                               </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
-              
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex justify-between items-center p-4 border-t border-gray-800">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <div className="text-sm text-gray-400">
-                    Page {currentPage} of {totalPages}
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Booking ID</TableHead>
+                                    <TableHead>Station</TableHead>
+                                    <TableHead>Time</TableHead>
+                                    <TableHead>Duration</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {customer.bookings.map((booking) => (
+                                    <TableRow key={booking.id}>
+                                      <TableCell className="font-mono text-xs">
+                                        {booking.id.substring(0, 8).toUpperCase()}
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center">
+                                          <span className={`w-2 h-2 rounded-full mr-2 ${booking.station.type === 'ps5' ? 'bg-blue-400' : 'bg-green-400'}`} />
+                                          {booking.station.name}
+                                        </div>
+                                        <div className="text-xs text-gray-400">
+                                          {booking.station.type === 'ps5' ? 'PlayStation 5' : 'Pool Table'}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center">
+                                          <Clock className="h-3 w-3 mr-1 text-gray-400" />
+                                          {booking.start_time} - {booking.end_time}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        {booking.duration} mins
+                                      </TableCell>
+                                      <TableCell>
+                                        <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeClass(booking.status)}`}>
+                                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openEditDialog(booking)}
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openDeleteDialog(booking)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
@@ -725,7 +745,7 @@ const BookingsPage = () => {
             
             <div>
               <label className="text-sm text-gray-400 mb-1 block">Status</label>
-              <Select value={editedStatus} onValueChange={(value) => setEditedStatus(value as any)}>
+              <Select value={editedStatus} onValueChange={(value) => setEditedStatus(value as Booking['status'])}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>

@@ -4,9 +4,8 @@ import { format } from 'date-fns';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
+import { DatePicker } from '@/components/ui/date-picker';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TimeSlot {
   startTime: string;
@@ -37,29 +36,20 @@ const DateTimeSection: React.FC<DateTimeSectionProps> = ({
   onDurationChange,
   onTimeSlotSelect
 }) => {
-  const isMobile = useIsMobile();
-  
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Date Picker - Now as a direct calendar */}
+        {/* Date Picker */}
         <div>
           <h3 className="text-lg font-medium mb-4 flex items-center">
             <CalendarIcon className="mr-2 h-5 w-5 text-cuephoria-lightpurple" />
             Select Date
           </h3>
-          <div className={`border border-gray-800 rounded-md bg-gray-800/50 p-2 ${isMobile ? 'overflow-x-auto' : ''}`}>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={onDateSelect}
-              initialFocus
-              className="mx-auto pointer-events-auto"
-              classNames={{
-                day_selected: "bg-cuephoria-purple text-white hover:bg-cuephoria-purple hover:text-white",
-                day_today: "bg-gray-700 text-white",
-                day: "text-sm p-0 h-8 w-8 aria-selected:opacity-100"
-              }}
+          <div className="border border-gray-800 rounded-md bg-gray-800/50 p-4">
+            <DatePicker
+              date={selectedDate}
+              onDateChange={onDateSelect}
+              placeholder="Select booking date"
             />
           </div>
         </div>

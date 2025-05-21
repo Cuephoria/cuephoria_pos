@@ -30,9 +30,8 @@ const StationCard: React.FC<StationCardProps> = ({
             ? 'border-cuephoria-purple bg-cuephoria-purple/10 shadow-[0_0_10px_rgba(139,92,246,0.3)]'
             : 'border-green-600 bg-green-900/10 shadow-[0_0_10px_rgba(22,163,74,0.3)]'
           : 'border-gray-800 bg-gray-800/20 hover:bg-gray-800/40'
-      } cursor-pointer`}
+      } ${multiSelect ? 'cursor-pointer' : ''}`}
       onClick={onSelect}
-      aria-selected={isSelected}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center">
@@ -74,17 +73,14 @@ const StationCard: React.FC<StationCardProps> = ({
               : 'bg-green-700 hover:bg-green-700/90'
             : ''
         } ${isMobile ? 'text-xs py-1' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation(); // Prevent double-triggering with the parent div onClick
-          onSelect();
-        }}
+        onClick={onSelect}
       >
-        {isSelected ? 'Selected' : 'Select'}
+        {isSelected ? (multiSelect ? 'Selected' : 'Selected') : (multiSelect ? 'Select' : 'Select')}
       </Button>
 
-      {isSelected && (
+      {multiSelect && isSelected && (
         <div className="mt-2 text-center">
-          <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} ${isPs5 ? 'text-cuephoria-lightpurple' : 'text-green-400'}`}>
+          <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-cuephoria-lightpurple`}>
             Click again to deselect
           </span>
         </div>
