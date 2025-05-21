@@ -29,7 +29,7 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   onStationTypeChange,
   loading: externalLoading,
   isMobile,
-  unavailableStationIds: externalUnavailableStationIds,
+  unavailableStationIds: externalUnavailableIds,
   availableControllers = 0
 }) => {
   // If external unavailable IDs are provided, use them, otherwise use what's computed from the hook
@@ -37,15 +37,27 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
     useStationAvailability({ selectedDate, selectedTimeSlot });
   
   const loading = externalLoading !== undefined ? externalLoading : internalLoading;
-  const unavailableStationIds = externalUnavailableStationIds || internalUnavailableIds || [];
+  const unavailableStationIds = externalUnavailableIds || internalUnavailableIds || [];
   
-  // Function to handle station selection
+  // Create a modified handleStationSelect that respects availability
   const handleStationSelect = (station: Station) => {
+    // If it's already selected, allow deselection
+    if (selectedStations.some(s => s.id === station.id)) {
+      onStationSelect(station);
+      return;
+    }
+    
     // Don't allow selection if station is unavailable
     if (unavailableStationIds.includes(station.id)) {
       return;
     }
     
+    // For PS5 stations, check controller availability
+    if (station.type === 'ps5' && availableControllers <= 0) {
+      return;
+    }
+    
+    // If it passes all checks, select the station
     onStationSelect(station);
   };
   

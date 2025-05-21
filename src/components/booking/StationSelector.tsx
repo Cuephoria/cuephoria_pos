@@ -59,9 +59,23 @@ const StationSelector = ({
     ? sortedStations
     : sortedStations.filter(station => station.type === stationType);
   
-  // Group stations by type for UI display
-  const ps5Stations = sortedStations.filter(station => station.type === 'ps5');
-  const ballStations = sortedStations.filter(station => station.type === '8ball');
+  // Create a handler that checks availability before selection
+  const handleStationSelect = (station: Station) => {
+    // Prevent selection if station is in the unavailable list
+    if (unavailableStationIds.includes(station.id)) {
+      return;
+    }
+    
+    // For PS5 stations, prevent selection if no controllers available
+    // But allow deselection (if it's already selected)
+    if (station.type === 'ps5' && availableControllers <= 0 && 
+        !selectedStations.some(s => s.id === station.id)) {
+      return;
+    }
+    
+    // If it passes the checks, allow selection
+    onStationSelect(station);
+  };
   
   return (
     <div className="w-full">
@@ -81,7 +95,7 @@ const StationSelector = ({
         multiSelect={multiSelect}
         unavailableStationIds={unavailableStationIds}
         availableControllers={availableControllers}
-        onStationSelect={onStationSelect}
+        onStationSelect={handleStationSelect}
       />
       
       <MultiSelectInfo show={multiSelect} />
