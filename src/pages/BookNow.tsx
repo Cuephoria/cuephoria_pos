@@ -1004,89 +1004,18 @@ View booking online: ${bookingDetails.viewUrl}
               
               {/* Step 5: Booking Confirmation */}
               {currentStep === 5 && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Check size={32} />
-                    </div>
-                    <h3 className="text-2xl font-semibold text-white mb-1">Booking Confirmed!</h3>
-                    <p className="text-gray-400 mb-6">
-                      Your booking details have been sent to {customerInfo.email || "our system"}
-                    </p>
-                  </div>
-                  
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                    <h4 className="text-lg font-medium mb-4 text-white">Booking Details</h4>
-                    
-                    <div className="space-y-3 text-gray-300">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Customer Name:</span>
-                        <span className="font-medium">{customerInfo.name}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Station(s):</span>
-                        <span className="font-medium">{selectedStations.map(s => s.name).join(", ")}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Date:</span>
-                        <span className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Time:</span>
-                        <span className="font-medium">{selectedTimeSlot?.startTime} - {selectedTimeSlot?.endTime}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Duration:</span>
-                        <span className="font-medium">{bookingDuration} minutes</span>
-                      </div>
-                      
-                      {discountPercentage > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Discount:</span>
-                          <span className="font-medium text-cuephoria-lightpurple">{discountPercentage}% off</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Total Price:</span>
-                        <span className="font-medium">₹{calculateTotalPrice().toFixed(2)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Booking Reference:</span>
-                        <span className="font-medium font-mono">{bookingAccessCode}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 space-y-3">
-                      <Button 
-                        onClick={handleShareBooking} 
-                        variant="outline" 
-                        className="w-full flex items-center justify-center gap-2"
-                      >
-                        <Share2 size={16} />
-                        Share Booking Details
-                      </Button>
-                      
-                      <Button
-                        onClick={() => window.open(`/bookings/check?code=${bookingAccessCode}`, '_blank')}
-                        className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
-                      >
-                        View Booking Details
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg p-4">
-                    <p className="text-gray-300">
-                      Please arrive 10 minutes before your booking time. For any questions or modifications, contact us at contact@cuephoria.in or check your booking status online with your booking code: <span className="font-mono font-medium">{bookingAccessCode}</span>
-                    </p>
-                  </div>
-                </div>
+                <BookingConfirmation 
+                  bookingId={bookingIds[0]}
+                  station={selectedStations[0]}
+                  date={selectedDate}
+                  timeSlot={selectedTimeSlot!}
+                  duration={bookingDuration}
+                  customerInfo={customerInfo}
+                  discountPercentage={discountPercentage}
+                  originalPrice={selectedStations[0].hourlyRate * (bookingDuration / 60)}
+                  finalPrice={calculateTotalPrice() / selectedStations.length}
+                  couponCode={couponCode}
+                />
               )}
             </CardContent>
             

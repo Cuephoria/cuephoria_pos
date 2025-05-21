@@ -172,12 +172,16 @@ export type Database = {
         Row: {
           booking_date: string
           booking_group_id: string | null
+          coupon_code: string | null
           created_at: string
           customer_id: string
+          discount_percentage: number | null
           duration: number
           end_time: string
+          final_price: number | null
           id: string
           notes: string | null
+          original_price: number | null
           start_time: string
           station_id: string
           status: string
@@ -187,12 +191,16 @@ export type Database = {
         Insert: {
           booking_date: string
           booking_group_id?: string | null
+          coupon_code?: string | null
           created_at?: string
           customer_id: string
+          discount_percentage?: number | null
           duration: number
           end_time: string
+          final_price?: number | null
           id?: string
           notes?: string | null
+          original_price?: number | null
           start_time: string
           station_id: string
           status?: string
@@ -202,12 +210,16 @@ export type Database = {
         Update: {
           booking_date?: string
           booking_group_id?: string | null
+          coupon_code?: string | null
           created_at?: string
           customer_id?: string
+          discount_percentage?: number | null
           duration?: number
           end_time?: string
+          final_price?: number | null
           id?: string
           notes?: string | null
+          original_price?: number | null
           start_time?: string
           station_id?: string
           status?: string

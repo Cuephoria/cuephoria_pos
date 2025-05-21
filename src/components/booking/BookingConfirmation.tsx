@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Check, Clock, Copy, Share2 } from 'lucide-react';
+import { CalendarIcon, Check, Clock, Copy, Share2, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,10 @@ interface BookingConfirmationProps {
   timeSlot: TimeSlot;
   duration: number;
   customerInfo: CustomerInfo;
+  discountPercentage?: number;
+  originalPrice?: number;
+  finalPrice?: number;
+  couponCode?: string;
 }
 
 const BookingConfirmation = ({
@@ -36,7 +40,11 @@ const BookingConfirmation = ({
   date,
   timeSlot,
   duration,
-  customerInfo
+  customerInfo,
+  discountPercentage,
+  originalPrice,
+  finalPrice,
+  couponCode
 }: BookingConfirmationProps) => {
   const [copied, setCopied] = useState(false);
   
@@ -89,7 +97,9 @@ const BookingConfirmation = ({
           endTime: timeSlot.endTime,
           duration,
           bookingReference: formatBookingReference(),
-          recipientEmail: customerInfo.email
+          recipientEmail: customerInfo.email,
+          discount: discountPercentage ? `${discountPercentage}% discount applied` : null,
+          finalPrice: finalPrice ? finalPrice.toFixed(2) : null
         }
       });
 
@@ -110,6 +120,12 @@ const BookingConfirmation = ({
       sendConfirmationEmail();
     }
   }, []);
+  
+  // Calculate price if not provided
+  const displayOriginalPrice = originalPrice || (station.hourlyRate * (duration / 60));
+  const displayFinalPrice = finalPrice || (discountPercentage 
+    ? displayOriginalPrice * (1 - (discountPercentage / 100)) 
+    : displayOriginalPrice);
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -169,6 +185,35 @@ const BookingConfirmation = ({
             <div className="flex justify-between">
               <span className="text-gray-400">Duration:</span>
               <span>{duration} minutes</span>
+            </div>
+            
+            {/* Price information */}
+            {couponCode && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Coupon:</span>
+                <div className="flex items-center">
+                  <Ticket className="h-3 w-3 mr-1 text-cuephoria-lightpurple" />
+                  <span>{couponCode}</span>
+                </div>
+              </div>
+            )}
+            
+            {discountPercentage && discountPercentage > 0 && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Original Price:</span>
+                  <span className="line-through">₹{displayOriginalPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-cuephoria-lightpurple">
+                  <span>Discount:</span>
+                  <span>{discountPercentage}% off</span>
+                </div>
+              </>
+            )}
+            
+            <div className="flex justify-between font-medium">
+              <span className="text-gray-400">Final Price:</span>
+              <span className="text-cuephoria-lightpurple">₹{displayFinalPrice.toFixed(2)}</span>
             </div>
           </div>
         </div>

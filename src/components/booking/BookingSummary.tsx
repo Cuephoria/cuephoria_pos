@@ -55,11 +55,14 @@ const BookingSummary = ({
     if (enteredCoupon.toLowerCase() === 'cuephoria50') {
       setValidCoupon(true);
       setDiscountPercentage(50); // 50% discount
+      if (onCouponApply) {
+        onCouponApply(enteredCoupon);
+      }
     } else {
       setValidCoupon(false);
       setDiscountPercentage(0);
     }
-  }, [enteredCoupon]);
+  }, [enteredCoupon, onCouponApply]);
   
   // When valid coupon detected, send it to parent component
   useEffect(() => {
