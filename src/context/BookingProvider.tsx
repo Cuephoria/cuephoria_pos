@@ -4,6 +4,7 @@ import { BookingContext } from './BookingContext';
 import { useBookingProvider } from '@/hooks/booking/useBookingProvider';
 
 export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Get all booking state and functions from our optimized hook
   const bookingState = useBookingProvider();
 
   return (

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Station } from '@/types/pos.types';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import StationTypeFilter from './stations/StationTypeFilter';
@@ -16,6 +16,26 @@ interface AvailableStationsGridProps {
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   loading?: boolean;
 }
+
+// Memoized station grid component to prevent unnecessary re-renders
+const AvailableStationsGridContent = React.memo(({
+  availableStations,
+  selectedStations,
+  stationType,
+  onStationSelect
+}: {
+  availableStations: Station[];
+  selectedStations: Station[];
+  stationType: 'ps5' | '8ball' | 'all';
+  onStationSelect: (station: Station) => void;
+}) => (
+  <StationGrid
+    stations={availableStations}
+    selectedStations={selectedStations}
+    onStationSelect={onStationSelect}
+    stationType={stationType}
+  />
+));
 
 const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   selectedDate,
@@ -35,6 +55,14 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   });
   
   const isLoading = externalLoading || stationsLoading;
+  
+  // Filter stations by type
+  const filteredStations = useMemo(() => {
+    if (stationType === 'all') {
+      return availableStations;
+    }
+    return availableStations.filter(station => station.type === stationType);
+  }, [availableStations, stationType]);
   
   if (isLoading) {
     return (
@@ -56,14 +84,14 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
         onStationTypeChange={onStationTypeChange} 
       />
       
-      <StationGrid
-        stations={availableStations}
+      <AvailableStationsGridContent
+        availableStations={filteredStations}
         selectedStations={selectedStations}
-        onStationSelect={onStationSelect}
         stationType={stationType}
+        onStationSelect={onStationSelect}
       />
     </div>
   );
 };
 
-export default AvailableStationsGrid;
+export default React.memo(AvailableStationsGrid);

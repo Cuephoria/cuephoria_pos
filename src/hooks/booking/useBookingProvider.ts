@@ -4,38 +4,11 @@ import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Station } from '@/types/pos.types';
-import { 
-  isDateInPast, 
-  generateTimeSlots, 
-  checkStationAvailability 
-} from '@/utils/booking';
+import { isDateInPast } from '@/utils/booking';
 import { CustomerInfo, TimeSlot } from '@/context/BookingContext';
-
-/**
- * Helper function to check if stations are available for a time slot
- */
-const checkStationAvailabilityForTimeSlot = async (
-  stationIds: string[],
-  date: Date,
-  timeSlot: TimeSlot
-): Promise<boolean> => {
-  if (!timeSlot) return false;
-  
-  try {
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    const result = await checkStationAvailability(
-      stationIds,
-      formattedDate,
-      timeSlot.startTime,
-      timeSlot.endTime
-    );
-    
-    return result.available;
-  } catch (error) {
-    console.error('Error checking station availability:', error);
-    return false;
-  }
-};
+import { useTimeSlots } from './useTimeSlots';
+import { useStationBooking } from './useStationBooking';
+import { useTodayBookings } from './useTodayBookings';
 
 /**
  * Hook that provides all state and functions for the booking process
@@ -47,11 +20,27 @@ export const useBookingProvider = () => {
   // Date and Time selection
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookingDuration, setBookingDuration] = useState<number>(60); // in minutes
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
-  const [loadingTimeSlots, setLoadingTimeSlots] = useState<boolean>(false);
-  const [isToday, setIsToday] = useState<boolean>(true);
   
+  // Use our new optimized hooks
+  const { 
+    timeSlots, 
+    loading: loadingTimeSlots, 
+    isToday,
+    refreshTimeSlots
+  } = useTimeSlots({ 
+    date: selectedDate, 
+    duration: bookingDuration 
+  });
+  
+  const {
+    todayBookings,
+    groupedBookings,
+    bookingTimeSlots,
+    loading: loadingTodayBookings,
+    fetchTodayBookings
+  } = useTodayBookings();
+
   // Station selection
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStations, setSelectedStations] = useState<Station[]>([]);
@@ -74,35 +63,37 @@ export const useBookingProvider = () => {
   const [couponCode, setCouponCode] = useState<string>('');
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   
-  // Today's bookings
-  const [todayBookings, setTodayBookings] = useState<any[]>([]);
-  const [loadingTodayBookings, setLoadingTodayBookings] = useState<boolean>(false);
-  
   // Booking summary
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
-  const [bookingIds, setBookingIds] = useState<string[]>([]);
-  const [bookingAccessCode, setBookingAccessCode] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
-  const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
+  
+  // Use our optimized booking submission hook
+  const {
+    submitBooking,
+    isSubmitting,
+    bookingError,
+    bookingIds,
+    bookingAccessCode,
+    bookingGroupId
+  } = useStationBooking({
+    onBookingConfirmed: (ids, groupId, accessCode) => {
+      setBookingIds(ids);
+      setBookingGroupId(groupId);
+      setBookingAccessCode(accessCode);
+      setBookingConfirmed(true);
+      setCurrentStep(5); // Move to confirmation step
+      toast.success(`${selectedStations.length} station(s) booked successfully!`);
+      fetchTodayBookings(); // Refresh today's bookings after a new booking
+    },
+    onBookingError: (error) => {
+      toast.error(error || 'Booking failed. Please try again.');
+    }
+  });
 
   // Initialize component
   useEffect(() => {
     document.title = "Book Now | Cuephoria";
     fetchStations();
-    fetchTodayBookings();
   }, []);
-  
-  // Check if selected date is today
-  useEffect(() => {
-    setIsToday(isSameDay(selectedDate, new Date()));
-    
-    // Reset selected time slot when date changes
-    setSelectedTimeSlot(null);
-    
-    // Fetch time slots for the selected date
-    fetchAvailableTimeSlots();
-  }, [selectedDate, bookingDuration]);
   
   // Reset selected stations when time slot changes
   useEffect(() => {
@@ -123,65 +114,6 @@ export const useBookingProvider = () => {
       updateControllerAvailability();
     }
   }, [selectedTimeSlot, selectedStations]);
-
-  // Set up notification for upcoming bookings
-  useEffect(() => {
-    // Function to check for upcoming bookings
-    const checkUpcomingBookings = () => {
-      try {
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
-        
-        if (todayBookings && todayBookings.length > 0) {
-          todayBookings.forEach(booking => {
-            const [hours, minutes] = booking.start_time.split(':').map(Number);
-            const bookingTimeInMinutes = hours * 60 + minutes;
-            
-            // Check if booking is 15 minutes away
-            const timeUntilBooking = bookingTimeInMinutes - currentTime;
-            if (timeUntilBooking > 0 && timeUntilBooking <= 15) {
-              const customerName = booking.customers?.name || 'Customer';
-              const stationName = booking.stations?.name || 'a station';
-              
-              toast.info(
-                `Upcoming booking for ${customerName} at ${booking.start_time} for ${stationName}`,
-                {
-                  duration: 10000, // Show for 10 seconds
-                  id: `booking-reminder-${booking.id}` // Prevent duplicate notifications
-                }
-              );
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error checking upcoming bookings:', error);
-      }
-    };
-    
-    // Check when component mounts and then every minute
-    checkUpcomingBookings();
-    const intervalId = setInterval(checkUpcomingBookings, 60 * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [todayBookings]);
-
-  // Group bookings by time
-  const groupBookingsByTime = () => {
-    const grouped: Record<string, Array<any>> = {};
-    
-    todayBookings.forEach(booking => {
-      const timeKey = booking.start_time.substring(0, 5);
-      if (!grouped[timeKey]) {
-        grouped[timeKey] = [];
-      }
-      grouped[timeKey].push(booking);
-    });
-    
-    return grouped;
-  };
-
-  const groupedBookings = groupBookingsByTime();
-  const bookingTimeSlots = Object.keys(groupedBookings).sort();
 
   // Update controller availability
   const updateControllerAvailability = async () => {
@@ -222,11 +154,23 @@ export const useBookingProvider = () => {
     }
   };
 
-  // Function to fetch stations from database
+  // Function to fetch stations from database with caching
+  const stationsCache: Station[] = [];
+  let lastStationsFetchTime = 0;
+  const STATIONS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
   const fetchStations = async () => {
     setLoadingStations(true);
     
     try {
+      // Use cached data if available and not expired
+      if (stationsCache.length > 0 && (Date.now() - lastStationsFetchTime < STATIONS_CACHE_DURATION)) {
+        console.log('Using cached stations data');
+        setStations(stationsCache);
+        setLoadingStations(false);
+        return;
+      }
+      
       // Fetch stations from Supabase
       const { data: stationsData, error } = await supabase
         .from('stations')
@@ -246,163 +190,17 @@ export const useBookingProvider = () => {
         currentSession: null
       })) || [];
       
+      // Update cache
+      stationsCache.length = 0;
+      stationsCache.push(...transformedStations);
+      lastStationsFetchTime = Date.now();
+      
       setStations(transformedStations);
     } catch (error) {
       console.error('Error fetching stations:', error);
       toast.error('Failed to load stations');
     } finally {
       setLoadingStations(false);
-    }
-  };
-
-  // Function to fetch today's bookings
-  const fetchTodayBookings = async () => {
-    setLoadingTodayBookings(true);
-    
-    try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          booking_date,
-          start_time,
-          end_time,
-          duration,
-          status,
-          stations (id, name, type),
-          customers (id, name, phone)
-        `)
-        .eq('booking_date', today)
-        .order('start_time', { ascending: true });
-        
-      if (error) throw error;
-      
-      setTodayBookings(data || []);
-    } catch (error) {
-      console.error('Error fetching today\'s bookings:', error);
-    } finally {
-      setLoadingTodayBookings(false);
-    }
-  };
-
-  // Function to fetch available time slots for the selected date
-  const fetchAvailableTimeSlots = async () => {
-    if (!selectedDate) return;
-    
-    setLoadingTimeSlots(true);
-    setSelectedTimeSlot(null);
-    
-    try {
-      // Check if selected date is today
-      const now = new Date();
-      const isToday = isSameDay(selectedDate, now);
-      
-      // Generate base time slots for the day (11am - 11pm)
-      // If today, pass the current time to filter out past time slots
-      const baseSlots = generateTimeSlots('11:00', '23:00', bookingDuration, isToday ? now : undefined);
-      
-      // Format date for API call (YYYY-MM-DD)
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      
-      if (stations.length === 0) {
-        // If stations aren't loaded yet, just show all slots as available
-        setTimeSlots(baseSlots);
-        return;
-      }
-      
-      // Fetch bookings for this date to determine which slots are unavailable
-      const { data: existingBookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('start_time, end_time, station_id')
-        .eq('booking_date', formattedDate)
-        .eq('status', 'confirmed');
-      
-      if (bookingsError) {
-        console.error("Error fetching existing bookings:", bookingsError);
-        setTimeSlots(baseSlots); // On error, show all slots
-        return;
-      }
-      
-      // If no bookings found, all slots are available
-      if (!existingBookings || existingBookings.length === 0) {
-        setTimeSlots(baseSlots);
-        setLoadingTimeSlots(false);
-        return;
-      }
-      
-      // For debugging purposes
-      console.log("Existing bookings found:", existingBookings.length);
-      console.log("First few bookings:", existingBookings.slice(0, 3));
-      
-      // Map to count bookings per time slot
-      const slotBookingMap = new Map();
-      
-      // Initialize the map with all slots and 0 bookings
-      baseSlots.forEach(slot => {
-        slotBookingMap.set(`${slot.startTime}-${slot.endTime}`, 0);
-      });
-      
-      // Group bookings by time slot and count them
-      existingBookings.forEach(booking => {
-        const bookingStart = booking.start_time;
-        const bookingEnd = booking.end_time;
-        
-        // Check each base slot to see if it overlaps with this booking
-        baseSlots.forEach(slot => {
-          const slotStart = slot.startTime + ":00";
-          const slotEnd = slot.endTime + ":00";
-          
-          // Check if this booking overlaps with the current slot
-          if (
-            (bookingStart <= slotStart && bookingEnd > slotStart) || // Booking starts before and ends during/after slot
-            (bookingStart < slotEnd && bookingEnd >= slotEnd) || // Booking starts during and ends after slot
-            (bookingStart >= slotStart && bookingEnd <= slotEnd) // Booking is contained within slot
-          ) {
-            // Increment booking count for this slot
-            const key = `${slot.startTime}-${slot.endTime}`;
-            const currentCount = slotBookingMap.get(key) || 0;
-            slotBookingMap.set(key, currentCount + 1);
-          }
-        });
-      });
-      
-      // Determine availability based on booking counts
-      // A slot is unavailable only if ALL stations are booked for that slot
-      const availableSlots = baseSlots.map(slot => {
-        const key = `${slot.startTime}-${slot.endTime}`;
-        const bookingCount = slotBookingMap.get(key) || 0;
-        
-        // A slot is unavailable only if all stations are booked
-        return {
-          ...slot,
-          isAvailable: bookingCount < stations.length
-        };
-      });
-      
-      console.log("Generated slots:", availableSlots.length);
-      console.log("Available slots:", availableSlots.filter(s => s.isAvailable).length);
-      
-      // Sort slots by start time
-      availableSlots.sort((a, b) => {
-        const timeA = a.startTime.split(':').map(Number);
-        const timeB = b.startTime.split(':').map(Number);
-        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-      });
-      
-      setTimeSlots(availableSlots);
-    } catch (error) {
-      console.error('Error fetching time slots:', error);
-      
-      // Generate fallback time slots if API call fails
-      const now = new Date();
-      const isToday = isSameDay(selectedDate, now);
-      const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration, isToday ? now : undefined);
-      setTimeSlots(fallbackSlots);
-      toast.error('Could not verify slot availability. All slots shown as available.');
-    } finally {
-      setLoadingTimeSlots(false);
     }
   };
 
@@ -450,9 +248,6 @@ export const useBookingProvider = () => {
       setSelectedDate(date);
       setSelectedTimeSlot(null); // Reset time slot when date changes
       setSelectedStations([]); // Reset selected stations when date changes
-      
-      // Check if the selected date is today
-      setIsToday(isSameDay(date, new Date()));
     }
   };
   
@@ -552,206 +347,15 @@ export const useBookingProvider = () => {
   
   // Submit booking to server
   const handleSubmitBooking = async () => {
-    if (selectedStations.length === 0 || !selectedDate || !selectedTimeSlot || !customerInfo.name || !customerInfo.phone) {
-      toast.error('Missing required booking information');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setBookingError(null);
-    setBookingIds([]);
-    setBookingAccessCode('');
-    
-    try {
-      console.log('Starting booking submission process...');
-      
-      // Check if customer exists by phone number
-      let customerId = customerInfo.customerId;
-      
-      if (!customerId) {
-        console.log('No customer ID provided, checking if customer exists...');
-        // Look up customer by phone
-        const { data: existingCustomers, error: customerLookupError } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('phone', customerInfo.phone)
-          .limit(1);
-        
-        if (customerLookupError) {
-          console.error('Error looking up customer:', customerLookupError);
-        }
-          
-        // If customer exists, use their ID
-        if (existingCustomers && existingCustomers.length > 0) {
-          customerId = existingCustomers[0].id;
-          console.log('Found existing customer with ID:', customerId);
-        } else {
-          // Create new customer
-          console.log('Creating new customer...');
-          const { data: newCustomer, error: customerError } = await supabase
-            .from('customers')
-            .insert({
-              name: customerInfo.name,
-              phone: customerInfo.phone,
-              email: customerInfo.email || null,
-              is_member: false,
-              loyalty_points: 0,
-              total_spent: 0,
-              total_play_time: 0
-            })
-            .select('id')
-            .single();
-            
-          if (customerError) {
-            console.error('Error creating customer:', customerError);
-            throw new Error('Failed to create customer: ' + customerError.message);
-          }
-          
-          if (!newCustomer) {
-            throw new Error('Failed to create customer: No customer ID returned');
-          }
-          
-          customerId = newCustomer.id;
-          console.log('Created new customer with ID:', customerId);
-        }
-      }
-      
-      if (!customerId) {
-        throw new Error('Failed to get customer ID');
-      }
-      
-      // Create a booking group ID for all stations (even if only one)
-      const groupId = crypto.randomUUID();
-      setBookingGroupId(groupId);
-      
-      // Calculate the final price with any applicable discounts
-      const totalPrice = calculateTotalPrice();
-      const discount = discountPercentage > 0 ? discountPercentage : 0;
-      
-      // Create bookings for each selected station
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      const createdBookingIds: string[] = [];
-      
-      console.log('Creating bookings for date:', formattedDate);
-      
-      // Perform one final availability check before booking
-      const startTimeFormatted = selectedTimeSlot.startTime + ':00';
-      const endTimeFormatted = selectedTimeSlot.endTime + ':00';
-      
-      // Check if there are any conflicting bookings
-      const stationIds = selectedStations.map(s => s.id);
-      const isAvailable = await checkStationAvailabilityForTimeSlot(stationIds, selectedDate, selectedTimeSlot);
-      
-      if (!isAvailable) {
-        throw new Error('One or more selected stations are no longer available. Please select different stations or time slot.');
-      }
-      
-      // Create bookings for each selected station
-      const bookings = selectedStations.map(station => ({
-        customer_id: customerId,
-        station_id: station.id,
-        booking_date: formattedDate,
-        start_time: startTimeFormatted,
-        end_time: endTimeFormatted,
-        duration: bookingDuration,
-        status: 'confirmed',
-        booking_group_id: groupId,
-        coupon_code: couponCode || null,
-        discount_percentage: discount,
-        original_price: station.hourlyRate * (bookingDuration / 60),
-        final_price: (station.hourlyRate * (bookingDuration / 60)) * (1 - (discount/100))
-      }));
-      
-      // Insert all bookings
-      const { data: newBookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .insert(bookings)
-        .select('id');
-        
-      if (bookingsError) {
-        console.error('Error creating bookings:', bookingsError);
-        throw new Error('Failed to create bookings: ' + bookingsError.message);
-      }
-      
-      if (!Array.isArray(newBookings) || newBookings.length === 0) {
-        throw new Error('No bookings were created');
-      }
-      
-      // Extract the booking IDs
-      createdBookingIds.push(...newBookings.map(b => b.id));
-      
-      // Get access code for the first booking
-      if (createdBookingIds.length > 0) {
-        console.log('Getting access code for booking ID:', createdBookingIds[0]);
-        
-        const { data: accessCodeData, error: accessCodeError } = await supabase
-          .from('booking_views')
-          .select('access_code')
-          .eq('booking_id', createdBookingIds[0])
-          .maybeSingle(); // Use maybeSingle instead of single to prevent errors
-          
-        if (!accessCodeError && accessCodeData) {
-          setBookingAccessCode(accessCodeData.access_code);
-          console.log('Retrieved access code:', accessCodeData.access_code);
-        } else {
-          console.warn('Could not retrieve access code:', accessCodeError);
-          // Generate a fallback access code
-          setBookingAccessCode(createdBookingIds[0].substring(0, 8));
-        }
-      }
-      
-      // Set bookings confirmed
-      setBookingIds(createdBookingIds);
-      setBookingConfirmed(true);
-      setCurrentStep(5); // Move to confirmation step
-      toast.success(`${selectedStations.length} station(s) booked successfully!`);
-      
-      // Send booking confirmation email
-      if (customerInfo.email) {
-        const primaryBookingId = createdBookingIds[0];
-        const stationNames = selectedStations.map(s => s.name).join(", ");
-        
-        try {
-          console.log('Sending booking confirmation email...');
-          
-          const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
-            body: {
-              bookingId: primaryBookingId,
-              bookingGroupId: groupId,
-              customerName: customerInfo.name,
-              stationName: stationNames,
-              bookingDate: format(selectedDate, 'EEEE, MMMM d, yyyy'),
-              startTime: selectedTimeSlot.startTime,
-              endTime: selectedTimeSlot.endTime,
-              duration: bookingDuration,
-              bookingReference: bookingAccessCode,
-              recipientEmail: customerInfo.email,
-              discount: discountPercentage > 0 ? `${discountPercentage}% discount applied` : null,
-              finalPrice: totalPrice.toFixed(2),
-              totalStations: selectedStations.length
-            }
-          });
-          
-          if (emailError) {
-            console.error('Error sending email:', emailError);
-          } else {
-            console.log('Email sent successfully!');
-          }
-        } catch (emailError) {
-          console.error('Error invoking email function:', emailError);
-        }
-      }
-      
-      // Refresh today's bookings
-      fetchTodayBookings();
-      
-    } catch (error: any) {
-      console.error('Error creating booking:', error);
-      setBookingError(error.message || 'Failed to create booking');
-      toast.error(error.message || 'Booking failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    await submitBooking({
+      selectedStations,
+      selectedDate,
+      selectedTimeSlot,
+      bookingDuration,
+      customerInfo,
+      couponCode,
+      discountPercentage
+    });
   };
 
   // Reset form for new booking
@@ -769,7 +373,6 @@ export const useBookingProvider = () => {
     setCouponCode('');
     setDiscountPercentage(0);
     setBookingConfirmed(false);
-    setBookingIds([]);
   };
 
   return {
@@ -787,7 +390,7 @@ export const useBookingProvider = () => {
     setSelectedTimeSlot,
     loadingTimeSlots,
     isToday,
-    fetchAvailableTimeSlots,
+    fetchAvailableTimeSlots: refreshTimeSlots,
 
     // Stations
     stations,
@@ -832,15 +435,10 @@ export const useBookingProvider = () => {
     bookingConfirmed,
     setBookingConfirmed,
     bookingIds,
-    setBookingIds,
     bookingAccessCode,
-    setBookingAccessCode,
     isSubmitting,
-    setIsSubmitting,
     bookingError,
-    setBookingError,
     bookingGroupId,
-    setBookingGroupId,
     handleSubmitBooking,
     handleNextStep,
     handlePreviousStep,

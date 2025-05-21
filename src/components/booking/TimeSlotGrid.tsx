@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { format } from 'date-fns';
 import { getEarliestBookingTime } from '@/utils/booking';
@@ -19,6 +19,35 @@ interface TimeSlotGridProps {
   selectedDate: Date;
 }
 
+// Memoized time slot button component to prevent unnecessary re-renders
+const TimeSlotButton = React.memo(({ 
+  slot, 
+  isSelected, 
+  onSelect 
+}: { 
+  slot: TimeSlot; 
+  isSelected: boolean; 
+  onSelect: () => void;
+}) => (
+  <button
+    disabled={!slot.isAvailable}
+    onClick={onSelect}
+    className={`
+      p-2 rounded-md text-center text-sm transition-colors
+      ${
+        isSelected
+          ? 'bg-cuephoria-purple text-white'
+          : slot.isAvailable
+          ? 'bg-gray-800 hover:bg-gray-700 text-white'
+          : 'bg-gray-900/50 text-gray-500 cursor-not-allowed'
+      }
+    `}
+  >
+    {slot.startTime}
+  </button>
+));
+
+// Main TimeSlotGrid component
 const TimeSlotGrid = ({
   timeSlots,
   selectedTimeSlot,
@@ -27,6 +56,29 @@ const TimeSlotGrid = ({
   isToday,
   selectedDate
 }: TimeSlotGridProps) => {
+  // Memoize grouping logic to prevent unnecessary recalculations
+  const groupedTimeSlots = useMemo(() => {
+    const groups: { [hour: string]: TimeSlot[] } = {};
+    
+    timeSlots.forEach(slot => {
+      const hour = slot.startTime.split(':')[0];
+      if (!groups[hour]) {
+        groups[hour] = [];
+      }
+      groups[hour].push(slot);
+    });
+    
+    return groups;
+  }, [timeSlots]);
+  
+  // Memoize statistics to prevent unnecessary recalculations
+  const { availableSlots, formattedDate } = useMemo(() => {
+    return {
+      availableSlots: timeSlots.filter(slot => slot.isAvailable),
+      formattedDate: format(selectedDate, 'EEEE, MMMM d, yyyy')
+    };
+  }, [timeSlots, selectedDate]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 border border-gray-800 rounded-md bg-gray-900/50">
@@ -35,9 +87,6 @@ const TimeSlotGrid = ({
       </div>
     );
   }
-
-  // Add a debug section to show how many available slots we have
-  const availableSlots = timeSlots.filter(slot => slot.isAvailable);
   
   if (timeSlots.length === 0) {
     return (
@@ -65,19 +114,6 @@ const TimeSlotGrid = ({
     );
   }
 
-  // Group time slots by hour for better display organization
-  const groupedTimeSlots: { [hour: string]: TimeSlot[] } = {};
-  
-  timeSlots.forEach(slot => {
-    const hour = slot.startTime.split(':')[0];
-    if (!groupedTimeSlots[hour]) {
-      groupedTimeSlots[hour] = [];
-    }
-    groupedTimeSlots[hour].push(slot);
-  });
-
-  const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
-
   return (
     <div className="space-y-4">
       <div className="p-3 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded">
@@ -103,23 +139,15 @@ const TimeSlotGrid = ({
           </h4>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {slots.map((slot, index) => (
-              <button
+              <TimeSlotButton
                 key={index}
-                disabled={!slot.isAvailable}
-                onClick={() => slot.isAvailable && onSelectTimeSlot(slot)}
-                className={`
-                  p-2 rounded-md text-center text-sm transition-colors
-                  ${
-                    selectedTimeSlot?.startTime === slot.startTime && selectedTimeSlot?.endTime === slot.endTime
-                      ? 'bg-cuephoria-purple text-white'
-                      : slot.isAvailable
-                      ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                      : 'bg-gray-900/50 text-gray-500 cursor-not-allowed'
-                  }
-                `}
-              >
-                {slot.startTime}
-              </button>
+                slot={slot}
+                isSelected={
+                  selectedTimeSlot?.startTime === slot.startTime && 
+                  selectedTimeSlot?.endTime === slot.endTime
+                }
+                onSelect={() => slot.isAvailable && onSelectTimeSlot(slot)}
+              />
             ))}
           </div>
         </div>
@@ -128,4 +156,5 @@ const TimeSlotGrid = ({
   );
 };
 
-export default TimeSlotGrid;
+// Export as memoized component to prevent unnecessary re-renders
+export default React.memo(TimeSlotGrid);

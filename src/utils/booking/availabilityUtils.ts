@@ -3,6 +3,10 @@
  * Station availability checking utilities
  */
 
+// Cache for availability results
+const availabilityResultsCache = new Map<string, { result: any, timestamp: number }>();
+const AVAILABILITY_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
+
 /**
  * Check if stations are available for a specific time slot
  * @param stationIds Array of station IDs to check
@@ -18,6 +22,16 @@ export const checkStationAvailability = async (
   endTime: string
 ): Promise<{ available: boolean, unavailableStationIds: string[], unavailableStations?: Array<{id: string, name: string}> }> => {
   try {
+    // Generate cache key
+    const cacheKey = `${date}_${startTime}_${endTime}_${stationIds.sort().join('_')}`;
+    
+    // Use cached results if available and not expired
+    const cachedResult = availabilityResultsCache.get(cacheKey);
+    if (cachedResult && (Date.now() - cachedResult.timestamp < AVAILABILITY_CACHE_DURATION)) {
+      console.log('Using cached availability check results');
+      return cachedResult.result;
+    }
+    
     // Import supabase client
     const { supabase } = await import('@/integrations/supabase/client');
     
@@ -64,11 +78,19 @@ export const checkStationAvailability = async (
           }));
         }
         
-        return {
+        const result = {
           available: unavailableStationIds.length === 0,
           unavailableStationIds,
           unavailableStations
         };
+        
+        // Store in cache
+        availabilityResultsCache.set(cacheKey, {
+          result,
+          timestamp: Date.now()
+        });
+        
+        return result;
       } else {
         console.log("Falling back to manual availability check due to RPC error:", error);
         // Fall back to manual check if RPC fails
@@ -117,11 +139,19 @@ export const checkStationAvailability = async (
             }))
         : [];
       
-      return {
+      const result = {
         available: unavailableStationIds.length === 0,
         unavailableStationIds,
         unavailableStations
       };
+      
+      // Store in cache
+      availabilityResultsCache.set(cacheKey, {
+        result,
+        timestamp: Date.now()
+      });
+      
+      return result;
     }
   } catch (error) {
     console.error("Error in checkStationAvailability:", error);

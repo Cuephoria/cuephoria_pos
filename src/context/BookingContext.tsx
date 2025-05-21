@@ -1,10 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { format, isSameDay } from 'date-fns';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext } from 'react';
 import { Station } from '@/types/pos.types';
-import { isDateInPast } from '@/utils/booking';
 
 // Define types
 export interface TimeSlot {
@@ -81,15 +77,10 @@ interface BookingContextType {
   bookingConfirmed: boolean;
   setBookingConfirmed: React.Dispatch<React.SetStateAction<boolean>>;
   bookingIds: string[];
-  setBookingIds: React.Dispatch<React.SetStateAction<string[]>>;
   bookingAccessCode: string;
-  setBookingAccessCode: React.Dispatch<React.SetStateAction<string>>;
   isSubmitting: boolean;
-  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
   bookingError: string | null;
-  setBookingError: React.Dispatch<React.SetStateAction<string | null>>;
   bookingGroupId: string | null;
-  setBookingGroupId: React.Dispatch<React.SetStateAction<string | null>>;
   handleSubmitBooking: () => Promise<void>;
   handleNextStep: () => void;
   handlePreviousStep: () => void;
@@ -104,9 +95,4 @@ export const useBookingContext = () => {
     throw new Error('useBookingContext must be used within a BookingProvider');
   }
   return context;
-};
-
-export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // We'll implement the provider in a separate file
-  return <></>;
 };
