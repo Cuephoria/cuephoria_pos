@@ -71,6 +71,9 @@ const BookNowContainer = () => {
     isSubmitting
   } = useBookingContext();
 
+  // Show today's bookings only if we're on the appropriate step
+  const showTodaysBookings = currentStep !== 5;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black">
       {/* Header */}
@@ -79,8 +82,8 @@ const BookNowContainer = () => {
       {/* Main Content */}
       <main className="pb-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-6xl mx-auto">
-          {/* Today's Bookings */}
-          {currentStep !== 5 && (
+          {/* Today's Bookings - Only show when needed */}
+          {showTodaysBookings && (
             <TodaysBookings 
               todayBookings={todayBookings}
               bookingTimeSlots={bookingTimeSlots}
@@ -192,3 +195,4 @@ const BookNowContainer = () => {
 };
 
 export default BookNowContainer;
+

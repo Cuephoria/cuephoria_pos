@@ -9,7 +9,7 @@ let bookingsCache: any = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 60 * 1000; // 1 minute cache
 
-export const useTodayBookings = () => {
+export const useTodayBookings = (autoFetch = true) => {
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
   const [groupedBookings, setGroupedBookings] = useState<Record<string, any[]>>({});
   const [bookingTimeSlots, setBookingTimeSlots] = useState<string[]>([]);
@@ -84,6 +84,11 @@ export const useTodayBookings = () => {
   
   // Set up notification for upcoming bookings
   useEffect(() => {
+    if (!autoFetch) {
+      // Skip automatic fetching if autoFetch is false
+      return;
+    }
+
     // Function to check for upcoming bookings
     const checkUpcomingBookings = () => {
       try {
@@ -130,7 +135,7 @@ export const useTodayBookings = () => {
       clearInterval(intervalId);
       clearInterval(refreshIntervalId);
     };
-  }, [todayBookings, fetchTodayBookings]);
+  }, [todayBookings, fetchTodayBookings, autoFetch]);
 
   return {
     todayBookings,
@@ -140,3 +145,4 @@ export const useTodayBookings = () => {
     fetchTodayBookings
   };
 };
+

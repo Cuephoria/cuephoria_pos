@@ -6,10 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isBefore, isToday } from 'date-fns';
 
 // Optimized hook for bookings management
-export const useBookings = () => {
+export const useBookings = (enabled = true) => {
   const queryClient = useQueryClient();
   
-  // Optimized bookings fetch with query caching
+  // Optimized bookings fetch with query caching and enabling/disabling
   const { 
     data: bookings, 
     isLoading, 
@@ -39,6 +39,7 @@ export const useBookings = () => {
     staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
     refetchOnWindowFocus: false, // Don't refetch on window focus for performance
     refetchOnMount: true,
+    enabled: enabled, // Only fetch if enabled is true
     placeholderData: (previousData) => previousData, // Use previous data while refetching
   });
 
@@ -186,3 +187,4 @@ export const useBookings = () => {
     updateBooking
   };
 };
+

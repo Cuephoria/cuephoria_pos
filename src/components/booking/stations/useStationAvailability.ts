@@ -13,9 +13,14 @@ const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache
 interface UseStationAvailabilityProps {
   selectedDate: Date | null;
   selectedTimeSlot: { startTime: string; endTime: string } | null;
+  autoFetch?: boolean;
 }
 
-export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseStationAvailabilityProps) => {
+export const useStationAvailability = ({ 
+  selectedDate, 
+  selectedTimeSlot, 
+  autoFetch = true 
+}: UseStationAvailabilityProps) => {
   const [stations, setStations] = useState<Station[]>([]);
   const [availableStations, setAvailableStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -28,17 +33,19 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
 
   // Fetch all stations on hook initialization
   useEffect(() => {
-    console.log("Hook initialized, fetching stations");
-    fetchStations();
-  }, []);
+    if (autoFetch) {
+      console.log("Hook initialized, fetching stations");
+      fetchStations();
+    }
+  }, [autoFetch]);
   
   // Filter available stations when date or time slot changes
   useEffect(() => {
-    if (selectedDate && selectedTimeSlot) {
+    if (selectedDate && selectedTimeSlot && autoFetch) {
       console.log("Date or time changed, filtering stations");
       filterAvailableStations();
     }
-  }, [selectedDate, selectedTimeSlot, stations]);
+  }, [selectedDate, selectedTimeSlot, stations, autoFetch]);
 
   // Fetch all stations from Supabase
   const fetchStations = async () => {
@@ -157,3 +164,4 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
     filterAvailableStations
   };
 };
+
