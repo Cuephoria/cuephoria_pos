@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isBefore, isToday } from 'date-fns';
-import { CalendarIcon, Clock, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { CalendarIcon, Clock, Edit, Trash2, Search, Filter, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Booking type definition
 interface Booking {
@@ -47,6 +48,15 @@ interface Booking {
   };
 }
 
+// Customer with bookings type
+interface CustomerWithBookings {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  bookings: Booking[];
+}
+
 // Filter options
 type FilterOption = 'all' | 'today' | 'upcoming' | 'past' | 'cancelled';
 type StatusOption = 'all' | 'confirmed' | 'cancelled' | 'completed' | 'no-show';
@@ -59,6 +69,7 @@ const BookingsPage = () => {
   const [selectedType, setSelectedType] = useState<StationType>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   
   // States for editing and deleting bookings
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -86,11 +97,12 @@ const BookingsPage = () => {
     }
   });
 
-  // Calculated and filtered bookings
-  const filteredBookings = React.useMemo(() => {
+  // Group bookings by customer
+  const customerBookings = React.useMemo(() => {
     if (!bookings) return [];
     
-    return bookings.filter(booking => {
+    // Apply filters first
+    const filteredBookings = bookings.filter(booking => {
       const bookingDate = parseISO(booking.booking_date);
       const isUpcoming = isBefore(new Date(), bookingDate) || 
                         (isToday(bookingDate) && booking.start_time > format(new Date(), 'HH:mm'));
@@ -125,7 +137,51 @@ const BookingsPage = () => {
       
       return true;
     });
+    
+    // Group by customer
+    const customerMap = new Map<string, CustomerWithBookings>();
+    
+    filteredBookings.forEach(booking => {
+      const customerId = booking.customer_id;
+      if (!customerMap.has(customerId)) {
+        customerMap.set(customerId, {
+          id: customerId,
+          name: booking.customer.name,
+          phone: booking.customer.phone,
+          email: booking.customer.email,
+          bookings: []
+        });
+      }
+      customerMap.get(customerId)?.bookings.push(booking);
+    });
+    
+    // Convert map to array and sort by customer name
+    return Array.from(customerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [bookings, selectedFilter, selectedStatus, selectedType, searchTerm, dateFilter]);
+  
+  // Toggle customer expansion
+  const toggleCustomer = (customerId: string) => {
+    setExpandedCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
+      }
+      return newSet;
+    });
+  };
+  
+  // Expand all customers
+  const expandAllCustomers = () => {
+    const allIds = customerBookings.map(customer => customer.id);
+    setExpandedCustomers(new Set(allIds));
+  };
+  
+  // Collapse all customers
+  const collapseAllCustomers = () => {
+    setExpandedCustomers(new Set());
+  };
   
   // Statistics
   const stats = React.useMemo(() => {
@@ -377,14 +433,30 @@ const BookingsPage = () => {
         </CardContent>
       </Card>
       
-      {/* Bookings Table */}
+      {/* Bookings by Customer */}
       <Card>
+        <CardHeader className="pb-0">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              Bookings by Customer
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={expandAllCustomers}>
+                Expand All
+              </Button>
+              <Button variant="outline" size="sm" onClick={collapseAllCustomers}>
+                Collapse All
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
         <CardContent className="p-0 sm:p-6">
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <LoadingSpinner className="h-8 w-8" />
             </div>
-          ) : filteredBookings.length === 0 ? (
+          ) : customerBookings.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-gray-400">No bookings found matching the current filters</p>
               {(selectedFilter !== 'all' || selectedStatus !== 'all' || selectedType !== 'all' || searchTerm || dateFilter) && (
@@ -392,83 +464,110 @@ const BookingsPage = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Booking ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Station</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-mono text-xs">
-                        {booking.id.substring(0, 8).toUpperCase()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{booking.customer.name}</div>
-                        <div className="text-sm text-gray-400">{booking.customer.phone}</div>
-                        {booking.customer.email && (
-                          <div className="text-xs text-gray-400 truncate max-w-[150px]">
-                            {booking.customer.email}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <span className={`w-2 h-2 rounded-full mr-2 ${booking.station.type === 'ps5' ? 'bg-blue-400' : 'bg-green-400'}`} />
-                          {booking.station.name}
+            <div className="space-y-4 p-4">
+              {customerBookings.map((customer) => (
+                <Collapsible 
+                  key={customer.id} 
+                  open={expandedCustomers.has(customer.id)} 
+                  onOpenChange={() => toggleCustomer(customer.id)}
+                  className="border border-gray-800 rounded-lg overflow-hidden"
+                >
+                  <CollapsibleTrigger asChild>
+                    <div className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-800/50">
+                      <div>
+                        <h3 className="font-medium">{customer.name}</h3>
+                        <div className="text-sm text-gray-400 flex flex-col sm:flex-row sm:gap-2">
+                          <span>{customer.phone}</span>
+                          {customer.email && (
+                            <span className="hidden sm:inline text-gray-500">•</span>
+                          )}
+                          {customer.email && <span>{customer.email}</span>}
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {booking.station.type === 'ps5' ? 'PlayStation 5' : 'Pool Table'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <CalendarIcon className="h-3 w-3 mr-1 text-gray-400" />
-                          {format(parseISO(booking.booking_date), 'dd MMM yyyy')}
-                        </div>
-                        <div className="flex items-center mt-1">
-                          <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                          {booking.start_time} - {booking.end_time}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {booking.duration} mins
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeClass(booking.status)}`}>
-                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">
+                          {customer.bookings.length} booking{customer.bookings.length !== 1 ? 's' : ''}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(booking)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog(booking)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        {expandedCustomers.has(customer.id) ? (
+                          <ChevronUp className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="h-5 w-5 text-gray-400" />
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Booking ID</TableHead>
+                            <TableHead>Station</TableHead>
+                            <TableHead>Date & Time</TableHead>
+                            <TableHead>Duration</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {customer.bookings.map((booking) => (
+                            <TableRow key={booking.id}>
+                              <TableCell className="font-mono text-xs">
+                                {booking.id.substring(0, 8).toUpperCase()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <span className={`w-2 h-2 rounded-full mr-2 ${booking.station.type === 'ps5' ? 'bg-blue-400' : 'bg-green-400'}`} />
+                                  {booking.station.name}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {booking.station.type === 'ps5' ? 'PlayStation 5' : 'Pool Table'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <CalendarIcon className="h-3 w-3 mr-1 text-gray-400" />
+                                  {format(parseISO(booking.booking_date), 'dd MMM yyyy')}
+                                </div>
+                                <div className="flex items-center mt-1">
+                                  <Clock className="h-3 w-3 mr-1 text-gray-400" />
+                                  {booking.start_time} - {booking.end_time}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {booking.duration} mins
+                              </TableCell>
+                              <TableCell>
+                                <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeClass(booking.status)}`}>
+                                  {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openEditDialog(booking)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openDeleteDialog(booking)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
             </div>
           )}
         </CardContent>
