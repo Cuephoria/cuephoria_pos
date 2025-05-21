@@ -9,10 +9,9 @@ import { formatTimeDisplay, calculateElapsedTime, calculateSessionCost } from '@
 
 interface StationTimerProps {
   station: Station;
-  compact?: boolean;
 }
 
-const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false }) => {
+const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
@@ -40,6 +39,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
   // Re-initialize timer when station data changes
   useEffect(() => {
+    console.log("StationTimer: Station data changed", {
+      stationId: station.id,
+      isOccupied: station.isOccupied,
+      hasSession: !!station.currentSession,
+      sessionId: station.currentSession?.id
+    });
+
     if (!station.isOccupied || !station.currentSession) {
       // Reset timer state when station is not occupied
       setHours(0);
@@ -59,6 +65,11 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
     // Store the session data in ref to maintain persistence across renders
     if (station.currentSession) {
+      console.log("StationTimer: Initializing with session data", {
+        sessionId: station.currentSession.id,
+        startTime: new Date(station.currentSession.startTime).toISOString()
+      });
+      
       sessionDataRef.current = {
         sessionId: station.currentSession.id,
         startTime: new Date(station.currentSession.startTime),
@@ -81,6 +92,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
     // Set up interval for regular updates if not already running
     if (timerRef.current === null && station.currentSession) {
+      console.log("StationTimer: Setting up timer interval for station", station.id);
+      
       timerRef.current = window.setInterval(() => {
         updateTimerCalculation();
       }, 1000);
@@ -126,6 +139,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
       if (!station.currentSession) return;
       
       const sessionId = station.currentSession.id;
+      console.log("StationTimer: Fetching session data for ID:", sessionId);
       
       const { data, error } = await supabase
         .from('sessions')
@@ -145,6 +159,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
         
         if (sessionData && sessionData.start_time) {
           const startTime = new Date(sessionData.start_time);
+          console.log("StationTimer: Updated start time from Supabase", startTime.toISOString());
           
           // Update the sessionDataRef with data from Supabase
           if (sessionDataRef.current) {
@@ -170,16 +185,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
   if (!station.isOccupied || !station.currentSession) {
     return null;
-  }
-
-  if (compact) {
-    return (
-      <div className="text-center">
-        <span className="font-mono text-lg bg-black px-3 py-1 rounded text-white font-bold inline-block">
-          {formatTimeDisplay(hours, minutes, seconds)}
-        </span>
-      </div>
-    );
   }
 
   return (
