@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
@@ -61,7 +62,6 @@ export const useBookingProvider = () => {
   // Coupon code
   const [couponCode, setCouponCode] = useState<string>('');
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
-  const [couponApplied, setCouponApplied] = useState<boolean>(false);
   
   // Booking summary
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
@@ -268,10 +268,10 @@ export const useBookingProvider = () => {
     setCustomerInfo(info);
   };
 
-  // Handle coupon code application - fixed to prevent multiple toasts
+  // Handle coupon code application
   const handleCouponApply = (code: string) => {
     // Prevent applying coupon multiple times
-    if (couponCode === code && couponApplied) {
+    if (couponCode === code) {
       toast.info('This coupon is already applied');
       return;
     }
@@ -281,11 +281,9 @@ export const useBookingProvider = () => {
     // Simple validation for the coupon code
     if (code.toLowerCase() === 'cuephoria50') {
       setDiscountPercentage(50); // 50% discount
-      setCouponApplied(true);
       toast.success('50% discount applied!');
     } else {
       setDiscountPercentage(0);
-      setCouponApplied(false);
     }
   };
   
@@ -378,7 +376,6 @@ export const useBookingProvider = () => {
     });
     setCouponCode('');
     setDiscountPercentage(0);
-    setCouponApplied(false);
     setBookingConfirmed(false);
     setBookingIds([]);
     setBookingAccessCode('');
