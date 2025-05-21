@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for the booking system
  */
@@ -46,10 +47,9 @@ export const generateTimeSlots = (
     const endTime = formatTime(endSlotMinutes);
     
     // Check if this time slot is in the past
-    const isInPast = currentTime && isSameDay(currentTime, new Date()) && 
-                     currentMinutes < earliestBookingTime;
+    const isInPast = currentMinutes < earliestBookingTime;
     
-    // Add the slot (filter out past time slots if it's today)
+    // Add the slot (filter out past time slots)
     if (!isInPast) {
       slots.push({
         startTime,
@@ -72,17 +72,6 @@ const formatTime = (totalMinutes: number): string => {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-};
-
-/**
- * Check if two dates are the same day
- */
-export const isSameDay = (date1: Date, date2: Date): boolean => {
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  );
 };
 
 /**
@@ -162,137 +151,4 @@ export const isBookingInPast = (booking: { booking_date: string; end_time: strin
   const currentTimeInMinutes = (currentHours * 60) + currentMinutes;
   
   return currentTimeInMinutes > endTimeInMinutes;
-};
-
-/**
- * Check if a date is in the past (before today)
- * @param date The date to check
- * @returns Boolean indicating if the date is before today
- */
-export const isDateInPast = (date: Date): boolean => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const compareDate = new Date(date);
-  compareDate.setHours(0, 0, 0, 0);
-  
-  return compareDate < today;
-};
-
-/**
- * Check if stations are available for a specific time slot
- * @param stationIds Array of station IDs to check
- * @param date Booking date in YYYY-MM-DD format
- * @param startTime Start time in HH:MM format
- * @param endTime End time in HH:MM format
- * @returns Promise resolving to object with availability info and unavailable station IDs
- */
-export const checkStationAvailability = async (
-  stationIds: string[],
-  date: string,
-  startTime: string,
-  endTime: string
-): Promise<{ available: boolean, unavailableStationIds: string[], unavailableStations?: Array<{id: string, name: string}> }> => {
-  try {
-    // Import supabase client
-    const { supabase } = await import('@/integrations/supabase/client');
-    
-    // Ensure we have proper time formats with seconds for consistency
-    const startTimeWithSeconds = startTime.includes(':00') ? startTime : `${startTime}:00`;
-    const endTimeWithSeconds = endTime.includes(':00') ? endTime : `${endTime}:00`;
-    
-    console.log(`Checking availability for date=${date}, start=${startTimeWithSeconds}, end=${endTimeWithSeconds}`);
-    console.log(`Station IDs to check:`, stationIds);
-    
-    // If no stations to check, return all available
-    if (!stationIds || stationIds.length === 0) {
-      return { available: true, unavailableStationIds: [] };
-    }
-    
-    // Using manual check directly as it's more reliable
-    // This approach queries the bookings table to find overlapping bookings
-    const { data: existingBookings, error: checkError } = await supabase
-      .from('bookings')
-      .select('station_id, station:stations(id, name)')
-      .eq('booking_date', date)
-      .in('status', ['confirmed', 'in-progress'])
-      .in('station_id', stationIds)
-      .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
-      .or(`start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
-      .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`)
-      .or(`start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`);
-    
-    if (checkError) {
-      console.error('Error checking station availability:', checkError);
-      // In case of error, assume all stations are available to avoid blocking bookings
-      return { available: true, unavailableStationIds: [] };
-    }
-    
-    // If no bookings found, all stations are available
-    if (!existingBookings || existingBookings.length === 0) {
-      console.log('No overlapping bookings found, all stations are available');
-      return { available: true, unavailableStationIds: [] };
-    }
-    
-    // Get the IDs of stations that are already booked for this time slot
-    const bookedStationIds = existingBookings.map(booking => booking.station_id);
-    
-    // Filter out unavailable stations
-    const unavailableStationIds = stationIds.filter(id => bookedStationIds.includes(id));
-    
-    // Get full station information for unavailable stations
-    const unavailableStations = existingBookings
-      .filter(booking => stationIds.includes(booking.station_id))
-      .map(booking => ({
-        id: booking.station_id,
-        name: booking.station?.name || 'Unknown station'
-      }));
-    
-    console.log('Manual availability check - unavailable stations:', unavailableStations);
-    console.log('Unavailable station IDs:', unavailableStationIds);
-    
-    return {
-      available: unavailableStationIds.length === 0,
-      unavailableStationIds,
-      unavailableStations
-    };
-    
-  } catch (error) {
-    console.error('Error in checkStationAvailability:', error);
-    // In case of error, assume all stations are available to avoid blocking bookings
-    return { available: true, unavailableStationIds: [] };
-  }
-};
-
-/**
- * Perform a final availability check right before booking
- * This is a safeguard against race conditions between selecting stations and confirming booking
- */
-export const performFinalAvailabilityCheck = async (
-  stationIds: string[],
-  date: string,
-  startTime: string,
-  endTime: string
-): Promise<{success: boolean, message?: string, unavailableStations?: Array<{id: string, name: string}>}> => {
-  try {
-    console.log('Performing final availability check before booking');
-    const result = await checkStationAvailability(stationIds, date, startTime, endTime);
-    
-    if (!result.available) {
-      const stationNames = result.unavailableStations?.map(s => s.name).join(', ') || 'Some stations';
-      return {
-        success: false,
-        message: `${stationNames} ${result.unavailableStations?.length === 1 ? 'is' : 'are'} no longer available for the selected time. Please select a different time or station.`,
-        unavailableStations: result.unavailableStations
-      };
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error in performFinalAvailabilityCheck:', error);
-    return { 
-      success: false, 
-      message: 'Could not verify station availability. Please try again.' 
-    };
-  }
 };
