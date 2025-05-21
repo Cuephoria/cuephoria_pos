@@ -51,7 +51,8 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
     try {
       const { data: stationsData, error } = await supabase
         .from('stations')
-        .select('*');
+        .select('*')
+        .eq('is_controller', false); // Exclude controllers
         
       if (error) {
         throw error;

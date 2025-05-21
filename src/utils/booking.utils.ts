@@ -204,65 +204,13 @@ export const checkStationAvailability = async (
     console.log(`Checking availability for date=${date}, start=${startTimeWithSeconds}, end=${endTimeWithSeconds}`);
     console.log(`Station IDs to check:`, stationIds);
     
-    // Try to use the RPC function first, but be prepared to handle errors
-    try {
-      const { data, error } = await supabase.rpc(
-        'check_stations_availability' as any,
-        {
-          p_date: date,
-          p_start_time: startTimeWithSeconds,
-          p_end_time: endTimeWithSeconds,
-          p_station_ids: stationIds
-        }
-      );
-      
-      console.log('Availability check result:', data);
-      
-      if (error) {
-        throw error;
-      }
-      
-      // If RPC was successful, treat data as a boolean result
-      const isAvailable = data === true;
-      
-      // If stations are unavailable, get the details
-      if (!isAvailable) {
-        const { data: unavailableBookings } = await supabase
-          .from('bookings')
-          .select('station_id, station:stations(id, name)')
-          .eq('booking_date', date)
-          .in('status', ['confirmed', 'in-progress'])
-          .in('station_id', stationIds)
-          .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
-          .or(`start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
-          .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`)
-          .or(`start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`);
-        
-        const unavailableStationIds = unavailableBookings?.map(booking => booking.station_id) || [];
-        const unavailableStations = unavailableBookings?.map(booking => ({
-          id: booking.station_id,
-          name: booking.station?.name || 'Unknown station'
-        })) || [];
-        
-        console.log('RPC found unavailable stations:', unavailableStations);
-        
-        return {
-          available: false,
-          unavailableStationIds,
-          unavailableStations
-        };
-      }
-      
-      // Stations are available
+    // If no stations to check, return all available
+    if (!stationIds || stationIds.length === 0) {
       return { available: true, unavailableStationIds: [] };
-      
-    } catch (rpcError) {
-      console.error('RPC error in availability check:', rpcError);
-      console.log('Falling back to manual availability check');
     }
     
-    // Fallback to manual check if RPC fails or isn't available
-    // This approach directly queries the bookings table
+    // Using manual check directly as it's more reliable
+    // This approach queries the bookings table to find overlapping bookings
     const { data: existingBookings, error: checkError } = await supabase
       .from('bookings')
       .select('station_id, station:stations(id, name)')
@@ -276,24 +224,32 @@ export const checkStationAvailability = async (
     
     if (checkError) {
       console.error('Error checking station availability:', checkError);
+      // In case of error, assume all stations are available to avoid blocking bookings
+      return { available: true, unavailableStationIds: [] };
+    }
+    
+    // If no bookings found, all stations are available
+    if (!existingBookings || existingBookings.length === 0) {
+      console.log('No overlapping bookings found, all stations are available');
       return { available: true, unavailableStationIds: [] };
     }
     
     // Get the IDs of stations that are already booked for this time slot
-    const bookedStationIds = existingBookings?.map(booking => booking.station_id) || [];
+    const bookedStationIds = existingBookings.map(booking => booking.station_id);
     
-    // Check if any of the requested stations are already booked
+    // Filter out unavailable stations
     const unavailableStationIds = stationIds.filter(id => bookedStationIds.includes(id));
     
     // Get full station information for unavailable stations
     const unavailableStations = existingBookings
-      ?.filter(booking => stationIds.includes(booking.station_id))
+      .filter(booking => stationIds.includes(booking.station_id))
       .map(booking => ({
         id: booking.station_id,
         name: booking.station?.name || 'Unknown station'
-      })) || [];
+      }));
     
     console.log('Manual availability check - unavailable stations:', unavailableStations);
+    console.log('Unavailable station IDs:', unavailableStationIds);
     
     return {
       available: unavailableStationIds.length === 0,
@@ -304,7 +260,6 @@ export const checkStationAvailability = async (
   } catch (error) {
     console.error('Error in checkStationAvailability:', error);
     // In case of error, assume all stations are available to avoid blocking bookings
-    // The final check before booking will catch any conflicts
     return { available: true, unavailableStationIds: [] };
   }
 };
