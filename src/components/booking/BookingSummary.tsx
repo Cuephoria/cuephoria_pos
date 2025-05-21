@@ -12,7 +12,7 @@ interface BookingSummaryProps {
   timeSlot: {
     startTime: string;
     endTime: string;
-  } | null;
+  };
   duration: number;
   customerInfo: {
     name: string;
@@ -115,15 +115,9 @@ const BookingSummary = ({
             </div>
             <div className="text-white">
               <p className="font-medium">{format(date, 'EEEE, MMMM d, yyyy')}</p>
-              {timeSlot ? (
-                <p className="text-sm text-gray-400">
-                  {timeSlot.startTime} - {timeSlot.endTime} ({duration} minutes)
-                </p>
-              ) : (
-                <p className="text-sm text-gray-400">
-                  No time slot selected ({duration} minutes)
-                </p>
-              )}
+              <p className="text-sm text-gray-400">
+                {timeSlot.startTime} - {timeSlot.endTime} ({duration} minutes)
+              </p>
             </div>
           </div>
           

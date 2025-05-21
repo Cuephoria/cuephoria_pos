@@ -47,9 +47,8 @@ export const generateTimeSlots = (
     const endTime = formatTime(endSlotMinutes);
     
     // Check if this time slot is in the past
-    // Only filter out past slots if it's today (important fix)
-    const isToday = currentTime ? isSameDay(currentTime, new Date()) : false;
-    const isInPast = isToday && currentMinutes < earliestBookingTime;
+    const isInPast = currentTime && isSameDay(currentTime, new Date()) && 
+                     currentMinutes < earliestBookingTime;
     
     // Add the slot (filter out past time slots if it's today)
     if (!isInPast) {
@@ -199,82 +198,38 @@ export const checkStationAvailability = async (
     // Import supabase client
     const { supabase } = await import('@/integrations/supabase/client');
     
-    // Ensure we have proper time formats with seconds for consistency
-    const startTimeWithSeconds = startTime.includes(':00') ? startTime : `${startTime}:00`;
-    const endTimeWithSeconds = endTime.includes(':00') ? endTime : `${endTime}:00`;
+    // Add seconds to times for proper comparison
+    const startTimeWithSeconds = `${startTime}:00`;
+    const endTimeWithSeconds = `${endTime}:00`;
     
-    console.log(`Checking availability for date=${date}, start=${startTimeWithSeconds}, end=${endTimeWithSeconds}`);
-    console.log(`Station IDs to check:`, stationIds);
-    
-    // If no stations to check, return all available
-    if (!stationIds || stationIds.length === 0) {
-      return { available: true, unavailableStationIds: [] };
-    }
-    
-    // Skip the database function call that's causing errors and go directly to the manual availability check
-    // which is more reliable anyway
-    return await manualAvailabilityCheck(stationIds, date, startTimeWithSeconds, endTimeWithSeconds);
-  } catch (error) {
-    console.error('Error in checkStationAvailability:', error);
-    
-    // On error, attempt manual check
-    return await manualAvailabilityCheck(stationIds, date, startTime, endTime);
-  }
-};
-
-/**
- * Fallback manual availability check 
- */
-const manualAvailabilityCheck = async (
-  stationIds: string[],
-  date: string,
-  startTime: string,
-  endTime: string
-): Promise<{ available: boolean, unavailableStationIds: string[], unavailableStations?: Array<{id: string, name: string}> }> => {
-  try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    
-    // Using manual check directly as it's more reliable
-    // This approach queries the bookings table to find overlapping bookings
-    const { data: existingBookings, error: checkError } = await supabase
+    // Query existing bookings that overlap with the requested time slot
+    const { data: existingBookings, error } = await supabase
       .from('bookings')
       .select('station_id, station:stations(id, name)')
       .eq('booking_date', date)
-      .in('status', ['confirmed', 'in-progress'])
-      .in('station_id', stationIds)
-      .or(`start_time.lte.${startTime},end_time.gt.${startTime}`)
-      .or(`start_time.lt.${endTime},end_time.gte.${endTime}`)
-      .or(`start_time.gte.${startTime},end_time.lte.${endTime}`)
-      .or(`start_time.lte.${startTime},end_time.gte.${endTime}`);
-    
-    if (checkError) {
-      console.error('Error checking station availability:', checkError);
-      // In case of error, assume all stations are available to avoid blocking bookings
-      return { available: true, unavailableStationIds: [] };
-    }
-    
-    // If no bookings found, all stations are available
-    if (!existingBookings || existingBookings.length === 0) {
-      console.log('No overlapping bookings found, all stations are available');
-      return { available: true, unavailableStationIds: [] };
+      .eq('status', 'confirmed')
+      .or(`start_time.lte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`)
+      .or(`end_time.gt.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
+      .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`);
+      
+    if (error) {
+      console.error('Error checking station availability:', error);
+      return { available: false, unavailableStationIds: [] };
     }
     
     // Get the IDs of stations that are already booked for this time slot
-    const bookedStationIds = existingBookings.map(booking => booking.station_id);
+    const bookedStationIds = existingBookings?.map(booking => booking.station_id) || [];
     
-    // Filter out unavailable stations
+    // Check if any of the requested stations are already booked
     const unavailableStationIds = stationIds.filter(id => bookedStationIds.includes(id));
     
     // Get full station information for unavailable stations
     const unavailableStations = existingBookings
-      .filter(booking => stationIds.includes(booking.station_id))
+      ?.filter(booking => stationIds.includes(booking.station_id))
       .map(booking => ({
         id: booking.station_id,
         name: booking.station?.name || 'Unknown station'
-      }));
-    
-    console.log('Manual availability check - unavailable stations:', unavailableStations);
-    console.log('Unavailable station IDs:', unavailableStationIds);
+      })) || [];
     
     return {
       available: unavailableStationIds.length === 0,
@@ -282,9 +237,8 @@ const manualAvailabilityCheck = async (
       unavailableStations
     };
   } catch (error) {
-    console.error('Error in manualAvailabilityCheck:', error);
-    // In case of error, assume all stations are available to avoid blocking bookings
-    return { available: true, unavailableStationIds: [] };
+    console.error('Error in checkStationAvailability:', error);
+    return { available: false, unavailableStationIds: [] };
   }
 };
 
@@ -299,7 +253,6 @@ export const performFinalAvailabilityCheck = async (
   endTime: string
 ): Promise<{success: boolean, message?: string, unavailableStations?: Array<{id: string, name: string}>}> => {
   try {
-    console.log('Performing final availability check before booking');
     const result = await checkStationAvailability(stationIds, date, startTime, endTime);
     
     if (!result.available) {
