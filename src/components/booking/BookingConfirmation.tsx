@@ -5,7 +5,7 @@ import { Station } from '@/types/pos.types';
 import { CalendarIcon, Check, Clock, Copy, Download, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface TimeSlot {
   startTime: string;
@@ -159,10 +159,9 @@ const BookingConfirmation = ({
       <div className="mt-6 text-center">
         <h4 className="font-medium text-white mb-3">Show this at arrival</h4>
         <div className="bg-white inline-block p-3 rounded-lg">
-          <QRCode 
+          <QRCodeSVG 
             value={`BOOKING:${bookingId}`}
             size={120}
-            renderAs="svg"
             includeMargin={false}
           />
         </div>
