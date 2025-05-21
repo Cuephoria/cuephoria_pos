@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Station } from '@/types/pos.types';
 import { toast } from 'sonner';
-import { checkStationAvailability } from '@/utils/booking';
+import { checkStationAvailability } from '@/utils/booking/availabilityUtils';
 import { formatDate } from '@/utils/booking/formatters';
 
 interface UseStationAvailabilityProps {
@@ -93,7 +93,7 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
       console.log("Checking availability for stations:", allStationIds);
       
       // Check availability for all stations for this specific time slot
-      const { unavailableStationIds } = await checkStationAvailability(
+      const { available, unavailableStationIds } = await checkStationAvailability(
         allStationIds,
         formattedDate,
         selectedTimeSlot.startTime,
@@ -103,13 +103,13 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
       console.log("Unavailable station IDs:", unavailableStationIds);
       
       // Filter out unavailable stations
-      const available = stationsList.filter(
+      const availableStationsFiltered = stationsList.filter(
         station => !unavailableStationIds.includes(station.id)
       );
       
-      console.log("Available stations:", available.length);
+      console.log("Available stations:", availableStationsFiltered.length);
       
-      setAvailableStations(available);
+      setAvailableStations(availableStationsFiltered);
     } catch (error) {
       console.error('Error filtering available stations:', error);
       // Fallback to showing all stations
