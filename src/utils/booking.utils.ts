@@ -186,14 +186,14 @@ export const isDateInPast = (date: Date): boolean => {
  * @param date Booking date in YYYY-MM-DD format
  * @param startTime Start time in HH:MM format
  * @param endTime End time in HH:MM format
- * @returns Promise resolving to boolean indicating if all stations are available
+ * @returns Promise resolving to object with availability info and unavailable station IDs
  */
 export const checkStationAvailability = async (
   stationIds: string[],
   date: string,
   startTime: string,
   endTime: string
-): Promise<{ available: boolean, unavailableStationIds: string[] }> => {
+): Promise<{ available: boolean, unavailableStationIds: string[], unavailableStations?: Array<{id: string, name: string}> }> => {
   try {
     // Import supabase client
     const { supabase } = await import('@/integrations/supabase/client');
@@ -205,7 +205,7 @@ export const checkStationAvailability = async (
     // Query existing bookings that overlap with the requested time slot
     const { data: existingBookings, error } = await supabase
       .from('bookings')
-      .select('station_id')
+      .select('station_id, station:stations(id, name)')
       .eq('booking_date', date)
       .eq('status', 'confirmed')
       .or(`start_time.lte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`)
@@ -223,12 +223,53 @@ export const checkStationAvailability = async (
     // Check if any of the requested stations are already booked
     const unavailableStationIds = stationIds.filter(id => bookedStationIds.includes(id));
     
+    // Get full station information for unavailable stations
+    const unavailableStations = existingBookings
+      ?.filter(booking => stationIds.includes(booking.station_id))
+      .map(booking => ({
+        id: booking.station_id,
+        name: booking.station?.name || 'Unknown station'
+      })) || [];
+    
     return {
       available: unavailableStationIds.length === 0,
-      unavailableStationIds
+      unavailableStationIds,
+      unavailableStations
     };
   } catch (error) {
     console.error('Error in checkStationAvailability:', error);
     return { available: false, unavailableStationIds: [] };
+  }
+};
+
+/**
+ * Perform a final availability check right before booking
+ * This is a safeguard against race conditions between selecting stations and confirming booking
+ */
+export const performFinalAvailabilityCheck = async (
+  stationIds: string[],
+  date: string,
+  startTime: string,
+  endTime: string
+): Promise<{success: boolean, message?: string, unavailableStations?: Array<{id: string, name: string}>}> => {
+  try {
+    const result = await checkStationAvailability(stationIds, date, startTime, endTime);
+    
+    if (!result.available) {
+      const stationNames = result.unavailableStations?.map(s => s.name).join(', ') || 'Some stations';
+      return {
+        success: false,
+        message: `${stationNames} ${result.unavailableStations?.length === 1 ? 'is' : 'are'} no longer available for the selected time. Please select a different time or station.`,
+        unavailableStations: result.unavailableStations
+      };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error in performFinalAvailabilityCheck:', error);
+    return { 
+      success: false, 
+      message: 'Could not verify station availability. Please try again.' 
+    };
   }
 };

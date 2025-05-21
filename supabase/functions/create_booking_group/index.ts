@@ -67,13 +67,16 @@ serve(async (req) => {
     console.log("Creating booking group with ID:", p_booking_group_id);
     console.log("For customer:", p_customer_id);
     console.log("With stations:", p_station_ids);
+    console.log("For date:", p_booking_date, "time:", p_start_time, "-", p_end_time);
     
     // Check if any station is already booked for this time
     const { data: existingBookings, error: checkError } = await supabase
       .from('bookings')
-      .select('station_id')
+      .select('station_id, station:stations(name)')
       .eq('booking_date', p_booking_date)
-      .eq('start_time', p_start_time)
+      .or(`start_time.lte.${p_start_time},end_time.gt.${p_start_time}`)
+      .or(`start_time.lt.${p_end_time},end_time.gte.${p_end_time}`)
+      .or(`start_time.gte.${p_start_time},end_time.lte.${p_end_time}`)
       .eq('status', 'confirmed')
       .in('station_id', p_station_ids);
       
@@ -85,9 +88,17 @@ serve(async (req) => {
     }
     
     if (existingBookings && existingBookings.length > 0) {
-      const alreadyBookedStations = existingBookings.map(b => b.station_id);
+      // Get station details for better error message
+      const unavailableStations = existingBookings.map(booking => ({
+        id: booking.station_id,
+        name: booking.station?.name || 'Unknown station'
+      }));
+      
       return new Response(
-        JSON.stringify({ error: "Some stations are already booked for this time slot", alreadyBookedStations }),
+        JSON.stringify({ 
+          error: "One or more selected stations are no longer available. Please select different stations or time slot.",
+          unavailableStations 
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409 }
       );
     }
