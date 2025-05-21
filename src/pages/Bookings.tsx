@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -226,11 +225,24 @@ const BookingsPage = () => {
     }
   };
   
-  // Handle booking deletion
+  // Modified to handle booking view deletion first
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
     
     try {
+      // First, delete associated booking_views
+      const { error: viewsError } = await supabase
+        .from('booking_views')
+        .delete()
+        .eq('booking_id', selectedBooking.id);
+      
+      if (viewsError) {
+        console.error('Error deleting booking views:', viewsError);
+        toast.error('Failed to delete booking: ' + viewsError.message);
+        return;
+      }
+      
+      // After successfully deleting booking_views, delete the booking
       const { error } = await supabase
         .from('bookings')
         .delete()
