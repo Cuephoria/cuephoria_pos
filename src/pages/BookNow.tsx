@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -252,7 +251,7 @@ const BookNow = () => {
             
             return {
               ...slot,
-              isAvailable: slot.isAvailable && (stationSlot ? stationSlot.is_available : false)
+              isAvailable: slot.isAvailable && (stationSlot ? stationSlot.isAvailable : false)
             };
           });
         } catch (stationError) {
