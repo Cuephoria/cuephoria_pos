@@ -1,9 +1,9 @@
+
 import React from 'react';
 import { Station } from '@/types/pos.types';
 import ControllerManagement from '@/components/booking/ControllerManagement';
 import AvailableStationsGrid from '@/components/booking/AvailableStationsGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
-import StationTypeFilter from '@/components/booking/stations/StationTypeFilter';
 
 interface StationSelectionSectionProps {
   selectedDate: Date;
@@ -46,12 +46,7 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
         )}
       </div>
       
-      {/* Direct filter component instead of using it through AvailableStationsGrid */}
-      <StationTypeFilter
-        stationType={stationType}
-        onStationTypeChange={onStationTypeChange}
-        isMobile={isMobile}
-      />
+      {/* Removed the duplicated StationTypeFilter component from here */}
       
       <AvailableStationsGrid 
         selectedDate={selectedDate}
