@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GameController, CircleDashed } from 'lucide-react';
+import { Gamepad2, CircleDashed } from 'lucide-react';
 
 interface StationTypeFilterProps {
   stationType: 'ps5' | '8ball' | 'all';
@@ -29,7 +29,7 @@ const StationTypeFilter: React.FC<StationTypeFilterProps> = ({
             value="ps5" 
             className={`text-sm flex items-center gap-1 ${isMobile ? 'justify-center' : ''}`}
           >
-            <GameController className="h-4 w-4" /> 
+            <Gamepad2 className="h-4 w-4" /> 
             PlayStation 5
           </TabsTrigger>
           <TabsTrigger 
