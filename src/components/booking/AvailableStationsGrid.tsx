@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
 import { toast } from 'sonner';
-import { checkStationAvailability } from '@/utils/booking.utils';
+import { checkStationAvailability } from '@/utils/booking';
+import { formatDate } from '@/utils/booking/formatters';
 
 interface AvailableStationsGridProps {
   selectedDate: Date;
