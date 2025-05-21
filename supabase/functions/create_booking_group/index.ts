@@ -69,7 +69,7 @@ serve(async (req) => {
     console.log("With stations:", p_station_ids);
     console.log("For date:", p_booking_date, "time:", p_start_time, "-", p_end_time);
     
-    // Direct query to check if stations are available
+    // Check if stations are available using the fixed SQL function
     const { data: stationAvailability, error: availabilityError } = await supabase.rpc(
       'check_stations_availability',
       {
@@ -102,7 +102,7 @@ serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          error: "One or more selected stations are no longer available. Please select different stations or time slot.",
+          error: "One or more selected stations are no longer available for this time slot. Please select different stations or a different time slot.",
           unavailableStations: stationDetails || unavailableStations.map(s => ({
             id: s.station_id,
             name: 'Unknown station'

@@ -319,16 +319,7 @@ const BookNow = () => {
         return;
       }
       
-      // We'll track availability across all stations
-      const allSlotsAvailability = new Map();
-      
-      // Initialize with all base slots marked as available
-      baseSlots.forEach(slot => {
-        const key = `${slot.startTime}-${slot.endTime}`;
-        allSlotsAvailability.set(key, true);
-      });
-      
-      // Check bookings for this date to determine which slots are unavailable
+      // Fetch bookings for this date to determine which slots are unavailable
       const { data: existingBookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('start_time, end_time, station_id')
@@ -352,52 +343,48 @@ const BookNow = () => {
       console.log("Existing bookings found:", existingBookings.length);
       console.log("First few bookings:", existingBookings.slice(0, 3));
       
-      // Go through each base slot and check if it overlaps with any booking
-      const availableSlots = baseSlots.map(slot => {
-        // Convert slot times to comparable format
-        const slotStart = slot.startTime + ":00";
-        const slotEnd = slot.endTime + ":00";
+      // Map to count bookings per time slot
+      const slotBookingMap = new Map();
+      
+      // Initialize the map with all slots and 0 bookings
+      baseSlots.forEach(slot => {
+        slotBookingMap.set(`${slot.startTime}-${slot.endTime}`, 0);
+      });
+      
+      // Group bookings by time slot and count them
+      existingBookings.forEach(booking => {
+        const bookingStart = booking.start_time;
+        const bookingEnd = booking.end_time;
         
-        // Default to available
-        let isAvailable = true;
-        
-        // Check if this slot overlaps with any existing booking on any station
-        const stationBookingCounts = new Map();
-        stations.forEach(station => {
-          stationBookingCounts.set(station.id, 0);
-        });
-        
-        // Count overlapping bookings for each station
-        existingBookings.forEach(booking => {
-          const bookingStart = booking.start_time;
-          const bookingEnd = booking.end_time;
+        // Check each base slot to see if it overlaps with this booking
+        baseSlots.forEach(slot => {
+          const slotStart = slot.startTime + ":00";
+          const slotEnd = slot.endTime + ":00";
           
-          // Check if this booking overlaps with current slot
+          // Check if this booking overlaps with the current slot
           if (
             (bookingStart <= slotStart && bookingEnd > slotStart) || // Booking starts before and ends during/after slot
             (bookingStart < slotEnd && bookingEnd >= slotEnd) || // Booking starts during and ends after slot
             (bookingStart >= slotStart && bookingEnd <= slotEnd) // Booking is contained within slot
           ) {
-            // Increment the count for this station
-            if (stationBookingCounts.has(booking.station_id)) {
-              stationBookingCounts.set(
-                booking.station_id, 
-                stationBookingCounts.get(booking.station_id) + 1
-              );
-            }
+            // Increment booking count for this slot
+            const key = `${slot.startTime}-${slot.endTime}`;
+            const currentCount = slotBookingMap.get(key) || 0;
+            slotBookingMap.set(key, currentCount + 1);
           }
         });
+      });
+      
+      // Determine availability based on booking counts
+      // A slot is unavailable only if ALL stations are booked for that slot
+      const availableSlots = baseSlots.map(slot => {
+        const key = `${slot.startTime}-${slot.endTime}`;
+        const bookingCount = slotBookingMap.get(key) || 0;
         
-        // Check if all stations are booked for this slot
-        // If at least one station is available (count = 0), the slot is available
-        let allStationsBooked = true;
-        stationBookingCounts.forEach((count, _) => {
-          if (count === 0) allStationsBooked = false;
-        });
-        
+        // A slot is unavailable only if all stations are booked
         return {
           ...slot,
-          isAvailable: !allStationsBooked
+          isAvailable: bookingCount < stations.length
         };
       });
       
@@ -649,21 +636,28 @@ View booking online: ${bookingDetails.viewUrl}
       const startTimeFormatted = timeSlot.startTime + ':00';
       const endTimeFormatted = timeSlot.endTime + ':00';
       
-      // Check if stations have active bookings for this time slot
+      console.log(`Checking availability for date: ${formattedDate}, time: ${startTimeFormatted}-${endTimeFormatted}`);
+      
+      // Check if stations have active bookings for this specific time slot
       const { data: existingBookings, error } = await supabase
         .from('bookings')
         .select('station_id')
         .eq('booking_date', formattedDate)
         .eq('status', 'confirmed')
-        .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
-        .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
-        .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
+        .or(
+          `start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`,
+          `start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`,
+          `start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`,
+          `start_time.lte.${startTimeFormatted},end_time.gte.${endTimeFormatted}`
+        )
         .in('station_id', stationIds);
       
       if (error) {
         console.error('Error checking station availability:', error);
         return false;
       }
+      
+      console.log('Existing bookings found:', existingBookings?.length || 0);
       
       // If there are no existing bookings for any of the selected stations,
       // all stations are available

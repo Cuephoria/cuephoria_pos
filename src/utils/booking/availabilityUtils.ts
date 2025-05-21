@@ -25,6 +25,8 @@ export const checkStationAvailability = async (
     const startTimeWithSeconds = `${startTime}:00`;
     const endTimeWithSeconds = `${endTime}:00`;
     
+    console.log(`Checking availability for date: ${date}, time: ${startTime}-${endTime}, stations: ${stationIds.length}`);
+    
     // Try to use the RPC function first
     try {
       const { data: availability, error } = await supabase.rpc(
@@ -81,10 +83,13 @@ export const checkStationAvailability = async (
         .select('station_id, station:stations(id, name, is_controller, parent_station_id)')
         .eq('booking_date', date)
         .in('status', ['confirmed', 'in-progress'])
-        .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
-        .or(`start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
-        .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`)
-        .or(`start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`);
+        .or(
+          `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`,
+          `start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`,
+          `start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`,
+          `start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`
+        )
+        .in('station_id', stationIds);
       
       if (error) {
         console.error("Error in fallback availability check:", error);

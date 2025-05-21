@@ -12,6 +12,10 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  -- Add proper logging
+  RAISE NOTICE 'Checking availability for date: %, start: %, end: %, stations: %', 
+    p_date, p_start_time, p_end_time, p_station_ids;
+
   -- Return a result set with station_id and availability status
   RETURN QUERY
   WITH booking_conflicts AS (
@@ -24,13 +28,14 @@ BEGIN
       AND b.status IN ('confirmed', 'in-progress')
       AND b.station_id = ANY(p_station_ids)
       AND (
-        -- Case 1: Existing booking starts during requested time
+        -- Existing booking overlaps with requested time (all four cases):
+        -- Case 1: Existing booking starts during the requested time
         (b.start_time <= p_start_time AND b.end_time > p_start_time) OR
-        -- Case 2: Existing booking ends during requested time
+        -- Case 2: Existing booking ends during the requested time
         (b.start_time < p_end_time AND b.end_time >= p_end_time) OR
-        -- Case 3: Existing booking is contained within requested time
+        -- Case 3: Existing booking is contained within the requested time
         (b.start_time >= p_start_time AND b.end_time <= p_end_time) OR
-        -- Case 4: Requested booking is contained within existing booking
+        -- Case 4: Requested booking is contained within an existing booking
         (b.start_time <= p_start_time AND b.end_time >= p_end_time)
       )
   )

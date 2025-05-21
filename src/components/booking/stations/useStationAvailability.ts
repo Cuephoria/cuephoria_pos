@@ -92,7 +92,7 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
       
       console.log("Checking availability for stations:", allStationIds);
       
-      // Check availability for all stations
+      // Check availability for all stations for this specific time slot
       const { unavailableStationIds } = await checkStationAvailability(
         allStationIds,
         formattedDate,
