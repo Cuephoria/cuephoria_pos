@@ -13,7 +13,7 @@ const Index = () => {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundBlendMode: 'overlay'
-    }} className="bg-gradient-to-br from-gray-900 to-black text-white py-20 px-6 flex-grow flex flex-col justify-center items-center text-center bg-inherit">
+    }} className="bg-gradient-to-br from-gray-900 to-black text-white py-20 px-6 flex-grow flex flex-col justify-center items-center text-center bg-zinc-950">
         <div className="max-w-4xl mx-auto bg-black/50 p-8 backdrop-blur-sm rounded-lg border border-cuephoria-purple/20">
           <h1 className="text-4xl md:text-6xl font-bold mb-4 font-heading bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple via-cuephoria-lightpurple to-cuephoria-blue">
             Cuephoria
