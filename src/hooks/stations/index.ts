@@ -6,7 +6,8 @@ import React from 'react';
 export * from './useSessionsData';
 export * from './useSessionActions';
 export * from './useEndSession';
-export * from './useStationsData';  // Change to useStationsData which exists
+export * from './useStationsData';
+export * from './useStations';  // Add the new useStations hook
 
 // This hook periodically updates booking statuses
 export const useUpdateBookingStatuses = () => {
@@ -43,5 +44,5 @@ export const useUpdateBookingStatuses = () => {
   }, []);
 };
 
-// Re-export the useStations hook with the correct path
-export { useStationsData as useStations } from './useStationsData';
+// Also export the useStations hook directly for backward compatibility
+export { useStations } from './useStations';
