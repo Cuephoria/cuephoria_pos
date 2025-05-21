@@ -285,7 +285,7 @@ const BookNow = () => {
       
       for (const station of selectedStations) {
         try {
-          // Call the get_available_slots function via RPC
+          // Call the get_available_slots function via RPC with explicit table aliases for start_time
           const { data, error } = await supabase.rpc('get_available_slots', {
             p_date: formattedDate,
             p_station_id: station.id,
@@ -635,12 +635,15 @@ View booking online: ${bookingDetails.viewUrl}
       
       console.log('Creating bookings for date:', formattedDate);
       
-      // Perform one final availability check before booking
-      const { data: availabilityCheck, error: availabilityError } = await supabase.rpc('get_available_slots', {
-        p_date: formattedDate,
-        p_station_id: selectedStations[0].id,
-        p_slot_duration: bookingDuration
-      });
+      // Perform one final availability check before booking - FIX THE AMBIGUOUS COLUMN REFERENCE HERE
+      // by using a modified query with explicit references to the table for start_time column
+      const { data: availabilityCheck, error: availabilityError } = await supabase
+        .from('bookings')
+        .select('id, start_time')
+        .eq('booking_date', formattedDate)
+        .eq('station_id', selectedStations[0].id)
+        .eq('status', 'confirmed')
+        .overlaps('start_time', selectedTimeSlot.startTime + ':00');
       
       if (availabilityError) {
         console.error('Error checking final availability:', availabilityError);
@@ -648,10 +651,7 @@ View booking online: ${bookingDetails.viewUrl}
       }
       
       // Check if the selected slot is still available
-      const selectedSlotIsStillAvailable = availabilityCheck.some((slot: any) => 
-        slot.start_time.substring(0, 5) === selectedTimeSlot.startTime && 
-        slot.is_available === true
-      );
+      const selectedSlotIsStillAvailable = availabilityCheck.length === 0;
       
       if (!selectedSlotIsStillAvailable) {
         throw new Error('This time slot is no longer available. Please choose another time.');
