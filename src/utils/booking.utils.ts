@@ -208,9 +208,16 @@ export const checkStationAvailability = async (
       .select('station_id, station:stations(id, name)')
       .eq('booking_date', date)
       .eq('status', 'confirmed')
-      .or(`start_time.lte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`)
-      .or(`end_time.gt.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
-      .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`);
+      .or(
+        // Improved time overlap logic to properly handle longer durations:
+        // 1. Existing booking starts during our requested time slot
+        `start_time.gte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`,
+        // 2. Existing booking ends during our requested time slot
+        `end_time.gt.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`,
+        // 3. Existing booking completely contains our requested time slot
+        `start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`
+      )
+      .in('station_id', stationIds);
       
     if (error) {
       console.error('Error checking station availability:', error);

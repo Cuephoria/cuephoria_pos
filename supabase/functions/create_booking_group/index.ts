@@ -68,19 +68,28 @@ serve(async (req) => {
     console.log("For customer:", p_customer_id);
     console.log("With stations:", p_station_ids);
     console.log("For date:", p_booking_date, "time:", p_start_time, "-", p_end_time);
+    console.log("Duration:", p_duration, "minutes");
     
     // Check if any station is already booked for this time
+    // IMPORTANT: We need to fix the time overlap check for longer durations
     const { data: existingBookings, error: checkError } = await supabase
       .from('bookings')
       .select('station_id, station:stations(name)')
       .eq('booking_date', p_booking_date)
-      .or(`start_time.lte.${p_start_time},end_time.gt.${p_start_time}`)
-      .or(`start_time.lt.${p_end_time},end_time.gte.${p_end_time}`)
-      .or(`start_time.gte.${p_start_time},end_time.lte.${p_end_time}`)
       .eq('status', 'confirmed')
+      .or(
+        // This improved query handles time range overlaps properly:
+        // 1. Existing booking starts during our requested time slot
+        `start_time.gte.${p_start_time},start_time.lt.${p_end_time}`,
+        // 2. Existing booking ends during our requested time slot
+        `end_time.gt.${p_start_time},end_time.lte.${p_end_time}`,
+        // 3. Existing booking completely contains our requested time slot
+        `start_time.lte.${p_start_time},end_time.gte.${p_end_time}`
+      )
       .in('station_id', p_station_ids);
       
     if (checkError) {
+      console.error("Error checking station availability:", checkError);
       return new Response(
         JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -93,6 +102,8 @@ serve(async (req) => {
         id: booking.station_id,
         name: booking.station?.name || 'Unknown station'
       }));
+      
+      console.log("Unavailable stations:", unavailableStations);
       
       return new Response(
         JSON.stringify({ 
@@ -133,11 +144,14 @@ serve(async (req) => {
       .select();
     
     if (insertError) {
+      console.error("Error creating bookings:", insertError);
       return new Response(
         JSON.stringify({ error: "Failed to create bookings: " + insertError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
+    
+    console.log(`Successfully created ${bookings?.length} bookings`);
     
     // Return the created bookings
     return new Response(
@@ -146,6 +160,7 @@ serve(async (req) => {
     );
     
   } catch (error) {
+    console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
