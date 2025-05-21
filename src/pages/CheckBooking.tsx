@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, Phone, Search, Share2, User } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { toast } from 'sonner';
+import { format, parseISO, addMinutes } from 'date-fns';
+import { getBookingStatusInfo } from '@/utils/booking';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { getBookingStatusInfo, isBookingInPast } from '@/utils/booking.utils';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { CalendarDays, Clock, MapPin, Phone, User } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const CheckBooking = () => {
   const navigate = useNavigate();

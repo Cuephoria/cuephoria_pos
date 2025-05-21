@@ -3,6 +3,9 @@
  * Time slot generation and manipulation utilities
  */
 
+import { formatTime } from './formatters';
+import { isSameDay } from './dateUtils';
+
 /**
  * Generate time slots in the specified range
  * @param startTimeStr Opening time (format: "HH:MM")
@@ -64,15 +67,6 @@ export const generateTimeSlots = (
   }
   
   return slots;
-};
-
-/**
- * Format minutes as HH:MM
- */
-export const formatTime = (totalMinutes: number): string => {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
 /**

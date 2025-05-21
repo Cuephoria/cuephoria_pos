@@ -8,3 +8,4 @@ export * from './timeSlots';
 export * from './dateUtils';
 export * from './statusUtils';
 export * from './availabilityUtils';
+export * from './formatters';

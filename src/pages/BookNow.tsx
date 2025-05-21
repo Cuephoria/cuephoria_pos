@@ -19,15 +19,18 @@ import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { 
   generateTimeSlots, 
   mapDatabaseSlotToFrontend, 
-  getEarliestBookingTime, 
+  getEarliestBookingTime
+} from '@/utils/booking';
+import { 
   getBookingStatusInfo,
   isDateInPast
-} from '@/utils/booking.utils';
+} from '@/utils/booking';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
 import ControllerManagement from '@/components/booking/ControllerManagement';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { checkStationAvailability, performFinalAvailabilityCheck } from '@/utils/booking';
 
 // Types for our booking form
 interface CustomerInfo {
