@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for the booking system
  */
@@ -210,34 +211,9 @@ export const checkStationAvailability = async (
       return { available: true, unavailableStationIds: [] };
     }
     
-    // Using the DB function for checking availability
-    const { data, error } = await supabase.rpc(
-      'check_stations_availability',
-      {
-        p_date: date,
-        p_start_time: startTimeWithSeconds,
-        p_end_time: endTimeWithSeconds,
-        p_station_ids: stationIds
-      }
-    );
-    
-    if (error) {
-      console.error('Error calling check_stations_availability:', error);
-      
-      // Fallback to manual check if RPC fails
-      return await manualAvailabilityCheck(stationIds, date, startTimeWithSeconds, endTimeWithSeconds);
-    }
-    
-    // Process the results from the DB function
-    const unavailableStations = data?.filter(item => !item.is_available) || [];
-    const unavailableStationIds = unavailableStations.map(item => item.station_id);
-    
-    console.log('DB function availability check - unavailable station IDs:', unavailableStationIds);
-    
-    return {
-      available: unavailableStationIds.length === 0,
-      unavailableStationIds
-    };
+    // Skip the database function call that's causing errors and go directly to the manual availability check
+    // which is more reliable anyway
+    return await manualAvailabilityCheck(stationIds, date, startTimeWithSeconds, endTimeWithSeconds);
   } catch (error) {
     console.error('Error in checkStationAvailability:', error);
     
