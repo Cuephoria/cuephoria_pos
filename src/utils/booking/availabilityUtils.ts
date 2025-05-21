@@ -78,17 +78,18 @@ export const checkStationAvailability = async (
       console.log("RPC error, using fallback check:", rpcError);
       
       // Manual fallback check (query the bookings directly)
+      // Fix the error by using .or() correctly with a string filter
+      const filterString = `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`;
+      const filterString2 = `start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`;
+      const filterString3 = `start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`;
+      const filterString4 = `start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`;
+      
       const { data: existingBookings, error } = await supabase
         .from('bookings')
         .select('station_id, station:stations(id, name, is_controller, parent_station_id)')
         .eq('booking_date', date)
         .in('status', ['confirmed', 'in-progress'])
-        .or(
-          `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`,
-          `start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`,
-          `start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`,
-          `start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`
-        )
+        .or(filterString + ',' + filterString2 + ',' + filterString3 + ',' + filterString4)
         .in('station_id', stationIds);
       
       if (error) {
