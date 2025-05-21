@@ -26,7 +26,7 @@ interface BookingConfirmationProps {
   bookingGroupId?: string;
   stations: Station[];
   date: Date;
-  timeSlot: TimeSlot | null;
+  timeSlot: TimeSlot;
   duration: number;
   customerInfo: CustomerInfo;
   discountPercentage?: number;
@@ -49,19 +49,6 @@ const BookingConfirmation = ({
   couponCode
 }: BookingConfirmationProps) => {
   const [copied, setCopied] = useState(false);
-  
-  // Handle missing time slot (this should never happen, but just to be safe)
-  if (!timeSlot) {
-    return (
-      <div className="text-center p-6">
-        <h3 className="text-xl font-semibold">Booking Confirmed!</h3>
-        <p className="text-gray-400 mt-2">
-          Your booking has been successfully confirmed, but time slot details are missing.
-          Please contact support if needed.
-        </p>
-      </div>
-    );
-  }
   
   // Format booking reference for display
   const formatBookingReference = () => {

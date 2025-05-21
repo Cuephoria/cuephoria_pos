@@ -69,35 +69,23 @@ serve(async (req) => {
     console.log("With stations:", p_station_ids);
     console.log("For date:", p_booking_date, "time:", p_start_time, "-", p_end_time);
     
-    // Ensure the input times have seconds for consistent comparison with database values
-    const startTimeWithSeconds = p_start_time.includes(':00') ? p_start_time : `${p_start_time}:00`;
-    const endTimeWithSeconds = p_end_time.includes(':00') ? p_end_time : `${p_end_time}:00`;
-    
-    console.log("Formatted times for comparison - start:", startTimeWithSeconds, "end:", endTimeWithSeconds);
-    
     // Check if any station is already booked for this time
-    // Using proper overlap detection logic
     const { data: existingBookings, error: checkError } = await supabase
       .from('bookings')
       .select('station_id, station:stations(name)')
       .eq('booking_date', p_booking_date)
+      .or(`start_time.lte.${p_start_time},end_time.gt.${p_start_time}`)
+      .or(`start_time.lt.${p_end_time},end_time.gte.${p_end_time}`)
+      .or(`start_time.gte.${p_start_time},end_time.lte.${p_end_time}`)
       .eq('status', 'confirmed')
-      .or(
-        `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`,
-        `start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`,
-        `start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`
-      )
       .in('station_id', p_station_ids);
       
     if (checkError) {
-      console.log("Error checking station availability:", checkError.message);
       return new Response(
         JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
-    
-    console.log("Existing bookings found:", existingBookings ? existingBookings.length : 0);
     
     if (existingBookings && existingBookings.length > 0) {
       // Get station details for better error message
@@ -105,8 +93,6 @@ serve(async (req) => {
         id: booking.station_id,
         name: booking.station?.name || 'Unknown station'
       }));
-      
-      console.log("Unavailable stations:", unavailableStations);
       
       return new Response(
         JSON.stringify({ 
@@ -128,8 +114,8 @@ serve(async (req) => {
         customer_id: p_customer_id,
         station_id: stationId,
         booking_date: p_booking_date,
-        start_time: startTimeWithSeconds,
-        end_time: endTimeWithSeconds,
+        start_time: p_start_time,
+        end_time: p_end_time,
         duration: p_duration,
         status: 'confirmed',
         booking_group_id: p_booking_group_id,
@@ -140,8 +126,6 @@ serve(async (req) => {
       };
     });
     
-    console.log("Creating bookings with records:", bookingRecords);
-    
     // Create bookings
     const { data: bookings, error: insertError } = await supabase
       .from('bookings')
@@ -149,14 +133,11 @@ serve(async (req) => {
       .select();
     
     if (insertError) {
-      console.log("Error creating bookings:", insertError.message);
       return new Response(
         JSON.stringify({ error: "Failed to create bookings: " + insertError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
-    
-    console.log("Bookings created successfully:", bookings?.length || 0);
     
     // Return the created bookings
     return new Response(
@@ -165,7 +146,6 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.log("Unexpected error:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

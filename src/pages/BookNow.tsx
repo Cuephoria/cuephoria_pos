@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay, isAfter, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,9 +21,7 @@ import {
   mapDatabaseSlotToFrontend, 
   getEarliestBookingTime, 
   getBookingStatusInfo,
-  isDateInPast,
-  performFinalAvailabilityCheck,
-  checkStationAvailability
+  isDateInPast
 } from '@/utils/booking.utils';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -643,30 +640,31 @@ View booking online: ${bookingDetails.viewUrl}
   };
   
   // Check station availability for a given time slot
-  const checkStationAvailabilityLocal = async (stationIds: string[], timeSlot: TimeSlot) => {
-    if (!timeSlot) return false;
-    
+  const checkStationAvailability = async (stationIds: string[], timeSlot: TimeSlot) => {
     try {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       const startTimeFormatted = timeSlot.startTime + ':00';
       const endTimeFormatted = timeSlot.endTime + ':00';
       
-      console.log('BookNow - Checking availability for:', {
-        date: formattedDate,
-        startTime: startTimeFormatted,
-        endTime: endTimeFormatted,
-        stationIds
-      });
+      // Check if stations have active bookings for this time slot
+      const { data: existingBookings, error } = await supabase
+        .from('bookings')
+        .select('station_id')
+        .eq('booking_date', formattedDate)
+        .eq('status', 'confirmed')
+        .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
+        .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
+        .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
+        .in('station_id', stationIds);
       
-      // Use the utility function to check availability
-      const result = await checkStationAvailability(
-        stationIds,
-        formattedDate,
-        timeSlot.startTime,
-        timeSlot.endTime
-      );
+      if (error) {
+        console.error('Error checking station availability:', error);
+        return false;
+      }
       
-      return result.available;
+      // If there are no existing bookings for any of the selected stations,
+      // all stations are available
+      return !existingBookings || existingBookings.length === 0;
     } catch (error) {
       console.error('Error checking station availability:', error);
       return false;
@@ -758,8 +756,12 @@ View booking online: ${bookingDetails.viewUrl}
       console.log('Creating bookings for date:', formattedDate);
       
       // Perform one final availability check before booking
+      const startTimeFormatted = selectedTimeSlot.startTime + ':00';
+      const endTimeFormatted = selectedTimeSlot.endTime + ':00';
+      
+      // Check if there are any conflicting bookings
       const stationIds = selectedStations.map(s => s.id);
-      const isAvailable = await checkStationAvailabilityLocal(stationIds, selectedTimeSlot);
+      const isAvailable = await checkStationAvailability(stationIds, selectedTimeSlot);
       
       if (!isAvailable) {
         throw new Error('One or more selected stations are no longer available. Please select different stations or time slot.');
@@ -770,8 +772,8 @@ View booking online: ${bookingDetails.viewUrl}
         customer_id: customerId,
         station_id: station.id,
         booking_date: formattedDate,
-        start_time: selectedTimeSlot.startTime + ':00',
-        end_time: selectedTimeSlot.endTime + ':00',
+        start_time: startTimeFormatted,
+        end_time: endTimeFormatted,
         duration: bookingDuration,
         status: 'confirmed',
         booking_group_id: groupId,
@@ -1162,11 +1164,11 @@ View booking online: ${bookingDetails.viewUrl}
               )}
               
               {/* Step 4: Booking Summary */}
-              {currentStep === 4 && selectedTimeSlot && (
+              {currentStep === 4 && (
                 <BookingSummary 
                   stations={selectedStations}
                   date={selectedDate}
-                  timeSlot={selectedTimeSlot}
+                  timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
                   customerInfo={customerInfo}
                   couponCode={couponCode}
@@ -1181,7 +1183,7 @@ View booking online: ${bookingDetails.viewUrl}
                   bookingGroupId={bookingGroupId || undefined}
                   stations={selectedStations}
                   date={selectedDate}
-                  timeSlot={selectedTimeSlot}
+                  timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
                   customerInfo={customerInfo}
                   discountPercentage={discountPercentage}
