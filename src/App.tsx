@@ -56,7 +56,6 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/booknow" element={<BookNow />} />
-              <Route path="/bookings" element={<Bookings />} />
               <Route path="/stations/public" element={<PublicStations />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/terms" element={<Terms />} />
@@ -73,6 +72,7 @@ function App() {
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/bookings" element={<Bookings />} />
               </Route>
               
               {/* Fallback route */}
