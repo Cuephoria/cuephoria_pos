@@ -18,6 +18,7 @@ interface UseStationAvailabilityProps {
 export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseStationAvailabilityProps) => {
   const [stations, setStations] = useState<Station[]>([]);
   const [availableStations, setAvailableStations] = useState<Station[]>([]);
+  const [unavailableStationIds, setUnavailableStationIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   // Generate cache key based on date and time slot
@@ -72,6 +73,7 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
         await filterAvailableStations(transformedStations);
       } else {
         setAvailableStations(transformedStations);
+        setUnavailableStationIds([]);
       }
     } catch (error) {
       console.error('Error fetching stations:', error);
@@ -86,6 +88,7 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
     if (!selectedDate || !selectedTimeSlot) {
       console.log("Missing date or time slot, can't filter stations");
       setAvailableStations(stationsList);
+      setUnavailableStationIds([]);
       return;
     }
     
@@ -123,7 +126,10 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
       
       console.log("Unavailable station IDs:", unavailableStationIds);
       
-      // Filter out unavailable stations
+      // Store unavailable station IDs in state
+      setUnavailableStationIds(unavailableStationIds);
+      
+      // Filter out unavailable stations for display
       const availableStationsFiltered = stationsList.filter(
         station => !unavailableStationIds.includes(station.id)
       );
@@ -143,6 +149,7 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
       console.error('Error filtering available stations:', error);
       // Fallback to showing all stations
       setAvailableStations(stationsList);
+      setUnavailableStationIds([]);
       toast.error('Could not verify station availability');
     } finally {
       setLoading(false);
@@ -152,6 +159,7 @@ export const useStationAvailability = ({ selectedDate, selectedTimeSlot }: UseSt
   return {
     stations,
     availableStations,
+    unavailableStationIds,
     loading,
     fetchStations,
     filterAvailableStations

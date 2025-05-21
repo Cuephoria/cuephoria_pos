@@ -1,11 +1,11 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Station } from '@/types/pos.types';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import StationTypeFilter from './stations/StationTypeFilter';
-import StationGrid from './stations/StationGrid';
-import NoTimeSlotMessage from './stations/NoTimeSlotMessage';
 import { useStationAvailability } from './stations/useStationAvailability';
+import StationSelector from './StationSelector';
+import StationTypeFilter from './stations/StationTypeFilter';
+import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AvailableStationsGridProps {
   selectedDate: Date;
@@ -15,28 +15,9 @@ interface AvailableStationsGridProps {
   onStationSelect: (station: Station) => void;
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   loading?: boolean;
-  isMobile?: boolean; // Added the isMobile prop
+  isMobile?: boolean;
+  unavailableStationIds?: string[];
 }
-
-// Memoized station grid component to prevent unnecessary re-renders
-const AvailableStationsGridContent = React.memo(({
-  availableStations,
-  selectedStations,
-  stationType,
-  onStationSelect
-}: {
-  availableStations: Station[];
-  selectedStations: Station[];
-  stationType: 'ps5' | '8ball' | 'all';
-  onStationSelect: (station: Station) => void;
-}) => (
-  <StationGrid
-    stations={availableStations}
-    selectedStations={selectedStations}
-    onStationSelect={onStationSelect}
-    stationType={stationType}
-  />
-));
 
 const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   selectedDate,
@@ -45,56 +26,61 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   selectedStations,
   onStationSelect,
   onStationTypeChange,
-  loading: externalLoading = false,
-  isMobile = false, // Added the isMobile prop with default value
+  loading: externalLoading,
+  isMobile,
+  unavailableStationIds: externalUnavailableStationIds
 }) => {
-  const { 
-    availableStations,
-    loading: stationsLoading
-  } = useStationAvailability({ 
-    selectedDate, 
-    selectedTimeSlot 
-  });
+  // If external unavailable IDs are provided, use them, otherwise use what's computed from the hook
+  const { stations, availableStations, loading: internalLoading, unavailableStationIds: internalUnavailableIds } = 
+    useStationAvailability({ selectedDate, selectedTimeSlot });
   
-  const isLoading = externalLoading || stationsLoading;
+  const loading = externalLoading !== undefined ? externalLoading : internalLoading;
+  const unavailableStationIds = externalUnavailableStationIds || internalUnavailableIds || [];
   
-  // Filter stations by type
-  const filteredStations = useMemo(() => {
-    if (stationType === 'all') {
-      return availableStations;
+  // Function to handle station selection
+  const handleStationSelect = (station: Station) => {
+    // Don't allow selection if station is unavailable
+    if (unavailableStationIds.includes(station.id)) {
+      return;
     }
-    return availableStations.filter(station => station.type === stationType);
-  }, [availableStations, stationType]);
-  
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-48 text-center">
-        <LoadingSpinner />
-        <span className="ml-2">Loading available stations...</span>
-      </div>
-    );
-  }
-  
-  if (!selectedTimeSlot) {
-    return <NoTimeSlotMessage />;
-  }
+    
+    onStationSelect(station);
+  };
   
   return (
     <div>
-      <StationTypeFilter 
-        stationType={stationType} 
-        onStationTypeChange={onStationTypeChange} 
-        isMobile={isMobile} // Pass the isMobile prop to StationTypeFilter
-      />
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <h3 className="text-xl font-semibold mb-2 sm:mb-0">Available Stations</h3>
+        
+        <div className="flex items-center">
+          {selectedTimeSlot && (
+            <div className="flex gap-2 items-center">
+              <Badge variant="outline" className="border-cuephoria-purple text-cuephoria-lightpurple">
+                {stations.length - unavailableStationIds.length} available
+              </Badge>
+              
+              {unavailableStationIds.length > 0 && (
+                <Badge variant="outline" className="border-red-500 text-red-400">
+                  {unavailableStationIds.length} unavailable
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
       
-      <AvailableStationsGridContent
-        availableStations={filteredStations}
+      <StationSelector
+        stations={stations}
         selectedStations={selectedStations}
         stationType={stationType}
-        onStationSelect={onStationSelect}
+        onStationTypeChange={onStationTypeChange}
+        onStationSelect={handleStationSelect}
+        loading={loading}
+        multiSelect={true}
+        unavailableStationIds={unavailableStationIds}
       />
     </div>
   );
 };
 
-export default React.memo(AvailableStationsGrid);
+export default AvailableStationsGrid;

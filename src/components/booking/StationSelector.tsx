@@ -14,6 +14,7 @@ interface StationSelectorProps {
   stationType: 'ps5' | '8ball' | 'all';
   loading: boolean;
   multiSelect?: boolean;
+  unavailableStationIds?: string[];
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   onStationSelect: (station: Station) => void;
 }
@@ -24,6 +25,7 @@ const StationSelector = ({
   stationType,
   loading,
   multiSelect = false,
+  unavailableStationIds = [],
   onStationTypeChange,
   onStationSelect
 }: StationSelectorProps) => {
@@ -75,6 +77,7 @@ const StationSelector = ({
         selectedStations={selectedStations}
         loading={loading}
         multiSelect={multiSelect}
+        unavailableStationIds={unavailableStationIds}
         onStationSelect={onStationSelect}
       />
       

@@ -8,6 +8,7 @@ interface StationGridProps {
   selectedStations: Station[];
   onStationSelect: (station: Station) => void;
   stationType: 'ps5' | '8ball' | 'all';
+  unavailableStationIds?: string[];
 }
 
 const StationGrid: React.FC<StationGridProps> = ({
@@ -15,6 +16,7 @@ const StationGrid: React.FC<StationGridProps> = ({
   selectedStations,
   onStationSelect,
   stationType,
+  unavailableStationIds = []
 }) => {
   // Get stations to display based on type filter
   const getFilteredStations = () => {
@@ -64,6 +66,7 @@ const StationGrid: React.FC<StationGridProps> = ({
           station={station}
           isSelected={selectedStations.some(s => s.id === station.id)}
           onSelect={() => onStationSelect(station)}
+          isBookable={!unavailableStationIds.includes(station.id)}
         />
       ))}
     </div>
