@@ -12,7 +12,7 @@ interface BookingSummaryProps {
   timeSlot: {
     startTime: string;
     endTime: string;
-  } | null; // Allow null for timeSlot
+  };
   duration: number;
   customerInfo: {
     name: string;
@@ -36,15 +36,6 @@ const BookingSummary = ({
   const [validCoupon, setValidCoupon] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [showCouponHint, setShowCouponHint] = useState(false);
-  
-  // Protect against null timeSlot
-  if (!timeSlot) {
-    return (
-      <div className="flex items-center justify-center p-8 bg-gray-800/70 border border-gray-700 rounded-lg">
-        <p className="text-gray-400">No time slot selected. Please go back and select a time slot.</p>
-      </div>
-    );
-  }
   
   // Group stations by type for better presentation
   const groupedStations = stations.reduce((groups, station) => {

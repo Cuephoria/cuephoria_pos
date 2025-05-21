@@ -1164,11 +1164,11 @@ View booking online: ${bookingDetails.viewUrl}
               )}
               
               {/* Step 4: Booking Summary */}
-              {currentStep === 4 && selectedTimeSlot && (
+              {currentStep === 4 && (
                 <BookingSummary 
                   stations={selectedStations}
                   date={selectedDate}
-                  timeSlot={selectedTimeSlot}
+                  timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
                   customerInfo={customerInfo}
                   couponCode={couponCode}
@@ -1177,13 +1177,13 @@ View booking online: ${bookingDetails.viewUrl}
               )}
               
               {/* Step 5: Booking Confirmation */}
-              {currentStep === 5 && selectedTimeSlot && (
+              {currentStep === 5 && (
                 <BookingConfirmation 
                   bookingId={bookingIds[0]} 
                   bookingGroupId={bookingGroupId || undefined}
                   stations={selectedStations}
                   date={selectedDate}
-                  timeSlot={selectedTimeSlot}
+                  timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
                   customerInfo={customerInfo}
                   discountPercentage={discountPercentage}
