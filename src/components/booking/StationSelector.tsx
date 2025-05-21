@@ -5,6 +5,8 @@ import { Tabs } from '@/components/ui/tabs';
 import StationTypeTabs from './stations/StationTypeTabs';
 import StationsContent from './stations/StationsContent';
 import MultiSelectInfo from './stations/MultiSelectInfo';
+import StationTypeFilter from './stations/StationTypeFilter';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface StationSelectorProps {
   stations: Station[];
@@ -25,6 +27,9 @@ const StationSelector = ({
   onStationTypeChange,
   onStationSelect
 }: StationSelectorProps) => {
+  // Get mobile state
+  const isMobile = useIsMobile();
+  
   // Sort stations sequentially by type and number
   const sortedStations = [...stations].sort((a, b) => {
     // First sort by type (ps5 first, then 8ball)
@@ -56,24 +61,22 @@ const StationSelector = ({
   
   return (
     <div className="w-full">
-      <Tabs value={stationType} className="w-full">
-        <StationTypeTabs
-          stationType={stationType}
-          ps5Count={ps5Stations.length}
-          ballCount={ballStations.length}
-          onStationTypeChange={onStationTypeChange}
-        />
+      {/* Use dropdown filter for mobile, tabs for desktop */}
+      <StationTypeFilter
+        stationType={stationType}
+        onStationTypeChange={onStationTypeChange}
+        isMobile={isMobile}
+      />
 
-        <StationsContent
-          stationType={stationType}
-          stations={stations}
-          filteredStations={filteredStations}
-          selectedStations={selectedStations}
-          loading={loading}
-          multiSelect={multiSelect}
-          onStationSelect={onStationSelect}
-        />
-      </Tabs>
+      <StationsContent
+        stationType={stationType}
+        stations={stations}
+        filteredStations={filteredStations}
+        selectedStations={selectedStations}
+        loading={loading}
+        multiSelect={multiSelect}
+        onStationSelect={onStationSelect}
+      />
       
       <MultiSelectInfo show={multiSelect} />
     </div>
