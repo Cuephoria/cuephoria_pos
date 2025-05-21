@@ -93,6 +93,55 @@ export const useBookings = () => {
     }
   };
   
+  // Delete all bookings with optimistic update for instant UI feedback
+  const deleteAllBookings = async () => {
+    try {
+      // Save current state for rollback if needed
+      const previousBookings = queryClient.getQueryData(['bookings']);
+      
+      // Optimistically update UI immediately by clearing the bookings cache
+      queryClient.setQueryData(['bookings'], []);
+      
+      // Perform the actual deletion operations asynchronously
+      
+      // First, delete all booking_views
+      const { error: viewsError } = await supabase
+        .from('booking_views')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      
+      if (viewsError) {
+        // Rollback on error
+        queryClient.setQueryData(['bookings'], previousBookings);
+        console.error('Error deleting booking views:', viewsError);
+        toast.error('Failed to delete all bookings: ' + viewsError.message);
+        return false;
+      }
+      
+      // After successfully deleting booking_views, delete all bookings
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      
+      if (error) {
+        // Rollback on error
+        queryClient.setQueryData(['bookings'], previousBookings);
+        throw error;
+      }
+      
+      toast.success('All bookings deleted successfully');
+      
+      // Finally invalidate query to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting all bookings:', error);
+      throw error;
+    }
+  };
+  
   // Update booking with optimistic updates
   const updateBooking = async (bookingId: string, updateData: any) => {
     try {
@@ -183,6 +232,7 @@ export const useBookings = () => {
     refetch,
     stats,
     deleteBooking,
+    deleteAllBookings,
     updateBooking
   };
 };

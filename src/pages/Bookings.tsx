@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isBefore, isToday } from 'date-fns';
-import { CalendarIcon, Clock, Edit, Trash2, Search, Filter, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { CalendarIcon, Clock, Edit, Trash2, Search, Filter, ChevronDown, ChevronUp, Users, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,6 +48,7 @@ const BookingsPage = () => {
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [editedStatus, setEditedStatus] = useState<'confirmed' | 'cancelled' | 'completed' | 'no-show'>('confirmed');
   const [editedNotes, setEditedNotes] = useState('');
   
@@ -63,6 +63,7 @@ const BookingsPage = () => {
     refetch,
     stats,
     deleteBooking,
+    deleteAllBookings,
     updateBooking
   } = useBookings();
 
@@ -285,6 +286,20 @@ const BookingsPage = () => {
     }
   };
   
+  // Handle delete all bookings
+  const handleDeleteAllBookings = async () => {
+    try {
+      await deleteAllBookings();
+      setIsDeleteAllDialogOpen(false);
+      setExpandedDates(new Set());
+      setExpandedCustomers(new Set());
+      setCurrentPage(1);
+    } catch (error) {
+      console.error('Error deleting all bookings:', error);
+      toast.error('Failed to delete all bookings');
+    }
+  };
+  
   // Open edit dialog with booking data
   const openEditDialog = (booking: any) => {
     setSelectedBooking(booking);
@@ -356,7 +371,18 @@ const BookingsPage = () => {
   
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6">
-      <h1 className="text-2xl sm:text-3xl font-bold mb-6">Bookings Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Bookings Management</h1>
+        <Button 
+          variant="destructive" 
+          onClick={() => setIsDeleteAllDialogOpen(true)}
+          disabled={!bookings || bookings.length === 0}
+          className="flex items-center gap-1"
+        >
+          <XCircle className="h-4 w-4" />
+          Delete All Bookings
+        </Button>
+      </div>
       
       {/* Stats Section */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -768,6 +794,24 @@ const BookingsPage = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteBooking} className="bg-red-600 hover:bg-red-700">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete All Bookings Confirmation Dialog */}
+      <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Bookings</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete ALL bookings? This action cannot be undone and will remove {bookings?.length || 0} booking records from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAllBookings} className="bg-red-600 hover:bg-red-700">
+              Delete All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
