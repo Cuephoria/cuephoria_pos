@@ -36,6 +36,9 @@ const TimeSlotGrid = ({
     );
   }
 
+  // Add a debug section to show how many available slots we have
+  const availableSlots = timeSlots.filter(slot => slot.isAvailable);
+  
   if (timeSlots.length === 0) {
     return (
       <div className="text-center py-8 border border-gray-800 rounded-md bg-gray-900/50">
@@ -45,6 +48,18 @@ const TimeSlotGrid = ({
             `No more slots available for today after ${getEarliestBookingTime()}. Please select a different date.` : 
             'Please select a different date or station'
           }
+        </p>
+      </div>
+    );
+  }
+  
+  // If we have slots but none are available, show this message
+  if (timeSlots.length > 0 && availableSlots.length === 0) {
+    return (
+      <div className="text-center py-8 border border-gray-800 rounded-md bg-gray-900/50">
+        <h3 className="text-lg font-medium">All Slots Are Booked</h3>
+        <p className="text-gray-400 mt-2">
+          All stations are fully booked for this date. Please select a different date.
         </p>
       </div>
     );
@@ -69,6 +84,10 @@ const TimeSlotGrid = ({
         <p className="text-sm">
           <span className="font-medium text-cuephoria-lightpurple">Selected Date:</span>{' '}
           {formattedDate}
+        </p>
+        <p className="text-sm text-gray-300 mt-1">
+          <span className="font-medium text-cuephoria-lightpurple">Available Slots:</span>{' '}
+          {availableSlots.length} of {timeSlots.length} total
         </p>
         {isToday && (
           <p className="text-sm text-gray-300 mt-1">
