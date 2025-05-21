@@ -7,10 +7,9 @@ interface BookingStepsProps {
 }
 
 const BookingSteps = ({ currentStep }: BookingStepsProps) => {
-  // Reordered steps to put Date & Time first, then Station
   const steps = [
-    { id: 1, name: 'Date & Time' },
-    { id: 2, name: 'Station' },
+    { id: 1, name: 'Station' },
+    { id: 2, name: 'Date & Time' },
     { id: 3, name: 'Your Info' },
     { id: 4, name: 'Summary' },
     { id: 5, name: 'Confirmed' }

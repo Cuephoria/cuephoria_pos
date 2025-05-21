@@ -88,32 +88,6 @@ export const mapDatabaseSlotToFrontend = (dbSlot: any) => {
 };
 
 /**
- * Check if two time ranges overlap
- * @param start1 Start time of first range (format: "HH:MM")
- * @param end1 End time of first range (format: "HH:MM")
- * @param start2 Start time of second range (format: "HH:MM")
- * @param end2 End time of second range (format: "HH:MM")
- * @returns Boolean indicating if the ranges overlap
- */
-export const doTimeRangesOverlap = (
-  start1: string,
-  end1: string,
-  start2: string,
-  end2: string
-): boolean => {
-  // Add seconds for proper comparison
-  const s1 = start1 + (start1.length === 5 ? ':00' : '');
-  const e1 = end1 + (end1.length === 5 ? ':00' : '');
-  const s2 = start2 + (start2.length === 5 ? ':00' : '');
-  const e2 = end2 + (end2.length === 5 ? ':00' : '');
-
-  // Check for overlap
-  return (s1 <= s2 && e1 > s2) ||
-         (s1 < e2 && e1 >= e2) ||
-         (s1 >= s2 && e1 <= e2);
-};
-
-/**
  * Get the earliest available booking time with buffer
  * @param bufferMinutes Number of minutes to add as buffer (default: 30)
  * @returns Formatted string with earliest booking time
