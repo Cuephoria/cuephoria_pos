@@ -37,14 +37,13 @@ const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({ publicView = 
 
   return (
     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-800 overflow-hidden shadow-xl">
-      <CardHeader className="pb-2 flex flex-row justify-between items-center">
+      <CardHeader className="pb-2">
         <div>
-          <CardTitle className="flex items-center text-lg md:text-left">
-            <Clock className="h-5 w-5 mr-2 text-cuephoria-purple animate-pulse-soft" />
-            Live Active Sessions
-          </CardTitle>
+          <CardTitle className="text-2xl font-semibold tracking-tight">Active Sessions</CardTitle>
+          <p className="text-sm text-gray-400 mt-1">Real-time station usage and customer sessions</p>
+          
           {!publicView && (
-            <div className="flex flex-wrap mt-1 space-x-2">
+            <div className="flex flex-wrap mt-3 space-x-2">
               <Badge variant="outline" className="bg-gray-800 text-xs">
                 <Users className="h-3 w-3 mr-1" /> {activeStationsCount}/{totalStations} Stations Active
               </Badge>
@@ -61,23 +60,10 @@ const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({ publicView = 
             </div>
           )}
         </div>
-        
-        {!publicView && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={`text-sm border-gray-700 ${isRefreshing ? 'animate-spin' : ''}`}
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <Clock className="h-3 w-3 mr-1" />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-        )}
       </CardHeader>
       
       <CardContent>
-        <div className="relative">
+        <div className="mt-4">
           <ActiveSessions publicView={publicView} />
         </div>
       </CardContent>
