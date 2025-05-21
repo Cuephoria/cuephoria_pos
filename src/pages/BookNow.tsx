@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -1084,7 +1083,7 @@ View booking online: ${bookingDetails.viewUrl}
                   
                   <div className="bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg p-4">
                     <p className="text-gray-300">
-                      Please arrive 10 minutes before your booking time. For any questions or modifications, contact us at support@cuephoria.in or check your booking status online with your booking code: <span className="font-mono font-medium">{bookingAccessCode}</span>
+                      Please arrive 10 minutes before your booking time. For any questions or modifications, contact us at contact@cuephoria.in or check your booking status online with your booking code: <span className="font-mono font-medium">{bookingAccessCode}</span>
                     </p>
                   </div>
                 </div>
