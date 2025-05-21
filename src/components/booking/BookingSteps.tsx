@@ -8,8 +8,8 @@ interface BookingStepsProps {
 
 const BookingSteps = ({ currentStep }: BookingStepsProps) => {
   const steps = [
-    { id: 1, name: 'Station' },
-    { id: 2, name: 'Date & Time' },
+    { id: 1, name: 'Date & Time' },
+    { id: 2, name: 'Station' },
     { id: 3, name: 'Your Info' },
     { id: 4, name: 'Summary' },
     { id: 5, name: 'Confirmed' }

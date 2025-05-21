@@ -16,6 +16,7 @@ interface TimeSlotGridProps {
   loading: boolean;
   onSelectTimeSlot: (timeSlot: TimeSlot) => void;
   isToday: boolean;
+  selectedDate: Date;
 }
 
 const TimeSlotGrid = ({
@@ -23,7 +24,8 @@ const TimeSlotGrid = ({
   selectedTimeSlot,
   loading,
   onSelectTimeSlot,
-  isToday
+  isToday,
+  selectedDate
 }: TimeSlotGridProps) => {
   if (loading) {
     return (
@@ -59,15 +61,21 @@ const TimeSlotGrid = ({
     groupedTimeSlots[hour].push(slot);
   });
 
+  const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
+
   return (
     <div className="space-y-4">
-      {isToday && (
-        <div className="mb-4 p-3 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded">
-          <p className="text-sm text-gray-300">
+      <div className="p-3 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded">
+        <p className="text-sm">
+          <span className="font-medium text-cuephoria-lightpurple">Selected Date:</span>{' '}
+          {formattedDate}
+        </p>
+        {isToday && (
+          <p className="text-sm text-gray-300 mt-1">
             <span className="font-medium text-cuephoria-lightpurple">Note:</span> For today, bookings are available starting from {getEarliestBookingTime()} onwards (30-minute buffer from current time).
           </p>
-        </div>
-      )}
+        )}
+      </div>
     
       {Object.entries(groupedTimeSlots).map(([hour, slots]) => (
         <div key={hour} className="border-b border-gray-800 pb-4 last:border-0">

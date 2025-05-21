@@ -47,9 +47,10 @@ export const generateTimeSlots = (
     const endTime = formatTime(endSlotMinutes);
     
     // Check if this time slot is in the past
-    const isInPast = currentMinutes < earliestBookingTime;
+    const isInPast = currentTime && isSameDay(currentTime, new Date()) && 
+                     currentMinutes < earliestBookingTime;
     
-    // Add the slot (filter out past time slots)
+    // Add the slot (filter out past time slots if it's today)
     if (!isInPast) {
       slots.push({
         startTime,
@@ -72,6 +73,17 @@ const formatTime = (totalMinutes: number): string => {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Check if two dates are the same day
+ */
+export const isSameDay = (date1: Date, date2: Date): boolean => {
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
 };
 
 /**
@@ -151,4 +163,72 @@ export const isBookingInPast = (booking: { booking_date: string; end_time: strin
   const currentTimeInMinutes = (currentHours * 60) + currentMinutes;
   
   return currentTimeInMinutes > endTimeInMinutes;
+};
+
+/**
+ * Check if a date is in the past (before today)
+ * @param date The date to check
+ * @returns Boolean indicating if the date is before today
+ */
+export const isDateInPast = (date: Date): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const compareDate = new Date(date);
+  compareDate.setHours(0, 0, 0, 0);
+  
+  return compareDate < today;
+};
+
+/**
+ * Check if stations are available for a specific time slot
+ * @param stationIds Array of station IDs to check
+ * @param date Booking date in YYYY-MM-DD format
+ * @param startTime Start time in HH:MM format
+ * @param endTime End time in HH:MM format
+ * @returns Promise resolving to boolean indicating if all stations are available
+ */
+export const checkStationAvailability = async (
+  stationIds: string[],
+  date: string,
+  startTime: string,
+  endTime: string
+): Promise<{ available: boolean, unavailableStationIds: string[] }> => {
+  try {
+    // Import supabase client
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Add seconds to times for proper comparison
+    const startTimeWithSeconds = `${startTime}:00`;
+    const endTimeWithSeconds = `${endTime}:00`;
+    
+    // Query existing bookings that overlap with the requested time slot
+    const { data: existingBookings, error } = await supabase
+      .from('bookings')
+      .select('station_id')
+      .eq('booking_date', date)
+      .eq('status', 'confirmed')
+      .or(`start_time.lte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`)
+      .or(`end_time.gt.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
+      .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`);
+      
+    if (error) {
+      console.error('Error checking station availability:', error);
+      return { available: false, unavailableStationIds: [] };
+    }
+    
+    // Get the IDs of stations that are already booked for this time slot
+    const bookedStationIds = existingBookings?.map(booking => booking.station_id) || [];
+    
+    // Check if any of the requested stations are already booked
+    const unavailableStationIds = stationIds.filter(id => bookedStationIds.includes(id));
+    
+    return {
+      available: unavailableStationIds.length === 0,
+      unavailableStationIds
+    };
+  } catch (error) {
+    console.error('Error in checkStationAvailability:', error);
+    return { available: false, unavailableStationIds: [] };
+  }
 };
