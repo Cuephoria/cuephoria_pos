@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, ChevronRight, Clock } from 'lucide-react';
+import { CalendarIcon, ChevronRight, Clock, User } from 'lucide-react';
 import BookingSteps from '@/components/booking/BookingSteps';
 import StationSelector from '@/components/booking/StationSelector';
 import AvailableStationsGrid from '@/components/booking/AvailableStationsGrid';
@@ -26,6 +26,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
 import ControllerManagement from '@/components/booking/ControllerManagement';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // Types for our booking form
 interface CustomerInfo {
@@ -87,6 +89,24 @@ const BookNow = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
+
+  // Group bookings by time
+  const groupBookingsByTime = () => {
+    const grouped: Record<string, Array<any>> = {};
+    
+    todayBookings.forEach(booking => {
+      const timeKey = booking.start_time.substring(0, 5);
+      if (!grouped[timeKey]) {
+        grouped[timeKey] = [];
+      }
+      grouped[timeKey].push(booking);
+    });
+    
+    return grouped;
+  };
+
+  const groupedBookings = groupBookingsByTime();
+  const bookingTimeSlots = Object.keys(groupedBookings).sort();
 
   // Fetch stations on component mount
   useEffect(() => {
@@ -883,9 +903,14 @@ View booking online: ${bookingDetails.viewUrl}
           {currentStep !== 5 && (
             <Card className="mb-8 bg-gray-900/80 border-gray-800">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center text-lg">
-                  <CalendarIcon className="h-5 w-5 mr-2 text-cuephoria-purple" />
-                  Today's Bookings
+                <CardTitle className="flex items-center text-lg justify-between">
+                  <div className="flex items-center">
+                    <CalendarIcon className="h-5 w-5 mr-2 text-cuephoria-purple" />
+                    Today's Bookings
+                  </div>
+                  <Badge variant="outline" className="ml-2 bg-gray-800 text-gray-300">
+                    {todayBookings.length} Total
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -895,52 +920,40 @@ View booking online: ${bookingDetails.viewUrl}
                     <span className="text-gray-400">Loading today's bookings...</span>
                   </div>
                 ) : todayBookings.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-gray-400 border-b border-gray-800">
-                          <th className="px-2 py-2 text-left">Time</th>
-                          <th className="px-2 py-2 text-left">Station</th>
-                          <th className="px-2 py-2 text-left">Customer</th>
-                          <th className="px-2 py-2 text-left">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {todayBookings.map(booking => {
-                          const now = new Date();
-                          const currentTime = now.getHours() * 60 + now.getMinutes();
-                          const [hours, minutes] = booking.start_time.split(':').map(Number);
-                          const bookingTimeInMinutes = hours * 60 + minutes;
-                          const isUpcoming = bookingTimeInMinutes - currentTime <= 60 && bookingTimeInMinutes > currentTime;
-                          
-                          return (
-                            <tr 
-                              key={booking.id} 
-                              className={`border-b border-gray-800 text-gray-300 ${isUpcoming ? 'bg-cuephoria-purple/10' : ''}`}
-                            >
-                              <td className="px-2 py-2">
-                                {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
-                                {isUpcoming && (
-                                  <span className="ml-2 text-xs text-cuephoria-lightpurple">
-                                    Upcoming
+                  <ScrollArea className="h-[250px] rounded-md border border-gray-800">
+                    <div className="p-2">
+                      {bookingTimeSlots.map(timeSlot => (
+                        <div key={timeSlot} className="mb-3 last:mb-0">
+                          <div className="flex items-center mb-1 bg-gray-800/50 p-1 rounded">
+                            <Clock className="h-4 w-4 text-cuephoria-purple mr-2" />
+                            <span className="text-sm font-medium text-gray-200">{timeSlot}</span>
+                          </div>
+                          <div className="pl-6 border-l border-gray-800">
+                            {groupedBookings[timeSlot].map(booking => (
+                              <div 
+                                key={booking.id} 
+                                className="mb-2 last:mb-0 bg-gray-900/40 p-2 rounded border border-gray-800/50"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <User className="h-3 w-3 text-cuephoria-lightpurple mr-1" />
+                                    <span className="text-xs text-gray-300">{booking.customers.name}</span>
+                                  </div>
+                                  <span className="text-xs text-gray-400">{booking.stations.name}</span>
+                                </div>
+                                <div className="flex items-center justify-between mt-1 text-xs">
+                                  <span className="text-gray-400">
+                                    {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
                                   </span>
-                                )}
-                              </td>
-                              <td className="px-2 py-2">
-                                {booking.stations.name}
-                              </td>
-                              <td className="px-2 py-2">
-                                {booking.customers.name}
-                              </td>
-                              <td className="px-2 py-2">
-                                {getStatusBadge(booking.status)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                  {getStatusBadge(booking.status)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="text-center py-4 text-gray-500">
                     No bookings scheduled for today
