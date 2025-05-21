@@ -630,38 +630,20 @@ View booking online: ${bookingDetails.viewUrl}
   };
   
   // Check station availability for a given time slot
-  const checkStationAvailability = async (stationIds: string[], timeSlot: TimeSlot) => {
+  const checkStationAvailabilityForTimeSlot = async (stationIds: string[], timeSlot: { startTime: string; endTime: string }) => {
     try {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      const startTimeFormatted = timeSlot.startTime + ':00';
-      const endTimeFormatted = timeSlot.endTime + ':00';
       
-      console.log(`Checking availability for date: ${formattedDate}, time: ${startTimeFormatted}-${endTimeFormatted}`);
+      console.log(`Checking availability for date: ${formattedDate}, time: ${timeSlot.startTime}-${timeSlot.endTime}`);
       
-      // Check if stations have active bookings for this specific time slot
-      const { data: existingBookings, error } = await supabase
-        .from('bookings')
-        .select('station_id')
-        .eq('booking_date', formattedDate)
-        .eq('status', 'confirmed')
-        .or(
-          `start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`,
-          `start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`,
-          `start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`,
-          `start_time.lte.${startTimeFormatted},end_time.gte.${endTimeFormatted}`
-        )
-        .in('station_id', stationIds);
+      const result = await checkStationAvailability(
+        stationIds,
+        formattedDate,
+        timeSlot.startTime,
+        timeSlot.endTime
+      );
       
-      if (error) {
-        console.error('Error checking station availability:', error);
-        return false;
-      }
-      
-      console.log('Existing bookings found:', existingBookings?.length || 0);
-      
-      // If there are no existing bookings for any of the selected stations,
-      // all stations are available
-      return !existingBookings || existingBookings.length === 0;
+      return result.available;
     } catch (error) {
       console.error('Error checking station availability:', error);
       return false;
@@ -758,7 +740,7 @@ View booking online: ${bookingDetails.viewUrl}
       
       // Check if there are any conflicting bookings
       const stationIds = selectedStations.map(s => s.id);
-      const isAvailable = await checkStationAvailability(stationIds, selectedTimeSlot);
+      const isAvailable = await checkStationAvailabilityForTimeSlot(stationIds, selectedTimeSlot);
       
       if (!isAvailable) {
         throw new Error('One or more selected stations are no longer available. Please select different stations or time slot.');
