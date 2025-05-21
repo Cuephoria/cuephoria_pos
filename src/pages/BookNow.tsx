@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay, isAfter, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -291,20 +290,50 @@ const BookNow = () => {
       // Format date for API call (YYYY-MM-DD)
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
-      // Call the get_available_slots function to check overall availability
-      const { data, error } = await supabase.rpc('get_available_slots', {
-        p_date: formattedDate,
-        p_slot_duration: bookingDuration
-      });
+      // Generate all time slots with station availability for all stations
+      const availableSlots: TimeSlot[] = [];
       
-      if (error) {
-        console.error('Error checking time slot availability:', error);
-        setTimeSlots(allSlots);
-        return;
+      for (const station of stations) {
+        // Call get_available_slots for each station
+        const { data, error } = await supabase.rpc('get_available_slots', {
+          p_date: formattedDate,
+          p_station_id: station.id,
+          p_slot_duration: bookingDuration
+        });
+        
+        if (error) {
+          console.error(`Error checking time slot availability for station ${station.name}:`, error);
+          continue;
+        }
+        
+        // Add each time slot to our overall available slots
+        if (data && Array.isArray(data)) {
+          data.forEach((slot: any) => {
+            const frontendSlot = mapDatabaseSlotToFrontend(slot);
+            
+            // Find if this slot already exists in our availableSlots array
+            const existingSlotIndex = availableSlots.findIndex(s => 
+              s.startTime === frontendSlot.startTime && s.endTime === frontendSlot.endTime
+            );
+            
+            if (existingSlotIndex === -1) {
+              // If slot doesn't exist yet, add it
+              availableSlots.push(frontendSlot);
+            } else if (!frontendSlot.isAvailable) {
+              // If slot exists but isn't available in this station, mark it as unavailable
+              // This is a conservative approach - if any station is unavailable, we mark the slot as unavailable
+              availableSlots[existingSlotIndex].isAvailable = false;
+            }
+          });
+        }
       }
       
-      // Transform response to our TimeSlot format
-      const availableSlots = data ? data.map((slot: any) => mapDatabaseSlotToFrontend(slot)) : allSlots;
+      // Sort slots by start time
+      availableSlots.sort((a, b) => {
+        const timeA = a.startTime.split(':').map(Number);
+        const timeB = b.startTime.split(':').map(Number);
+        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+      });
       
       setTimeSlots(availableSlots);
     } catch (error) {
@@ -537,6 +566,38 @@ View booking online: ${bookingDetails.viewUrl}
     );
   };
   
+  // Check station availability for a given time slot
+  const checkStationAvailability = async (stationIds: string[], timeSlot: TimeSlot) => {
+    try {
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const startTimeFormatted = timeSlot.startTime + ':00';
+      const endTimeFormatted = timeSlot.endTime + ':00';
+      
+      // Check if stations have active bookings for this time slot
+      const { data: existingBookings, error } = await supabase
+        .from('bookings')
+        .select('station_id')
+        .eq('booking_date', formattedDate)
+        .eq('status', 'confirmed')
+        .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
+        .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
+        .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
+        .in('station_id', stationIds);
+      
+      if (error) {
+        console.error('Error checking station availability:', error);
+        return false;
+      }
+      
+      // If there are no existing bookings for any of the selected stations,
+      // all stations are available
+      return !existingBookings || existingBookings.length === 0;
+    } catch (error) {
+      console.error('Error checking station availability:', error);
+      return false;
+    }
+  };
+  
   // Submit booking to server using transaction
   const handleSubmitBooking = async () => {
     if (selectedStations.length === 0 || !selectedDate || !selectedTimeSlot || !customerInfo.name || !customerInfo.phone) {
@@ -623,42 +684,13 @@ View booking online: ${bookingDetails.viewUrl}
       
       // Perform one final availability check before booking
       const startTimeFormatted = selectedTimeSlot.startTime + ':00';
-      const { data: availableStations, error: availabilityError } = await supabase.rpc(
-        'check_stations_availability',
-        {
-          p_date: formattedDate,
-          p_start_time: startTimeFormatted,
-          p_end_time: selectedTimeSlot.endTime + ':00',
-          p_station_ids: selectedStations.map(s => s.id)
-        }
-      );
+      const endTimeFormatted = selectedTimeSlot.endTime + ':00';
       
-      if (availabilityError) {
-        console.error('Error checking station availability:', availabilityError);
-      }
+      // Check if there are any conflicting bookings
+      const stationIds = selectedStations.map(s => s.id);
+      const isAvailable = await checkStationAvailability(stationIds, selectedTimeSlot);
       
-      // Fallback check if RPC fails
-      if (!availableStations || typeof availableStations !== 'boolean') {
-        // Manual check for each station
-        for (const station of selectedStations) {
-          const { data: existingBookings, error } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('booking_date', formattedDate)
-            .eq('station_id', station.id)
-            .eq('status', 'confirmed')
-            .filter('start_time', 'eq', startTimeFormatted);
-            
-          if (error) {
-            console.error(`Error checking availability for station ${station.name}:`, error);
-            throw new Error(`Could not verify availability for ${station.name}`);
-          }
-          
-          if (existingBookings && existingBookings.length > 0) {
-            throw new Error(`${station.name} is no longer available. Please select another station.`);
-          }
-        }
-      } else if (!availableStations) {
+      if (!isAvailable) {
         throw new Error('One or more selected stations are no longer available. Please select different stations or time slot.');
       }
       
@@ -667,8 +699,8 @@ View booking online: ${bookingDetails.viewUrl}
         customer_id: customerId,
         station_id: station.id,
         booking_date: formattedDate,
-        start_time: selectedTimeSlot.startTime + ':00',
-        end_time: selectedTimeSlot.endTime + ':00',
+        start_time: startTimeFormatted,
+        end_time: endTimeFormatted,
         duration: bookingDuration,
         status: 'confirmed',
         booking_group_id: groupId,
