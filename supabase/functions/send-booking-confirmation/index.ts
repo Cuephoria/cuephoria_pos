@@ -14,6 +14,9 @@ interface BookingConfirmationRequest {
   duration: number
   bookingReference: string
   recipientEmail: string
+  discount?: string
+  finalPrice?: string
+  totalStations?: number
 }
 
 serve(async (req) => {
@@ -23,6 +26,19 @@ serve(async (req) => {
   }
   
   try {
+    console.log('Received request to send booking confirmation email');
+    
+    // Parse and validate the request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body:', JSON.stringify(requestBody));
+    } catch (parseError) {
+      console.error('Error parsing request JSON:', parseError);
+      throw new Error('Invalid JSON request body');
+    }
+    
+    // Validate essential fields
     const { 
       bookingId, 
       customerName, 
@@ -32,12 +48,30 @@ serve(async (req) => {
       endTime, 
       duration, 
       bookingReference,
-      recipientEmail 
-    } = await req.json() as BookingConfirmationRequest
+      recipientEmail,
+      discount,
+      finalPrice,
+      totalStations
+    } = requestBody as BookingConfirmationRequest;
 
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is not set')
+    // Validate required fields
+    if (!recipientEmail) {
+      console.error('No recipient email provided');
+      throw new Error('No recipient email provided');
     }
+    
+    if (!customerName || !stationName || !bookingDate || !startTime || !endTime) {
+      console.error('Missing required booking information');
+      throw new Error('Missing required booking information for email');
+    }
+
+    // Check for API key
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not set in environment variables');
+      throw new Error('Email API key not configured');
+    }
+    
+    console.log(`Preparing to send email to: ${recipientEmail}`);
 
     // Prepare the email content
     const emailContent = `
@@ -116,6 +150,9 @@ serve(async (req) => {
               <p><strong>Date:</strong> ${bookingDate}</p>
               <p><strong>Time:</strong> ${startTime} - ${endTime}</p>
               <p><strong>Duration:</strong> ${duration} minutes</p>
+              ${totalStations && totalStations > 1 ? `<p><strong>Total Stations:</strong> ${totalStations}</p>` : ''}
+              ${discount ? `<p><strong>Discount:</strong> ${discount}</p>` : ''}
+              ${finalPrice ? `<p><strong>Final Price:</strong> ₹${finalPrice}</p>` : ''}
               
               <h3>Booking Reference:</h3>
               <div class="reference">${bookingReference}</div>
@@ -134,40 +171,55 @@ serve(async (req) => {
           </div>
         </body>
       </html>
-    `
+    `;
 
-    // Send email using Resend API
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`
-      },
-      body: JSON.stringify({
-        from: 'Cuephoria Booking <bookings@cuephoria.in>',
-        to: recipientEmail,
-        subject: `Booking Confirmation - ${bookingReference}`,
-        html: emailContent,
-      })
-    })
+    // Log email attempt
+    console.log(`Sending email to ${recipientEmail} via Resend API`);
 
-    const data = await response.json()
+    try {
+      // Send email using Resend API
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'Cuephoria Booking <bookings@cuephoria.in>',
+          to: recipientEmail,
+          subject: `Booking Confirmation - ${bookingReference}`,
+          html: emailContent,
+        })
+      });
 
-    return new Response(
-      JSON.stringify(data),
-      { 
-        status: 200, 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        }
+      if (!response.ok) {
+        const errorDetails = await response.text();
+        console.error(`Resend API error: ${response.status} ${response.statusText}`, errorDetails);
+        throw new Error(`Email API responded with error: ${response.status} ${response.statusText}`);
       }
-    )
+
+      const responseData = await response.json();
+      console.log('Resend API response:', JSON.stringify(responseData));
+
+      return new Response(
+        JSON.stringify({ success: true, data: responseData }),
+        { 
+          status: 200, 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json' 
+          }
+        }
+      );
+    } catch (fetchError) {
+      console.error('Error calling Resend API:', fetchError);
+      throw new Error(`Error sending email: ${fetchError.message}`);
+    }
   } catch (error) {
-    console.error('Error sending booking confirmation:', error)
+    console.error('Error sending booking confirmation:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ success: false, error: error.message }),
       { 
         status: 400, 
         headers: { 
@@ -175,6 +227,6 @@ serve(async (req) => {
           'Content-Type': 'application/json' 
         }
       }
-    )
+    );
   }
-})
+});
