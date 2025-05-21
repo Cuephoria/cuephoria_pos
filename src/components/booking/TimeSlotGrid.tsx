@@ -16,6 +16,7 @@ interface TimeSlotGridProps {
   loading: boolean;
   onSelectTimeSlot: (timeSlot: TimeSlot) => void;
   isToday: boolean;
+  selectedDate: Date;
 }
 
 const TimeSlotGrid = ({
@@ -23,7 +24,8 @@ const TimeSlotGrid = ({
   selectedTimeSlot,
   loading,
   onSelectTimeSlot,
-  isToday
+  isToday,
+  selectedDate
 }: TimeSlotGridProps) => {
   if (loading) {
     return (
@@ -34,6 +36,9 @@ const TimeSlotGrid = ({
     );
   }
 
+  // Add a debug section to show how many available slots we have
+  const availableSlots = timeSlots.filter(slot => slot.isAvailable);
+  
   if (timeSlots.length === 0) {
     return (
       <div className="text-center py-8 border border-gray-800 rounded-md bg-gray-900/50">
@@ -43,6 +48,18 @@ const TimeSlotGrid = ({
             `No more slots available for today after ${getEarliestBookingTime()}. Please select a different date.` : 
             'Please select a different date or station'
           }
+        </p>
+      </div>
+    );
+  }
+  
+  // If we have slots but none are available, show this message
+  if (timeSlots.length > 0 && availableSlots.length === 0) {
+    return (
+      <div className="text-center py-8 border border-gray-800 rounded-md bg-gray-900/50">
+        <h3 className="text-lg font-medium">All Slots Are Booked</h3>
+        <p className="text-gray-400 mt-2">
+          All stations are fully booked for this date. Please select a different date.
         </p>
       </div>
     );
@@ -59,15 +76,25 @@ const TimeSlotGrid = ({
     groupedTimeSlots[hour].push(slot);
   });
 
+  const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
+
   return (
     <div className="space-y-4">
-      {isToday && (
-        <div className="mb-4 p-3 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded">
-          <p className="text-sm text-gray-300">
+      <div className="p-3 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded">
+        <p className="text-sm">
+          <span className="font-medium text-cuephoria-lightpurple">Selected Date:</span>{' '}
+          {formattedDate}
+        </p>
+        <p className="text-sm text-gray-300 mt-1">
+          <span className="font-medium text-cuephoria-lightpurple">Available Slots:</span>{' '}
+          {availableSlots.length} of {timeSlots.length} total
+        </p>
+        {isToday && (
+          <p className="text-sm text-gray-300 mt-1">
             <span className="font-medium text-cuephoria-lightpurple">Note:</span> For today, bookings are available starting from {getEarliestBookingTime()} onwards (30-minute buffer from current time).
           </p>
-        </div>
-      )}
+        )}
+      </div>
     
       {Object.entries(groupedTimeSlots).map(([hour, slots]) => (
         <div key={hour} className="border-b border-gray-800 pb-4 last:border-0">
