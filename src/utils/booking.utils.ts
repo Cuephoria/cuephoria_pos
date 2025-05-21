@@ -56,3 +56,16 @@ const formatTime = (totalMinutes: number): string => {
   const minutes = totalMinutes % 60;
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
+
+/**
+ * Map database slot response to frontend format
+ * @param dbSlot The slot object from database
+ * @returns Properly formatted slot for frontend
+ */
+export const mapDatabaseSlotToFrontend = (dbSlot: any) => {
+  return {
+    startTime: dbSlot.start_time.substring(0, 5), // Get HH:MM from HH:MM:SS
+    endTime: dbSlot.end_time.substring(0, 5),    // Get HH:MM from HH:MM:SS
+    isAvailable: dbSlot.is_available
+  };
+};

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +21,7 @@ import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import CustomerInfoForm from '@/components/booking/CustomerInfoForm';
 import BookingSummary from '@/components/booking/BookingSummary';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
-import { generateTimeSlots } from '@/utils/booking.utils';
+import { generateTimeSlots, mapDatabaseSlotToFrontend } from '@/utils/booking.utils';
 import { Badge } from '@/components/ui/badge';
 
 // Types for our booking form
@@ -236,12 +237,10 @@ const BookNow = () => {
             continue;
           }
           
+          console.log(`Station ${station.name} available slots:`, data);
+          
           // Transform data to our TimeSlot format
-          const stationSlots = data.map((slot: any) => ({
-            startTime: slot.start_time.substring(0, 5), // Get HH:MM from HH:MM:SS
-            endTime: slot.end_time.substring(0, 5), // Get HH:MM from HH:MM:SS
-            isAvailable: slot.is_available
-          }));
+          const stationSlots = data.map((slot: any) => mapDatabaseSlotToFrontend(slot));
           
           // Filter for common available slots
           availableSlots = availableSlots.map(slot => {
@@ -337,15 +336,31 @@ const BookNow = () => {
 
       // Use the Web Share API if available
       if (navigator.share) {
-        await navigator.share({
-          title: 'Cuephoria Booking Confirmation',
-          text: `My booking at Cuephoria for ${bookingDetails.stations} on ${bookingDetails.date} at ${bookingDetails.time}`,
-          url: bookingViewUrl
-        });
-        toast.success('Booking details shared successfully!');
+        try {
+          await navigator.share({
+            title: 'Cuephoria Booking Confirmation',
+            text: `My booking at Cuephoria for ${bookingDetails.stations} on ${bookingDetails.date} at ${bookingDetails.time}`,
+            url: bookingViewUrl
+          });
+          toast.success('Booking details shared successfully!');
+        } catch (shareError) {
+          // Fallback to copying to clipboard if share is cancelled or fails
+          console.log('Share cancelled or failed, falling back to clipboard', shareError);
+          copyToClipboard(bookingDetails);
+        }
       } else {
         // Fallback to copying to clipboard
-        const text = `
+        copyToClipboard(bookingDetails);
+      }
+    } catch (error) {
+      console.error('Error sharing booking:', error);
+      toast.error('Failed to share booking details');
+    }
+  };
+  
+  // Helper function to copy booking details to clipboard
+  const copyToClipboard = (bookingDetails: any) => {
+    const text = `
 Cuephoria Booking Confirmation
 
 Customer: ${bookingDetails.customerName}
@@ -354,16 +369,11 @@ Date: ${bookingDetails.date}
 Time: ${bookingDetails.time}
 Duration: ${bookingDetails.duration}
 
-View booking online: ${bookingViewUrl}
-        `;
-        
-        navigator.clipboard.writeText(text);
-        toast.success('Booking details copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Error sharing booking:', error);
-      toast.error('Failed to share booking details');
-    }
+View booking online: ${bookingDetails.viewUrl}
+    `;
+    
+    navigator.clipboard.writeText(text);
+    toast.success('Booking details copied to clipboard!');
   };
   
   // Move to next step
