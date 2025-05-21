@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
 import { CalendarIcon, Check, Clock, Copy, Share2, Ticket } from 'lucide-react';
@@ -26,7 +26,7 @@ interface BookingConfirmationProps {
   bookingGroupId?: string;
   stations: Station[];
   date: Date;
-  timeSlot: TimeSlot;
+  timeSlot: TimeSlot | null;
   duration: number;
   customerInfo: CustomerInfo;
   discountPercentage?: number;
@@ -77,7 +77,7 @@ const BookingConfirmation = ({
     ? `${stations.length} stations at Cuephoria` 
     : `${stations[0].name} at Cuephoria`;
     
-  const shareableText = `I've booked ${stationsText} on ${format(date, 'MMM d')} at ${timeSlot.startTime}. Booking reference: ${formatBookingReference()}`;
+  const shareableText = `I've booked ${stationsText} on ${format(date, 'MMM d')} at ${timeSlot?.startTime || 'scheduled time'}. Booking reference: ${formatBookingReference()}`;
   
   // Handle share booking
   const shareBooking = async () => {
@@ -112,8 +112,8 @@ const BookingConfirmation = ({
           customerName: customerInfo.name,
           stationName: stationNames,
           bookingDate: format(date, 'EEEE, MMMM d, yyyy'),
-          startTime: timeSlot.startTime,
-          endTime: timeSlot.endTime,
+          startTime: timeSlot?.startTime || 'TBD',
+          endTime: timeSlot?.endTime || 'TBD',
           duration,
           bookingReference: formatBookingReference(),
           recipientEmail: customerInfo.email,
@@ -222,7 +222,11 @@ const BookingConfirmation = ({
               <span className="text-gray-400">Time:</span>
               <div className="flex items-center">
                 <Clock className="h-3 w-3 mr-1 text-cuephoria-lightpurple" />
-                <span>{timeSlot.startTime} - {timeSlot.endTime}</span>
+                {timeSlot ? (
+                  <span>{timeSlot.startTime} - {timeSlot.endTime}</span>
+                ) : (
+                  <span>Time not specified</span>
+                )}
               </div>
             </div>
             <div className="flex justify-between">

@@ -205,9 +205,10 @@ export const checkStationAvailability = async (
     console.log(`Checking availability for date=${date}, start=${startTimeWithSeconds}, end=${endTimeWithSeconds}`);
     console.log(`Station IDs to check:`, stationIds);
     
-    // Call the stored procedure for availability check
-    const { data: isAvailable, error } = await supabase.rpc(
-      'check_stations_availability',
+    // Use the raw method to call the stored procedure directly
+    // This avoids TypeScript errors when the RPC function isn't in the TypeScript definitions
+    const { data, error } = await supabase.rpc(
+      'check_stations_availability' as any,
       {
         p_date: date,
         p_start_time: startTimeWithSeconds,
@@ -216,7 +217,7 @@ export const checkStationAvailability = async (
       }
     );
     
-    console.log('Availability check result:', isAvailable);
+    console.log('Availability check result:', data);
     
     if (error) {
       console.error('Error in availability check:', error);
@@ -260,8 +261,11 @@ export const checkStationAvailability = async (
       };
     }
     
-    // If RPC was successful, but stations are unavailable, get the details
-    if (isAvailable === false) {
+    // If RPC was successful, treat data as a boolean result
+    const isAvailable = data === true;
+    
+    // If stations are unavailable, get the details
+    if (!isAvailable) {
       const { data: unavailableBookings, error } = await supabase
         .from('bookings')
         .select('station_id, station:stations(id, name)')
