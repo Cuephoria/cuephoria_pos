@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStationsData } from './useStationsData';
 import { useSessionsData } from './useSessionsData';
 import { useSessionActions } from './session-actions';
@@ -22,8 +22,9 @@ export const useStations = (
     stationsError,
     refreshStations,
     deleteStation,
-    updateStation
-  } = useStationsData(); // Remove the initialStations parameter here
+    updateStation,
+    connectSessionsToStations
+  } = useStationsData();
 
   // Get session data
   const {
@@ -34,6 +35,19 @@ export const useStations = (
     refreshSessions,
     deleteSession
   } = useSessionsData();
+
+  // Connect sessions to stations whenever sessions or stations change
+  useEffect(() => {
+    if (!stationsLoading && !sessionsLoading && stations.length > 0) {
+      console.log("Connecting sessions to stations after data load");
+      
+      // Connect sessions to stations and update the stations state
+      const updatedStations = connectSessionsToStations(stations, sessions);
+      if (updatedStations !== stations) {
+        setStations(updatedStations);
+      }
+    }
+  }, [sessions, stations, stationsLoading, sessionsLoading]);
 
   // Create session action props
   const sessionActionsProps = {

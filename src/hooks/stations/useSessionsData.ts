@@ -127,11 +127,11 @@ export const useSessionsData = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     // Set up a regular polling interval to refresh sessions even when page is visible
-    // Reduce the polling frequency to once every two minutes for performance
+    // Reduce the polling frequency to once every minute for better performance
     const intervalId = setInterval(() => {
       console.log('Periodic session refresh');
       refreshSessions();
-    }, 120000); // Refresh every two minutes
+    }, 60000); // Refresh every minute
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
