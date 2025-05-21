@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, ChevronRight } from 'lucide-react';
+import { CalendarIcon, ChevronRight, Clock } from 'lucide-react';
 import BookingSteps from '@/components/booking/BookingSteps';
 import StationSelector from '@/components/booking/StationSelector';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
@@ -658,26 +657,33 @@ View booking online: ${bookingDetails.viewUrl}
         throw new Error('This time slot is no longer available. Please choose another time.');
       }
       
-      // Use transaction to ensure all bookings are created or none
-      const { data: newBookings, error: transactionError } = await supabase.rpc('create_booking_group', {
-        p_customer_id: customerId,
-        p_booking_date: formattedDate,
-        p_start_time: selectedTimeSlot.startTime + ':00',
-        p_end_time: selectedTimeSlot.endTime + ':00',
-        p_duration: bookingDuration,
-        p_booking_group_id: groupId,
-        p_coupon_code: couponCode || null,
-        p_discount_percentage: discount,
-        p_station_ids: selectedStations.map(s => s.id),
-        p_station_prices: selectedStations.map(s => s.hourlyRate * (bookingDuration / 60))
-      });
+      // Since we can't use RPC for create_booking_group, implement the logic directly
+      // Create bookings for each selected station with a transaction
+      const bookings = selectedStations.map(station => ({
+        customer_id: customerId,
+        station_id: station.id,
+        booking_date: formattedDate,
+        start_time: selectedTimeSlot.startTime + ':00',
+        end_time: selectedTimeSlot.endTime + ':00',
+        duration: bookingDuration,
+        status: 'confirmed',
+        booking_group_id: groupId,
+        coupon_code: couponCode || null,
+        discount_percentage: discount,
+        original_price: station.hourlyRate * (bookingDuration / 60),
+        final_price: (station.hourlyRate * (bookingDuration / 60)) * (1 - (discount/100))
+      }));
       
-      if (transactionError) {
-        console.error('Transaction error:', transactionError);
-        throw new Error('Failed to create bookings: ' + transactionError.message);
+      // Insert all bookings
+      const { data: newBookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .insert(bookings)
+        .select('id');
+        
+      if (bookingsError) {
+        console.error('Error creating bookings:', bookingsError);
+        throw new Error('Failed to create bookings: ' + bookingsError.message);
       }
-      
-      console.log('Booking transaction result:', newBookings);
       
       if (!Array.isArray(newBookings) || newBookings.length === 0) {
         throw new Error('No bookings were created');
