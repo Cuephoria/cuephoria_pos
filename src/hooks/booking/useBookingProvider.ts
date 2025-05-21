@@ -65,15 +65,19 @@ export const useBookingProvider = () => {
   
   // Booking summary
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
+  // Add the missing state variables for booking IDs, access code, and group ID
+  const [bookingIds, setBookingIds] = useState<string[]>([]);
+  const [bookingAccessCode, setBookingAccessCode] = useState<string>('');
+  const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
   
   // Use our optimized booking submission hook
   const {
     submitBooking,
     isSubmitting,
     bookingError,
-    bookingIds,
-    bookingAccessCode,
-    bookingGroupId
+    bookingIds: submittedBookingIds,
+    bookingAccessCode: submittedAccessCode,
+    bookingGroupId: submittedGroupId
   } = useStationBooking({
     onBookingConfirmed: (ids, groupId, accessCode) => {
       setBookingIds(ids);
@@ -373,6 +377,9 @@ export const useBookingProvider = () => {
     setCouponCode('');
     setDiscountPercentage(0);
     setBookingConfirmed(false);
+    setBookingIds([]);
+    setBookingAccessCode('');
+    setBookingGroupId(null);
   };
 
   return {
