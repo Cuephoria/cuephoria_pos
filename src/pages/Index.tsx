@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/card';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { Calendar, Gamepad2, Clock, Book, User, Table2, Star, ChevronRight, Chec
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import LiveSessionsSection from '@/components/dashboard/LiveSessionsSection';
 import { useTodayBookings } from '@/hooks/booking/useTodayBookings';
-import ActionButtonSection from '@/components/dashboard/ActionButtonSection';
+import UpcomingTournaments from '@/components/dashboard/UpcomingTournaments';
 import { motion } from 'framer-motion';
 
 const Index = () => {
@@ -268,17 +268,6 @@ const Index = () => {
         </motion.div>
       </div>
 
-      {/* Quick Access Buttons */}
-      <div className="py-6 px-4 border-t border-b border-gray-800 bg-gray-900/50">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <ActionButtonSection />
-        </motion.div>
-      </div>
-
       {/* Today's Bookings & Active Sessions Section */}
       <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <motion.div 
@@ -288,10 +277,10 @@ const Index = () => {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue">
-            Live Status Dashboard
+            Live Status & Upcoming Events
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto">
-            View today's schedule and monitor current active sessions
+            Check out our current facility status and upcoming tournaments
           </p>
         </motion.div>
         
@@ -401,15 +390,25 @@ const Index = () => {
             </Card>
           </motion.div>
           
-          {/* Live Active Sessions */}
+          {/* Upcoming Tournaments Section */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <LiveSessionsSection />
+            <UpcomingTournaments />
           </motion.div>
         </div>
+        
+        {/* Live Sessions Section */}
+        <motion.div
+          className="mt-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <LiveSessionsSection publicView={true} />
+        </motion.div>
         
         {/* Features Section */}
         <motion.div 
@@ -645,7 +644,7 @@ const Index = () => {
               <ul className="space-y-2 text-sm">
                 <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/')}>Home</Button></li>
                 <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/booknow')}>Book Now</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/stations')}>Stations</Button></li>
+                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/public/stations')}>Stations</Button></li>
               </ul>
             </div>
             <div>

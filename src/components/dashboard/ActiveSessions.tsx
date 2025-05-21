@@ -3,14 +3,14 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock, User, Gamepad2, Table2, X } from 'lucide-react';
 import { usePOS } from '@/context/POSContext';
-import StationTimer from '@/components/station/StationTimer';
 import { motion } from 'framer-motion';
 
 interface ActiveSessionsProps {
   limit?: number;
+  publicView?: boolean;
 }
 
-const ActiveSessions: React.FC<ActiveSessionsProps> = ({ limit }) => {
+const ActiveSessions: React.FC<ActiveSessionsProps> = ({ limit, publicView = false }) => {
   const { stations, customers } = usePOS();
   
   // Get occupied stations with sessions
@@ -79,15 +79,20 @@ const ActiveSessions: React.FC<ActiveSessionsProps> = ({ limit }) => {
                       {isPS5 ? 'PS5' : '8-Ball'}
                     </span>
                   </div>
-                  <div className="flex items-center text-xs text-gray-400 mt-1">
-                    <User className="h-3 w-3 mr-1" />
-                    <p className="truncate max-w-[120px]">{customer?.name || 'Walk-in Customer'}</p>
-                  </div>
+                  {!publicView && (
+                    <div className="flex items-center text-xs text-gray-400 mt-1">
+                      <User className="h-3 w-3 mr-1" />
+                      <p className="truncate max-w-[120px]">{customer?.name || 'Walk-in Customer'}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div>
-                <StationTimer station={station} compact={true} />
-              </div>
+              {!publicView && (
+                <div className="text-sm text-gray-300 font-medium">
+                  <Clock className="h-3 w-3 inline mr-1" />
+                  <span>In Session</span>
+                </div>
+              )}
             </motion.div>
           );
         })
