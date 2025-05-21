@@ -23,7 +23,7 @@ export const useStations = (
     refreshStations,
     deleteStation,
     updateStation
-  } = useStationsData(); // Remove the initialStations parameter since the function doesn't accept it
+  } = useStationsData();
 
   // Get session data
   const {

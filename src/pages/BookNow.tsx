@@ -233,11 +233,16 @@ const BookNow = () => {
           
           if (error) {
             console.error(`Error checking availability for station ${station.name}:`, error);
-            toast.error(`Failed to check availability for ${station.name}`);
             continue;
           }
           
           console.log(`Station ${station.name} available slots:`, data);
+          
+          // Handle case where data is null or empty (RPC function might not exist)
+          if (!data || data.length === 0) {
+            toast.error(`No availability data for ${station.name}`);
+            continue;
+          }
           
           // Transform data to our TimeSlot format
           const stationSlots = data.map((slot: any) => mapDatabaseSlotToFrontend(slot));
@@ -255,21 +260,20 @@ const BookNow = () => {
           });
         } catch (stationError) {
           console.error(`Error processing station ${station.name}:`, stationError);
-          toast.error(`Failed to process station ${station.name}`);
         }
       }
       
       setTimeSlots(availableSlots);
     } catch (error) {
       console.error('Error fetching time slots:', error);
-      toast.error('Failed to load available time slots. Please try again.');
       
       // Generate fallback time slots if API call fails
       const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration).map(slot => ({
         ...slot,
-        isAvailable: false
+        isAvailable: true // Make all slots available as fallback
       }));
       setTimeSlots(fallbackSlots);
+      toast.error('Could not verify slot availability. All slots shown as available.');
     } finally {
       setLoadingTimeSlots(false);
     }
@@ -487,9 +491,21 @@ View booking online: ${bookingDetails.viewUrl}
             .select('id')
             .single();
             
-          if (customerError) throw customerError;
+          if (customerError) {
+            console.error('Error creating customer:', customerError);
+            throw new Error('Failed to create customer: ' + customerError.message);
+          }
+          
+          if (!newCustomer) {
+            throw new Error('Failed to create customer: No customer ID returned');
+          }
+          
           customerId = newCustomer.id;
         }
+      }
+      
+      if (!customerId) {
+        throw new Error('Failed to get customer ID');
       }
       
       // Create bookings for each selected station
@@ -512,7 +528,15 @@ View booking online: ${bookingDetails.viewUrl}
           .select()
           .single();
           
-        if (bookingError) throw bookingError;
+        if (bookingError) {
+          console.error('Booking error:', bookingError);
+          throw new Error('Failed to create booking: ' + bookingError.message);
+        }
+        
+        if (!newBooking) {
+          throw new Error('No booking data returned');
+        }
+        
         createdBookingIds.push(newBooking.id);
       }
 
@@ -522,10 +546,14 @@ View booking online: ${bookingDetails.viewUrl}
           .from('booking_views')
           .select('access_code')
           .eq('booking_id', createdBookingIds[0])
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to prevent errors
           
         if (!accessCodeError && accessCodeData) {
           setBookingAccessCode(accessCodeData.access_code);
+        } else {
+          console.warn('Could not retrieve access code:', accessCodeError);
+          // Generate a fallback access code
+          setBookingAccessCode(createdBookingIds[0].substring(0, 8));
         }
       }
       
@@ -569,7 +597,7 @@ View booking online: ${bookingDetails.viewUrl}
     } catch (error: any) {
       console.error('Error creating booking:', error);
       setBookingError(error.message || 'Failed to create booking');
-      toast.error('Booking failed. Please try again.');
+      toast.error(error.message || 'Booking failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -737,16 +765,18 @@ View booking online: ${bookingDetails.viewUrl}
                         <CalendarIcon className="mr-2 h-5 w-5 text-cuephoria-lightpurple" />
                         Select Date
                       </h3>
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDateSelect}
-                        disabled={(date) => {
-                          // Disable dates before today
-                          return date < new Date(new Date().setHours(0,0,0,0));
-                        }}
-                        className="p-3 pointer-events-auto border border-gray-800 rounded-md bg-gray-800/50"
-                      />
+                      <div className="border border-gray-800 rounded-md bg-gray-800/50 p-4">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleDateSelect}
+                          disabled={(date) => {
+                            // Disable dates before today
+                            return date < new Date(new Date().setHours(0,0,0,0));
+                          }}
+                          className="mx-auto"
+                        />
+                      </div>
                     </div>
                     
                     {/* Duration & Time Slots */}
