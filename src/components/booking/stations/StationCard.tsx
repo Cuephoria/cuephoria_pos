@@ -1,66 +1,90 @@
 
 import React from 'react';
 import { Station } from '@/types/pos.types';
+import { Gamepad2, Table2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface StationCardProps {
   station: Station;
   isSelected: boolean;
   onSelect: () => void;
+  multiSelect?: boolean;
+  isMobile?: boolean;
 }
 
-const StationCard: React.FC<StationCardProps> = ({
-  station,
-  isSelected,
+const StationCard: React.FC<StationCardProps> = ({ 
+  station, 
+  isSelected, 
   onSelect,
+  multiSelect = false,
+  isMobile = false
 }) => {
+  const isPs5 = station.type === 'ps5';
+  
   return (
-    <div 
+    <div
+      className={`border rounded-lg ${isMobile ? 'p-3' : 'p-4'} transition-all ${
+        isSelected
+          ? isPs5
+            ? 'border-cuephoria-purple bg-cuephoria-purple/10 shadow-[0_0_10px_rgba(139,92,246,0.3)]'
+            : 'border-green-600 bg-green-900/10 shadow-[0_0_10px_rgba(22,163,74,0.3)]'
+          : 'border-gray-800 bg-gray-800/20 hover:bg-gray-800/40'
+      } ${multiSelect ? 'cursor-pointer' : ''}`}
       onClick={onSelect}
-      className={`
-        p-4 rounded-lg cursor-pointer transition-all border-2
-        ${isSelected
-          ? 'border-cuephoria-purple bg-cuephoria-purple/10'
-          : 'border-gray-800 bg-gray-800/50 hover:bg-gray-800'
-        }
-      `}
     >
-      <div className="flex items-center justify-between">
-        <h4 className="font-medium">{station.name}</h4>
-        <div 
-          className={`h-5 w-5 rounded-full ${
-            isSelected
-              ? 'bg-cuephoria-purple'
-              : 'bg-gray-700'
-          }`}
-        >
-          {isSelected && (
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5 text-white" 
-              viewBox="0 0 20 20" 
-              fill="currentColor"
-            >
-              <path 
-                fillRule="evenodd" 
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
-                clipRule="evenodd" 
-              />
-            </svg>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center">
+          {isPs5 ? (
+            <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg bg-cuephoria-purple/20 flex items-center justify-center mr-3`}>
+              <Gamepad2 className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${isSelected ? 'text-cuephoria-lightpurple' : 'text-gray-400'}`} />
+            </div>
+          ) : (
+            <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg bg-green-900/20 flex items-center justify-center mr-3`}>
+              <Table2 className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${isSelected ? 'text-green-400' : 'text-gray-400'}`} />
+            </div>
           )}
+          <div>
+            <h3 className={`${isMobile ? 'text-sm' : 'text-base'} font-medium ${isSelected ? 'text-white' : 'text-gray-200'}`}>
+              {station.name}
+            </h3>
+            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-400`}>
+              ₹{station.hourlyRate}/hour
+            </p>
+          </div>
         </div>
+        
+        <Badge 
+          variant="outline" 
+          className={`${isMobile ? 'text-xs' : 'text-sm'} ${isPs5 ? 'bg-cuephoria-purple/10 text-cuephoria-lightpurple border-cuephoria-purple/30' : 
+                         'bg-green-900/10 text-green-400 border-green-600/30'}`}
+        >
+          {isPs5 ? 'PS5' : '8-Ball'}
+        </Badge>
       </div>
-      <div className="mt-2 text-sm text-gray-400">
-        <div className="flex justify-between">
-          <span>Type:</span>
-          <span className="text-gray-300">
-            {station.type === 'ps5' ? 'PlayStation 5' : 'Pool Table'}
+      
+      <Button
+        variant={isSelected ? "default" : "outline"}
+        size={isMobile ? "sm" : "sm"}
+        className={`mt-3 w-full ${
+          isSelected
+            ? isPs5
+              ? 'bg-cuephoria-purple hover:bg-cuephoria-purple/90'
+              : 'bg-green-700 hover:bg-green-700/90'
+            : ''
+        } ${isMobile ? 'text-xs py-1' : ''}`}
+        onClick={onSelect}
+      >
+        {isSelected ? (multiSelect ? 'Selected' : 'Selected') : (multiSelect ? 'Select' : 'Select')}
+      </Button>
+
+      {multiSelect && isSelected && (
+        <div className="mt-2 text-center">
+          <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-cuephoria-lightpurple`}>
+            Click again to deselect
           </span>
         </div>
-        <div className="flex justify-between mt-1">
-          <span>Rate:</span>
-          <span className="text-gray-300">₹{station.hourlyRate}/hour</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
