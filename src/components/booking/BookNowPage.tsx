@@ -3,7 +3,7 @@ import { format, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Station } from '@/types/pos.types';
 import { toast } from 'sonner';
-import { isDateInPast } from '@/utils/booking';
+import { isDateInPast, generateTimeSlots } from '@/utils/booking';
 import BookingSteps from '@/components/booking/BookingSteps';
 import BookNowHeader from '@/components/booking/book-now/BookNowHeader';
 import TodaysBookings from '@/components/booking/book-now/TodaysBookings';
@@ -30,6 +30,34 @@ interface TimeSlot {
   endTime: string;   // Format: "HH:MM"
   isAvailable: boolean;
 }
+
+/**
+ * Helper function to check if stations are available for a time slot
+ * @param stationIds Array of station IDs to check
+ * @param timeSlot The time slot to check
+ * @returns Promise<boolean> true if all stations are available
+ */
+const checkStationAvailabilityForTimeSlot = async (
+  stationIds: string[],
+  timeSlot: TimeSlot
+): Promise<boolean> => {
+  if (!timeSlot) return false;
+  
+  try {
+    const formattedDate = format(new Date(), 'yyyy-MM-dd');
+    const result = await checkStationAvailability(
+      stationIds,
+      formattedDate,
+      timeSlot.startTime,
+      timeSlot.endTime
+    );
+    
+    return result.available;
+  } catch (error) {
+    console.error('Error checking station availability:', error);
+    return false;
+  }
+};
 
 const BookNow = () => {
   // Current booking step - Note that Step 1 is now Date & Time, Step 2 is Station
