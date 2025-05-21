@@ -60,7 +60,11 @@ serve(async (req) => {
     // Update completed bookings
     const { data: completedData, error: completedError } = await supabaseClient
       .from('bookings')
-      .update({ status: 'completed' })
+      .update({ 
+        status: 'completed',
+        status_updated_at: new Date().toISOString(),
+        status_updated_by: 'system'
+      })
       .eq('booking_date', today)
       .eq('status', 'in-progress')
       .lt('end_time', now);
