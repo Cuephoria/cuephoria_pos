@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 /**
  * Hook to load and manage session data from Supabase
  */
-export const useSessionsData = (autoFetch = true) => {
+export const useSessionsData = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState<boolean>(false);
   const [sessionsError, setSessionsError] = useState<Error | null>(null);
@@ -112,11 +112,6 @@ export const useSessionsData = (autoFetch = true) => {
   };
   
   useEffect(() => {
-    if (!autoFetch) {
-      // Skip automatic fetching if autoFetch is false
-      return;
-    }
-    
     console.log('Initial session load triggered');
     // Start loading immediately
     refreshSessions();
@@ -142,7 +137,7 @@ export const useSessionsData = (autoFetch = true) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [refreshSessions, autoFetch]);
+  }, [refreshSessions]);
   
   return {
     sessions,
@@ -153,4 +148,3 @@ export const useSessionsData = (autoFetch = true) => {
     deleteSession
   };
 };
-
