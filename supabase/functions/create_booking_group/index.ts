@@ -75,52 +75,32 @@ serve(async (req) => {
     
     console.log("Standardized times: start =", startTimeFormatted, "end =", endTimeFormatted);
     
-    // Call the SQL function to check availability
-    const { data: availabilityCheck, error: availabilityError } = await supabase.rpc(
-      'check_stations_availability',
-      {
-        p_date: p_booking_date,
-        p_start_time: startTimeFormatted,
-        p_end_time: endTimeFormatted,
-        p_station_ids: p_station_ids
-      }
-    );
+    // Check availability directly using the same query logic as in the client
+    const { data: existingBookings, error: checkError } = await supabase
+      .from('bookings')
+      .select('station_id, station:stations(name)')
+      .eq('booking_date', p_booking_date)
+      .in('station_id', p_station_ids)
+      .in('status', ['confirmed', 'in-progress'])
+      .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
+      .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
+      .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
+      .or(`start_time.lte.${startTimeFormatted},end_time.gte.${endTimeFormatted}`);
     
-    console.log("Availability check result:", availabilityCheck);
-    
-    if (availabilityError) {
-      console.error("Availability check error:", availabilityError);
+    if (checkError) {
+      console.error("Error checking station availability:", checkError);
       return new Response(
-        JSON.stringify({ error: "Failed to check station availability: " + availabilityError.message }),
+        JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
     
-    if (availabilityCheck === false) {
-      // Get unavailable stations for better error messages
-      const { data: existingBookings, error: checkError } = await supabase
-        .from('bookings')
-        .select('station_id, station:stations(name)')
-        .eq('booking_date', p_booking_date)
-        .in('station_id', p_station_ids)
-        .eq('status', 'confirmed')
-        .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
-        .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
-        .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
-        .or(`start_time.lte.${startTimeFormatted},end_time.gte.${endTimeFormatted}`);
-      
-      if (checkError) {
-        console.error("Error getting unavailable stations:", checkError);
-        return new Response(
-          JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-        );
-      }
-      
-      const unavailableStations = existingBookings?.map(booking => ({
+    // Get unavailable stations for better error messages
+    if (existingBookings && existingBookings.length > 0) {
+      const unavailableStations = existingBookings.map(booking => ({
         id: booking.station_id,
         name: booking.station?.name || 'Unknown station'
-      })) || [];
+      }));
       
       console.log("Unavailable stations:", unavailableStations);
       

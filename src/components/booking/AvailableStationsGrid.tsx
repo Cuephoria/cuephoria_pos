@@ -38,6 +38,9 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   useEffect(() => {
     if (selectedDate && selectedTimeSlot) {
       filterAvailableStations();
+    } else {
+      // If no date or time slot is selected, show all stations
+      setAvailableStations(stations);
     }
   }, [selectedDate, selectedTimeSlot, stations]);
   
@@ -64,7 +67,11 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
         currentSession: null
       })) || [];
       
+      console.log('Fetched stations:', transformedStations);
       setStations(transformedStations);
+      
+      // Initially set all stations as available
+      setAvailableStations(transformedStations);
       
       if (selectedDate && selectedTimeSlot) {
         filterAvailableStations(transformedStations);
@@ -79,7 +86,10 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   
   // Filter stations based on selected date and time
   const filterAvailableStations = async (stationsList = stations) => {
-    if (!selectedDate || !selectedTimeSlot) return;
+    if (!selectedDate || !selectedTimeSlot) {
+      setAvailableStations(stationsList);
+      return;
+    }
     
     setLoadingStations(true);
     
@@ -89,6 +99,15 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
       // Get all station IDs
       const allStationIds = stationsList.map(station => station.id);
       
+      if (allStationIds.length === 0) {
+        console.log('No stations to check availability for');
+        setAvailableStations([]);
+        setLoadingStations(false);
+        return;
+      }
+      
+      console.log('Checking availability for stations:', allStationIds);
+      
       // Check availability for all stations
       const { unavailableStationIds } = await checkStationAvailability(
         allStationIds,
@@ -97,11 +116,14 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
         selectedTimeSlot.endTime
       );
       
+      console.log('Unavailable station IDs:', unavailableStationIds);
+      
       // Filter out unavailable stations
       const available = stationsList.filter(
         station => !unavailableStationIds.includes(station.id)
       );
       
+      console.log('Available stations:', available);
       setAvailableStations(available);
     } catch (error) {
       console.error('Error filtering available stations:', error);
