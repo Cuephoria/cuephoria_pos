@@ -202,20 +202,32 @@ export const checkStationAvailability = async (
     const startTimeWithSeconds = `${startTime}:00`;
     const endTimeWithSeconds = `${endTime}:00`;
     
-    // Query existing bookings that overlap with the requested time slot
+    console.log('Checking availability for:', {
+      date,
+      startTime: startTimeWithSeconds,
+      endTime: endTimeWithSeconds,
+      stationIds
+    });
+    
+    // Query existing bookings that overlap with the requested time slot using proper overlap detection
     const { data: existingBookings, error } = await supabase
       .from('bookings')
       .select('station_id, station:stations(id, name)')
       .eq('booking_date', date)
       .eq('status', 'confirmed')
-      .or(`start_time.lte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`)
-      .or(`end_time.gt.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
-      .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`);
+      .or(
+        `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`,
+        `start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`,
+        `start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`
+      )
+      .in('station_id', stationIds);
       
     if (error) {
       console.error('Error checking station availability:', error);
       return { available: false, unavailableStationIds: [] };
     }
+    
+    console.log('Found existing bookings:', existingBookings);
     
     // Get the IDs of stations that are already booked for this time slot
     const bookedStationIds = existingBookings?.map(booking => booking.station_id) || [];

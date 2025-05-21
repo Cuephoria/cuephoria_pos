@@ -646,15 +646,24 @@ View booking online: ${bookingDetails.viewUrl}
       const startTimeFormatted = timeSlot.startTime + ':00';
       const endTimeFormatted = timeSlot.endTime + ':00';
       
-      // Check if stations have active bookings for this time slot
+      console.log('BookNow - Checking availability for:', {
+        date: formattedDate,
+        startTime: startTimeFormatted,
+        endTime: endTimeFormatted,
+        stationIds
+      });
+      
+      // Check if stations have active bookings for this time slot using proper overlap detection
       const { data: existingBookings, error } = await supabase
         .from('bookings')
-        .select('station_id')
+        .select('station_id, station:stations(name)')
         .eq('booking_date', formattedDate)
         .eq('status', 'confirmed')
-        .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
-        .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
-        .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
+        .or(
+          `start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`,
+          `start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`,
+          `start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`
+        )
         .in('station_id', stationIds);
       
       if (error) {
@@ -662,9 +671,13 @@ View booking online: ${bookingDetails.viewUrl}
         return false;
       }
       
+      console.log('BookNow - Found existing bookings:', existingBookings?.length || 0);
+      
       // If there are no existing bookings for any of the selected stations,
       // all stations are available
-      return !existingBookings || existingBookings.length === 0;
+      const isAvailable = !existingBookings || existingBookings.length === 0;
+      console.log('BookNow - Stations available:', isAvailable);
+      return isAvailable;
     } catch (error) {
       console.error('Error checking station availability:', error);
       return false;
@@ -756,10 +769,6 @@ View booking online: ${bookingDetails.viewUrl}
       console.log('Creating bookings for date:', formattedDate);
       
       // Perform one final availability check before booking
-      const startTimeFormatted = selectedTimeSlot.startTime + ':00';
-      const endTimeFormatted = selectedTimeSlot.endTime + ':00';
-      
-      // Check if there are any conflicting bookings
       const stationIds = selectedStations.map(s => s.id);
       const isAvailable = await checkStationAvailability(stationIds, selectedTimeSlot);
       
@@ -772,8 +781,8 @@ View booking online: ${bookingDetails.viewUrl}
         customer_id: customerId,
         station_id: station.id,
         booking_date: formattedDate,
-        start_time: startTimeFormatted,
-        end_time: endTimeFormatted,
+        start_time: selectedTimeSlot.startTime + ':00',
+        end_time: selectedTimeSlot.endTime + ':00',
         duration: bookingDuration,
         status: 'confirmed',
         booking_group_id: groupId,
