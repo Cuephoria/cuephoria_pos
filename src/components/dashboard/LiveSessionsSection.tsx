@@ -39,12 +39,12 @@ const LiveSessionsSection: React.FC<LiveSessionsSectionProps> = ({ publicView = 
     <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-800 overflow-hidden shadow-xl hover:shadow-purple-900/20 transition-all duration-500">
       <CardHeader className="pb-2 flex flex-row justify-between items-center">
         <div>
-          <CardTitle className="flex items-center text-lg">
+          <CardTitle className="flex items-center text-lg md:text-left">
             <Clock className="h-5 w-5 mr-2 text-cuephoria-purple animate-pulse-soft" />
             Live Active Sessions
           </CardTitle>
           {!publicView && (
-            <div className="flex items-center mt-1 space-x-2">
+            <div className="flex flex-wrap mt-1 space-x-2">
               <Badge variant="outline" className="bg-gray-800 text-xs">
                 <Users className="h-3 w-3 mr-1" /> {activeStationsCount}/{totalStations} Stations Active
               </Badge>

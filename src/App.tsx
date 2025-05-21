@@ -1,4 +1,3 @@
-
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -25,6 +24,7 @@ import Bookings from './pages/Bookings';
 import CheckBooking from './pages/CheckBooking';
 import { useUpdateBookingStatuses } from './hooks/stations';
 import AuthenticatedLayout from './components/layouts/AuthenticatedLayout';
+import Tournaments from './pages/Tournaments';
 
 // Initialize React Query client
 const queryClient = new QueryClient({
@@ -55,11 +55,12 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/booknow" element={<BookNow />} />
-              <Route path="/public/stations" element={<PublicStations />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/stations/public" element={<PublicStations />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
-              <Route path="/bookings/check" element={<CheckBooking />} />
+              <Route path="/check/:code" element={<CheckBooking />} />
               
               {/* Authenticated routes */}
               <Route element={<AuthenticatedLayout />}>
@@ -70,7 +71,7 @@ function App() {
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/bookings" element={<Bookings />} />
+                <Route path="/tournaments" element={<Tournaments />} />
               </Route>
               
               {/* Fallback route */}
