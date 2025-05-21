@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for the booking system
  */
