@@ -31,12 +31,14 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   
   // Fetch all stations on component mount
   useEffect(() => {
+    console.log("Component mounted, fetching stations");
     fetchStations();
   }, []);
   
   // Filter available stations when date or time slot changes
   useEffect(() => {
     if (selectedDate && selectedTimeSlot) {
+      console.log("Date or time changed, filtering stations");
       filterAvailableStations();
     }
   }, [selectedDate, selectedTimeSlot, stations]);
@@ -46,6 +48,7 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
     setLoadingStations(true);
     
     try {
+      console.log("Fetching stations from Supabase");
       const { data: stationsData, error } = await supabase
         .from('stations')
         .select('*');
@@ -53,6 +56,8 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
       if (error) {
         throw error;
       }
+      
+      console.log("Stations fetched:", stationsData?.length);
       
       // Transform data to match Station type
       const transformedStations: Station[] = stationsData?.map(item => ({
@@ -67,7 +72,9 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
       setStations(transformedStations);
       
       if (selectedDate && selectedTimeSlot) {
-        filterAvailableStations(transformedStations);
+        await filterAvailableStations(transformedStations);
+      } else {
+        setAvailableStations(transformedStations);
       }
     } catch (error) {
       console.error('Error fetching stations:', error);
@@ -79,15 +86,24 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   
   // Filter stations based on selected date and time
   const filterAvailableStations = async (stationsList = stations) => {
-    if (!selectedDate || !selectedTimeSlot) return;
+    if (!selectedDate || !selectedTimeSlot) {
+      console.log("Missing date or time slot, can't filter stations");
+      setAvailableStations(stationsList);
+      return;
+    }
     
     setLoadingStations(true);
     
     try {
+      console.log("Filtering available stations for", formatDate(selectedDate), 
+        "from", selectedTimeSlot.startTime, "to", selectedTimeSlot.endTime);
+      
       const formattedDate = formatDate(selectedDate);
       
       // Get all station IDs
       const allStationIds = stationsList.map(station => station.id);
+      
+      console.log("Checking availability for stations:", allStationIds);
       
       // Check availability for all stations
       const { unavailableStationIds } = await checkStationAvailability(
@@ -97,10 +113,14 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
         selectedTimeSlot.endTime
       );
       
+      console.log("Unavailable station IDs:", unavailableStationIds);
+      
       // Filter out unavailable stations
       const available = stationsList.filter(
         station => !unavailableStationIds.includes(station.id)
       );
+      
+      console.log("Available stations:", available.length);
       
       setAvailableStations(available);
     } catch (error) {

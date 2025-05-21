@@ -69,35 +69,44 @@ serve(async (req) => {
     console.log("With stations:", p_station_ids);
     console.log("For date:", p_booking_date, "time:", p_start_time, "-", p_end_time);
     
-    // Check if any station is already booked for this time
-    const { data: existingBookings, error: checkError } = await supabase
-      .from('bookings')
-      .select('station_id, station:stations(name)')
-      .eq('booking_date', p_booking_date)
-      .or(`start_time.lte.${p_start_time},end_time.gt.${p_start_time}`)
-      .or(`start_time.lt.${p_end_time},end_time.gte.${p_end_time}`)
-      .or(`start_time.gte.${p_start_time},end_time.lte.${p_end_time}`)
-      .eq('status', 'confirmed')
-      .in('station_id', p_station_ids);
-      
-    if (checkError) {
+    // Direct query to check if stations are available
+    const { data: stationAvailability, error: availabilityError } = await supabase.rpc(
+      'check_stations_availability',
+      {
+        p_date: p_booking_date,
+        p_start_time: p_start_time,
+        p_end_time: p_end_time,
+        p_station_ids: p_station_ids
+      }
+    );
+    
+    if (availabilityError) {
+      console.error("Error checking station availability:", availabilityError);
       return new Response(
-        JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
+        JSON.stringify({ error: "Failed to check station availability: " + availabilityError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
     
-    if (existingBookings && existingBookings.length > 0) {
+    console.log("Station availability check result:", stationAvailability);
+    
+    // Filter unavailable stations
+    const unavailableStations = stationAvailability.filter(s => !s.is_available);
+    
+    if (unavailableStations.length > 0) {
       // Get station details for better error message
-      const unavailableStations = existingBookings.map(booking => ({
-        id: booking.station_id,
-        name: booking.station?.name || 'Unknown station'
-      }));
+      const { data: stationDetails } = await supabase
+        .from('stations')
+        .select('id, name')
+        .in('id', unavailableStations.map(s => s.station_id));
       
       return new Response(
         JSON.stringify({ 
           error: "One or more selected stations are no longer available. Please select different stations or time slot.",
-          unavailableStations 
+          unavailableStations: stationDetails || unavailableStations.map(s => ({
+            id: s.station_id,
+            name: 'Unknown station'
+          }))
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409 }
       );
@@ -133,6 +142,7 @@ serve(async (req) => {
       .select();
     
     if (insertError) {
+      console.error("Error inserting bookings:", insertError);
       return new Response(
         JSON.stringify({ error: "Failed to create bookings: " + insertError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -146,6 +156,7 @@ serve(async (req) => {
     );
     
   } catch (error) {
+    console.error("Error in create_booking_group:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
