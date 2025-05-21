@@ -205,8 +205,8 @@ export const checkStationAvailability = async (
     console.log(`Checking availability for date=${date}, start=${startTimeWithSeconds}, end=${endTimeWithSeconds}`);
     console.log(`Station IDs to check:`, stationIds);
     
-    // Call the direct RPC function for consistent checking
-    const { data: isAvailable, error: rpcError } = await supabase.rpc(
+    // Call the stored procedure for availability check
+    const { data: isAvailable, error } = await supabase.rpc(
       'check_stations_availability',
       {
         p_date: date,
@@ -216,23 +216,24 @@ export const checkStationAvailability = async (
       }
     );
     
-    console.log('RPC availability check result:', isAvailable);
+    console.log('Availability check result:', isAvailable);
     
-    if (rpcError) {
-      console.error('Error in RPC check_stations_availability:', rpcError);
+    if (error) {
+      console.error('Error in availability check:', error);
       // Fallback to manual check if RPC fails
-      const { data: existingBookings, error } = await supabase
+      const { data: existingBookings, error: checkError } = await supabase
         .from('bookings')
         .select('station_id, station:stations(id, name)')
         .eq('booking_date', date)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'in-progress'])
+        .in('station_id', stationIds)
         .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
         .or(`start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
         .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`)
         .or(`start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`);
       
-      if (error) {
-        console.error('Error checking station availability:', error);
+      if (checkError) {
+        console.error('Error checking station availability:', checkError);
         return { available: false, unavailableStationIds: [] };
       }
       
@@ -265,8 +266,8 @@ export const checkStationAvailability = async (
         .from('bookings')
         .select('station_id, station:stations(id, name)')
         .eq('booking_date', date)
+        .in('status', ['confirmed', 'in-progress'])
         .in('station_id', stationIds)
-        .eq('status', 'confirmed')
         .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
         .or(`start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
         .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`)
