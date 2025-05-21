@@ -19,7 +19,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const { toast } = useToast();
   const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
-  const activeSessionIdRef = useRef<string | null>(null);
   const sessionDataRef = useRef<{
     sessionId: string;
     startTime: Date;
@@ -47,51 +46,42 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       sessionId: station.currentSession?.id
     });
 
-    // Clear existing timer when station changes or session ends
-    if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    // If we were tracking a different session or no longer have a session, reset state
-    if (!station.isOccupied || !station.currentSession || 
-        (activeSessionIdRef.current && activeSessionIdRef.current !== station.currentSession.id)) {
+    if (!station.isOccupied || !station.currentSession) {
       // Reset timer state when station is not occupied
       setHours(0);
       setMinutes(0);
       setSeconds(0);
       setCost(0);
+      
+      // Clear any existing timer
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
       sessionDataRef.current = null;
-      activeSessionIdRef.current = null;
       return;
     }
 
     // Store the session data in ref to maintain persistence across renders
     if (station.currentSession) {
-      const sessionId = station.currentSession.id;
+      console.log("StationTimer: Initializing with session data", {
+        sessionId: station.currentSession.id,
+        startTime: new Date(station.currentSession.startTime).toISOString()
+      });
       
-      // Only set up new timer if this is a different session than previously
-      if (activeSessionIdRef.current !== sessionId) {
-        console.log("StationTimer: Initializing with new session data", {
-          sessionId: sessionId,
-          startTime: new Date(station.currentSession.startTime).toISOString()
-        });
-        
-        activeSessionIdRef.current = sessionId;
-        
-        sessionDataRef.current = {
-          sessionId: sessionId,
-          startTime: new Date(station.currentSession.startTime),
-          stationId: station.id,
-          customerId: station.currentSession.customerId,
-          hourlyRate: station.hourlyRate
-        };
-        
-        // Ensure we have a valid start time
-        if (isNaN(sessionDataRef.current.startTime.getTime())) {
-          console.error("StationTimer: Invalid start time for session", station.currentSession);
-          sessionDataRef.current.startTime = new Date();
-        }
+      sessionDataRef.current = {
+        sessionId: station.currentSession.id,
+        startTime: new Date(station.currentSession.startTime),
+        stationId: station.id,
+        customerId: station.currentSession.customerId,
+        hourlyRate: station.hourlyRate
+      };
+      
+      // Ensure we have a valid start time
+      if (isNaN(sessionDataRef.current.startTime.getTime())) {
+        console.error("StationTimer: Invalid start time for session", station.currentSession);
+        sessionDataRef.current.startTime = new Date();
       }
     }
 
@@ -101,7 +91,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     }
 
     // Set up interval for regular updates if not already running
-    if (station.currentSession && !timerRef.current) {
+    if (timerRef.current === null && station.currentSession) {
       console.log("StationTimer: Setting up timer interval for station", station.id);
       
       timerRef.current = window.setInterval(() => {
@@ -111,7 +101,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
 
     // Fetch the latest session data from Supabase for accuracy
     fetchSessionData();
-  }, [station, station.isOccupied, station.currentSession?.id]);
+  }, [station]);
 
   // Function to update timer calculation based on session data
   const updateTimerCalculation = () => {
@@ -166,22 +156,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       if (data) {
         // Use type assertion since we know this data should exist
         const sessionData = data as any;
-        
-        // Check if the session has been ended on the server but local state hasn't updated yet
-        if (sessionData.end_time || sessionData.status === 'completed') {
-          console.log("StationTimer: Session has been ended on server, clearing timer");
-          
-          // Clear timer if session has ended
-          if (timerRef.current) {
-            window.clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          
-          // Reset session refs
-          sessionDataRef.current = null;
-          activeSessionIdRef.current = null;
-          return;
-        }
         
         if (sessionData && sessionData.start_time) {
           const startTime = new Date(sessionData.start_time);

@@ -5,6 +5,7 @@ import { Station } from '@/types/pos.types';
 import { CalendarIcon, Check, Clock, Copy, Share2, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimeSlot {
   startTime: string;
@@ -95,6 +96,51 @@ const BookingConfirmation = ({
     }
   };
 
+  // Send confirmation email
+  const sendConfirmationEmail = async () => {
+    if (!customerInfo.email) return;
+
+    try {
+      // Get station names
+      const stationNames = stations.map(s => s.name).join(", ");
+
+      // Call the send-booking-confirmation edge function
+      const { error } = await supabase.functions.invoke('send-booking-confirmation', {
+        body: {
+          bookingId,
+          bookingGroupId,
+          customerName: customerInfo.name,
+          stationName: stationNames,
+          bookingDate: format(date, 'EEEE, MMMM d, yyyy'),
+          startTime: timeSlot.startTime,
+          endTime: timeSlot.endTime,
+          duration,
+          bookingReference: formatBookingReference(),
+          recipientEmail: customerInfo.email,
+          discount: discountPercentage ? `${discountPercentage}% discount applied` : null,
+          finalPrice: finalPrice ? finalPrice.toFixed(2) : null,
+          totalStations: stations.length
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Confirmation email sent successfully');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast.error('Failed to send confirmation email');
+    }
+  };
+
+  // Send email if customer provided an email address
+  React.useEffect(() => {
+    if (customerInfo.email) {
+      sendConfirmationEmail();
+    }
+  }, []);
+  
   // Calculate price if not provided
   const displayOriginalPrice = originalPrice || stations.reduce((sum, station) => 
     sum + (station.hourlyRate * (duration / 60)), 0
@@ -114,6 +160,7 @@ const BookingConfirmation = ({
         <h3 className="text-xl font-semibold">Booking Confirmed!</h3>
         <p className="text-gray-400 mt-2">
           Your booking has been successfully confirmed
+          {customerInfo.email && " and a confirmation email has been sent"}
         </p>
       </div>
       

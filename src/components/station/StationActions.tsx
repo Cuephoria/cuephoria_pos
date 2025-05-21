@@ -29,9 +29,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Debounce function to prevent double-clicks
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
       toast({
@@ -41,8 +39,6 @@ const StationActions: React.FC<StationActionsProps> = ({
       });
       return;
     }
-    
-    if (isLoading) return; // Prevent multiple clicks
     
     try {
       setIsLoading(true);
@@ -69,8 +65,6 @@ const StationActions: React.FC<StationActionsProps> = ({
 
   const handleEndSession = async () => {
     if (station.isOccupied && station.currentSession) {
-      if (isLoading || isRedirecting) return; // Prevent multiple clicks or actions during redirect
-      
       try {
         setIsLoading(true);
         
@@ -83,26 +77,16 @@ const StationActions: React.FC<StationActionsProps> = ({
           selectCustomer(customer.id);
         }
         
-        // Show loading toast to indicate process has started
-        toast({
-          title: "Processing...",
-          description: "Ending session and preparing checkout...",
-        });
-        
-        // Wait for session to fully end before redirecting
         await onEndSession(station.id);
-        
-        setIsRedirecting(true); // Set redirecting state to prevent multiple navigations
         
         toast({
           title: "Session Ended",
-          description: "Session has been ended and added to cart.",
+          description: "Session has been ended and added to cart. Redirecting to checkout...",
         });
         
-        // Add a small delay before redirecting to ensure state updates are complete
         setTimeout(() => {
           navigate('/pos');
-        }, 500);
+        }, 1500);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({
@@ -110,7 +94,7 @@ const StationActions: React.FC<StationActionsProps> = ({
           description: "Failed to end session. Please try again.",
           variant: "destructive"
         });
-        setIsRedirecting(false);
+      } finally {
         setIsLoading(false);
       }
     }
@@ -122,9 +106,9 @@ const StationActions: React.FC<StationActionsProps> = ({
         variant="destructive" 
         className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
         onClick={handleEndSession}
-        disabled={isLoading || isRedirecting}
+        disabled={isLoading}
       >
-        {isLoading ? "Processing..." : isRedirecting ? "Redirecting..." : "End Session"}
+        {isLoading ? "Processing..." : "End Session"}
       </Button>
     );
   }

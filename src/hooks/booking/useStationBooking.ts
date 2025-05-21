@@ -156,6 +156,40 @@ export const useStationBooking = ({
         }
       }
       
+      // Send booking confirmation email
+      if (customerInfo.email) {
+        try {
+          const primaryBookingId = createdBookingIds[0];
+          const stationNames = selectedStations.map(s => s.name).join(", ");
+          
+          const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
+            body: {
+              bookingId: primaryBookingId,
+              bookingGroupId: groupId,
+              customerName: customerInfo.name,
+              stationName: stationNames,
+              bookingDate: format(selectedDate, 'EEEE, MMMM d, yyyy'),
+              startTime: selectedTimeSlot.startTime,
+              endTime: selectedTimeSlot.endTime,
+              duration: bookingDuration,
+              bookingReference: bookingAccessCode,
+              recipientEmail: customerInfo.email,
+              discount: discountPercentage > 0 ? `${discountPercentage}% discount applied` : null,
+              finalPrice: selectedStations.reduce((sum, station) => 
+                sum + ((station.hourlyRate * (bookingDuration / 60)) * (1 - (discountPercentage/100))), 0
+              ).toFixed(2),
+              totalStations: selectedStations.length
+            }
+          });
+          
+          if (emailError) {
+            console.error('Error sending email:', emailError);
+          }
+        } catch (emailError) {
+          console.error('Error invoking email function:', emailError);
+        }
+      }
+      
       if (onBookingConfirmed) {
         onBookingConfirmed(createdBookingIds, groupId, bookingAccessCode);
       }
