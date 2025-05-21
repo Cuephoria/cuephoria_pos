@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for the booking system
  */
@@ -208,8 +207,8 @@ export const checkStationAvailability = async (
       .select('station_id, station:stations(id, name)')
       .eq('booking_date', date)
       .eq('status', 'confirmed')
-      .or(`start_time.lte.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds}`)
-      .or(`end_time.gt.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
+      .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
+      .or(`start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`)
       .or(`start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`);
       
     if (error) {
