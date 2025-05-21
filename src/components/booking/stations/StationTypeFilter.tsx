@@ -6,13 +6,13 @@ import { Gamepad2, CircleDashed } from 'lucide-react';
 interface StationTypeFilterProps {
   stationType: 'ps5' | '8ball' | 'all';
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
-  isMobile?: boolean; // Add isMobile prop
+  isMobile?: boolean;
 }
 
 const StationTypeFilter: React.FC<StationTypeFilterProps> = ({ 
   stationType, 
   onStationTypeChange,
-  isMobile = false // Default value
+  isMobile = false
 }) => {
   return (
     <div className="mb-6">
@@ -27,14 +27,14 @@ const StationTypeFilter: React.FC<StationTypeFilterProps> = ({
           </TabsTrigger>
           <TabsTrigger 
             value="ps5" 
-            className={`text-sm flex items-center gap-1 ${isMobile ? 'justify-center' : ''}`}
+            className="text-sm flex items-center gap-1 justify-center"
           >
             <Gamepad2 className="h-4 w-4" /> 
             PlayStation 5
           </TabsTrigger>
           <TabsTrigger 
             value="8ball" 
-            className={`text-sm flex items-center gap-1 ${isMobile ? 'justify-center' : ''}`}
+            className="text-sm flex items-center gap-1 justify-center"
           >
             <CircleDashed className="h-4 w-4" /> 
             Pool Table

@@ -42,9 +42,19 @@ export const useBookings = () => {
     placeholderData: (previousData) => previousData, // Use previous data while refetching
   });
 
-  // Delete booking with proper cleanup
+  // Delete booking with optimistic update for instant UI feedback
   const deleteBooking = async (bookingId: string) => {
     try {
+      // Save current state for rollback if needed
+      const previousBookings = queryClient.getQueryData(['bookings']);
+      
+      // Optimistically update UI immediately by removing the booking from cache
+      queryClient.setQueryData(['bookings'], (old: any[] | undefined) => 
+        old ? old.filter(booking => booking.id !== bookingId) : []
+      );
+      
+      // Perform the actual deletion operations asynchronously
+      
       // First, delete associated booking_views
       const { error: viewsError } = await supabase
         .from('booking_views')
@@ -52,9 +62,11 @@ export const useBookings = () => {
         .eq('booking_id', bookingId);
       
       if (viewsError) {
+        // Rollback on error
+        queryClient.setQueryData(['bookings'], previousBookings);
         console.error('Error deleting booking views:', viewsError);
         toast.error('Failed to delete booking: ' + viewsError.message);
-        return;
+        return false;
       }
       
       // After successfully deleting booking_views, delete the booking
@@ -63,9 +75,15 @@ export const useBookings = () => {
         .delete()
         .eq('id', bookingId);
       
-      if (error) throw error;
+      if (error) {
+        // Rollback on error
+        queryClient.setQueryData(['bookings'], previousBookings);
+        throw error;
+      }
       
-      // Invalidate query to refresh data
+      toast.success('Booking deleted successfully');
+      
+      // Finally invalidate query to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       
       return true;
@@ -75,17 +93,32 @@ export const useBookings = () => {
     }
   };
   
-  // Update booking
+  // Update booking with optimistic updates
   const updateBooking = async (bookingId: string, updateData: any) => {
     try {
+      // Save current state for rollback if needed
+      const previousBookings = queryClient.getQueryData(['bookings']);
+      
+      // Optimistically update UI immediately
+      queryClient.setQueryData(['bookings'], (old: any[] | undefined) => 
+        old ? old.map(booking => 
+          booking.id === bookingId ? { ...booking, ...updateData } : booking
+        ) : []
+      );
+      
+      // Perform the actual update operation
       const { error } = await supabase
         .from('bookings')
         .update(updateData)
         .eq('id', bookingId);
       
-      if (error) throw error;
+      if (error) {
+        // Rollback on error
+        queryClient.setQueryData(['bookings'], previousBookings);
+        throw error;
+      }
       
-      // Invalidate query to refresh data
+      // Finally invalidate query to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       
       return true;
