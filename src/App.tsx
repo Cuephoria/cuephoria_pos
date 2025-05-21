@@ -1,3 +1,4 @@
+
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -61,6 +62,7 @@ function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/check/:code" element={<CheckBooking />} />
+              <Route path="/tournaments" element={<Tournaments />} />
               
               {/* Authenticated routes */}
               <Route element={<AuthenticatedLayout />}>
@@ -71,7 +73,6 @@ function App() {
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/tournaments" element={<Tournaments />} />
               </Route>
               
               {/* Fallback route */}
