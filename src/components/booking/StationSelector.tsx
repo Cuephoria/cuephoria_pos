@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface StationSelectorProps {
   stations: Station[];
@@ -26,6 +27,8 @@ const StationSelector = ({
   onStationTypeChange,
   onStationSelect
 }: StationSelectorProps) => {
+  const isMobile = useIsMobile();
+  
   // Filter stations by type
   const filteredStations = stationType === 'all' 
     ? stations
@@ -42,39 +45,44 @@ const StationSelector = ({
         onValueChange={(value) => onStationTypeChange(value as 'ps5' | '8ball' | 'all')}
         className="w-full"
       >
-        <TabsList className="grid grid-cols-3 mb-6">
-          <TabsTrigger value="all">All Stations</TabsTrigger>
-          <TabsTrigger value="ps5">
-            <Gamepad2 className="mr-2 h-4 w-4" /> PS5 ({ps5Stations.length})
+        <TabsList className={`grid grid-cols-3 ${isMobile ? 'mb-4' : 'mb-6'} w-full max-w-full overflow-x-auto`}>
+          <TabsTrigger value="all" className={isMobile ? "text-xs px-2" : ""}>All Stations</TabsTrigger>
+          <TabsTrigger value="ps5" className={isMobile ? "text-xs px-2" : ""}>
+            <Gamepad2 className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} /> 
+            PS5 ({ps5Stations.length})
           </TabsTrigger>
-          <TabsTrigger value="8ball">
-            <Table2 className="mr-2 h-4 w-4" /> Pool ({ballStations.length})
+          <TabsTrigger value="8ball" className={isMobile ? "text-xs px-2" : ""}>
+            <Table2 className={`${isMobile ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2"}`} /> 
+            Pool ({ballStations.length})
           </TabsTrigger>
         </TabsList>
 
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <LoadingSpinner size="lg" />
-            <span className="ml-2">Loading stations...</span>
-          </div>
-        ) : filteredStations.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-gray-700 rounded-lg">
-            <h3 className="text-lg font-medium">No Stations Available</h3>
-            <p className="text-gray-400 mt-2">Please try a different filter</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredStations.map((station) => (
-              <StationCard
-                key={station.id}
-                station={station}
-                isSelected={selectedStations.some(s => s.id === station.id)}
-                onSelect={() => onStationSelect(station)}
-                multiSelect={multiSelect}
-              />
-            ))}
-          </div>
-        )}
+        <TabsContent value={stationType} className="mt-0 pt-0">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <LoadingSpinner size="lg" />
+              <span className="ml-2">Loading stations...</span>
+            </div>
+          ) : filteredStations.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed border-gray-700 rounded-lg">
+              <h3 className="text-lg font-medium">No Stations Available</h3>
+              <p className="text-gray-400 mt-2">Please try a different filter</p>
+            </div>
+          ) : (
+            <div className={`grid grid-cols-1 ${isMobile ? "" : "sm:grid-cols-2 md:grid-cols-3"} gap-4`}>
+              {filteredStations.map((station) => (
+                <StationCard
+                  key={station.id}
+                  station={station}
+                  isSelected={selectedStations.some(s => s.id === station.id)}
+                  onSelect={() => onStationSelect(station)}
+                  multiSelect={multiSelect}
+                  isMobile={isMobile}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
       
       {multiSelect && (
@@ -95,18 +103,20 @@ const StationCard = ({
   station, 
   isSelected, 
   onSelect,
-  multiSelect = false
+  multiSelect = false,
+  isMobile = false
 }: { 
   station: Station; 
   isSelected: boolean; 
   onSelect: () => void; 
   multiSelect?: boolean;
+  isMobile?: boolean;
 }) => {
   const isPs5 = station.type === 'ps5';
   
   return (
     <div
-      className={`border rounded-lg p-4 transition-all ${
+      className={`border rounded-lg p-3 ${isMobile ? 'p-3' : 'p-4'} transition-all ${
         isSelected
           ? isPs5
             ? 'border-cuephoria-purple bg-cuephoria-purple/10 shadow-[0_0_10px_rgba(139,92,246,0.3)]'
@@ -118,19 +128,19 @@ const StationCard = ({
       <div className="flex items-start justify-between">
         <div className="flex items-center">
           {isPs5 ? (
-            <div className="w-10 h-10 rounded-lg bg-cuephoria-purple/20 flex items-center justify-center mr-3">
-              <Gamepad2 className={`h-5 w-5 ${isSelected ? 'text-cuephoria-lightpurple' : 'text-gray-400'}`} />
+            <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg bg-cuephoria-purple/20 flex items-center justify-center mr-3`}>
+              <Gamepad2 className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${isSelected ? 'text-cuephoria-lightpurple' : 'text-gray-400'}`} />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-green-900/20 flex items-center justify-center mr-3">
-              <Table2 className={`h-5 w-5 ${isSelected ? 'text-green-400' : 'text-gray-400'}`} />
+            <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg bg-green-900/20 flex items-center justify-center mr-3`}>
+              <Table2 className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${isSelected ? 'text-green-400' : 'text-gray-400'}`} />
             </div>
           )}
           <div>
-            <h3 className={`font-medium ${isSelected ? 'text-white' : 'text-gray-200'}`}>
+            <h3 className={`${isMobile ? 'text-sm' : 'text-base'} font-medium ${isSelected ? 'text-white' : 'text-gray-200'}`}>
               {station.name}
             </h3>
-            <p className="text-sm text-gray-400">
+            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-400`}>
               ₹{station.hourlyRate}/hour
             </p>
           </div>
@@ -138,8 +148,8 @@ const StationCard = ({
         
         <Badge 
           variant="outline" 
-          className={isPs5 ? 'bg-cuephoria-purple/10 text-cuephoria-lightpurple border-cuephoria-purple/30' : 
-                           'bg-green-900/10 text-green-400 border-green-600/30'}
+          className={`${isMobile ? 'text-xs' : 'text-sm'} ${isPs5 ? 'bg-cuephoria-purple/10 text-cuephoria-lightpurple border-cuephoria-purple/30' : 
+                         'bg-green-900/10 text-green-400 border-green-600/30'}`}
         >
           {isPs5 ? 'PS5' : '8-Ball'}
         </Badge>
@@ -147,14 +157,14 @@ const StationCard = ({
       
       <Button
         variant={isSelected ? "default" : "outline"}
-        size="sm"
-        className={`mt-4 w-full ${
+        size={isMobile ? "sm" : "sm"}
+        className={`mt-3 w-full ${
           isSelected
             ? isPs5
               ? 'bg-cuephoria-purple hover:bg-cuephoria-purple/90'
               : 'bg-green-700 hover:bg-green-700/90'
             : ''
-        }`}
+        } ${isMobile ? 'text-xs py-1' : ''}`}
         onClick={onSelect}
       >
         {isSelected ? (multiSelect ? 'Selected' : 'Selected') : (multiSelect ? 'Select' : 'Select')}
@@ -162,7 +172,7 @@ const StationCard = ({
 
       {multiSelect && isSelected && (
         <div className="mt-2 text-center">
-          <span className="text-xs text-cuephoria-lightpurple">
+          <span className={`${isMobile ? 'text-[10px]' : 'text-xs'} text-cuephoria-lightpurple`}>
             Click again to deselect
           </span>
         </div>
