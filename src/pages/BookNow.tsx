@@ -401,6 +401,12 @@ const BookNow = () => {
 
   // Handle coupon code application
   const handleCouponApply = (code: string) => {
+    // Prevent applying coupon multiple times
+    if (couponCode === code) {
+      toast.info('This coupon is already applied');
+      return;
+    }
+    
     setCouponCode(code);
     
     // Simple validation for the coupon code
@@ -637,13 +643,14 @@ View booking online: ${bookingDetails.viewUrl}
       
       // Perform one final availability check before booking - FIX THE AMBIGUOUS COLUMN REFERENCE HERE
       // by using a modified query with explicit references to the table for start_time column
+      const startTimeFormatted = selectedTimeSlot.startTime + ':00';
       const { data: availabilityCheck, error: availabilityError } = await supabase
         .from('bookings')
-        .select('id, start_time')
+        .select('id')
         .eq('booking_date', formattedDate)
         .eq('station_id', selectedStations[0].id)
         .eq('status', 'confirmed')
-        .overlaps('start_time', selectedTimeSlot.startTime + ':00');
+        .filter('start_time', 'eq', startTimeFormatted);
       
       if (availabilityError) {
         console.error('Error checking final availability:', availabilityError);
@@ -651,7 +658,7 @@ View booking online: ${bookingDetails.viewUrl}
       }
       
       // Check if the selected slot is still available
-      const selectedSlotIsStillAvailable = availabilityCheck.length === 0;
+      const selectedSlotIsStillAvailable = !availabilityCheck || availabilityCheck.length === 0;
       
       if (!selectedSlotIsStillAvailable) {
         throw new Error('This time slot is no longer available. Please choose another time.');
