@@ -6,6 +6,7 @@ import { CalendarIcon, Check, Clock, Copy, Share2, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface TimeSlot {
   startTime: string;
@@ -51,6 +52,7 @@ const BookingConfirmation = ({
   const [copied, setCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   
   // Format booking reference for display
   const formatBookingReference = () => {
@@ -107,9 +109,14 @@ const BookingConfirmation = ({
 
     try {
       setSendingEmail(true);
+      setEmailError(null);
+      
       // Get station names
       const stationNames = stations.map(s => s.name).join(", ");
 
+      console.log('Preparing to send email confirmation to:', customerInfo.email);
+      console.log('Booking ID:', bookingId);
+      
       // Call the send-booking-confirmation edge function
       const { data, error } = await supabase.functions.invoke('send-booking-confirmation', {
         body: {
@@ -131,14 +138,16 @@ const BookingConfirmation = ({
 
       if (error) {
         console.error('Error from edge function:', error);
+        setEmailError(error.message || 'Failed to send email. Please try again.');
         throw new Error(`Failed to send email: ${error.message}`);
       }
       
       console.log('Email sending response:', data);
       setEmailSent(true);
       toast.success('Confirmation email sent successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending email:', error);
+      setEmailError(error.message || 'Failed to send confirmation email');
       toast.error('Failed to send confirmation email. Please try again.');
     } finally {
       setSendingEmail(false);
@@ -174,6 +183,16 @@ const BookingConfirmation = ({
           {customerInfo.email && emailSent && " and a confirmation email has been sent"}
         </p>
       </div>
+      
+      {/* Email error message */}
+      {emailError && (
+        <Alert variant="destructive" className="bg-red-950/30 border-red-800 text-red-300">
+          <AlertTitle>Failed to send email</AlertTitle>
+          <AlertDescription>
+            We couldn't send your confirmation email. You can try again using the button below.
+          </AlertDescription>
+        </Alert>
+      )}
       
       {/* Booking reference */}
       <div className="bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg p-4 text-center">
@@ -293,14 +312,15 @@ const BookingConfirmation = ({
         </div>
       </div>
       
-      {/* Send Email button (only show if email exists but hasn't been sent) */}
-      {customerInfo.email && !emailSent && (
+      {/* Email actions */}
+      {customerInfo.email && (
         <Button 
           className="w-full" 
           onClick={sendConfirmationEmail}
           disabled={sendingEmail}
+          variant={emailSent && !emailError ? "outline" : "default"}
         >
-          {sendingEmail ? 'Sending...' : 'Resend Confirmation Email'}
+          {sendingEmail ? 'Sending...' : emailSent && !emailError ? 'Resend Confirmation Email' : 'Send Confirmation Email'}
         </Button>
       )}
       

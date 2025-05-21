@@ -163,6 +163,12 @@ export const useStationBooking = ({
           const stationNames = selectedStations.map(s => s.name).join(", ");
           
           console.log('Sending booking confirmation email to:', customerInfo.email);
+          console.log('Booking details:', {
+            bookingId: primaryBookingId,
+            groupId,
+            customerName: customerInfo.name,
+            stationNames
+          });
           
           const { data: emailData, error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
             body: {
