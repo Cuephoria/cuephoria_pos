@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Clock, User } from 'lucide-react';
+import { CalendarIcon, Clock, User, Ticket } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface BookingSummaryProps {
   stations: Station[];
@@ -17,6 +19,8 @@ interface BookingSummaryProps {
     phone: string;
     email?: string;
   };
+  couponCode?: string;
+  onCouponApply?: (code: string) => void;
 }
 
 const BookingSummary = ({
@@ -24,11 +28,53 @@ const BookingSummary = ({
   date,
   timeSlot,
   duration,
-  customerInfo
+  customerInfo,
+  couponCode,
+  onCouponApply
 }: BookingSummaryProps) => {
+  const [enteredCoupon, setEnteredCoupon] = useState(couponCode || '');
+  const [validCoupon, setValidCoupon] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [showCouponHint, setShowCouponHint] = useState(false);
+  
   const totalPrice = stations.reduce((sum, station) => 
     sum + (station.hourlyRate * (duration / 60)), 0
   );
+  
+  const discountedPrice = validCoupon ? totalPrice * (1 - (discountPercentage/100)) : totalPrice;
+  
+  // Validate coupon whenever enteredCoupon changes
+  useEffect(() => {
+    // Handle empty coupon
+    if (!enteredCoupon) {
+      setValidCoupon(false);
+      setDiscountPercentage(0);
+      return;
+    }
+    
+    // Simple validation for the "cuephoria50" coupon code
+    if (enteredCoupon.toLowerCase() === 'cuephoria50') {
+      setValidCoupon(true);
+      setDiscountPercentage(50); // 50% discount
+    } else {
+      setValidCoupon(false);
+      setDiscountPercentage(0);
+    }
+  }, [enteredCoupon]);
+  
+  // When valid coupon detected, send it to parent component
+  useEffect(() => {
+    if (validCoupon && onCouponApply) {
+      onCouponApply(enteredCoupon);
+    }
+  }, [validCoupon, enteredCoupon, onCouponApply]);
+
+  const handleApplyCoupon = () => {
+    // This will trigger the useEffect above to validate the coupon
+    if (onCouponApply) {
+      onCouponApply(enteredCoupon);
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -81,13 +127,71 @@ const BookingSummary = ({
               ))}
             </div>
           </div>
+          
+          {/* Coupon Code */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center py-3 border-b border-gray-700">
+            <div className="flex items-center mb-2 md:mb-0">
+              <Ticket className="text-cuephoria-purple mr-3 h-5 w-5" />
+              <h4 className="text-gray-400">Coupon</h4>
+            </div>
+            <div className="flex flex-col items-end space-y-2 w-full md:w-auto">
+              <div className="flex w-full md:w-auto gap-2">
+                <Input
+                  placeholder="Enter coupon code"
+                  className="bg-gray-700/50 border-gray-600 text-white w-full md:w-48"
+                  value={enteredCoupon}
+                  onChange={(e) => setEnteredCoupon(e.target.value)}
+                  onFocus={() => setShowCouponHint(true)}
+                />
+                <Button 
+                  size="sm" 
+                  variant={validCoupon ? "default" : "outline"}
+                  onClick={handleApplyCoupon}
+                  className={validCoupon ? "bg-cuephoria-purple hover:bg-cuephoria-purple/90" : ""}
+                >
+                  Apply
+                </Button>
+              </div>
+              
+              {showCouponHint && !validCoupon && (
+                <p className="text-xs text-gray-400 italic">
+                  Psst... try "cuephoria50" for a special discount
+                </p>
+              )}
+              
+              {validCoupon && (
+                <p className="text-sm text-cuephoria-lightpurple">
+                  {discountPercentage}% discount applied!
+                </p>
+              )}
+            </div>
+          </div>
         </div>
         
         <div className="mt-6 pt-4 border-t border-gray-700">
-          <div className="flex justify-between items-center">
-            <h4 className="text-lg font-medium text-gray-300">Total Amount</h4>
-            <p className="text-xl font-bold text-cuephoria-lightpurple">₹{totalPrice.toFixed(2)}</p>
-          </div>
+          {validCoupon ? (
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-gray-400">
+                <h4 className="text-sm">Original Price</h4>
+                <p className="text-sm line-through">₹{totalPrice.toFixed(2)}</p>
+              </div>
+              
+              <div className="flex justify-between items-center text-cuephoria-lightpurple">
+                <h4 className="text-sm">Discount ({discountPercentage}%)</h4>
+                <p className="text-sm">- ₹{(totalPrice - discountedPrice).toFixed(2)}</p>
+              </div>
+              
+              <div className="flex justify-between items-center pt-1">
+                <h4 className="text-lg font-medium text-gray-300">Total Amount</h4>
+                <p className="text-xl font-bold text-cuephoria-lightpurple">₹{discountedPrice.toFixed(2)}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <h4 className="text-lg font-medium text-gray-300">Total Amount</h4>
+              <p className="text-xl font-bold text-cuephoria-lightpurple">₹{totalPrice.toFixed(2)}</p>
+            </div>
+          )}
         </div>
       </div>
       

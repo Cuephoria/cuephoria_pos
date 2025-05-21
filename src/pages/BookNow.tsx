@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Check, ChevronRight, Clock, Gamepad2, Share2, Table2 } from 'lucide-react';
+import { CalendarIcon, Check, ChevronRight, Clock, Gamepad2, Share2, Table2, Ticket } from 'lucide-react';
 import BookingSteps from '@/components/booking/BookingSteps';
 import StationSelector from '@/components/booking/StationSelector';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
@@ -66,6 +66,10 @@ const BookNow = () => {
     isExistingCustomer: false
   });
   
+  // Coupon code
+  const [couponCode, setCouponCode] = useState<string>('');
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  
   // Today's bookings
   const [todayBookings, setTodayBookings] = useState<any[]>([]);
   const [loadingTodayBookings, setLoadingTodayBookings] = useState<boolean>(false);
@@ -76,6 +80,7 @@ const BookNow = () => {
   const [bookingAccessCode, setBookingAccessCode] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
 
   // Fetch stations on component mount
   useEffect(() => {
@@ -219,6 +224,23 @@ const BookNow = () => {
       // First, generate time slots for the day (11am - 11pm)
       const allSlots = generateTimeSlots('11:00', '23:00', bookingDuration);
       
+      // Filter slots that are in the past if the date is today
+      const now = new Date();
+      const isToday = isSameDay(selectedDate, now);
+      
+      if (isToday) {
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTimeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+        
+        // Mark past time slots as unavailable
+        allSlots.forEach(slot => {
+          if (slot.startTime <= currentTimeString) {
+            slot.isAvailable = false;
+          }
+        });
+      }
+      
       // Check availability for each station and find common available slots
       let availableSlots = [...allSlots];
       
@@ -322,6 +344,32 @@ const BookNow = () => {
     setCustomerInfo(info);
   };
 
+  // Handle coupon code application
+  const handleCouponApply = (code: string) => {
+    setCouponCode(code);
+    
+    // Simple validation for the coupon code
+    if (code.toLowerCase() === 'cuephoria50') {
+      setDiscountPercentage(50); // 50% discount
+      toast.success('50% discount applied!');
+    } else {
+      setDiscountPercentage(0);
+    }
+  };
+  
+  // Calculate discounted price
+  const calculateTotalPrice = () => {
+    const originalPrice = selectedStations.reduce((sum, station) => 
+      sum + (station.hourlyRate * (bookingDuration / 60)), 0
+    );
+    
+    if (discountPercentage > 0) {
+      return originalPrice * (1 - (discountPercentage/100));
+    }
+    
+    return originalPrice;
+  };
+  
   // Handle share booking details
   const handleShareBooking = async () => {
     if (!bookingIds.length || !customerInfo.name) return;
@@ -518,6 +566,15 @@ View booking online: ${bookingDetails.viewUrl}
         throw new Error('Failed to get customer ID');
       }
       
+      // Create a booking group ID if multiple stations are selected
+      const isMultipleStations = selectedStations.length > 1;
+      const groupId = isMultipleStations ? crypto.randomUUID() : null;
+      setBookingGroupId(groupId);
+      
+      // Calculate the final price with any applicable discounts
+      const totalPrice = calculateTotalPrice();
+      const discount = discountPercentage > 0 ? discountPercentage : 0;
+      
       // Create bookings for each selected station
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       const createdBookingIds: string[] = [];
@@ -535,7 +592,14 @@ View booking online: ${bookingDetails.viewUrl}
           end_time: selectedTimeSlot.endTime,
           duration: bookingDuration,
           status: 'confirmed',
-          notes: ''
+          notes: '',
+          booking_group_id: groupId,
+          coupon_code: couponCode || null,
+          discount_percentage: discount,
+          original_price: station.hourlyRate * (bookingDuration / 60),
+          final_price: discount > 0 
+            ? (station.hourlyRate * (bookingDuration / 60) * (1 - discount/100))
+            : (station.hourlyRate * (bookingDuration / 60))
         };
         
         console.log('Booking data:', bookingData);
@@ -603,7 +667,9 @@ View booking online: ${bookingDetails.viewUrl}
               endTime: selectedTimeSlot.endTime,
               duration: bookingDuration,
               bookingReference: bookingAccessCode,
-              recipientEmail: customerInfo.email
+              recipientEmail: customerInfo.email,
+              discount: discountPercentage > 0 ? `${discountPercentage}% discount applied` : null,
+              finalPrice: totalPrice.toFixed(2)
             }
           });
           
@@ -932,6 +998,8 @@ View booking online: ${bookingDetails.viewUrl}
                   timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
                   customerInfo={customerInfo}
+                  couponCode={couponCode}
+                  onCouponApply={handleCouponApply}
                 />
               )}
               
@@ -975,6 +1043,18 @@ View booking online: ${bookingDetails.viewUrl}
                       <div className="flex justify-between">
                         <span className="text-gray-400">Duration:</span>
                         <span className="font-medium">{bookingDuration} minutes</span>
+                      </div>
+                      
+                      {discountPercentage > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Discount:</span>
+                          <span className="font-medium text-cuephoria-lightpurple">{discountPercentage}% off</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Price:</span>
+                        <span className="font-medium">₹{calculateTotalPrice().toFixed(2)}</span>
                       </div>
                       
                       <div className="flex justify-between">
@@ -1066,6 +1146,8 @@ View booking online: ${bookingDetails.viewUrl}
                         email: '',
                         isExistingCustomer: false
                       });
+                      setCouponCode('');
+                      setDiscountPercentage(0);
                       setBookingConfirmed(false);
                       setBookingIds([]);
                     }}
