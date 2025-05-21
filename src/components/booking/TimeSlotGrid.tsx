@@ -1,6 +1,8 @@
 
 import React from 'react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { format } from 'date-fns';
+import { getEarliestBookingTime } from '@/utils/booking.utils';
 
 interface TimeSlot {
   startTime: string;
@@ -13,13 +15,15 @@ interface TimeSlotGridProps {
   selectedTimeSlot: TimeSlot | null;
   loading: boolean;
   onSelectTimeSlot: (timeSlot: TimeSlot) => void;
+  isToday: boolean;
 }
 
 const TimeSlotGrid = ({
   timeSlots,
   selectedTimeSlot,
   loading,
-  onSelectTimeSlot
+  onSelectTimeSlot,
+  isToday
 }: TimeSlotGridProps) => {
   if (loading) {
     return (
@@ -34,7 +38,12 @@ const TimeSlotGrid = ({
     return (
       <div className="text-center py-8 border border-gray-800 rounded-md bg-gray-900/50">
         <h3 className="text-lg font-medium">No Time Slots Available</h3>
-        <p className="text-gray-400 mt-2">Please select a different date or station</p>
+        <p className="text-gray-400 mt-2">
+          {isToday ? 
+            `No more slots available for today after ${getEarliestBookingTime()}. Please select a different date.` : 
+            'Please select a different date or station'
+          }
+        </p>
       </div>
     );
   }
@@ -52,6 +61,14 @@ const TimeSlotGrid = ({
 
   return (
     <div className="space-y-4">
+      {isToday && (
+        <div className="mb-4 p-3 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded">
+          <p className="text-sm text-gray-300">
+            <span className="font-medium text-cuephoria-lightpurple">Note:</span> For today, bookings are available starting from {getEarliestBookingTime()} onwards (30-minute buffer from current time).
+          </p>
+        </div>
+      )}
+    
       {Object.entries(groupedTimeSlots).map(([hour, slots]) => (
         <div key={hour} className="border-b border-gray-800 pb-4 last:border-0">
           <h4 className="text-sm font-medium text-gray-400 mb-2">

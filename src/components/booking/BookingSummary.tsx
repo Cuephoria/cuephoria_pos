@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
@@ -35,6 +36,15 @@ const BookingSummary = ({
   const [validCoupon, setValidCoupon] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [showCouponHint, setShowCouponHint] = useState(false);
+  
+  // Group stations by type for better presentation
+  const groupedStations = stations.reduce((groups, station) => {
+    if (!groups[station.type]) {
+      groups[station.type] = [];
+    }
+    groups[station.type].push(station);
+    return groups;
+  }, {} as Record<string, Station[]>);
   
   const totalPrice = stations.reduce((sum, station) => 
     sum + (station.hourlyRate * (duration / 60)), 0
@@ -111,22 +121,29 @@ const BookingSummary = ({
             </div>
           </div>
           
-          {/* Station(s) */}
+          {/* Station(s) - Grouped by type */}
           <div className="flex flex-col md:flex-row md:justify-between md:items-start py-3 border-b border-gray-700">
             <div className="flex items-center mb-2 md:mb-0">
               <Clock className="text-cuephoria-purple mr-3 h-5 w-5" />
               <h4 className="text-gray-400">Station{stations.length > 1 ? 's' : ''}</h4>
             </div>
-            <div className="text-white">
-              {stations.map((station, index) => (
-                <div key={station.id} className="mb-2 last:mb-0">
-                  <p className="font-medium">{station.name}</p>
-                  <p className="text-sm text-gray-400">
-                    ₹{station.hourlyRate} per hour × {duration / 60} hour{duration > 60 ? 's' : ''} = 
-                    ₹{(station.hourlyRate * (duration / 60)).toFixed(2)}
+            <div className="text-white w-full md:w-auto md:text-right">
+              {Object.entries(groupedStations).map(([type, typeStations]) => (
+                <div key={type} className="mb-3 last:mb-0">
+                  <p className="font-medium text-cuephoria-lightpurple">
+                    {type === 'ps5' ? 'PlayStation 5' : '8-Ball Pool'} 
+                    <span className="text-sm ml-1">({typeStations.length})</span>
                   </p>
+                  {typeStations.map(station => (
+                    <p key={station.id} className="text-sm text-gray-400">
+                      {station.name}: ₹{(station.hourlyRate * (duration / 60)).toFixed(2)}
+                    </p>
+                  ))}
                 </div>
               ))}
+              <p className="text-sm mt-2 pt-2 border-t border-gray-700">
+                {stations.length} station{stations.length > 1 ? 's' : ''} × {duration} minutes
+              </p>
             </div>
           </div>
           

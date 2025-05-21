@@ -23,7 +23,8 @@ interface CustomerInfo {
 
 interface BookingConfirmationProps {
   bookingId: string;
-  station: Station;
+  bookingGroupId?: string;
+  stations: Station[];
   date: Date;
   timeSlot: TimeSlot;
   duration: number;
@@ -36,7 +37,8 @@ interface BookingConfirmationProps {
 
 const BookingConfirmation = ({
   bookingId,
-  station,
+  bookingGroupId,
+  stations,
   date,
   timeSlot,
   duration,
@@ -53,6 +55,15 @@ const BookingConfirmation = ({
     return bookingId.substring(0, 8).toUpperCase();
   };
   
+  // Group stations by type for better presentation
+  const groupedStations = stations.reduce((groups, station) => {
+    if (!groups[station.type]) {
+      groups[station.type] = [];
+    }
+    groups[station.type].push(station);
+    return groups;
+  }, {} as Record<string, Station[]>);
+  
   // Handle copy booking reference
   const copyBookingReference = () => {
     navigator.clipboard.writeText(formatBookingReference());
@@ -62,7 +73,11 @@ const BookingConfirmation = ({
   };
   
   // Create shareable booking text
-  const shareableText = `I've booked ${station.name} at Cuephoria on ${format(date, 'MMM d')} at ${timeSlot.startTime}. Booking reference: ${formatBookingReference()}`;
+  const stationsText = stations.length > 1 
+    ? `${stations.length} stations at Cuephoria` 
+    : `${stations[0].name} at Cuephoria`;
+    
+  const shareableText = `I've booked ${stationsText} on ${format(date, 'MMM d')} at ${timeSlot.startTime}. Booking reference: ${formatBookingReference()}`;
   
   // Handle share booking
   const shareBooking = async () => {
@@ -86,12 +101,16 @@ const BookingConfirmation = ({
     if (!customerInfo.email) return;
 
     try {
+      // Get station names
+      const stationNames = stations.map(s => s.name).join(", ");
+
       // Call the send-booking-confirmation edge function
       const { error } = await supabase.functions.invoke('send-booking-confirmation', {
         body: {
           bookingId,
+          bookingGroupId,
           customerName: customerInfo.name,
-          stationName: station.name,
+          stationName: stationNames,
           bookingDate: format(date, 'EEEE, MMMM d, yyyy'),
           startTime: timeSlot.startTime,
           endTime: timeSlot.endTime,
@@ -99,7 +118,8 @@ const BookingConfirmation = ({
           bookingReference: formatBookingReference(),
           recipientEmail: customerInfo.email,
           discount: discountPercentage ? `${discountPercentage}% discount applied` : null,
-          finalPrice: finalPrice ? finalPrice.toFixed(2) : null
+          finalPrice: finalPrice ? finalPrice.toFixed(2) : null,
+          totalStations: stations.length
         }
       });
 
@@ -122,7 +142,10 @@ const BookingConfirmation = ({
   }, []);
   
   // Calculate price if not provided
-  const displayOriginalPrice = originalPrice || (station.hourlyRate * (duration / 60));
+  const displayOriginalPrice = originalPrice || stations.reduce((sum, station) => 
+    sum + (station.hourlyRate * (duration / 60)), 0
+  );
+  
   const displayFinalPrice = finalPrice || (discountPercentage 
     ? displayOriginalPrice * (1 - (discountPercentage / 100)) 
     : displayOriginalPrice);
@@ -164,10 +187,30 @@ const BookingConfirmation = ({
         <div className="p-4">
           <h4 className="font-medium text-white mb-2">Booking Details</h4>
           <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Station:</span>
-              <span>{station.name}</span>
+            {/* Show stations grouped by type */}
+            <div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-400">
+                  {stations.length > 1 ? 'Stations:' : 'Station:'}
+                </span>
+                <div className="text-right">
+                  {Object.entries(groupedStations).map(([type, typeStations]) => (
+                    <div key={type} className="mb-2">
+                      <div className="font-medium">
+                        {type === 'ps5' ? 'PlayStation 5' : '8-Ball Pool'} 
+                        <span className="text-xs ml-1">({typeStations.length})</span>
+                      </div>
+                      {typeStations.map(station => (
+                        <div key={station.id} className="text-sm text-gray-300">
+                          {station.name}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+            
             <div className="flex justify-between items-center">
               <span className="text-gray-400">Date:</span>
               <div className="flex items-center">

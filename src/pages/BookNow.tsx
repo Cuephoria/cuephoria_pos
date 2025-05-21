@@ -1,27 +1,26 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Check, ChevronRight, Clock, Gamepad2, Share2, Table2, Ticket } from 'lucide-react';
+import { CalendarIcon, ChevronRight } from 'lucide-react';
 import BookingSteps from '@/components/booking/BookingSteps';
 import StationSelector from '@/components/booking/StationSelector';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import CustomerInfoForm from '@/components/booking/CustomerInfoForm';
 import BookingSummary from '@/components/booking/BookingSummary';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
-import { generateTimeSlots, mapDatabaseSlotToFrontend } from '@/utils/booking.utils';
+import { generateTimeSlots, mapDatabaseSlotToFrontend, getEarliestBookingTime } from '@/utils/booking.utils';
 import { Badge } from '@/components/ui/badge';
 import { DatePicker } from '@/components/ui/date-picker';
+import ControllerManagement from '@/components/booking/ControllerManagement';
 
 // Types for our booking form
 interface CustomerInfo {
@@ -52,6 +51,10 @@ const BookNow = () => {
   const [stationType, setStationType] = useState<'ps5'|'8ball'|'all'>('all');
   const [loadingStations, setLoadingStations] = useState<boolean>(true);
   
+  // Controller management
+  const [totalControllers, setTotalControllers] = useState<number>(6);
+  const [availableControllers, setAvailableControllers] = useState<number>(6);
+  
   // Time slot selection
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -80,6 +83,7 @@ const BookNow = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingGroupId, setBookingGroupId] = useState<string | null>(null);
+  const [isToday, setIsToday] = useState<boolean>(true);
 
   // Fetch stations on component mount
   useEffect(() => {
@@ -87,6 +91,11 @@ const BookNow = () => {
     fetchStations();
     fetchTodayBookings();
   }, []);
+  
+  // Check if selected date is today
+  useEffect(() => {
+    setIsToday(isSameDay(selectedDate, new Date()));
+  }, [selectedDate]);
   
   // Filter available stations by type when stationType changes
   useEffect(() => {
@@ -100,6 +109,11 @@ const BookNow = () => {
   useEffect(() => {
     if (selectedStations.length > 0 && selectedDate) {
       fetchAvailableTimeSlots();
+      
+      // Update controller availability for PS5 stations
+      if (selectedStations.some(station => station.type === 'ps5')) {
+        updateControllerAvailability();
+      }
     }
   }, [selectedDate, selectedStations, bookingDuration]);
 
@@ -143,6 +157,45 @@ const BookNow = () => {
     
     return () => clearInterval(intervalId);
   }, [todayBookings]);
+
+  // Update controller availability
+  const updateControllerAvailability = async () => {
+    try {
+      if (!selectedDate || !selectedTimeSlot) {
+        // Default to all controllers available if no date/time selected
+        setAvailableControllers(6);
+        return;
+      }
+      
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Count PS5 bookings for the selected time slot
+      const { data: ps5Bookings, error } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('booking_date', formattedDate)
+        .eq('status', 'confirmed')
+        .eq('start_time', selectedTimeSlot.startTime + ':00')
+        .or(`end_time.gte.${selectedTimeSlot.endTime + ':00'}`)
+        .in('station_id', stations
+          .filter(s => s.type === 'ps5')
+          .map(s => s.id)
+        );
+        
+      if (error) throw error;
+      
+      // Calculate available controllers (total - booked)
+      const bookedControllers = ps5Bookings?.length || 0;
+      const remainingControllers = Math.max(0, totalControllers - bookedControllers);
+      
+      setAvailableControllers(remainingControllers);
+      
+    } catch (error) {
+      console.error('Error checking controller availability:', error);
+      // Default to showing all available if we can't check
+      setAvailableControllers(6);
+    }
+  };
 
   // Function to fetch stations from database
   const fetchStations = async () => {
@@ -220,25 +273,13 @@ const BookNow = () => {
       // Format date for API call (YYYY-MM-DD)
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
-      // First, generate time slots for the day (11am - 11pm)
-      const allSlots = generateTimeSlots('11:00', '23:00', bookingDuration);
-      
-      // Filter slots that are in the past if the date is today
+      // Check if selected date is today
       const now = new Date();
       const isToday = isSameDay(selectedDate, now);
       
-      if (isToday) {
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const currentTimeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-        
-        // Mark past time slots as unavailable
-        allSlots.forEach(slot => {
-          if (slot.startTime <= currentTimeString) {
-            slot.isAvailable = false;
-          }
-        });
-      }
+      // First, generate time slots for the day (11am - 11pm)
+      // If today, pass the current time to filter out past time slots
+      const allSlots = generateTimeSlots('11:00', '23:00', bookingDuration, isToday ? now : undefined);
       
       // Check availability for each station and find common available slots
       let availableSlots = [...allSlots];
@@ -289,7 +330,9 @@ const BookNow = () => {
       console.error('Error fetching time slots:', error);
       
       // Generate fallback time slots if API call fails
-      const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration).map(slot => ({
+      const now = new Date();
+      const isToday = isSameDay(selectedDate, now);
+      const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration, isToday ? now : undefined).map(slot => ({
         ...slot,
         isAvailable: true // Make all slots available as fallback
       }));
@@ -313,6 +356,12 @@ const BookNow = () => {
       if (isAlreadySelected) {
         return prev.filter(s => s.id !== station.id);
       } else {
+        // Check if we're selecting a PS5 station and if there are enough controllers
+        if (station.type === 'ps5' && 
+            prev.filter(s => s.type === 'ps5').length >= availableControllers) {
+          toast.error(`Cannot select more PS5 stations. Only ${availableControllers} controllers available.`);
+          return prev;
+        }
         return [...prev, station];
       }
     });
@@ -321,6 +370,11 @@ const BookNow = () => {
   // Handle time slot selection
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     setSelectedTimeSlot(slot);
+    
+    // Update controller availability when time slot changes
+    if (selectedStations.some(station => station.type === 'ps5')) {
+      updateControllerAvailability();
+    }
   };
 
   // Handle date selection 
@@ -328,6 +382,9 @@ const BookNow = () => {
     if (date) {
       setSelectedDate(date);
       setSelectedTimeSlot(null); // Reset time slot when date changes
+      
+      // Check if the selected date is today
+      setIsToday(isSameDay(date, new Date()));
     }
   };
   
@@ -495,7 +552,7 @@ View booking online: ${bookingDetails.viewUrl}
     );
   };
   
-  // Submit booking to server
+  // Submit booking to server using transaction
   const handleSubmitBooking = async () => {
     if (selectedStations.length === 0 || !selectedDate || !selectedTimeSlot || !customerInfo.name || !customerInfo.phone) {
       toast.error('Missing required booking information');
@@ -565,9 +622,8 @@ View booking online: ${bookingDetails.viewUrl}
         throw new Error('Failed to get customer ID');
       }
       
-      // Create a booking group ID if multiple stations are selected
-      const isMultipleStations = selectedStations.length > 1;
-      const groupId = isMultipleStations ? crypto.randomUUID() : null;
+      // Create a booking group ID for all stations (even if only one)
+      const groupId = crypto.randomUUID();
       setBookingGroupId(groupId);
       
       // Calculate the final price with any applicable discounts
@@ -580,48 +636,56 @@ View booking online: ${bookingDetails.viewUrl}
       
       console.log('Creating bookings for date:', formattedDate);
       
-      for (const station of selectedStations) {
-        console.log(`Creating booking for station: ${station.name} (${station.id})`);
-        
-        const bookingData = {
-          station_id: station.id,
-          customer_id: customerId,
-          booking_date: formattedDate,
-          start_time: selectedTimeSlot.startTime,
-          end_time: selectedTimeSlot.endTime,
-          duration: bookingDuration,
-          status: 'confirmed',
-          notes: '',
-          booking_group_id: groupId,
-          coupon_code: couponCode || null,
-          discount_percentage: discount,
-          original_price: station.hourlyRate * (bookingDuration / 60),
-          final_price: discount > 0 
-            ? (station.hourlyRate * (bookingDuration / 60) * (1 - discount/100))
-            : (station.hourlyRate * (bookingDuration / 60))
-        };
-        
-        console.log('Booking data:', bookingData);
-        
-        const { data: newBooking, error: bookingError } = await supabase
-          .from('bookings')
-          .insert(bookingData)
-          .select()
-          .single();
-          
-        if (bookingError) {
-          console.error('Booking error:', bookingError);
-          throw new Error('Failed to create booking: ' + bookingError.message);
-        }
-        
-        if (!newBooking) {
-          throw new Error('No booking data returned');
-        }
-        
-        console.log('Booking created successfully:', newBooking);
-        createdBookingIds.push(newBooking.id);
+      // Perform one final availability check before booking
+      const { data: availabilityCheck, error: availabilityError } = await supabase.rpc('get_available_slots', {
+        p_date: formattedDate,
+        p_station_id: selectedStations[0].id,
+        p_slot_duration: bookingDuration
+      });
+      
+      if (availabilityError) {
+        console.error('Error checking final availability:', availabilityError);
+        throw new Error('Could not confirm availability: ' + availabilityError.message);
       }
-
+      
+      // Check if the selected slot is still available
+      const selectedSlotIsStillAvailable = availabilityCheck.some((slot: any) => 
+        slot.start_time.substring(0, 5) === selectedTimeSlot.startTime && 
+        slot.is_available === true
+      );
+      
+      if (!selectedSlotIsStillAvailable) {
+        throw new Error('This time slot is no longer available. Please choose another time.');
+      }
+      
+      // Use transaction to ensure all bookings are created or none
+      const { data: newBookings, error: transactionError } = await supabase.rpc('create_booking_group', {
+        p_customer_id: customerId,
+        p_booking_date: formattedDate,
+        p_start_time: selectedTimeSlot.startTime + ':00',
+        p_end_time: selectedTimeSlot.endTime + ':00',
+        p_duration: bookingDuration,
+        p_booking_group_id: groupId,
+        p_coupon_code: couponCode || null,
+        p_discount_percentage: discount,
+        p_station_ids: selectedStations.map(s => s.id),
+        p_station_prices: selectedStations.map(s => s.hourlyRate * (bookingDuration / 60))
+      });
+      
+      if (transactionError) {
+        console.error('Transaction error:', transactionError);
+        throw new Error('Failed to create bookings: ' + transactionError.message);
+      }
+      
+      console.log('Booking transaction result:', newBookings);
+      
+      if (!Array.isArray(newBookings) || newBookings.length === 0) {
+        throw new Error('No bookings were created');
+      }
+      
+      // Extract the booking IDs
+      createdBookingIds.push(...newBookings.map(b => b.id));
+      
       // Get access code for the first booking
       if (createdBookingIds.length > 0) {
         console.log('Getting access code for booking ID:', createdBookingIds[0]);
@@ -659,6 +723,7 @@ View booking online: ${bookingDetails.viewUrl}
           const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
             body: {
               bookingId: primaryBookingId,
+              bookingGroupId: groupId,
               customerName: customerInfo.name,
               stationName: stationNames,
               bookingDate: format(selectedDate, 'EEEE, MMMM d, yyyy'),
@@ -668,7 +733,8 @@ View booking online: ${bookingDetails.viewUrl}
               bookingReference: bookingAccessCode,
               recipientEmail: customerInfo.email,
               discount: discountPercentage > 0 ? `${discountPercentage}% discount applied` : null,
-              finalPrice: totalPrice.toFixed(2)
+              finalPrice: totalPrice.toFixed(2),
+              totalStations: selectedStations.length
             }
           });
           
@@ -823,6 +889,19 @@ View booking online: ${bookingDetails.viewUrl}
                     multiSelect={true}
                   />
                   
+                  {/* Controller Availability for PS5 */}
+                  {stationType === 'ps5' || (stationType === 'all' && stations.some(s => s.type === 'ps5')) && (
+                    <div className="mt-6 p-4 bg-gray-800/40 border border-gray-700 rounded-lg">
+                      <ControllerManagement 
+                        totalControllers={totalControllers}
+                        availableControllers={availableControllers}
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Note: Each PS5 station requires one controller. We have {totalControllers} controllers in total.
+                      </p>
+                    </div>
+                  )}
+                  
                   {selectedStations.length > 0 && (
                     <div className="mt-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
                       <h4 className="text-lg font-medium mb-2 text-white">Selected Stations ({selectedStations.length})</h4>
@@ -952,6 +1031,7 @@ View booking online: ${bookingDetails.viewUrl}
                           selectedTimeSlot={selectedTimeSlot}
                           loading={loadingTimeSlots}
                           onSelectTimeSlot={handleTimeSlotSelect}
+                          isToday={isToday}
                         />
                       </div>
                     </div>
@@ -1005,15 +1085,18 @@ View booking online: ${bookingDetails.viewUrl}
               {/* Step 5: Booking Confirmation */}
               {currentStep === 5 && (
                 <BookingConfirmation 
-                  bookingId={bookingIds[0]}
-                  station={selectedStations[0]}
+                  bookingId={bookingIds[0]} 
+                  bookingGroupId={bookingGroupId || undefined}
+                  stations={selectedStations}
                   date={selectedDate}
                   timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
                   customerInfo={customerInfo}
                   discountPercentage={discountPercentage}
-                  originalPrice={selectedStations[0].hourlyRate * (bookingDuration / 60)}
-                  finalPrice={calculateTotalPrice() / selectedStations.length}
+                  originalPrice={selectedStations.reduce((sum, station) => 
+                    sum + (station.hourlyRate * (bookingDuration / 60)), 0
+                  )}
+                  finalPrice={calculateTotalPrice()}
                   couponCode={couponCode}
                 />
               )}
