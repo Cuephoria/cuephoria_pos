@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ const Index = () => {
             </Button>
             
             <Button
-              onClick={() => navigate('/booknow')}
+              onClick={() => window.location.href = 'admin.cuephoria.in/booknow'}
               size="lg"
               className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 animate-pulse-soft"
             >

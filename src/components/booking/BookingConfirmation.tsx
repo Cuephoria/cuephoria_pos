@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Check, Clock, Copy, Download, Share2 } from 'lucide-react';
+import { CalendarIcon, Check, Clock, Copy, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimeSlot {
   startTime: string;
@@ -72,6 +72,44 @@ const BookingConfirmation = ({
       console.error('Error sharing:', error);
     }
   };
+
+  // Send confirmation email
+  const sendConfirmationEmail = async () => {
+    if (!customerInfo.email) return;
+
+    try {
+      // Call the send-booking-confirmation edge function
+      const { error } = await supabase.functions.invoke('send-booking-confirmation', {
+        body: {
+          bookingId,
+          customerName: customerInfo.name,
+          stationName: station.name,
+          bookingDate: format(date, 'EEEE, MMMM d, yyyy'),
+          startTime: timeSlot.startTime,
+          endTime: timeSlot.endTime,
+          duration,
+          bookingReference: formatBookingReference(),
+          recipientEmail: customerInfo.email
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Confirmation email sent successfully');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast.error('Failed to send confirmation email');
+    }
+  };
+
+  // Send email if customer provided an email address
+  React.useEffect(() => {
+    if (customerInfo.email) {
+      sendConfirmationEmail();
+    }
+  }, []);
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -83,6 +121,7 @@ const BookingConfirmation = ({
         <h3 className="text-xl font-semibold">Booking Confirmed!</h3>
         <p className="text-gray-400 mt-2">
           Your booking has been successfully confirmed
+          {customerInfo.email && " and a confirmation email has been sent"}
         </p>
       </div>
       
@@ -148,26 +187,14 @@ const BookingConfirmation = ({
             {customerInfo.email && (
               <div className="flex justify-between">
                 <span className="text-gray-400">Email:</span>
-                <span>{customerInfo.email}</span>
+                <span className="break-all">{customerInfo.email}</span>
               </div>
             )}
           </div>
         </div>
       </div>
       
-      {/* QR Code */}
-      <div className="mt-6 text-center">
-        <h4 className="font-medium text-white mb-3">Show this at arrival</h4>
-        <div className="bg-white inline-block p-3 rounded-lg">
-          <QRCodeSVG 
-            value={`BOOKING:${bookingId}`}
-            size={120}
-            includeMargin={false}
-          />
-        </div>
-      </div>
-      
-      {/* Share and Download buttons */}
+      {/* Share button */}
       <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
         <Button variant="outline" onClick={shareBooking}>
           <Share2 className="mr-2 h-4 w-4" /> Share Booking
