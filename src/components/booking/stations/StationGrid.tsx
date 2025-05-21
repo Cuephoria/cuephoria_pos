@@ -18,30 +18,10 @@ const StationGrid: React.FC<StationGridProps> = ({
 }) => {
   // Get stations to display based on type filter
   const getFilteredStations = () => {
-    // First filter by type if needed
-    const typeFiltered = stationType === 'all' 
-      ? stations 
-      : stations.filter(station => station.type === stationType);
-    
-    // Then sort them sequentially
-    return typeFiltered.sort((a, b) => {
-      // First sort by type (ps5 first, then 8ball)
-      if (a.type !== b.type) {
-        return a.type === 'ps5' ? -1 : 1;
-      }
-      
-      // Extract numbers from station names
-      const aMatch = a.name.match(/(\d+)/);
-      const bMatch = b.name.match(/(\d+)/);
-      
-      // If both have numbers, sort by the numeric value
-      if (aMatch && bMatch) {
-        return parseInt(aMatch[0], 10) - parseInt(bMatch[0], 10);
-      }
-      
-      // Fallback to alphabetical sort if no numbers found
-      return a.name.localeCompare(b.name);
-    });
+    if (stationType === 'all') {
+      return stations;
+    }
+    return stations.filter(station => station.type === stationType);
   };
 
   const filteredStations = getFilteredStations();

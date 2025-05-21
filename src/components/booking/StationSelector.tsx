@@ -25,20 +25,19 @@ const StationSelector = ({
   onStationTypeChange,
   onStationSelect
 }: StationSelectorProps) => {
-  // Sort stations sequentially by type and number
+  // Sort stations by type and name with a numerical sort
   const sortedStations = [...stations].sort((a, b) => {
     // First sort by type (ps5 first, then 8ball)
     if (a.type !== b.type) {
       return a.type === 'ps5' ? -1 : 1;
     }
     
-    // Extract numbers from station names
+    // Then sort numerically by extracting numbers from the name
     const aMatch = a.name.match(/(\d+)/);
     const bMatch = b.name.match(/(\d+)/);
     
-    // If both have numbers, sort by the numeric value
     if (aMatch && bMatch) {
-      return parseInt(aMatch[0], 10) - parseInt(bMatch[0], 10);
+      return parseInt(aMatch[0]) - parseInt(bMatch[0]);
     }
     
     // Fallback to alphabetical sort if no numbers found

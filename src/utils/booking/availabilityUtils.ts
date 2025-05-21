@@ -78,15 +78,17 @@ export const checkStationAvailability = async (
       console.log("RPC error, using fallback check:", rpcError);
       
       // Manual fallback check (query the bookings directly)
-      // Create a proper filter string combining all conditions
-      const filterString = `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds},start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds},start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds},start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`;
-      
       const { data: existingBookings, error } = await supabase
         .from('bookings')
         .select('station_id, station:stations(id, name, is_controller, parent_station_id)')
         .eq('booking_date', date)
         .in('status', ['confirmed', 'in-progress'])
-        .or(filterString)
+        .or(
+          `start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`,
+          `start_time.lt.${endTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`,
+          `start_time.gte.${startTimeWithSeconds},end_time.lte.${endTimeWithSeconds}`,
+          `start_time.lte.${startTimeWithSeconds},end_time.gte.${endTimeWithSeconds}`
+        )
         .in('station_id', stationIds);
       
       if (error) {
