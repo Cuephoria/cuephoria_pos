@@ -171,6 +171,7 @@ export type Database = {
       bookings: {
         Row: {
           booking_date: string
+          booking_group_id: string | null
           created_at: string
           customer_id: string
           duration: number
@@ -185,6 +186,7 @@ export type Database = {
         }
         Insert: {
           booking_date: string
+          booking_group_id?: string | null
           created_at?: string
           customer_id: string
           duration: number
@@ -199,6 +201,7 @@ export type Database = {
         }
         Update: {
           booking_date?: string
+          booking_group_id?: string | null
           created_at?: string
           customer_id?: string
           duration?: number
