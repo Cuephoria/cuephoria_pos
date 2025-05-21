@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
 import { CalendarIcon, Check, Clock, Copy, Share2, Ticket } from 'lucide-react';
@@ -49,6 +49,8 @@ const BookingConfirmation = ({
   couponCode
 }: BookingConfirmationProps) => {
   const [copied, setCopied] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   
   // Format booking reference for display
   const formatBookingReference = () => {
@@ -98,14 +100,18 @@ const BookingConfirmation = ({
 
   // Send confirmation email
   const sendConfirmationEmail = async () => {
-    if (!customerInfo.email) return;
+    if (!customerInfo.email) {
+      toast.error('No email address provided');
+      return;
+    }
 
     try {
+      setSendingEmail(true);
       // Get station names
       const stationNames = stations.map(s => s.name).join(", ");
 
       // Call the send-booking-confirmation edge function
-      const { error } = await supabase.functions.invoke('send-booking-confirmation', {
+      const { data, error } = await supabase.functions.invoke('send-booking-confirmation', {
         body: {
           bookingId,
           bookingGroupId,
@@ -124,19 +130,24 @@ const BookingConfirmation = ({
       });
 
       if (error) {
-        throw error;
+        console.error('Error from edge function:', error);
+        throw new Error(`Failed to send email: ${error.message}`);
       }
       
+      console.log('Email sending response:', data);
+      setEmailSent(true);
       toast.success('Confirmation email sent successfully');
     } catch (error) {
       console.error('Error sending email:', error);
-      toast.error('Failed to send confirmation email');
+      toast.error('Failed to send confirmation email. Please try again.');
+    } finally {
+      setSendingEmail(false);
     }
   };
 
   // Send email if customer provided an email address
-  React.useEffect(() => {
-    if (customerInfo.email) {
+  useEffect(() => {
+    if (customerInfo.email && !emailSent) {
       sendConfirmationEmail();
     }
   }, []);
@@ -160,7 +171,7 @@ const BookingConfirmation = ({
         <h3 className="text-xl font-semibold">Booking Confirmed!</h3>
         <p className="text-gray-400 mt-2">
           Your booking has been successfully confirmed
-          {customerInfo.email && " and a confirmation email has been sent"}
+          {customerInfo.email && emailSent && " and a confirmation email has been sent"}
         </p>
       </div>
       
@@ -281,6 +292,17 @@ const BookingConfirmation = ({
           </div>
         </div>
       </div>
+      
+      {/* Send Email button (only show if email exists but hasn't been sent) */}
+      {customerInfo.email && !emailSent && (
+        <Button 
+          className="w-full" 
+          onClick={sendConfirmationEmail}
+          disabled={sendingEmail}
+        >
+          {sendingEmail ? 'Sending...' : 'Resend Confirmation Email'}
+        </Button>
+      )}
       
       {/* Share button */}
       <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">

@@ -162,7 +162,9 @@ export const useStationBooking = ({
           const primaryBookingId = createdBookingIds[0];
           const stationNames = selectedStations.map(s => s.name).join(", ");
           
-          const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
+          console.log('Sending booking confirmation email to:', customerInfo.email);
+          
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
             body: {
               bookingId: primaryBookingId,
               bookingGroupId: groupId,
@@ -172,7 +174,7 @@ export const useStationBooking = ({
               startTime: selectedTimeSlot.startTime,
               endTime: selectedTimeSlot.endTime,
               duration: bookingDuration,
-              bookingReference: bookingAccessCode,
+              bookingReference: bookingAccessCode || createdBookingIds[0].substring(0, 8).toUpperCase(),
               recipientEmail: customerInfo.email,
               discount: discountPercentage > 0 ? `${discountPercentage}% discount applied` : null,
               finalPrice: selectedStations.reduce((sum, station) => 
@@ -184,9 +186,16 @@ export const useStationBooking = ({
           
           if (emailError) {
             console.error('Error sending email:', emailError);
+            // We don't want to fail the booking if email fails
+            toast.error('Booking confirmed but email notification failed');
+          } else {
+            console.log('Email sent successfully:', emailData);
+            toast.success('Booking confirmation email sent');
           }
         } catch (emailError) {
           console.error('Error invoking email function:', emailError);
+          // We don't want to fail the booking if email fails
+          toast.error('Booking confirmed but there was a problem sending the confirmation email');
         }
       }
       
