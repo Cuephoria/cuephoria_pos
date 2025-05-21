@@ -1,27 +1,19 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-
 const Index = () => {
   const navigate = useNavigate();
-
   useEffect(() => {
     document.title = "Cuephoria Management";
   }, []);
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  return <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
-      <div 
-        className="bg-gradient-to-br from-gray-900 to-black text-white py-20 px-6 flex-grow flex flex-col justify-center items-center text-center"
-        style={{
-          backgroundImage: "url('/lovable-uploads/b266b413-e798-48db-83a6-bdfd46a3bb6e.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundBlendMode: 'overlay'
-        }}
-      >
+      <div style={{
+      backgroundImage: "url('/lovable-uploads/b266b413-e798-48db-83a6-bdfd46a3bb6e.png')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundBlendMode: 'overlay'
+    }} className="bg-gradient-to-br from-gray-900 to-black text-white py-20 px-6 flex-grow flex flex-col justify-center items-center text-center bg-slate-600">
         <div className="max-w-4xl mx-auto bg-black/50 p-8 backdrop-blur-sm rounded-lg border border-cuephoria-purple/20">
           <h1 className="text-4xl md:text-6xl font-bold mb-4 font-heading bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple via-cuephoria-lightpurple to-cuephoria-blue">
             Cuephoria
@@ -35,20 +27,11 @@ const Index = () => {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <Button
-              onClick={() => navigate('/login')}
-              size="lg"
-              variant="outline"
-              className="text-white border-cuephoria-purple hover:bg-cuephoria-purple/20"
-            >
+            <Button onClick={() => navigate('/login')} size="lg" variant="outline" className="text-white border-cuephoria-purple hover:bg-cuephoria-purple/20">
               Staff Login
             </Button>
             
-            <Button
-              onClick={() => window.location.href = 'https://admin.cuephoria.in/booknow'}
-              size="lg"
-              className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 animate-pulse-soft"
-            >
+            <Button onClick={() => window.location.href = 'https://admin.cuephoria.in/booknow'} size="lg" className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 animate-pulse-soft">
               Book Now
             </Button>
           </div>
@@ -96,8 +79,6 @@ const Index = () => {
           &copy; {new Date().getFullYear()} Cuephoria. All rights reserved.
         </p>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
