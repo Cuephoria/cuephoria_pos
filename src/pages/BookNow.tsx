@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
 import { CalendarIcon, ChevronRight, Clock } from 'lucide-react';
 import BookingSteps from '@/components/booking/BookingSteps';
-import StationSelector from '@/components/booking/StationSelector';
+import AvailableStationsGrid from '@/components/booking/AvailableStationsGrid';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
 import CustomerInfoForm from '@/components/booking/CustomerInfoForm';
 import BookingSummary from '@/components/booking/BookingSummary';
@@ -37,7 +38,7 @@ interface TimeSlot {
 }
 
 const BookNow = () => {
-  // Current booking step
+  // Current booking step (reordered flow)
   const [currentStep, setCurrentStep] = useState<1|2|3|4|5>(1);
 
   // Date selection
@@ -47,7 +48,7 @@ const BookNow = () => {
   // Station selection
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStations, setSelectedStations] = useState<Station[]>([]);
-  const [stationType, setStationType] = useState<'ps5'|'8ball'|'all'>('all');
+  const [availableStations, setAvailableStations] = useState<Station[]>([]);
   const [loadingStations, setLoadingStations] = useState<boolean>(true);
   
   // Controller management
@@ -94,27 +95,20 @@ const BookNow = () => {
   // Check if selected date is today
   useEffect(() => {
     setIsToday(isSameDay(selectedDate, new Date()));
-  }, [selectedDate]);
+    // Reset time slot when date changes
+    setSelectedTimeSlot(null);
+    // Fetch time slots for the new date
+    fetchAvailableTimeSlots();
+  }, [selectedDate, bookingDuration]);
   
-  // Filter available stations by type when stationType changes
+  // Update available stations when time slot changes
   useEffect(() => {
-    if (selectedStations.length > 0 && 
-        stationType !== 'all') {
-      setSelectedStations(selectedStations.filter(station => station.type === stationType));
+    if (selectedTimeSlot) {
+      fetchAvailableStationsForTimeSlot();
+    } else {
+      setAvailableStations([]);
     }
-  }, [stationType]);
-  
-  // Fetch available time slots when date or selected stations change
-  useEffect(() => {
-    if (selectedStations.length > 0 && selectedDate) {
-      fetchAvailableTimeSlots();
-      
-      // Update controller availability for PS5 stations
-      if (selectedStations.some(station => station.type === 'ps5')) {
-        updateControllerAvailability();
-      }
-    }
-  }, [selectedDate, selectedStations, bookingDuration]);
+  }, [selectedTimeSlot]);
 
   // Set up notification for upcoming bookings
   useEffect(() => {
@@ -261,12 +255,11 @@ const BookNow = () => {
     }
   };
 
-  // Function to fetch available time slots for the selected date and stations
+  // Function to fetch available time slots for the selected date
   const fetchAvailableTimeSlots = async () => {
-    if (selectedStations.length === 0 || !selectedDate) return;
+    if (!selectedDate) return;
     
     setLoadingTimeSlots(true);
-    setSelectedTimeSlot(null);
     
     try {
       // Format date for API call (YYYY-MM-DD)
@@ -280,51 +273,13 @@ const BookNow = () => {
       // If today, pass the current time to filter out past time slots
       const allSlots = generateTimeSlots('11:00', '23:00', bookingDuration, isToday ? now : undefined);
       
-      // Check availability for each station and find common available slots
-      let availableSlots = [...allSlots];
+      // We'll check if there are any stations available at each time slot
+      let availableTimeSlots = [...allSlots];
       
-      for (const station of selectedStations) {
-        try {
-          // Call the get_available_slots function via RPC with explicit table aliases for start_time
-          const { data, error } = await supabase.rpc('get_available_slots', {
-            p_date: formattedDate,
-            p_station_id: station.id,
-            p_slot_duration: bookingDuration
-          });
-          
-          if (error) {
-            console.error(`Error checking availability for station ${station.name}:`, error);
-            continue;
-          }
-          
-          console.log(`Station ${station.name} available slots:`, data);
-          
-          // Handle case where data is null or empty (RPC function might not exist)
-          if (!data || data.length === 0) {
-            toast.error(`No availability data for ${station.name}`);
-            continue;
-          }
-          
-          // Transform data to our TimeSlot format
-          const stationSlots = data.map((slot: any) => mapDatabaseSlotToFrontend(slot));
-          
-          // Filter for common available slots
-          availableSlots = availableSlots.map(slot => {
-            const stationSlot = stationSlots.find(s => 
-              s.startTime === slot.startTime && s.endTime === slot.endTime
-            );
-            
-            return {
-              ...slot,
-              isAvailable: slot.isAvailable && (stationSlot ? stationSlot.isAvailable : false)
-            };
-          });
-        } catch (stationError) {
-          console.error(`Error processing station ${station.name}:`, stationError);
-        }
-      }
+      // Get all stations to check availability
+      availableTimeSlots = await checkOverallAvailability(formattedDate, availableTimeSlots);
       
-      setTimeSlots(availableSlots);
+      setTimeSlots(availableTimeSlots);
     } catch (error) {
       console.error('Error fetching time slots:', error);
       
@@ -342,9 +297,118 @@ const BookNow = () => {
     }
   };
 
-  // Handle station type filter change
-  const handleStationTypeChange = (type: 'ps5' | '8ball' | 'all') => {
-    setStationType(type);
+  // Function to check if any stations are available at each time slot
+  const checkOverallAvailability = async (formattedDate: string, timeSlots: TimeSlot[]): Promise<TimeSlot[]> => {
+    try {
+      // Get all bookings for this date
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select('station_id, start_time, end_time')
+        .eq('booking_date', formattedDate)
+        .eq('status', 'confirmed');
+      
+      if (error) throw error;
+      
+      // Create a map to track which stations are booked at which times
+      const bookedStations: Record<string, Set<string>> = {};
+      
+      // Format each time slot for lookup
+      timeSlots.forEach(slot => {
+        bookedStations[`${slot.startTime}-${slot.endTime}`] = new Set();
+      });
+      
+      // Mark stations as booked for their respective time slots
+      if (bookings) {
+        bookings.forEach(booking => {
+          const bookingStart = booking.start_time.substring(0, 5); // Get HH:MM from HH:MM:SS
+          const bookingEnd = booking.end_time.substring(0, 5);
+          
+          // Check each time slot for overlap with this booking
+          timeSlots.forEach(slot => {
+            // Check if booking overlaps with this time slot
+            const slotStart = slot.startTime;
+            const slotEnd = slot.endTime;
+            
+            // Booking overlaps if:
+            // 1. Booking starts before or at slot start AND booking ends after slot start
+            // 2. Booking starts before slot end AND booking ends after or at slot end
+            // 3. Booking starts after or at slot start AND booking ends before or at slot end
+            if (
+              (bookingStart <= slotStart && bookingEnd > slotStart) ||
+              (bookingStart < slotEnd && bookingEnd >= slotEnd) ||
+              (bookingStart >= slotStart && bookingEnd <= slotEnd)
+            ) {
+              // Add this station to the set of booked stations for this time slot
+              bookedStations[`${slotStart}-${slotEnd}`].add(booking.station_id);
+            }
+          });
+        });
+      }
+      
+      // Now mark each time slot as available or not based on if there are stations available
+      const totalStationCount = stations.length;
+      
+      return timeSlots.map(slot => {
+        const key = `${slot.startTime}-${slot.endTime}`;
+        const bookedCount = bookedStations[key]?.size || 0;
+        
+        // A slot is available if at least one station is available
+        return {
+          ...slot,
+          isAvailable: bookedCount < totalStationCount
+        };
+      });
+      
+    } catch (error) {
+      console.error('Error checking overall availability:', error);
+      return timeSlots; // Return original slots if error
+    }
+  };
+
+  // Function to fetch available stations for selected time slot
+  const fetchAvailableStationsForTimeSlot = async () => {
+    if (!selectedDate || !selectedTimeSlot) {
+      setAvailableStations([]);
+      return;
+    }
+    
+    setLoadingStations(true);
+    setSelectedStations([]); // Clear selected stations when time slot changes
+    
+    try {
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Get all booked stations for the selected time slot
+      const { data: bookedStations, error } = await supabase
+        .from('bookings')
+        .select('station_id')
+        .eq('booking_date', formattedDate)
+        .eq('status', 'confirmed')
+        .or(
+          `start_time.lte.${selectedTimeSlot.startTime + ':00'},end_time.gt.${selectedTimeSlot.startTime + ':00'}`,
+          `start_time.lt.${selectedTimeSlot.endTime + ':00'},end_time.gte.${selectedTimeSlot.endTime + ':00'}`,
+          `start_time.gte.${selectedTimeSlot.startTime + ':00'},end_time.lte.${selectedTimeSlot.endTime + ':00'}`
+        );
+        
+      if (error) throw error;
+      
+      const bookedStationIds = new Set((bookedStations || []).map(b => b.station_id));
+      
+      // Filter available stations
+      const available = stations.filter(station => !bookedStationIds.has(station.id));
+      
+      setAvailableStations(available);
+      
+      // Update controller availability
+      updateControllerAvailability();
+      
+    } catch (error) {
+      console.error('Error fetching available stations:', error);
+      toast.error('Failed to check station availability');
+      setAvailableStations(stations); // Show all stations as fallback
+    } finally {
+      setLoadingStations(false);
+    }
   };
   
   // Handle station selection/deselection
@@ -369,18 +433,12 @@ const BookNow = () => {
   // Handle time slot selection
   const handleTimeSlotSelect = (slot: TimeSlot) => {
     setSelectedTimeSlot(slot);
-    
-    // Update controller availability when time slot changes
-    if (selectedStations.some(station => station.type === 'ps5')) {
-      updateControllerAvailability();
-    }
   };
 
   // Handle date selection 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
-      setSelectedTimeSlot(null); // Reset time slot when date changes
       
       // Check if the selected date is today
       setIsToday(isSameDay(date, new Date()));
@@ -492,16 +550,16 @@ View booking online: ${bookingDetails.viewUrl}
   // Move to next step
   const handleNextStep = () => {
     switch (currentStep) {
-      case 1: // Station selection
-        if (selectedStations.length === 0) {
-          toast.error('Please select at least one station');
+      case 1: // Date and time selection
+        if (!selectedTimeSlot) {
+          toast.error('Please select a time slot');
           return;
         }
         setCurrentStep(2);
         break;
-      case 2: // Date and time selection
-        if (!selectedTimeSlot) {
-          toast.error('Please select a time slot');
+      case 2: // Station selection
+        if (selectedStations.length === 0) {
+          toast.error('Please select at least one station');
           return;
         }
         setCurrentStep(3);
@@ -641,31 +699,35 @@ View booking online: ${bookingDetails.viewUrl}
       
       console.log('Creating bookings for date:', formattedDate);
       
-      // Perform one final availability check before booking - FIX THE AMBIGUOUS COLUMN REFERENCE HERE
-      // by using a modified query with explicit references to the table for start_time column
+      // Perform one final availability check before booking
       const startTimeFormatted = selectedTimeSlot.startTime + ':00';
       const { data: availabilityCheck, error: availabilityError } = await supabase
         .from('bookings')
-        .select('id')
+        .select('id, station_id')
         .eq('booking_date', formattedDate)
-        .eq('station_id', selectedStations[0].id)
         .eq('status', 'confirmed')
-        .filter('start_time', 'eq', startTimeFormatted);
+        .or(
+          `start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`,
+          `start_time.lt.${selectedTimeSlot.endTime + ':00'},end_time.gte.${selectedTimeSlot.endTime + ':00'}`,
+          `start_time.gte.${startTimeFormatted},end_time.lte.${selectedTimeSlot.endTime + ':00'}`
+        )
+        .in('station_id', selectedStations.map(s => s.id));
       
       if (availabilityError) {
         console.error('Error checking final availability:', availabilityError);
         throw new Error('Could not confirm availability: ' + availabilityError.message);
       }
       
-      // Check if the selected slot is still available
-      const selectedSlotIsStillAvailable = !availabilityCheck || availabilityCheck.length === 0;
+      // Check if the selected slots are still available
+      const bookedStationIds = new Set((availabilityCheck || []).map(b => b.station_id));
+      const unavailableStations = selectedStations.filter(s => bookedStationIds.has(s.id));
       
-      if (!selectedSlotIsStillAvailable) {
-        throw new Error('This time slot is no longer available. Please choose another time.');
+      if (unavailableStations.length > 0) {
+        const stationNames = unavailableStations.map(s => s.name).join(", ");
+        throw new Error(`Some stations are no longer available: ${stationNames}. Please select different stations or try a different time.`);
       }
       
-      // Since we can't use RPC for create_booking_group, implement the logic directly
-      // Create bookings for each selected station with a transaction
+      // Create bookings for each selected station
       const bookings = selectedStations.map(station => ({
         customer_id: customerId,
         station_id: station.id,
@@ -875,8 +937,8 @@ View booking online: ${bookingDetails.viewUrl}
           <Card className="mt-8 bg-gray-900/80 border-gray-800">
             <CardHeader>
               <CardTitle className="text-xl text-center">
-                {currentStep === 1 && 'Select Station(s)'}
-                {currentStep === 2 && 'Choose Date & Time'}
+                {currentStep === 1 && 'Choose Date & Time'}
+                {currentStep === 2 && 'Select Station(s)'}
                 {currentStep === 3 && 'Your Information'}
                 {currentStep === 4 && 'Booking Summary'}
                 {currentStep === 5 && 'Booking Confirmed'}
@@ -884,62 +946,8 @@ View booking online: ${bookingDetails.viewUrl}
             </CardHeader>
             
             <CardContent>
-              {/* Step 1: Station Selection */}
+              {/* Step 1: Date & Time Selection */}
               {currentStep === 1 && (
-                <div>
-                  <div className="mb-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
-                    <p className="text-sm text-gray-300">
-                      <span className="font-semibold text-cuephoria-lightpurple">Multi-Station Booking:</span> You can select multiple gaming stations or pool tables for your session!
-                    </p>
-                  </div>
-                  <StationSelector 
-                    stations={stations}
-                    selectedStations={selectedStations}
-                    stationType={stationType}
-                    loading={loadingStations}
-                    onStationTypeChange={handleStationTypeChange}
-                    onStationSelect={handleStationSelect}
-                    multiSelect={true}
-                  />
-                  
-                  {/* Controller Availability for PS5 */}
-                  {stationType === 'ps5' || (stationType === 'all' && stations.some(s => s.type === 'ps5')) && (
-                    <div className="mt-6 p-4 bg-gray-800/40 border border-gray-700 rounded-lg">
-                      <ControllerManagement 
-                        totalControllers={totalControllers}
-                        availableControllers={availableControllers}
-                      />
-                      <p className="text-xs text-gray-400 mt-2">
-                        Note: Each PS5 station requires one controller. We have {totalControllers} controllers in total.
-                      </p>
-                    </div>
-                  )}
-                  
-                  {selectedStations.length > 0 && (
-                    <div className="mt-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
-                      <h4 className="text-lg font-medium mb-2 text-white">Selected Stations ({selectedStations.length})</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedStations.map(station => (
-                          <div key={station.id} className="flex items-center bg-gray-800 px-3 py-1 rounded-full">
-                            <span className="text-sm text-gray-200">{station.name}</span>
-                            <button 
-                              onClick={() => handleStationSelect(station)}
-                              className="ml-2 text-gray-400 hover:text-white"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Step 2: Date & Time Selection */}
-              {currentStep === 2 && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Date Picker */}
@@ -1068,6 +1076,62 @@ View booking online: ${bookingDetails.viewUrl}
                             {bookingDuration} minutes
                           </span>
                         </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Station Selection */}
+              {currentStep === 2 && (
+                <div>
+                  <div className="mb-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
+                    <p className="text-sm text-gray-300">
+                      <span className="font-semibold text-cuephoria-lightpurple">Stations available for {selectedTimeSlot?.startTime} - {selectedTimeSlot?.endTime}:</span> 
+                      {' '}Select one or more stations for your booking.
+                    </p>
+                  </div>
+                  
+                  {/* Available stations for selected time */}
+                  <AvailableStationsGrid 
+                    stations={availableStations}
+                    selectedStations={selectedStations}
+                    loading={loadingStations}
+                    timeSlot={selectedTimeSlot}
+                    onStationSelect={handleStationSelect}
+                    multiSelect={true}
+                  />
+                  
+                  {/* Controller Availability for PS5 */}
+                  {availableStations.some(s => s.type === 'ps5') && (
+                    <div className="mt-6 p-4 bg-gray-800/40 border border-gray-700 rounded-lg">
+                      <ControllerManagement 
+                        totalControllers={totalControllers}
+                        availableControllers={availableControllers}
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Note: Each PS5 station requires one controller. We have {totalControllers} controllers in total.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedStations.length > 0 && (
+                    <div className="mt-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
+                      <h4 className="text-lg font-medium mb-2 text-white">Selected Stations ({selectedStations.length})</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedStations.map(station => (
+                          <div key={station.id} className="flex items-center bg-gray-800 px-3 py-1 rounded-full">
+                            <span className="text-sm text-gray-200">{station.name}</span>
+                            <button 
+                              onClick={() => handleStationSelect(station)}
+                              className="ml-2 text-gray-400 hover:text-white"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
