@@ -78,7 +78,7 @@ export const checkStationAvailability = async (
       // Manual fallback check (query the bookings directly)
       const { data: existingBookings, error } = await supabase
         .from('bookings')
-        .select('station_id, station:stations(id, name)')
+        .select('station_id, station:stations(id, name, is_controller, parent_station_id)')
         .eq('booking_date', date)
         .in('status', ['confirmed', 'in-progress'])
         .or(`start_time.lte.${startTimeWithSeconds},end_time.gt.${startTimeWithSeconds}`)
@@ -93,12 +93,16 @@ export const checkStationAvailability = async (
       
       console.log("Manual check found these existing bookings:", existingBookings);
       
-      // Extract the unavailable station IDs
-      const unavailableStationIds = existingBookings
+      // Extract the unavailable station IDs, properly handling controllers
+      const directlyBookedStationIds = existingBookings
         ? existingBookings
             .filter(booking => stationIds.includes(booking.station_id))
             .map(booking => booking.station_id)
         : [];
+      
+      // For controller bookings, we only consider them unavailable if they're booked 
+      // within the specific time slot we're checking
+      const unavailableStationIds = [...directlyBookedStationIds];
       
       // Get station details
       const unavailableStations = existingBookings
