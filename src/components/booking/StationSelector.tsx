@@ -29,17 +29,36 @@ const StationSelector = ({
 }: StationSelectorProps) => {
   const isMobile = useIsMobile();
   
+  // Sort stations by type and name with a numerical sort
+  const sortedStations = [...stations].sort((a, b) => {
+    // First sort by type (ps5 first, then 8ball)
+    if (a.type !== b.type) {
+      return a.type === 'ps5' ? -1 : 1;
+    }
+    
+    // Then sort numerically by extracting numbers from the name
+    const aMatch = a.name.match(/(\d+)/);
+    const bMatch = b.name.match(/(\d+)/);
+    
+    if (aMatch && bMatch) {
+      return parseInt(aMatch[0]) - parseInt(bMatch[0]);
+    }
+    
+    // Fallback to alphabetical sort if no numbers found
+    return a.name.localeCompare(b.name);
+  });
+  
   // Filter stations by type
   const filteredStations = stationType === 'all' 
-    ? stations
-    : stations.filter(station => station.type === stationType);
+    ? sortedStations
+    : sortedStations.filter(station => station.type === stationType);
   
   // Group stations by type for UI display
-  const ps5Stations = stations.filter(station => station.type === 'ps5');
-  const ballStations = stations.filter(station => station.type === '8ball');
+  const ps5Stations = sortedStations.filter(station => station.type === 'ps5');
+  const ballStations = sortedStations.filter(station => station.type === '8ball');
   
   return (
-    <div>
+    <div className="w-full">
       <Tabs 
         defaultValue={stationType}
         onValueChange={(value) => onStationTypeChange(value as 'ps5' | '8ball' | 'all')}
@@ -69,7 +88,7 @@ const StationSelector = ({
               <p className="text-gray-400 mt-2">Please try a different filter</p>
             </div>
           ) : (
-            <div className={`grid grid-cols-1 ${isMobile ? "" : "sm:grid-cols-2 md:grid-cols-3"} gap-4`}>
+            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "sm:grid-cols-2 md:grid-cols-3 gap-4"}`}>
               {filteredStations.map((station) => (
                 <StationCard
                   key={station.id}
@@ -116,7 +135,7 @@ const StationCard = ({
   
   return (
     <div
-      className={`border rounded-lg p-3 ${isMobile ? 'p-3' : 'p-4'} transition-all ${
+      className={`border rounded-lg ${isMobile ? 'p-3' : 'p-4'} transition-all ${
         isSelected
           ? isPs5
             ? 'border-cuephoria-purple bg-cuephoria-purple/10 shadow-[0_0_10px_rgba(139,92,246,0.3)]'
