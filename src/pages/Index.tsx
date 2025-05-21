@@ -8,82 +8,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Gamepad2, Clock, Info, Users, Table2, Star, ChevronRight, CheckCircle, Trophy } from 'lucide-react';
+import { Calendar, Gamepad2, Clock, Book, User, Table2, Star, ChevronRight, CheckCircle, Trophy } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import LiveSessionsSection from '@/components/dashboard/LiveSessionsSection';
+import { useTodayBookings } from '@/hooks/booking/useTodayBookings';
 
 const Index = () => {
   const navigate = useNavigate();
-  const [todayBookings, setTodayBookings] = React.useState<any[]>([]);
-  const [activeStations, setActiveStations] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { todayBookings, loading, fetchTodayBookings } = useTodayBookings();
 
   useEffect(() => {
     document.title = "Cuephoria Gaming";
-    fetchTodayData();
-    
-    const intervalId = setInterval(fetchTodayData, 60000); // Refresh every minute
-    return () => clearInterval(intervalId);
   }, []);
-
-  const fetchTodayData = async () => {
-    setLoading(true);
-    const today = format(new Date(), 'yyyy-MM-dd');
-    
-    try {
-      // Fetch today's bookings
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select(`
-          id, 
-          booking_date, 
-          start_time, 
-          end_time, 
-          status,
-          stations (name, type),
-          customers (name, phone)
-        `)
-        .eq('booking_date', today)
-        .order('start_time');
-        
-      if (bookingsError) throw bookingsError;
-      
-      // Fetch active stations
-      const { data: stationsData, error: stationsError } = await supabase
-        .from('stations')
-        .select(`
-          id, 
-          name,
-          type,
-          is_occupied,
-          sessions (
-            id,
-            start_time,
-            end_time,
-            customers (name)
-          )
-        `)
-        .eq('is_occupied', true);
-        
-      if (stationsError) throw stationsError;
-      
-      // Process stations data to include active session info
-      const processedStations = stationsData.map(station => {
-        const activeSession = station.sessions.find(session => session.end_time === null);
-        return {
-          ...station,
-          activeSession: activeSession || null
-        };
-      });
-      
-      setTodayBookings(bookingsData || []);
-      setActiveStations(processedStations || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load today\'s data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -117,7 +53,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
-      {/* Hero Section */}
+      {/* Hero Section with Action Cards */}
       <div className="bg-gradient-to-br from-gray-900 to-black py-16 px-6 flex flex-col justify-center items-center text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
         <div className="absolute inset-0 bg-gradient-radial from-cuephoria-purple/20 to-transparent"></div>
@@ -134,138 +70,80 @@ const Index = () => {
             Cuephoria
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-gray-300 max-w-2xl mx-auto">
-            Experience premium gaming and billiards in a vibrant, immersive environment
+            Premium Gaming and Billiards Experience
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button onClick={() => navigate('/booknow')} size="lg" className="bg-cuephoria-purple hover:bg-cuephoria-purple/90 text-white px-8">
-              Book Now
-            </Button>
-            <Button onClick={() => navigate('/bookings/check')} size="lg" variant="outline" className="text-white border-cuephoria-purple hover:bg-cuephoria-purple/20">
-              Check Booking
-            </Button>
-            <Button onClick={() => navigate('/login')} size="lg" variant="ghost" className="text-gray-300 hover:text-white">
-              Staff Login
-            </Button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-3xl mx-auto">
+            <Card className="bg-cuephoria-purple/20 border-cuephoria-purple/40 backdrop-blur-sm hover:shadow-[0_5px_15px_rgba(155,135,245,0.3)] transition-all duration-300 group">
+              <CardHeader className="pb-2">
+                <div className="w-12 h-12 rounded-full bg-cuephoria-purple/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Book className="h-6 w-6 text-cuephoria-lightpurple" />
+                </div>
+                <CardTitle className="text-white text-xl">Book Now</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Reserve your gaming session or billiards table
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm text-gray-300">
+                Choose from PS5 stations or professional billiards tables at your preferred time.
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/booknow')} 
+                  className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/80"
+                >
+                  Make a Reservation <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card className="bg-cuephoria-blue/20 border-cuephoria-blue/40 backdrop-blur-sm hover:shadow-[0_5px_15px_rgba(14,165,233,0.3)] transition-all duration-300 group">
+              <CardHeader className="pb-2">
+                <div className="w-12 h-12 rounded-full bg-cuephoria-blue/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Calendar className="h-6 w-6 text-blue-300" />
+                </div>
+                <CardTitle className="text-white text-xl">Check Booking</CardTitle>
+                <CardDescription className="text-gray-300">
+                  View or manage your existing reservation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm text-gray-300">
+                Enter your booking reference to check details or make changes to your reservation.
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/bookings/check')} 
+                  className="w-full bg-cuephoria-blue hover:bg-cuephoria-blue/80"
+                >
+                  View Your Booking <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </CardFooter>
+            </Card>
           </div>
         </div>
       </div>
 
-      {/* Features Section */}
+      {/* Today's Bookings & Active Sessions Section */}
       <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue">
-            Premium Gaming Experience
+            Live Status Dashboard
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto">
-            Our state-of-the-art gaming facility offers the latest PS5 consoles and premium billiards tables
+            View today's schedule and monitor current active sessions
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <Card className="bg-gray-800/80 border-gray-700 transform transition-all hover:scale-105">
-            <CardHeader className="pb-2">
-              <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
-                <Gamepad2 className="h-6 w-6 text-cuephoria-lightpurple" />
-              </div>
-              <CardTitle className="text-xl text-white">Modern Gaming</CardTitle>
-              <CardDescription className="text-gray-400">
-                Latest PlayStation 5 consoles with 4K displays
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Latest games library</span>
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Pro gaming accessories</span>
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Comfortable gaming stations</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800/80 border-gray-700 transform transition-all hover:scale-105">
-            <CardHeader className="pb-2">
-              <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
-                <Table2 className="h-6 w-6 text-cuephoria-lightpurple" />
-              </div>
-              <CardTitle className="text-xl text-white">Premium Billiards</CardTitle>
-              <CardDescription className="text-gray-400">
-                Professional-grade billiards tables
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Competition-quality tables</span>
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Professional equipment</span>
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Perfect for both beginners and pros</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800/80 border-gray-700 transform transition-all hover:scale-105">
-            <CardHeader className="pb-2">
-              <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
-                <Trophy className="h-6 w-6 text-cuephoria-lightpurple" />
-              </div>
-              <CardTitle className="text-xl text-white">Tournaments</CardTitle>
-              <CardDescription className="text-gray-400">
-                Regular gaming tournaments and events
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Weekly competitions</span>
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Cash prizes</span>
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                  <span>Community events</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Today's Bookings Preview Section */}
-        <div>
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue">
-              Today's Availability
-            </h2>
-            <p className="text-gray-300 max-w-3xl mx-auto">
-              Check out our schedule for today or book your own session now
-            </p>
-          </div>
-          
-          <Card className="bg-gray-900/80 border-gray-800 overflow-hidden mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Today's Bookings Section */}
+          <Card className="bg-gray-900/90 border-gray-800 overflow-hidden shadow-xl">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center text-lg">
                   <Calendar className="h-5 w-5 mr-2 text-cuephoria-purple" />
                   Today's Schedule
                 </CardTitle>
-                <Button variant="ghost" size="sm" onClick={fetchTodayData} className="text-gray-400 hover:text-white">
+                <Button variant="ghost" size="sm" onClick={fetchTodayBookings} className="text-gray-400 hover:text-white">
                   Refresh
                 </Button>
               </div>
@@ -321,7 +199,7 @@ const Index = () => {
                 </div>
               )}
             </CardContent>
-            <CardFooter className="pt-2 pb-4 px-6">
+            <CardFooter className="pt-2 pb-4 px-6 bg-gray-800/50">
               <Button 
                 onClick={() => navigate('/booknow')} 
                 variant="default" 
@@ -331,6 +209,107 @@ const Index = () => {
               </Button>
             </CardFooter>
           </Card>
+          
+          {/* Live Active Sessions */}
+          <LiveSessionsSection />
+        </div>
+        
+        {/* Features Section (kept from original) */}
+        <div className="mt-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue">
+              Premium Gaming Experience
+            </h2>
+            <p className="text-gray-300 max-w-3xl mx-auto">
+              Our state-of-the-art gaming facility offers the latest PS5 consoles and premium billiards tables
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <Card className="bg-gray-800/80 border-gray-700 transform transition-all hover:scale-105">
+              <CardHeader className="pb-2">
+                <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
+                  <Gamepad2 className="h-6 w-6 text-cuephoria-lightpurple" />
+                </div>
+                <CardTitle className="text-xl text-white">Modern Gaming</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Latest PlayStation 5 consoles with 4K displays
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Latest games library</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Pro gaming accessories</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Comfortable gaming stations</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800/80 border-gray-700 transform transition-all hover:scale-105">
+              <CardHeader className="pb-2">
+                <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
+                  <Table2 className="h-6 w-6 text-cuephoria-lightpurple" />
+                </div>
+                <CardTitle className="text-xl text-white">Premium Billiards</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Professional-grade billiards tables
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Competition-quality tables</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Professional equipment</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Perfect for both beginners and pros</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800/80 border-gray-700 transform transition-all hover:scale-105">
+              <CardHeader className="pb-2">
+                <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
+                  <Trophy className="h-6 w-6 text-cuephoria-lightpurple" />
+                </div>
+                <CardTitle className="text-xl text-white">Tournaments</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Regular gaming tournaments and events
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Weekly competitions</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Cash prizes</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Community events</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
