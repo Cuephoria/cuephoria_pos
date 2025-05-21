@@ -38,11 +38,8 @@ const RunningTimer: React.FC<RunningTimerProps> = ({ startTime, compact = false 
   
   if (compact) {
     return (
-      <div className="flex items-center text-xs text-gray-300">
-        <Clock className="h-3 w-3 mr-1" />
-        <span className={`font-mono ${seconds % 2 === 0 ? 'text-white' : 'text-white/90'}`}>
-          {formatTimeDisplay(hours, minutes, seconds)}
-        </span>
+      <div className={`${seconds % 2 === 0 ? 'text-white' : 'text-white/90'}`}>
+        {formatTimeDisplay(hours, minutes, seconds)}
       </div>
     );
   }
