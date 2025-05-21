@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Station } from '@/types/pos.types';
 import StationGrid from './StationGrid';
@@ -15,6 +14,7 @@ interface StationsContentProps {
   multiSelect?: boolean;
   onStationSelect: (station: Station) => void;
   unavailableStationIds?: string[];
+  availableControllers?: number;
 }
 
 const StationsContent: React.FC<StationsContentProps> = ({
@@ -25,7 +25,8 @@ const StationsContent: React.FC<StationsContentProps> = ({
   loading,
   multiSelect = false,
   onStationSelect,
-  unavailableStationIds = []
+  unavailableStationIds = [],
+  availableControllers = 0
 }) => {
   if (loading) {
     return (
@@ -39,14 +40,30 @@ const StationsContent: React.FC<StationsContentProps> = ({
     return <NoTimeSlotMessage />;
   }
 
-  if (filteredStations.length === 0) {
+  // Filter out PS5 stations if there are no controllers available
+  // but only if we're not already showing selected PS5 stations (keep those visible)
+  const displayStations = filteredStations.filter(station => {
+    // If it's not a PS5 station, always show it
+    if (station.type !== 'ps5') {
+      return true;
+    }
+    
+    // If there are no controllers available AND this station is not already selected, hide it
+    if (availableControllers <= 0 && !selectedStations.some(s => s.id === station.id)) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  if (displayStations.length === 0) {
     return <EmptyStateMessage stationType={stationType} />;
   }
 
   return (
     <div className="mt-6">
       <StationGrid
-        stations={filteredStations}
+        stations={displayStations}
         selectedStations={selectedStations}
         onStationSelect={onStationSelect}
         stationType={stationType}

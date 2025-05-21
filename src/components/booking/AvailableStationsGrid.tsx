@@ -17,6 +17,7 @@ interface AvailableStationsGridProps {
   loading?: boolean;
   isMobile?: boolean;
   unavailableStationIds?: string[];
+  availableControllers?: number; 
 }
 
 const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
@@ -28,7 +29,8 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   onStationTypeChange,
   loading: externalLoading,
   isMobile,
-  unavailableStationIds: externalUnavailableStationIds
+  unavailableStationIds: externalUnavailableStationIds,
+  availableControllers = 0
 }) => {
   // If external unavailable IDs are provided, use them, otherwise use what's computed from the hook
   const { stations, availableStations, loading: internalLoading, unavailableStationIds: internalUnavailableIds } = 
@@ -78,6 +80,7 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
         loading={loading}
         multiSelect={true}
         unavailableStationIds={unavailableStationIds}
+        availableControllers={availableControllers}
       />
     </div>
   );

@@ -57,6 +57,7 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
         onStationTypeChange={onStationTypeChange}
         loading={loadingStations}
         unavailableStationIds={unavailableStationIds}
+        availableControllers={availableControllers}
         isMobile={isMobile}
       />
       
