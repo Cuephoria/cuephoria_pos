@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,6 +22,7 @@ import BookingSummary from '@/components/booking/BookingSummary';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { generateTimeSlots, mapDatabaseSlotToFrontend } from '@/utils/booking.utils';
 import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/ui/date-picker';
 
 // Types for our booking form
 interface CustomerInfo {
@@ -461,22 +461,31 @@ View booking online: ${bookingDetails.viewUrl}
     setBookingAccessCode('');
     
     try {
+      console.log('Starting booking submission process...');
+      
       // Check if customer exists by phone number
       let customerId = customerInfo.customerId;
       
       if (!customerId) {
+        console.log('No customer ID provided, checking if customer exists...');
         // Look up customer by phone
-        const { data: existingCustomers } = await supabase
+        const { data: existingCustomers, error: customerLookupError } = await supabase
           .from('customers')
           .select('id')
           .eq('phone', customerInfo.phone)
           .limit(1);
+        
+        if (customerLookupError) {
+          console.error('Error looking up customer:', customerLookupError);
+        }
           
         // If customer exists, use their ID
         if (existingCustomers && existingCustomers.length > 0) {
           customerId = existingCustomers[0].id;
+          console.log('Found existing customer with ID:', customerId);
         } else {
           // Create new customer
+          console.log('Creating new customer...');
           const { data: newCustomer, error: customerError } = await supabase
             .from('customers')
             .insert({
@@ -501,6 +510,7 @@ View booking online: ${bookingDetails.viewUrl}
           }
           
           customerId = newCustomer.id;
+          console.log('Created new customer with ID:', customerId);
         }
       }
       
@@ -512,19 +522,27 @@ View booking online: ${bookingDetails.viewUrl}
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       const createdBookingIds: string[] = [];
       
+      console.log('Creating bookings for date:', formattedDate);
+      
       for (const station of selectedStations) {
+        console.log(`Creating booking for station: ${station.name} (${station.id})`);
+        
+        const bookingData = {
+          station_id: station.id,
+          customer_id: customerId,
+          booking_date: formattedDate,
+          start_time: selectedTimeSlot.startTime,
+          end_time: selectedTimeSlot.endTime,
+          duration: bookingDuration,
+          status: 'confirmed',
+          notes: ''
+        };
+        
+        console.log('Booking data:', bookingData);
+        
         const { data: newBooking, error: bookingError } = await supabase
           .from('bookings')
-          .insert({
-            station_id: station.id,
-            customer_id: customerId,
-            booking_date: formattedDate,
-            start_time: selectedTimeSlot.startTime,
-            end_time: selectedTimeSlot.endTime,
-            duration: bookingDuration,
-            status: 'confirmed',
-            notes: ''
-          })
+          .insert(bookingData)
           .select()
           .single();
           
@@ -537,11 +555,14 @@ View booking online: ${bookingDetails.viewUrl}
           throw new Error('No booking data returned');
         }
         
+        console.log('Booking created successfully:', newBooking);
         createdBookingIds.push(newBooking.id);
       }
 
       // Get access code for the first booking
       if (createdBookingIds.length > 0) {
+        console.log('Getting access code for booking ID:', createdBookingIds[0]);
+        
         const { data: accessCodeData, error: accessCodeError } = await supabase
           .from('booking_views')
           .select('access_code')
@@ -550,6 +571,7 @@ View booking online: ${bookingDetails.viewUrl}
           
         if (!accessCodeError && accessCodeData) {
           setBookingAccessCode(accessCodeData.access_code);
+          console.log('Retrieved access code:', accessCodeData.access_code);
         } else {
           console.warn('Could not retrieve access code:', accessCodeError);
           // Generate a fallback access code
@@ -569,6 +591,8 @@ View booking online: ${bookingDetails.viewUrl}
         const stationNames = selectedStations.map(s => s.name).join(", ");
         
         try {
+          console.log('Sending booking confirmation email...');
+          
           const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
             body: {
               bookingId: primaryBookingId,
@@ -585,6 +609,8 @@ View booking online: ${bookingDetails.viewUrl}
           
           if (emailError) {
             console.error('Error sending email:', emailError);
+          } else {
+            console.log('Email sent successfully!');
           }
         } catch (emailError) {
           console.error('Error invoking email function:', emailError);
@@ -632,7 +658,7 @@ View booking online: ${bookingDetails.viewUrl}
             <Card className="mb-8 bg-gray-900/80 border-gray-800">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
-                  <Calendar className="h-5 w-5 mr-2 text-cuephoria-purple" />
+                  <CalendarIcon className="h-5 w-5 mr-2 text-cuephoria-purple" />
                   Today's Bookings
                 </CardTitle>
               </CardHeader>
@@ -766,15 +792,10 @@ View booking online: ${bookingDetails.viewUrl}
                         Select Date
                       </h3>
                       <div className="border border-gray-800 rounded-md bg-gray-800/50 p-4">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={handleDateSelect}
-                          disabled={(date) => {
-                            // Disable dates before today
-                            return date < new Date(new Date().setHours(0,0,0,0));
-                          }}
-                          className="mx-auto"
+                        <DatePicker
+                          date={selectedDate}
+                          onDateChange={handleDateSelect}
+                          placeholder="Select booking date"
                         />
                       </div>
                     </div>
