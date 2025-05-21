@@ -1,1 +1,25 @@
+
+# This is the Supabase configuration file
+
 project_id = "apltkougkglbsfphbghi"
+
+[api]
+# API configuration - default values work well
+
+[db]
+# Database configuration
+port = 5432
+major_version = 15
+
+[realtime]
+# Realtime configuration
+
+[studio]
+# Studio configuration
+
+[auth]
+# Auth configuration
+
+[functions]
+[functions.update-booking-statuses]
+verify_jwt = true

@@ -22,6 +22,7 @@ import CustomerInfoForm from '@/components/booking/CustomerInfoForm';
 import BookingSummary from '@/components/booking/BookingSummary';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { generateTimeSlots } from '@/utils/booking.utils';
+import { Badge } from '@/components/ui/badge';
 
 // Types for our booking form
 interface CustomerInfo {
@@ -65,15 +66,22 @@ const BookNow = () => {
     isExistingCustomer: false
   });
   
+  // Today's bookings
+  const [todayBookings, setTodayBookings] = useState<any[]>([]);
+  const [loadingTodayBookings, setLoadingTodayBookings] = useState<boolean>(false);
+  
   // Booking summary
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
   const [bookingIds, setBookingIds] = useState<string[]>([]);
+  const [bookingAccessCode, setBookingAccessCode] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Fetch stations on component mount
   useEffect(() => {
+    document.title = "Book Now | Cuephoria";
     fetchStations();
+    fetchTodayBookings();
   }, []);
   
   // Filter available stations by type when stationType changes
@@ -90,6 +98,47 @@ const BookNow = () => {
       fetchAvailableTimeSlots();
     }
   }, [selectedDate, selectedStations, bookingDuration]);
+
+  // Set up notification for upcoming bookings
+  useEffect(() => {
+    // Function to check for upcoming bookings
+    const checkUpcomingBookings = () => {
+      try {
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
+        
+        if (todayBookings && todayBookings.length > 0) {
+          todayBookings.forEach(booking => {
+            const [hours, minutes] = booking.start_time.split(':').map(Number);
+            const bookingTimeInMinutes = hours * 60 + minutes;
+            
+            // Check if booking is 15 minutes away
+            const timeUntilBooking = bookingTimeInMinutes - currentTime;
+            if (timeUntilBooking > 0 && timeUntilBooking <= 15) {
+              const customerName = booking.customers?.name || 'Customer';
+              const stationName = booking.stations?.name || 'a station';
+              
+              toast.info(
+                `Upcoming booking for ${customerName} at ${booking.start_time} for ${stationName}`,
+                {
+                  duration: 10000, // Show for 10 seconds
+                  id: `booking-reminder-${booking.id}` // Prevent duplicate notifications
+                }
+              );
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error checking upcoming bookings:', error);
+      }
+    };
+    
+    // Check when component mounts and then every minute
+    checkUpcomingBookings();
+    const intervalId = setInterval(checkUpcomingBookings, 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [todayBookings]);
 
   // Function to fetch stations from database
   const fetchStations = async () => {
@@ -124,6 +173,38 @@ const BookNow = () => {
     }
   };
 
+  // Function to fetch today's bookings
+  const fetchTodayBookings = async () => {
+    setLoadingTodayBookings(true);
+    
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          booking_date,
+          start_time,
+          end_time,
+          duration,
+          status,
+          stations (id, name, type),
+          customers (id, name, phone)
+        `)
+        .eq('booking_date', today)
+        .order('start_time', { ascending: true });
+        
+      if (error) throw error;
+      
+      setTodayBookings(data || []);
+    } catch (error) {
+      console.error('Error fetching today\'s bookings:', error);
+    } finally {
+      setLoadingTodayBookings(false);
+    }
+  };
+
   // Function to fetch available time slots for the selected date and stations
   const fetchAvailableTimeSlots = async () => {
     if (selectedStations.length === 0 || !selectedDate) return;
@@ -142,45 +223,54 @@ const BookNow = () => {
       let availableSlots = [...allSlots];
       
       for (const station of selectedStations) {
-        // Call the get_available_slots function via RPC
-        const { data, error } = await supabase.rpc('get_available_slots', {
-          p_date: formattedDate,
-          p_station_id: station.id,
-          p_slot_duration: bookingDuration
-        });
-        
-        if (error) {
-          console.error(`Error checking availability for station ${station.name}:`, error);
-          toast.error(`Failed to check availability for ${station.name}`);
-          throw error;
-        }
-        
-        // Transform data to our TimeSlot format
-        const stationSlots = data.map((slot: any) => ({
-          startTime: slot.start_time.substring(0, 5), // Get HH:MM from HH:MM:SS
-          endTime: slot.end_time.substring(0, 5), // Get HH:MM from HH:MM:SS
-          isAvailable: slot.is_available
-        }));
-        
-        // Filter for common available slots
-        availableSlots = availableSlots.map(slot => {
-          const stationSlot = stationSlots.find(s => 
-            s.startTime === slot.startTime && s.endTime === slot.endTime
-          );
+        try {
+          // Call the get_available_slots function via RPC
+          const { data, error } = await supabase.rpc('get_available_slots', {
+            p_date: formattedDate,
+            p_station_id: station.id,
+            p_slot_duration: bookingDuration
+          });
           
-          return {
-            ...slot,
-            isAvailable: slot.isAvailable && (stationSlot ? stationSlot.isAvailable : false)
-          };
-        });
+          if (error) {
+            console.error(`Error checking availability for station ${station.name}:`, error);
+            toast.error(`Failed to check availability for ${station.name}`);
+            continue;
+          }
+          
+          // Transform data to our TimeSlot format
+          const stationSlots = data.map((slot: any) => ({
+            startTime: slot.start_time.substring(0, 5), // Get HH:MM from HH:MM:SS
+            endTime: slot.end_time.substring(0, 5), // Get HH:MM from HH:MM:SS
+            isAvailable: slot.is_available
+          }));
+          
+          // Filter for common available slots
+          availableSlots = availableSlots.map(slot => {
+            const stationSlot = stationSlots.find(s => 
+              s.startTime === slot.startTime && s.endTime === slot.endTime
+            );
+            
+            return {
+              ...slot,
+              isAvailable: slot.isAvailable && (stationSlot ? stationSlot.is_available : false)
+            };
+          });
+        } catch (stationError) {
+          console.error(`Error processing station ${station.name}:`, stationError);
+          toast.error(`Failed to process station ${station.name}`);
+        }
       }
       
       setTimeSlots(availableSlots);
     } catch (error) {
       console.error('Error fetching time slots:', error);
+      toast.error('Failed to load available time slots. Please try again.');
       
       // Generate fallback time slots if API call fails
-      const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration);
+      const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration).map(slot => ({
+        ...slot,
+        isAvailable: false
+      }));
       setTimeSlots(fallbackSlots);
     } finally {
       setLoadingTimeSlots(false);
@@ -235,32 +325,37 @@ const BookNow = () => {
     if (!bookingIds.length || !customerInfo.name) return;
 
     try {
+      const bookingViewUrl = `${window.location.origin}/bookings/check?code=${bookingAccessCode}`;
+      
       const bookingDetails = {
         customerName: customerInfo.name,
         stations: selectedStations.map(s => s.name).join(", "),
         date: format(selectedDate, 'EEEE, MMMM d, yyyy'),
         time: `${selectedTimeSlot?.startTime} - ${selectedTimeSlot?.endTime}`,
-        duration: `${bookingDuration} minutes`
+        duration: `${bookingDuration} minutes`,
+        viewUrl: bookingViewUrl
       };
 
       // Use the Web Share API if available
       if (navigator.share) {
         await navigator.share({
           title: 'Cuephoria Booking Confirmation',
-          text: `Hi ${bookingDetails.customerName}, your booking at Cuephoria for ${bookingDetails.stations} on ${bookingDetails.date} at ${bookingDetails.time} is confirmed!`,
-          url: window.location.href
+          text: `My booking at Cuephoria for ${bookingDetails.stations} on ${bookingDetails.date} at ${bookingDetails.time}`,
+          url: bookingViewUrl
         });
         toast.success('Booking details shared successfully!');
       } else {
         // Fallback to copying to clipboard
         const text = `
-          Cuephoria Booking Confirmation
-          
-          Customer: ${bookingDetails.customerName}
-          Station(s): ${bookingDetails.stations}
-          Date: ${bookingDetails.date}
-          Time: ${bookingDetails.time}
-          Duration: ${bookingDetails.duration}
+Cuephoria Booking Confirmation
+
+Customer: ${bookingDetails.customerName}
+Station(s): ${bookingDetails.stations}
+Date: ${bookingDetails.date}
+Time: ${bookingDetails.time}
+Duration: ${bookingDetails.duration}
+
+View booking online: ${bookingViewUrl}
         `;
         
         navigator.clipboard.writeText(text);
@@ -321,6 +416,25 @@ const BookNow = () => {
     }
   };
   
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    const statusMap = {
+      'confirmed': { color: 'bg-green-500/20 text-green-500 border-green-500/50', label: 'Confirmed' },
+      'in-progress': { color: 'bg-blue-500/20 text-blue-500 border-blue-500/50', label: 'In Progress' },
+      'completed': { color: 'bg-purple-500/20 text-purple-500 border-purple-500/50', label: 'Completed' },
+      'cancelled': { color: 'bg-red-500/20 text-red-500 border-red-500/50', label: 'Cancelled' },
+      'no-show': { color: 'bg-orange-500/20 text-orange-500 border-orange-500/50', label: 'No Show' }
+    };
+
+    const statusInfo = statusMap[status] || { color: 'bg-gray-500/20 text-gray-500 border-gray-500/50', label: status };
+    
+    return (
+      <Badge className={statusInfo.color}>
+        {statusInfo.label}
+      </Badge>
+    );
+  };
+  
   // Submit booking to server
   const handleSubmitBooking = async () => {
     if (selectedStations.length === 0 || !selectedDate || !selectedTimeSlot || !customerInfo.name || !customerInfo.phone) {
@@ -331,6 +445,7 @@ const BookNow = () => {
     setIsSubmitting(true);
     setBookingError(null);
     setBookingIds([]);
+    setBookingAccessCode('');
     
     try {
       // Check if customer exists by phone number
@@ -391,6 +506,19 @@ const BookNow = () => {
         if (bookingError) throw bookingError;
         createdBookingIds.push(newBooking.id);
       }
+
+      // Get access code for the first booking
+      if (createdBookingIds.length > 0) {
+        const { data: accessCodeData, error: accessCodeError } = await supabase
+          .from('booking_views')
+          .select('access_code')
+          .eq('booking_id', createdBookingIds[0])
+          .single();
+          
+        if (!accessCodeError && accessCodeData) {
+          setBookingAccessCode(accessCodeData.access_code);
+        }
+      }
       
       // Set bookings confirmed
       setBookingIds(createdBookingIds);
@@ -403,8 +531,6 @@ const BookNow = () => {
         const primaryBookingId = createdBookingIds[0];
         const stationNames = selectedStations.map(s => s.name).join(", ");
         
-        const bookingReference = `CUE-${primaryBookingId.substring(0, 8).toUpperCase()}`;
-        
         try {
           const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
             body: {
@@ -415,7 +541,7 @@ const BookNow = () => {
               startTime: selectedTimeSlot.startTime,
               endTime: selectedTimeSlot.endTime,
               duration: bookingDuration,
-              bookingReference: bookingReference,
+              bookingReference: bookingAccessCode,
               recipientEmail: customerInfo.email
             }
           });
@@ -428,6 +554,9 @@ const BookNow = () => {
         }
       }
       
+      // Refresh today's bookings
+      fetchTodayBookings();
+      
     } catch (error: any) {
       console.error('Error creating booking:', error);
       setBookingError(error.message || 'Failed to create booking');
@@ -437,68 +566,6 @@ const BookNow = () => {
     }
   };
 
-  // Set up notification for upcoming bookings
-  useEffect(() => {
-    // Function to check for upcoming bookings
-    const checkUpcomingBookings = async () => {
-      try {
-        const now = new Date();
-        const today = format(now, 'yyyy-MM-dd');
-        const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
-        
-        // Fetch today's bookings
-        const { data: todayBookings, error } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            booking_date,
-            start_time,
-            station_id,
-            customers (
-              name
-            ),
-            stations (
-              name
-            )
-          `)
-          .eq('booking_date', today)
-          .eq('status', 'confirmed');
-          
-        if (error) throw error;
-        
-        if (todayBookings && todayBookings.length > 0) {
-          todayBookings.forEach(booking => {
-            const [hours, minutes] = booking.start_time.split(':').map(Number);
-            const bookingTimeInMinutes = hours * 60 + minutes;
-            
-            // Check if booking is 15 minutes away
-            const timeUntilBooking = bookingTimeInMinutes - currentTime;
-            if (timeUntilBooking > 0 && timeUntilBooking <= 15) {
-              const customerName = booking.customers?.name || 'Customer';
-              const stationName = booking.stations?.name || 'a station';
-              
-              toast.info(
-                `Upcoming booking for ${customerName} at ${booking.start_time} for ${stationName}`,
-                {
-                  duration: 10000, // Show for 10 seconds
-                  id: `booking-reminder-${booking.id}` // Prevent duplicate notifications
-                }
-              );
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error checking upcoming bookings:', error);
-      }
-    };
-    
-    // Check when component mounts and then every minute
-    checkUpcomingBookings();
-    const intervalId = setInterval(checkUpcomingBookings, 60 * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black">
       {/* Header */}
@@ -523,6 +590,77 @@ const BookNow = () => {
       {/* Main Content */}
       <main className="pb-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-6xl mx-auto">
+          {/* Today's Bookings */}
+          {currentStep !== 5 && (
+            <Card className="mb-8 bg-gray-900/80 border-gray-800">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <Calendar className="h-5 w-5 mr-2 text-cuephoria-purple" />
+                  Today's Bookings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingTodayBookings ? (
+                  <div className="flex items-center justify-center h-16">
+                    <LoadingSpinner className="mr-2" />
+                    <span className="text-gray-400">Loading today's bookings...</span>
+                  </div>
+                ) : todayBookings.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-gray-400 border-b border-gray-800">
+                          <th className="px-2 py-2 text-left">Time</th>
+                          <th className="px-2 py-2 text-left">Station</th>
+                          <th className="px-2 py-2 text-left">Customer</th>
+                          <th className="px-2 py-2 text-left">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {todayBookings.map(booking => {
+                          const now = new Date();
+                          const currentTime = now.getHours() * 60 + now.getMinutes();
+                          const [hours, minutes] = booking.start_time.split(':').map(Number);
+                          const bookingTimeInMinutes = hours * 60 + minutes;
+                          const isUpcoming = bookingTimeInMinutes - currentTime <= 60 && bookingTimeInMinutes > currentTime;
+                          
+                          return (
+                            <tr 
+                              key={booking.id} 
+                              className={`border-b border-gray-800 text-gray-300 ${isUpcoming ? 'bg-cuephoria-purple/10' : ''}`}
+                            >
+                              <td className="px-2 py-2">
+                                {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
+                                {isUpcoming && (
+                                  <span className="ml-2 text-xs text-cuephoria-lightpurple">
+                                    Upcoming
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-2 py-2">
+                                {booking.stations.name}
+                              </td>
+                              <td className="px-2 py-2">
+                                {booking.customers.name}
+                              </td>
+                              <td className="px-2 py-2">
+                                {getStatusBadge(booking.status)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    No bookings scheduled for today
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        
           {/* Booking Steps Progress */}
           <BookingSteps currentStep={currentStep} />
           
@@ -542,9 +680,9 @@ const BookNow = () => {
               {/* Step 1: Station Selection */}
               {currentStep === 1 && (
                 <div>
-                  <div className="mb-4 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
+                  <div className="mb-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
                     <p className="text-sm text-gray-300">
-                      <span className="font-semibold text-cuephoria-lightpurple">New Feature:</span> You can now select multiple stations for your booking session!
+                      <span className="font-semibold text-cuephoria-lightpurple">Multi-Station Booking:</span> You can select multiple gaming stations or pool tables for your session!
                     </p>
                   </div>
                   <StationSelector 
@@ -781,11 +919,11 @@ const BookNow = () => {
                       
                       <div className="flex justify-between">
                         <span className="text-gray-400">Booking Reference:</span>
-                        <span className="font-medium font-mono">CUE-{bookingIds[0]?.substring(0, 8).toUpperCase() || "ERROR"}</span>
+                        <span className="font-medium font-mono">{bookingAccessCode}</span>
                       </div>
                     </div>
                     
-                    <div className="mt-6">
+                    <div className="mt-6 space-y-3">
                       <Button 
                         onClick={handleShareBooking} 
                         variant="outline" 
@@ -794,12 +932,19 @@ const BookNow = () => {
                         <Share2 size={16} />
                         Share Booking Details
                       </Button>
+                      
+                      <Button
+                        onClick={() => window.open(`/bookings/check?code=${bookingAccessCode}`, '_blank')}
+                        className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/90"
+                      >
+                        View Booking Details
+                      </Button>
                     </div>
                   </div>
                   
                   <div className="bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg p-4">
                     <p className="text-gray-300">
-                      Please arrive 10 minutes before your booking time. For any questions or modifications, contact us at support@cuephoria.in
+                      Please arrive 10 minutes before your booking time. For any questions or modifications, contact us at support@cuephoria.in or check your booking status online with your booking code: <span className="font-mono font-medium">{bookingAccessCode}</span>
                     </p>
                   </div>
                 </div>

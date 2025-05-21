@@ -136,6 +136,38 @@ export type Database = {
           },
         ]
       }
+      booking_views: {
+        Row: {
+          access_code: string
+          booking_id: string
+          created_at: string
+          id: string
+          last_accessed_at: string | null
+        }
+        Insert: {
+          access_code: string
+          booking_id: string
+          created_at?: string
+          id?: string
+          last_accessed_at?: string | null
+        }
+        Update: {
+          access_code?: string
+          booking_id?: string
+          created_at?: string
+          id?: string
+          last_accessed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_views_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_date: string
@@ -148,6 +180,8 @@ export type Database = {
           start_time: string
           station_id: string
           status: string
+          status_updated_at: string | null
+          status_updated_by: string | null
         }
         Insert: {
           booking_date: string
@@ -160,6 +194,8 @@ export type Database = {
           start_time: string
           station_id: string
           status?: string
+          status_updated_at?: string | null
+          status_updated_by?: string | null
         }
         Update: {
           booking_date?: string
@@ -172,6 +208,8 @@ export type Database = {
           start_time?: string
           station_id?: string
           status?: string
+          status_updated_at?: string | null
+          status_updated_by?: string | null
         }
         Relationships: [
           {
@@ -758,6 +796,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_booking_access_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_available_slots: {
         Args: { p_date: string; p_station_id: string; p_slot_duration?: number }
         Returns: {
@@ -768,6 +810,10 @@ export type Database = {
       }
       save_bill_edit_audit: {
         Args: { p_bill_id: string; p_editor_name: string; p_changes: string }
+        Returns: undefined
+      }
+      update_missed_bookings: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
     }
