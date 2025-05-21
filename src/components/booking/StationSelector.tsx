@@ -14,8 +14,6 @@ interface StationSelectorProps {
   stationType: 'ps5' | '8ball' | 'all';
   loading: boolean;
   multiSelect?: boolean;
-  unavailableStationIds?: string[];
-  availableControllers?: number;
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   onStationSelect: (station: Station) => void;
 }
@@ -26,8 +24,6 @@ const StationSelector = ({
   stationType,
   loading,
   multiSelect = false,
-  unavailableStationIds = [],
-  availableControllers = 0,
   onStationTypeChange,
   onStationSelect
 }: StationSelectorProps) => {
@@ -59,23 +55,9 @@ const StationSelector = ({
     ? sortedStations
     : sortedStations.filter(station => station.type === stationType);
   
-  // Create a handler that checks availability before selection
-  const handleStationSelect = (station: Station) => {
-    // Prevent selection if station is in the unavailable list
-    if (unavailableStationIds.includes(station.id)) {
-      return;
-    }
-    
-    // For PS5 stations, prevent selection if no controllers available
-    // But allow deselection (if it's already selected)
-    if (station.type === 'ps5' && availableControllers <= 0 && 
-        !selectedStations.some(s => s.id === station.id)) {
-      return;
-    }
-    
-    // If it passes the checks, allow selection
-    onStationSelect(station);
-  };
+  // Group stations by type for UI display
+  const ps5Stations = sortedStations.filter(station => station.type === 'ps5');
+  const ballStations = sortedStations.filter(station => station.type === '8ball');
   
   return (
     <div className="w-full">
@@ -93,9 +75,7 @@ const StationSelector = ({
         selectedStations={selectedStations}
         loading={loading}
         multiSelect={multiSelect}
-        unavailableStationIds={unavailableStationIds}
-        availableControllers={availableControllers}
-        onStationSelect={handleStationSelect}
+        onStationSelect={onStationSelect}
       />
       
       <MultiSelectInfo show={multiSelect} />

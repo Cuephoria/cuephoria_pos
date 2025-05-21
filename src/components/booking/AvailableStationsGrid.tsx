@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Station } from '@/types/pos.types';
-import { useStationAvailability } from './stations/useStationAvailability';
-import StationSelector from './StationSelector';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import StationTypeFilter from './stations/StationTypeFilter';
-import { Badge } from '@/components/ui/badge';
-import { useIsMobile } from '@/hooks/use-mobile';
+import StationGrid from './stations/StationGrid';
+import NoTimeSlotMessage from './stations/NoTimeSlotMessage';
+import { useStationAvailability } from './stations/useStationAvailability';
 
 interface AvailableStationsGridProps {
   selectedDate: Date;
@@ -15,10 +15,28 @@ interface AvailableStationsGridProps {
   onStationSelect: (station: Station) => void;
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   loading?: boolean;
-  isMobile?: boolean;
-  unavailableStationIds?: string[];
-  availableControllers?: number; 
+  isMobile?: boolean; // Added the isMobile prop
 }
+
+// Memoized station grid component to prevent unnecessary re-renders
+const AvailableStationsGridContent = React.memo(({
+  availableStations,
+  selectedStations,
+  stationType,
+  onStationSelect
+}: {
+  availableStations: Station[];
+  selectedStations: Station[];
+  stationType: 'ps5' | '8ball' | 'all';
+  onStationSelect: (station: Station) => void;
+}) => (
+  <StationGrid
+    stations={availableStations}
+    selectedStations={selectedStations}
+    onStationSelect={onStationSelect}
+    stationType={stationType}
+  />
+));
 
 const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   selectedDate,
@@ -27,75 +45,56 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   selectedStations,
   onStationSelect,
   onStationTypeChange,
-  loading: externalLoading,
-  isMobile,
-  unavailableStationIds: externalUnavailableIds,
-  availableControllers = 0
+  loading: externalLoading = false,
+  isMobile = false, // Added the isMobile prop with default value
 }) => {
-  // If external unavailable IDs are provided, use them, otherwise use what's computed from the hook
-  const { stations, availableStations, loading: internalLoading, unavailableStationIds: internalUnavailableIds } = 
-    useStationAvailability({ selectedDate, selectedTimeSlot });
+  const { 
+    availableStations,
+    loading: stationsLoading
+  } = useStationAvailability({ 
+    selectedDate, 
+    selectedTimeSlot 
+  });
   
-  const loading = externalLoading !== undefined ? externalLoading : internalLoading;
-  const unavailableStationIds = externalUnavailableIds || internalUnavailableIds || [];
+  const isLoading = externalLoading || stationsLoading;
   
-  // Create a modified handleStationSelect that respects availability
-  const handleStationSelect = (station: Station) => {
-    // If it's already selected, allow deselection
-    if (selectedStations.some(s => s.id === station.id)) {
-      onStationSelect(station);
-      return;
+  // Filter stations by type
+  const filteredStations = useMemo(() => {
+    if (stationType === 'all') {
+      return availableStations;
     }
-    
-    // Don't allow selection if station is unavailable
-    if (unavailableStationIds.includes(station.id)) {
-      return;
-    }
-    
-    // For PS5 stations, check controller availability
-    if (station.type === 'ps5' && availableControllers <= 0) {
-      return;
-    }
-    
-    // If it passes all checks, select the station
-    onStationSelect(station);
-  };
+    return availableStations.filter(station => station.type === stationType);
+  }, [availableStations, stationType]);
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-center">
+        <LoadingSpinner />
+        <span className="ml-2">Loading available stations...</span>
+      </div>
+    );
+  }
+  
+  if (!selectedTimeSlot) {
+    return <NoTimeSlotMessage />;
+  }
   
   return (
     <div>
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-        <h3 className="text-xl font-semibold mb-2 sm:mb-0">Available Stations</h3>
-        
-        <div className="flex items-center">
-          {selectedTimeSlot && (
-            <div className="flex gap-2 items-center">
-              <Badge variant="outline" className="border-cuephoria-purple text-cuephoria-lightpurple">
-                {stations.length - unavailableStationIds.length} available
-              </Badge>
-              
-              {unavailableStationIds.length > 0 && (
-                <Badge variant="outline" className="border-red-500 text-red-400">
-                  {unavailableStationIds.length} unavailable
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <StationTypeFilter 
+        stationType={stationType} 
+        onStationTypeChange={onStationTypeChange} 
+        isMobile={isMobile} // Pass the isMobile prop to StationTypeFilter
+      />
       
-      <StationSelector
-        stations={stations}
+      <AvailableStationsGridContent
+        availableStations={filteredStations}
         selectedStations={selectedStations}
         stationType={stationType}
-        onStationTypeChange={onStationTypeChange}
-        onStationSelect={handleStationSelect}
-        loading={loading}
-        multiSelect={true}
-        unavailableStationIds={unavailableStationIds}
-        availableControllers={availableControllers}
+        onStationSelect={onStationSelect}
       />
     </div>
   );
 };
 
-export default AvailableStationsGrid;
+export default React.memo(AvailableStationsGrid);

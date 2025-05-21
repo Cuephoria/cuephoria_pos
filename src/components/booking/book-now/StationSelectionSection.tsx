@@ -14,7 +14,6 @@ interface StationSelectionSectionProps {
   availableControllers: number;
   totalControllers: number;
   loadingStations: boolean;
-  unavailableStationIds?: string[];
   onStationSelect: (station: Station) => void;
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
 }
@@ -28,7 +27,6 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
   availableControllers,
   totalControllers,
   loadingStations,
-  unavailableStationIds = [],
   onStationSelect,
   onStationTypeChange
 }) => {
@@ -48,6 +46,8 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
         )}
       </div>
       
+      {/* Removed the duplicated StationTypeFilter component from here */}
+      
       <AvailableStationsGrid 
         selectedDate={selectedDate}
         selectedTimeSlot={selectedTimeSlot}
@@ -56,8 +56,6 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
         onStationSelect={onStationSelect}
         onStationTypeChange={onStationTypeChange}
         loading={loadingStations}
-        unavailableStationIds={unavailableStationIds}
-        availableControllers={availableControllers}
         isMobile={isMobile}
       />
       
