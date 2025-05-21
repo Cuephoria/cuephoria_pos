@@ -69,30 +69,60 @@ serve(async (req) => {
     console.log("With stations:", p_station_ids);
     console.log("For date:", p_booking_date, "time:", p_start_time, "-", p_end_time);
     
-    // Check if any station is already booked for this time
-    const { data: existingBookings, error: checkError } = await supabase
-      .from('bookings')
-      .select('station_id, station:stations(name)')
-      .eq('booking_date', p_booking_date)
-      .or(`start_time.lte.${p_start_time},end_time.gt.${p_start_time}`)
-      .or(`start_time.lt.${p_end_time},end_time.gte.${p_end_time}`)
-      .or(`start_time.gte.${p_start_time},end_time.lte.${p_end_time}`)
-      .eq('status', 'confirmed')
-      .in('station_id', p_station_ids);
-      
-    if (checkError) {
+    // Always ensure start and end times have seconds for consistency
+    const startTimeFormatted = p_start_time.includes(':00') ? p_start_time : p_start_time + ':00';
+    const endTimeFormatted = p_end_time.includes(':00') ? p_end_time : p_end_time + ':00';
+    
+    console.log("Standardized times: start =", startTimeFormatted, "end =", endTimeFormatted);
+    
+    // Call the SQL function to check availability
+    const { data: availabilityCheck, error: availabilityError } = await supabase.rpc(
+      'check_stations_availability',
+      {
+        p_date: p_booking_date,
+        p_start_time: startTimeFormatted,
+        p_end_time: endTimeFormatted,
+        p_station_ids: p_station_ids
+      }
+    );
+    
+    console.log("Availability check result:", availabilityCheck);
+    
+    if (availabilityError) {
+      console.error("Availability check error:", availabilityError);
       return new Response(
-        JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
+        JSON.stringify({ error: "Failed to check station availability: " + availabilityError.message }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
     
-    if (existingBookings && existingBookings.length > 0) {
-      // Get station details for better error message
-      const unavailableStations = existingBookings.map(booking => ({
+    if (availabilityCheck === false) {
+      // Get unavailable stations for better error messages
+      const { data: existingBookings, error: checkError } = await supabase
+        .from('bookings')
+        .select('station_id, station:stations(name)')
+        .eq('booking_date', p_booking_date)
+        .in('station_id', p_station_ids)
+        .eq('status', 'confirmed')
+        .or(`start_time.lte.${startTimeFormatted},end_time.gt.${startTimeFormatted}`)
+        .or(`start_time.lt.${endTimeFormatted},end_time.gte.${endTimeFormatted}`)
+        .or(`start_time.gte.${startTimeFormatted},end_time.lte.${endTimeFormatted}`)
+        .or(`start_time.lte.${startTimeFormatted},end_time.gte.${endTimeFormatted}`);
+      
+      if (checkError) {
+        console.error("Error getting unavailable stations:", checkError);
+        return new Response(
+          JSON.stringify({ error: "Failed to check station availability: " + checkError.message }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        );
+      }
+      
+      const unavailableStations = existingBookings?.map(booking => ({
         id: booking.station_id,
         name: booking.station?.name || 'Unknown station'
-      }));
+      })) || [];
+      
+      console.log("Unavailable stations:", unavailableStations);
       
       return new Response(
         JSON.stringify({ 
@@ -114,8 +144,8 @@ serve(async (req) => {
         customer_id: p_customer_id,
         station_id: stationId,
         booking_date: p_booking_date,
-        start_time: p_start_time,
-        end_time: p_end_time,
+        start_time: startTimeFormatted,
+        end_time: endTimeFormatted,
         duration: p_duration,
         status: 'confirmed',
         booking_group_id: p_booking_group_id,
@@ -146,6 +176,7 @@ serve(async (req) => {
     );
     
   } catch (error) {
+    console.error("Unhandled error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
