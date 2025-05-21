@@ -12,7 +12,7 @@ interface BookingSummaryProps {
   timeSlot: {
     startTime: string;
     endTime: string;
-  };
+  } | null; // Allow null for timeSlot
   duration: number;
   customerInfo: {
     name: string;
@@ -87,6 +87,15 @@ const BookingSummary = ({
       onCouponApply(enteredCoupon);
     }
   };
+  
+  // If timeSlot is null, show a placeholder message
+  if (!timeSlot) {
+    return (
+      <div className="p-4 text-center text-gray-400">
+        Please select a time slot to see the booking summary.
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
