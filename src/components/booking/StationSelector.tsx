@@ -9,18 +9,20 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface StationSelectorProps {
   stations: Station[];
-  selectedStation: Station | null;
+  selectedStations: Station[];
   stationType: 'ps5' | '8ball' | 'all';
   loading: boolean;
+  multiSelect?: boolean;
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   onStationSelect: (station: Station) => void;
 }
 
 const StationSelector = ({
   stations,
-  selectedStation,
+  selectedStations,
   stationType,
   loading,
+  multiSelect = false,
   onStationTypeChange,
   onStationSelect
 }: StationSelectorProps) => {
@@ -66,13 +68,25 @@ const StationSelector = ({
               <StationCard
                 key={station.id}
                 station={station}
-                isSelected={selectedStation?.id === station.id}
+                isSelected={selectedStations.some(s => s.id === station.id)}
                 onSelect={() => onStationSelect(station)}
+                multiSelect={multiSelect}
               />
             ))}
           </div>
         )}
       </Tabs>
+      
+      {multiSelect && (
+        <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <div className="flex items-center text-sm text-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-cuephoria-lightpurple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>You can select multiple stations for group bookings. All stations must be available at the same time slot.</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -80,23 +94,25 @@ const StationSelector = ({
 const StationCard = ({ 
   station, 
   isSelected, 
-  onSelect 
+  onSelect,
+  multiSelect = false
 }: { 
   station: Station; 
   isSelected: boolean; 
   onSelect: () => void; 
+  multiSelect?: boolean;
 }) => {
   const isPs5 = station.type === 'ps5';
   
   return (
     <div
-      className={`border rounded-lg p-4 transition-all cursor-pointer ${
+      className={`border rounded-lg p-4 transition-all ${
         isSelected
           ? isPs5
             ? 'border-cuephoria-purple bg-cuephoria-purple/10 shadow-[0_0_10px_rgba(139,92,246,0.3)]'
             : 'border-green-600 bg-green-900/10 shadow-[0_0_10px_rgba(22,163,74,0.3)]'
           : 'border-gray-800 bg-gray-800/20 hover:bg-gray-800/40'
-      }`}
+      } ${multiSelect ? 'cursor-pointer' : ''}`}
       onClick={onSelect}
     >
       <div className="flex items-start justify-between">
@@ -141,8 +157,16 @@ const StationCard = ({
         }`}
         onClick={onSelect}
       >
-        {isSelected ? 'Selected' : 'Select'}
+        {isSelected ? (multiSelect ? 'Selected' : 'Selected') : (multiSelect ? 'Select' : 'Select')}
       </Button>
+
+      {multiSelect && isSelected && (
+        <div className="mt-2 text-center">
+          <span className="text-xs text-cuephoria-lightpurple">
+            Click again to deselect
+          </span>
+        </div>
+      )}
     </div>
   );
 };

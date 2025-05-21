@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Check, ChevronRight, Clock, Gamepad2, Table2 } from 'lucide-react';
+import { CalendarIcon, Check, ChevronRight, Clock, Gamepad2, Share2, Table2 } from 'lucide-react';
 import BookingSteps from '@/components/booking/BookingSteps';
 import StationSelector from '@/components/booking/StationSelector';
 import TimeSlotGrid from '@/components/booking/TimeSlotGrid';
@@ -48,7 +48,7 @@ const BookNow = () => {
   
   // Station selection
   const [stations, setStations] = useState<Station[]>([]);
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [selectedStations, setSelectedStations] = useState<Station[]>([]);
   const [stationType, setStationType] = useState<'ps5'|'8ball'|'all'>('all');
   const [loadingStations, setLoadingStations] = useState<boolean>(true);
   
@@ -67,7 +67,7 @@ const BookNow = () => {
   
   // Booking summary
   const [bookingConfirmed, setBookingConfirmed] = useState<boolean>(false);
-  const [bookingId, setBookingId] = useState<string>('');
+  const [bookingIds, setBookingIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
@@ -78,19 +78,18 @@ const BookNow = () => {
   
   // Filter available stations by type when stationType changes
   useEffect(() => {
-    if (selectedStation && 
-        stationType !== 'all' && 
-        selectedStation.type !== stationType) {
-      setSelectedStation(null);
+    if (selectedStations.length > 0 && 
+        stationType !== 'all') {
+      setSelectedStations(selectedStations.filter(station => station.type === stationType));
     }
-  }, [stationType, selectedStation]);
+  }, [stationType]);
   
-  // Fetch available time slots when date or selected station changes
+  // Fetch available time slots when date or selected stations change
   useEffect(() => {
-    if (selectedStation && selectedDate) {
+    if (selectedStations.length > 0 && selectedDate) {
       fetchAvailableTimeSlots();
     }
-  }, [selectedDate, selectedStation, bookingDuration]);
+  }, [selectedDate, selectedStations, bookingDuration]);
 
   // Function to fetch stations from database
   const fetchStations = async () => {
@@ -125,9 +124,9 @@ const BookNow = () => {
     }
   };
 
-  // Function to fetch available time slots for the selected date and station
+  // Function to fetch available time slots for the selected date and stations
   const fetchAvailableTimeSlots = async () => {
-    if (!selectedStation || !selectedDate) return;
+    if (selectedStations.length === 0 || !selectedDate) return;
     
     setLoadingTimeSlots(true);
     setSelectedTimeSlot(null);
@@ -136,31 +135,52 @@ const BookNow = () => {
       // Format date for API call (YYYY-MM-DD)
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
-      // Call the get_available_slots function via RPC
-      const { data, error } = await supabase.rpc('get_available_slots', {
-        p_date: formattedDate,
-        p_station_id: selectedStation.id,
-        p_slot_duration: bookingDuration
-      });
+      // First, generate time slots for the day (11am - 11pm)
+      const allSlots = generateTimeSlots('11:00', '23:00', bookingDuration);
       
-      if (error) {
-        throw error;
+      // Check availability for each station and find common available slots
+      let availableSlots = [...allSlots];
+      
+      for (const station of selectedStations) {
+        // Call the get_available_slots function via RPC
+        const { data, error } = await supabase.rpc('get_available_slots', {
+          p_date: formattedDate,
+          p_station_id: station.id,
+          p_slot_duration: bookingDuration
+        });
+        
+        if (error) {
+          console.error(`Error checking availability for station ${station.name}:`, error);
+          toast.error(`Failed to check availability for ${station.name}`);
+          throw error;
+        }
+        
+        // Transform data to our TimeSlot format
+        const stationSlots = data.map((slot: any) => ({
+          startTime: slot.start_time.substring(0, 5), // Get HH:MM from HH:MM:SS
+          endTime: slot.end_time.substring(0, 5), // Get HH:MM from HH:MM:SS
+          isAvailable: slot.is_available
+        }));
+        
+        // Filter for common available slots
+        availableSlots = availableSlots.map(slot => {
+          const stationSlot = stationSlots.find(s => 
+            s.startTime === slot.startTime && s.endTime === slot.endTime
+          );
+          
+          return {
+            ...slot,
+            isAvailable: slot.isAvailable && (stationSlot ? stationSlot.isAvailable : false)
+          };
+        });
       }
-      
-      // Transform data to our TimeSlot format
-      const availableSlots: TimeSlot[] = data.map((slot: any) => ({
-        startTime: slot.start_time.substring(0, 5), // Get HH:MM from HH:MM:SS
-        endTime: slot.end_time.substring(0, 5), // Get HH:MM from HH:MM:SS
-        isAvailable: slot.is_available
-      }));
       
       setTimeSlots(availableSlots);
     } catch (error) {
       console.error('Error fetching time slots:', error);
-      toast.error('Failed to load available time slots');
       
       // Generate fallback time slots if API call fails
-      const fallbackSlots = generateTimeSlots('10:00', '22:00', bookingDuration);
+      const fallbackSlots = generateTimeSlots('11:00', '23:00', bookingDuration);
       setTimeSlots(fallbackSlots);
     } finally {
       setLoadingTimeSlots(false);
@@ -170,15 +190,19 @@ const BookNow = () => {
   // Handle station type filter change
   const handleStationTypeChange = (type: 'ps5' | '8ball' | 'all') => {
     setStationType(type);
-    setSelectedStation(null); // Reset selection when filter changes
   };
   
-  // Handle station selection 
+  // Handle station selection/deselection
   const handleStationSelect = (station: Station) => {
-    setSelectedStation(station);
-    if (currentStep === 1) {
-      setCurrentStep(2); // Move to date & time selection
-    }
+    setSelectedStations(prev => {
+      const isAlreadySelected = prev.some(s => s.id === station.id);
+      
+      if (isAlreadySelected) {
+        return prev.filter(s => s.id !== station.id);
+      } else {
+        return [...prev, station];
+      }
+    });
   };
   
   // Handle time slot selection
@@ -205,13 +229,55 @@ const BookNow = () => {
   const handleCustomerInfoChange = (info: CustomerInfo) => {
     setCustomerInfo(info);
   };
+
+  // Handle share booking details
+  const handleShareBooking = async () => {
+    if (!bookingIds.length || !customerInfo.name) return;
+
+    try {
+      const bookingDetails = {
+        customerName: customerInfo.name,
+        stations: selectedStations.map(s => s.name).join(", "),
+        date: format(selectedDate, 'EEEE, MMMM d, yyyy'),
+        time: `${selectedTimeSlot?.startTime} - ${selectedTimeSlot?.endTime}`,
+        duration: `${bookingDuration} minutes`
+      };
+
+      // Use the Web Share API if available
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Cuephoria Booking Confirmation',
+          text: `Hi ${bookingDetails.customerName}, your booking at Cuephoria for ${bookingDetails.stations} on ${bookingDetails.date} at ${bookingDetails.time} is confirmed!`,
+          url: window.location.href
+        });
+        toast.success('Booking details shared successfully!');
+      } else {
+        // Fallback to copying to clipboard
+        const text = `
+          Cuephoria Booking Confirmation
+          
+          Customer: ${bookingDetails.customerName}
+          Station(s): ${bookingDetails.stations}
+          Date: ${bookingDetails.date}
+          Time: ${bookingDetails.time}
+          Duration: ${bookingDetails.duration}
+        `;
+        
+        navigator.clipboard.writeText(text);
+        toast.success('Booking details copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Error sharing booking:', error);
+      toast.error('Failed to share booking details');
+    }
+  };
   
   // Move to next step
   const handleNextStep = () => {
     switch (currentStep) {
       case 1: // Station selection
-        if (!selectedStation) {
-          toast.error('Please select a station');
+        if (selectedStations.length === 0) {
+          toast.error('Please select at least one station');
           return;
         }
         setCurrentStep(2);
@@ -257,13 +323,14 @@ const BookNow = () => {
   
   // Submit booking to server
   const handleSubmitBooking = async () => {
-    if (!selectedStation || !selectedDate || !selectedTimeSlot || !customerInfo.name || !customerInfo.phone) {
+    if (selectedStations.length === 0 || !selectedDate || !selectedTimeSlot || !customerInfo.name || !customerInfo.phone) {
       toast.error('Missing required booking information');
       return;
     }
     
     setIsSubmitting(true);
     setBookingError(null);
+    setBookingIds([]);
     
     try {
       // Check if customer exists by phone number
@@ -301,31 +368,65 @@ const BookNow = () => {
         }
       }
       
-      // Create booking
+      // Create bookings for each selected station
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const createdBookingIds: string[] = [];
       
-      const { data: newBooking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          station_id: selectedStation.id,
-          customer_id: customerId,
-          booking_date: formattedDate,
-          start_time: selectedTimeSlot.startTime,
-          end_time: selectedTimeSlot.endTime,
-          duration: bookingDuration,
-          status: 'confirmed',
-          notes: ''
-        })
-        .select()
-        .single();
-        
-      if (bookingError) throw bookingError;
+      for (const station of selectedStations) {
+        const { data: newBooking, error: bookingError } = await supabase
+          .from('bookings')
+          .insert({
+            station_id: station.id,
+            customer_id: customerId,
+            booking_date: formattedDate,
+            start_time: selectedTimeSlot.startTime,
+            end_time: selectedTimeSlot.endTime,
+            duration: bookingDuration,
+            status: 'confirmed',
+            notes: ''
+          })
+          .select()
+          .single();
+          
+        if (bookingError) throw bookingError;
+        createdBookingIds.push(newBooking.id);
+      }
       
-      // Set booking confirmed
-      setBookingId(newBooking.id);
+      // Set bookings confirmed
+      setBookingIds(createdBookingIds);
       setBookingConfirmed(true);
       setCurrentStep(5); // Move to confirmation step
-      toast.success('Booking confirmed!');
+      toast.success(`${selectedStations.length} station(s) booked successfully!`);
+      
+      // Send booking confirmation email
+      if (customerInfo.email) {
+        const primaryBookingId = createdBookingIds[0];
+        const stationNames = selectedStations.map(s => s.name).join(", ");
+        
+        const bookingReference = `CUE-${primaryBookingId.substring(0, 8).toUpperCase()}`;
+        
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
+            body: {
+              bookingId: primaryBookingId,
+              customerName: customerInfo.name,
+              stationName: stationNames,
+              bookingDate: format(selectedDate, 'EEEE, MMMM d, yyyy'),
+              startTime: selectedTimeSlot.startTime,
+              endTime: selectedTimeSlot.endTime,
+              duration: bookingDuration,
+              bookingReference: bookingReference,
+              recipientEmail: customerInfo.email
+            }
+          });
+          
+          if (emailError) {
+            console.error('Error sending email:', emailError);
+          }
+        } catch (emailError) {
+          console.error('Error invoking email function:', emailError);
+        }
+      }
       
     } catch (error: any) {
       console.error('Error creating booking:', error);
@@ -335,6 +436,68 @@ const BookNow = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Set up notification for upcoming bookings
+  useEffect(() => {
+    // Function to check for upcoming bookings
+    const checkUpcomingBookings = async () => {
+      try {
+        const now = new Date();
+        const today = format(now, 'yyyy-MM-dd');
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
+        
+        // Fetch today's bookings
+        const { data: todayBookings, error } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            booking_date,
+            start_time,
+            station_id,
+            customers (
+              name
+            ),
+            stations (
+              name
+            )
+          `)
+          .eq('booking_date', today)
+          .eq('status', 'confirmed');
+          
+        if (error) throw error;
+        
+        if (todayBookings && todayBookings.length > 0) {
+          todayBookings.forEach(booking => {
+            const [hours, minutes] = booking.start_time.split(':').map(Number);
+            const bookingTimeInMinutes = hours * 60 + minutes;
+            
+            // Check if booking is 15 minutes away
+            const timeUntilBooking = bookingTimeInMinutes - currentTime;
+            if (timeUntilBooking > 0 && timeUntilBooking <= 15) {
+              const customerName = booking.customers?.name || 'Customer';
+              const stationName = booking.stations?.name || 'a station';
+              
+              toast.info(
+                `Upcoming booking for ${customerName} at ${booking.start_time} for ${stationName}`,
+                {
+                  duration: 10000, // Show for 10 seconds
+                  id: `booking-reminder-${booking.id}` // Prevent duplicate notifications
+                }
+              );
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error checking upcoming bookings:', error);
+      }
+    };
+    
+    // Check when component mounts and then every minute
+    checkUpcomingBookings();
+    const intervalId = setInterval(checkUpcomingBookings, 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black">
@@ -348,10 +511,10 @@ const BookNow = () => {
               className="h-16 mb-4" 
             />
             <h1 className="text-3xl md:text-4xl font-bold text-white font-heading bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple via-cuephoria-lightpurple to-cuephoria-blue">
-              Book Your Gaming Session
+              Book Your Gaming Experience
             </h1>
             <p className="mt-2 text-lg text-gray-300 max-w-2xl">
-              Reserve your favorite gaming station or pool table in advance
+              Reserve your favorite gaming stations or pool tables in advance
             </p>
           </div>
         </div>
@@ -367,7 +530,7 @@ const BookNow = () => {
           <Card className="mt-8 bg-gray-900/80 border-gray-800">
             <CardHeader>
               <CardTitle className="text-xl text-center">
-                {currentStep === 1 && 'Select a Station'}
+                {currentStep === 1 && 'Select Station(s)'}
                 {currentStep === 2 && 'Choose Date & Time'}
                 {currentStep === 3 && 'Your Information'}
                 {currentStep === 4 && 'Booking Summary'}
@@ -378,14 +541,43 @@ const BookNow = () => {
             <CardContent>
               {/* Step 1: Station Selection */}
               {currentStep === 1 && (
-                <StationSelector 
-                  stations={stations}
-                  selectedStation={selectedStation}
-                  stationType={stationType}
-                  loading={loadingStations}
-                  onStationTypeChange={handleStationTypeChange}
-                  onStationSelect={handleStationSelect}
-                />
+                <div>
+                  <div className="mb-4 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
+                    <p className="text-sm text-gray-300">
+                      <span className="font-semibold text-cuephoria-lightpurple">New Feature:</span> You can now select multiple stations for your booking session!
+                    </p>
+                  </div>
+                  <StationSelector 
+                    stations={stations}
+                    selectedStations={selectedStations}
+                    stationType={stationType}
+                    loading={loadingStations}
+                    onStationTypeChange={handleStationTypeChange}
+                    onStationSelect={handleStationSelect}
+                    multiSelect={true}
+                  />
+                  
+                  {selectedStations.length > 0 && (
+                    <div className="mt-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
+                      <h4 className="text-lg font-medium mb-2 text-white">Selected Stations ({selectedStations.length})</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedStations.map(station => (
+                          <div key={station.id} className="flex items-center bg-gray-800 px-3 py-1 rounded-full">
+                            <span className="text-sm text-gray-200">{station.name}</span>
+                            <button 
+                              onClick={() => handleStationSelect(station)}
+                              className="ml-2 text-gray-400 hover:text-white"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
               
               {/* Step 2: Date & Time Selection */}
@@ -537,7 +729,7 @@ const BookNow = () => {
               {/* Step 4: Booking Summary */}
               {currentStep === 4 && (
                 <BookingSummary 
-                  station={selectedStation!}
+                  stations={selectedStations}
                   date={selectedDate}
                   timeSlot={selectedTimeSlot!}
                   duration={bookingDuration}
@@ -547,14 +739,70 @@ const BookNow = () => {
               
               {/* Step 5: Booking Confirmation */}
               {currentStep === 5 && (
-                <BookingConfirmation 
-                  bookingId={bookingId}
-                  station={selectedStation!}
-                  date={selectedDate}
-                  timeSlot={selectedTimeSlot!}
-                  duration={bookingDuration}
-                  customerInfo={customerInfo}
-                />
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Check size={32} />
+                    </div>
+                    <h3 className="text-2xl font-semibold text-white mb-1">Booking Confirmed!</h3>
+                    <p className="text-gray-400 mb-6">
+                      Your booking details have been sent to {customerInfo.email || "our system"}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                    <h4 className="text-lg font-medium mb-4 text-white">Booking Details</h4>
+                    
+                    <div className="space-y-3 text-gray-300">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Customer Name:</span>
+                        <span className="font-medium">{customerInfo.name}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Station(s):</span>
+                        <span className="font-medium">{selectedStations.map(s => s.name).join(", ")}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Date:</span>
+                        <span className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Time:</span>
+                        <span className="font-medium">{selectedTimeSlot?.startTime} - {selectedTimeSlot?.endTime}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Duration:</span>
+                        <span className="font-medium">{bookingDuration} minutes</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Booking Reference:</span>
+                        <span className="font-medium font-mono">CUE-{bookingIds[0]?.substring(0, 8).toUpperCase() || "ERROR"}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <Button 
+                        onClick={handleShareBooking} 
+                        variant="outline" 
+                        className="w-full flex items-center justify-center gap-2"
+                      >
+                        <Share2 size={16} />
+                        Share Booking Details
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg p-4">
+                    <p className="text-gray-300">
+                      Please arrive 10 minutes before your booking time. For any questions or modifications, contact us at support@cuephoria.in
+                    </p>
+                  </div>
+                </div>
               )}
             </CardContent>
             
@@ -604,7 +852,7 @@ const BookNow = () => {
                     onClick={() => {
                       // Reset form for new booking
                       setCurrentStep(1);
-                      setSelectedStation(null);
+                      setSelectedStations([]);
                       setSelectedDate(new Date());
                       setSelectedTimeSlot(null);
                       setCustomerInfo({
@@ -614,6 +862,7 @@ const BookNow = () => {
                         isExistingCustomer: false
                       });
                       setBookingConfirmed(false);
+                      setBookingIds([]);
                     }}
                     className="w-full sm:w-auto bg-cuephoria-purple hover:bg-cuephoria-purple/90"
                   >

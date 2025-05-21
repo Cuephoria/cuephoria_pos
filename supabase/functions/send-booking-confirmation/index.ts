@@ -93,7 +93,7 @@ serve(async (req) => {
             .cta-button {
               display: inline-block;
               background: linear-gradient(to right, #6a11cb, #8e44ad);
-              color: white;
+              color: white !important;
               text-decoration: none;
               padding: 10px 20px;
               border-radius: 5px;
@@ -126,7 +126,7 @@ serve(async (req) => {
             <p>If you need to make any changes to your booking, please contact us.</p>
             
             <div style="text-align:center">
-              <a href="http://admin.cuephoria.in/booknow" class="cta-button">Book Another Session</a>
+              <a href="https://admin.cuephoria.in/booknow" class="cta-button">Book Another Session</a>
             </div>
           </div>
           <div class="footer">

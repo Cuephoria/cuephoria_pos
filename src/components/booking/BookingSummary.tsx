@@ -2,139 +2,100 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Station } from '@/types/pos.types';
-import { CalendarIcon, Clock, Gamepad2, Table2, User } from 'lucide-react';
-
-interface TimeSlot {
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-}
-
-interface CustomerInfo {
-  name: string;
-  phone: string;
-  email: string;
-  isExistingCustomer: boolean;
-  customerId?: string;
-}
+import { CalendarIcon, Clock, User } from 'lucide-react';
 
 interface BookingSummaryProps {
-  station: Station;
+  stations: Station[];
   date: Date;
-  timeSlot: TimeSlot;
+  timeSlot: {
+    startTime: string;
+    endTime: string;
+  };
   duration: number;
-  customerInfo: CustomerInfo;
+  customerInfo: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
 }
 
 const BookingSummary = ({
-  station,
+  stations,
   date,
   timeSlot,
   duration,
   customerInfo
 }: BookingSummaryProps) => {
-  // Calculate estimated cost
-  const hourlyRate = station.hourlyRate;
-  const hours = duration / 60;
-  const estimatedCost = hourlyRate * hours;
-  
-  // Get icon based on station type
-  const StationIcon = station.type === 'ps5' ? Gamepad2 : Table2;
+  const totalPrice = stations.reduce((sum, station) => 
+    sum + (station.hourlyRate * (duration / 60)), 0
+  );
   
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-medium mb-4">Please review your booking details</h3>
-      
-      {/* Station Details */}
-      <div className="bg-gray-800/30 p-4 rounded-lg border border-gray-700 space-y-4">
-        <div className="flex items-center">
-          <div className={`w-10 h-10 rounded-lg ${
-            station.type === 'ps5' ? 'bg-cuephoria-purple/20' : 'bg-green-900/20'
-          } flex items-center justify-center mr-3`}>
-            <StationIcon className={`h-5 w-5 ${
-              station.type === 'ps5' ? 'text-cuephoria-lightpurple' : 'text-green-400'
-            }`} />
-          </div>
-          <div>
-            <h4 className="font-medium text-white">{station.name}</h4>
-            <p className="text-sm text-gray-400">
-              {station.type === 'ps5' ? 'PlayStation 5 Console' : '8-Ball Pool Table'}
-            </p>
-          </div>
-        </div>
+      <div className="bg-gray-800/70 border border-gray-700 rounded-lg p-6">
+        <h3 className="text-lg font-medium mb-4 text-white">Booking Summary</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center">
-            <CalendarIcon className="h-4 w-4 mr-2 text-cuephoria-lightpurple" />
-            <span>{format(date, 'EEEE, MMMM d, yyyy')}</span>
-          </div>
-          
-          <div className="flex items-center">
-            <Clock className="h-4 w-4 mr-2 text-cuephoria-lightpurple" />
-            <span>{timeSlot.startTime} - {timeSlot.endTime} ({duration} minutes)</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Customer Details */}
-      <div className="bg-gray-800/30 p-4 rounded-lg border border-gray-700">
-        <h4 className="font-medium text-white mb-3 flex items-center">
-          <User className="h-4 w-4 mr-2" />
-          Customer Information
-        </h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4">
-          <div>
-            <span className="text-gray-400 text-sm">Name:</span>
-            <p>{customerInfo.name}</p>
-          </div>
-          
-          <div>
-            <span className="text-gray-400 text-sm">Phone:</span>
-            <p>{customerInfo.phone}</p>
-          </div>
-          
-          {customerInfo.email && (
-            <div className="col-span-2">
-              <span className="text-gray-400 text-sm">Email:</span>
-              <p>{customerInfo.email}</p>
+        <div className="space-y-4">
+          {/* Customer Info */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center py-3 border-b border-gray-700">
+            <div className="flex items-center mb-2 md:mb-0">
+              <User className="text-cuephoria-purple mr-3 h-5 w-5" />
+              <h4 className="text-gray-400">Customer</h4>
             </div>
-          )}
+            <div className="text-white">
+              <p className="font-medium">{customerInfo.name}</p>
+              <p className="text-sm text-gray-400">{customerInfo.phone}</p>
+              {customerInfo.email && <p className="text-sm text-gray-400">{customerInfo.email}</p>}
+            </div>
+          </div>
+          
+          {/* Date & Time */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center py-3 border-b border-gray-700">
+            <div className="flex items-center mb-2 md:mb-0">
+              <CalendarIcon className="text-cuephoria-purple mr-3 h-5 w-5" />
+              <h4 className="text-gray-400">Date & Time</h4>
+            </div>
+            <div className="text-white">
+              <p className="font-medium">{format(date, 'EEEE, MMMM d, yyyy')}</p>
+              <p className="text-sm text-gray-400">
+                {timeSlot.startTime} - {timeSlot.endTime} ({duration} minutes)
+              </p>
+            </div>
+          </div>
+          
+          {/* Station(s) */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start py-3 border-b border-gray-700">
+            <div className="flex items-center mb-2 md:mb-0">
+              <Clock className="text-cuephoria-purple mr-3 h-5 w-5" />
+              <h4 className="text-gray-400">Station{stations.length > 1 ? 's' : ''}</h4>
+            </div>
+            <div className="text-white">
+              {stations.map((station, index) => (
+                <div key={station.id} className="mb-2 last:mb-0">
+                  <p className="font-medium">{station.name}</p>
+                  <p className="text-sm text-gray-400">
+                    ₹{station.hourlyRate} per hour × {duration / 60} hour{duration > 60 ? 's' : ''} = 
+                    ₹{(station.hourlyRate * (duration / 60)).toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         
-        {customerInfo.isExistingCustomer && (
-          <div className="mt-3 pt-2 border-t border-gray-700">
-            <span className="bg-cuephoria-purple/20 text-cuephoria-lightpurple text-xs px-2 py-1 rounded-full">
-              Existing Customer
-            </span>
+        <div className="mt-6 pt-4 border-t border-gray-700">
+          <div className="flex justify-between items-center">
+            <h4 className="text-lg font-medium text-gray-300">Total Amount</h4>
+            <p className="text-xl font-bold text-cuephoria-lightpurple">₹{totalPrice.toFixed(2)}</p>
           </div>
-        )}
+        </div>
       </div>
       
-      {/* Pricing Summary */}
-      <div className="bg-gray-800/30 p-4 rounded-lg border border-gray-700">
-        <h4 className="font-medium text-white mb-3">Pricing Summary</h4>
-        
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Hourly Rate:</span>
-            <span>₹{hourlyRate}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-gray-400">Duration:</span>
-            <span>{hours} hour{hours > 1 ? 's' : ''}</span>
-          </div>
-          
-          <div className="pt-2 border-t border-gray-700 flex justify-between font-medium">
-            <span>Estimated Total:</span>
-            <span className="text-cuephoria-lightpurple">₹{estimatedCost}</span>
-          </div>
-          
-          <p className="text-xs text-gray-500 mt-2">
-            * Payment will be collected at the venue
-          </p>
-        </div>
+      <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-4">
+        <p className="text-sm text-gray-400">
+          By confirming this booking, you agree to our <span className="text-cuephoria-lightpurple">terms and conditions</span>. 
+          Cancellations made less than 2 hours before the booking time may be subject to a cancellation fee.
+        </p>
       </div>
     </div>
   );
