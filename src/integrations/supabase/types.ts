@@ -811,18 +811,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_stations_availability: {
-        Args: {
-          p_date: string
-          p_start_time: string
-          p_end_time: string
-          p_station_ids: string[]
-        }
-        Returns: {
-          station_id: string
-          is_available: boolean
-        }[]
-      }
       generate_booking_access_code: {
         Args: Record<PropertyKey, never>
         Returns: string

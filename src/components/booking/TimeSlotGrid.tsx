@@ -2,7 +2,7 @@
 import React from 'react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { format } from 'date-fns';
-import { getEarliestBookingTime } from '@/utils/booking';
+import { getEarliestBookingTime } from '@/utils/booking.utils';
 
 interface TimeSlot {
   startTime: string;
