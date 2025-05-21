@@ -20,13 +20,24 @@ const BookNowFooter: React.FC<BookNowFooterProps> = ({
   onNextStep,
   onBookAnother
 }) => {
+  // Scroll to top function
+  const handleNextWithScroll = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onNextStep();
+  };
+
+  const handlePreviousWithScroll = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onPreviousStep();
+  };
+
   return (
     <CardFooter className="flex flex-col sm:flex-row justify-between gap-4">
       {currentStep < 5 && (
         <>
           <Button 
             variant="outline" 
-            onClick={onPreviousStep}
+            onClick={handlePreviousWithScroll}
             disabled={currentStep === 1 || isSubmitting}
             className="w-full sm:w-auto"
           >
@@ -34,7 +45,7 @@ const BookNowFooter: React.FC<BookNowFooterProps> = ({
           </Button>
           
           <Button 
-            onClick={onNextStep}
+            onClick={handleNextWithScroll}
             disabled={isSubmitting}
             className="w-full sm:w-auto bg-cuephoria-purple hover:bg-cuephoria-purple/90"
           >

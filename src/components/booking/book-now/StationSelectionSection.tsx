@@ -3,6 +3,7 @@ import React from 'react';
 import { Station } from '@/types/pos.types';
 import ControllerManagement from '@/components/booking/ControllerManagement';
 import AvailableStationsGrid from '@/components/booking/AvailableStationsGrid';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface StationSelectionSectionProps {
   selectedDate: Date;
@@ -29,6 +30,8 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
   onStationSelect,
   onStationTypeChange
 }) => {
+  const isMobile = useIsMobile();
+  
   return (
     <div>
       <div className="mb-6 p-4 bg-cuephoria-purple/10 border border-cuephoria-purple/30 rounded-lg">
@@ -51,6 +54,7 @@ const StationSelectionSection: React.FC<StationSelectionSectionProps> = ({
         onStationSelect={onStationSelect}
         onStationTypeChange={onStationTypeChange}
         loading={loadingStations}
+        isMobile={isMobile}
       />
       
       {/* Controller Availability for PS5 */}

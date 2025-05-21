@@ -15,6 +15,7 @@ interface AvailableStationsGridProps {
   onStationSelect: (station: Station) => void;
   onStationTypeChange: (type: 'ps5' | '8ball' | 'all') => void;
   loading?: boolean;
+  isMobile?: boolean; // Added the isMobile prop
 }
 
 // Memoized station grid component to prevent unnecessary re-renders
@@ -45,6 +46,7 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
   onStationSelect,
   onStationTypeChange,
   loading: externalLoading = false,
+  isMobile = false, // Added the isMobile prop with default value
 }) => {
   const { 
     availableStations,
@@ -82,6 +84,7 @@ const AvailableStationsGrid: React.FC<AvailableStationsGridProps> = ({
       <StationTypeFilter 
         stationType={stationType} 
         onStationTypeChange={onStationTypeChange} 
+        isMobile={isMobile} // Pass the isMobile prop to StationTypeFilter
       />
       
       <AvailableStationsGridContent
