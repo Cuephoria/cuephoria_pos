@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -97,8 +96,11 @@ const CheckBooking = () => {
     }
 
     if (data && data.bookings) {
-      const bookingData = data.bookings;
-      bookingData.access_code = data.access_code; // Preserve access_code
+      // Create a new booking object with all data from bookings plus the access code
+      const bookingData = {
+        ...data.bookings,
+        access_code: data.access_code // Store access code separately
+      };
       
       setBooking(bookingData);
       setCustomerBookings([bookingData]);
