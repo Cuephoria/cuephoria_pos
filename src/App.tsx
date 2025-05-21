@@ -36,15 +36,20 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
-  // Use the hook to update booking statuses periodically
+// Create a separate component for using the hook
+const BookingStatusUpdater = () => {
   useUpdateBookingStatuses();
-  
+  return null;
+};
+
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <POSProvider>
           <ExpenseProvider>
+            {/* Use the component to properly use the hook */}
+            <BookingStatusUpdater />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
