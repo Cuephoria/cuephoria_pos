@@ -13,7 +13,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
   const { stations, setStations, sessions, setSessions, updateCustomer } = props;
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isEndingSession, setIsEndingSession] = useState<Record<string, boolean>>({});
   
   // Get the functionality from existing hooks
   const startSessionHook = useStartSession(props);
@@ -68,7 +67,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
             station_id: dbStationId, // Use a valid UUID for database
             customer_id: newSession.customerId,
             start_time: newSession.startTime.toISOString(),
-            status: 'active', // Explicitly set status
             // No end_time or duration, making it persist until explicitly ended
           } as any)
           .select();
@@ -136,15 +134,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
   // End an active session
   const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
-      // Check if we're already ending this session
-      if (isEndingSession[stationId]) {
-        console.log('Already ending session for station:', stationId);
-        return undefined;
-      }
-      
       setIsLoading(true);
-      setIsEndingSession(prev => ({ ...prev, [stationId]: true }));
-      
       console.log('Ending session for station:', stationId);
       
       // Find the station
@@ -175,7 +165,6 @@ export const useSessionActions = (props: SessionActionsProps) => {
       throw error;
     } finally {
       setIsLoading(false);
-      setIsEndingSession(prev => ({ ...prev, [stationId]: false }));
     }
   };
   

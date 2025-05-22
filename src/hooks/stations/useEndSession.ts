@@ -61,42 +61,29 @@ export const useEndSession = ({
         s.id === session.id ? updatedSession : s
       ));
       
-      // Important: Update station state early to prevent race conditions
       setStations(prev => prev.map(s => 
         s.id === stationId 
           ? { ...s, isOccupied: false, currentSession: null } 
           : s
       ));
       
-      // Try to update session in Supabase with retry logic
-      let retries = 2;
-      let sessionUpdateSuccess = false;
-      
-      while (retries > 0 && !sessionUpdateSuccess) {
-        try {
-          const { error: sessionError } = await supabase
-            .from('sessions')
-            .update({
-              end_time: endTime.toISOString(),
-              duration: durationMinutes,
-              status: 'completed'  // Explicitly mark as completed
-            })
-            .eq('id', session.id);
-            
-          if (sessionError) {
-            console.error('Error updating session in Supabase:', sessionError);
-            retries--;
-            // Wait a bit before retrying
-            if (retries > 0) await new Promise(r => setTimeout(r, 500));
-          } else {
-            sessionUpdateSuccess = true;
-            console.log('Successfully updated session in Supabase');
-          }
-        } catch (supabaseError) {
-          console.error('Error updating session in Supabase:', supabaseError);
-          retries--;
-          if (retries > 0) await new Promise(r => setTimeout(r, 500));
+      // Try to update session in Supabase
+      try {
+        const { error: sessionError } = await supabase
+          .from('sessions')
+          .update({
+            end_time: endTime.toISOString(),
+            duration: durationMinutes
+          })
+          .eq('id', session.id);
+          
+        if (sessionError) {
+          console.error('Error updating session in Supabase:', sessionError);
+          // Continue since local state is already updated
         }
+      } catch (supabaseError) {
+        console.error('Error updating session in Supabase:', supabaseError);
+        // Continue since local state is already updated
       }
       
       // Try to update station in Supabase
@@ -107,16 +94,12 @@ export const useEndSession = ({
         if (dbStationId) {
           const { error: stationError } = await supabase
             .from('stations')
-            .update({ 
-              is_occupied: false 
-            })
+            .update({ is_occupied: false })
             .eq('id', dbStationId);
           
           if (stationError) {
             console.error('Error updating station in Supabase:', stationError);
             // Continue since local state is already updated
-          } else {
-            console.log('Successfully updated station in Supabase');
           }
         } else {
           console.log("Skipping station update in Supabase due to non-UUID station ID");
@@ -144,7 +127,7 @@ export const useEndSession = ({
       const hoursPlayed = durationMinutes / 60; // Convert minutes to hours for billing
       let sessionCost = Math.ceil(hoursPlayed * stationRate);
       
-      // Apply 50% discount for members
+      // Apply 50% discount for members - IMPORTANT: This is the key part for member discounts
       const isMember = customer?.isMember || false;
       const discountApplied = isMember;
       

@@ -25,6 +25,7 @@ import Bookings from './pages/Bookings';
 import CheckBooking from './pages/CheckBooking';
 import { useUpdateBookingStatuses } from './hooks/stations';
 import AuthenticatedLayout from './components/layouts/AuthenticatedLayout';
+import Tournaments from './pages/Tournaments';
 
 // Initialize React Query client
 const queryClient = new QueryClient({
@@ -36,25 +37,31 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
-  // Use the hook to update booking statuses periodically
+// Create a separate component for using the hook
+const BookingStatusUpdater = () => {
   useUpdateBookingStatuses();
-  
+  return null;
+};
+
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <POSProvider>
           <ExpenseProvider>
+            {/* Use the component to properly use the hook */}
+            <BookingStatusUpdater />
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/booknow" element={<BookNow />} />
-              <Route path="/public/stations" element={<PublicStations />} />
+              <Route path="/stations/public" element={<PublicStations />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
-              <Route path="/bookings/check" element={<CheckBooking />} />
+              <Route path="/check/:code" element={<CheckBooking />} />
+              <Route path="/tournaments" element={<Tournaments />} />
               
               {/* Authenticated routes */}
               <Route element={<AuthenticatedLayout />}>
