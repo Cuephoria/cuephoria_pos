@@ -19,7 +19,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [sessionStatus, setSessionStatus] = useState<string>('active');
   const { toast } = useToast();
   const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
@@ -29,7 +28,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
     stationId: string;
     customerId: string;
     hourlyRate: number;
-    status?: string;
   } | null>(null);
 
   // Clear interval on component unmount to prevent memory leaks
@@ -44,54 +42,12 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
 
   // Re-initialize timer when station data changes
   useEffect(() => {
-    // Check if session is completed from database on initial load and station changes
-    const checkSessionStatus = async () => {
-      if (!station.currentSession) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('sessions')
-          .select('status, end_time')
-          .eq('id', station.currentSession.id)
-          .single();
-          
-        if (error) {
-          console.error("StationTimer: Error fetching session status", error);
-          return;
-        }
-        
-        if (data) {
-          console.log(`StationTimer: Session ${station.currentSession.id} status from DB:`, data.status);
-          
-          // If session is completed in database but not in local state
-          if (data.status === 'completed' || data.end_time) {
-            console.log("StationTimer: Session is completed in database but not in local state, refreshing");
-            setSessionStatus('completed');
-            
-            // Force reload the page to update station state
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-            
-            return;
-          }
-          
-          setSessionStatus(data.status || 'active');
-        }
-      } catch (error) {
-        console.error("StationTimer: Error checking session status", error);
-      }
-    };
-    
-    checkSessionStatus();
-    
     if (!station.isOccupied || !station.currentSession) {
       // Reset timer state when station is not occupied
       setHours(0);
       setMinutes(0);
       setSeconds(0);
       setCost(0);
-      setSessionStatus('completed');
       
       // Clear any existing timer
       if (timerRef.current) {
@@ -110,11 +66,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
         startTime: new Date(station.currentSession.startTime),
         stationId: station.id,
         customerId: station.currentSession.customerId,
-        hourlyRate: station.hourlyRate,
-        status: station.currentSession.status || 'active'
+        hourlyRate: station.hourlyRate
       };
-      
-      setSessionStatus(station.currentSession.status || 'active');
       
       // Ensure we have a valid start time
       if (isNaN(sessionDataRef.current.startTime.getTime())) {
@@ -128,9 +81,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
       updateTimerCalculation();
     }
 
-    // Set up interval for regular updates if not already running and session is active
-    if (timerRef.current === null && station.currentSession && 
-        sessionStatus !== 'completed') {
+    // Set up interval for regular updates if not already running
+    if (timerRef.current === null && station.currentSession) {
       timerRef.current = window.setInterval(() => {
         updateTimerCalculation();
       }, 1000);
@@ -143,7 +95,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
   // Function to update timer calculation based on session data
   const updateTimerCalculation = () => {
     if (!sessionDataRef.current) return;
-    if (sessionStatus === 'completed') return;
     
     try {
       const customer = customers.find(c => c.id === sessionDataRef.current?.customerId);
@@ -196,45 +147,21 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
         // Use type assertion since we know this data should exist
         const sessionData = data as any;
         
-        // Check if session is completed in database
-        if (sessionData && sessionData.status === 'completed') {
-          console.log("StationTimer: Session is marked as completed in database");
-          setSessionStatus('completed');
-          
-          // Clear timer if running
-          if (timerRef.current) {
-            window.clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          
-          // Force refresh the page to update station state
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
-          
-          setIsRefreshing(false);
-          return;
-        }
-        
         if (sessionData && sessionData.start_time) {
           const startTime = new Date(sessionData.start_time);
           
           // Update the sessionDataRef with data from Supabase
           if (sessionDataRef.current) {
             sessionDataRef.current.startTime = startTime;
-            sessionDataRef.current.status = sessionData.status;
           } else {
             sessionDataRef.current = {
               sessionId,
               startTime,
               stationId: station.id,
               customerId: station.currentSession.customerId,
-              hourlyRate: station.hourlyRate,
-              status: sessionData.status
+              hourlyRate: station.hourlyRate
             };
           }
-          
-          setSessionStatus(sessionData.status || 'active');
           
           // Update timer calculation with fresh data
           updateTimerCalculation();
@@ -247,8 +174,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false })
     }
   };
 
-  // If session is completed, don't show the timer
-  if (!station.isOccupied || !station.currentSession || sessionStatus === 'completed') {
+  if (!station.isOccupied || !station.currentSession) {
     return null;
   }
 

@@ -50,7 +50,6 @@ export interface Session {
   startTime: Date;
   endTime?: Date;
   duration?: number; // in minutes
-  status?: 'active' | 'completed' | 'paused'; // Added status field to match database
 }
 
 export interface CartItem {
@@ -124,10 +123,6 @@ export interface POSContextType {
   
   // Station state setter
   setStations: (stations: Station[]) => void;
-  
-  // Add the refreshStations function to the interface definition
-  refreshStations?: () => void;
-  refreshSessions?: () => void;
   
   // Product functions
   addProduct: (product: Omit<Product, 'id'>) => void;

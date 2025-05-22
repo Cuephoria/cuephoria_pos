@@ -48,62 +48,6 @@ export const useStations = (
       }
     }
   }, [sessions, stations, stationsLoading, sessionsLoading]);
-  
-  // Add auto-refresh for stations every 30 seconds
-  useEffect(() => {
-    const autoRefreshInterval = setInterval(() => {
-      if (!stationsLoading && !sessionsLoading) {
-        console.log("Auto-refreshing stations and sessions data");
-        refreshStations();
-        refreshSessions();
-      }
-    }, 30000); // Every 30 seconds
-    
-    return () => clearInterval(autoRefreshInterval);
-  }, [refreshStations, refreshSessions, stationsLoading, sessionsLoading]);
-
-  // Add a listener for redirect-based refreshes
-  useEffect(() => {
-    // Check if coming back from POS page (after ending a session)
-    const checkPageTransition = () => {
-      const prevRoute = sessionStorage.getItem('prevRoute');
-      const currentRoute = window.location.pathname;
-      
-      // If just returned from POS route to stations route
-      if (prevRoute === '/pos' && currentRoute === '/stations') {
-        console.log("Detected navigation from POS to Stations - refreshing data");
-        if (!stationsLoading && !sessionsLoading) {
-          // Subtle refresh after a short delay to let page render
-          setTimeout(() => {
-            refreshStations();
-            refreshSessions();
-          }, 300);
-        }
-      }
-      
-      // Update previous route
-      sessionStorage.setItem('prevRoute', currentRoute);
-    };
-    
-    // Run on component mount
-    checkPageTransition();
-    
-    // Add event listener for custom refresh event
-    const handleCustomRefresh = () => {
-      if (!stationsLoading && !sessionsLoading) {
-        console.log("Custom refresh event received");
-        refreshStations();
-        refreshSessions();
-      }
-    };
-    
-    window.addEventListener('refresh-stations', handleCustomRefresh);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('refresh-stations', handleCustomRefresh);
-    };
-  }, [refreshStations, refreshSessions, stationsLoading, sessionsLoading]);
 
   // Create session action props
   const sessionActionsProps = {
