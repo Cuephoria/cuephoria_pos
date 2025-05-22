@@ -11,8 +11,12 @@ const Stations = () => {
   const { stations, refreshStations } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
   
-  // Add event listener for global station refresh
+  // Track page navigation for refresh logic
   useEffect(() => {
+    // Store current path in session storage for navigation detection
+    sessionStorage.setItem('prevRoute', window.location.pathname);
+    
+    // Add event listener for global station refresh
     const handleRefreshStations = () => {
       console.log("Global refresh stations event triggered");
       if (refreshStations) {

@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, RefreshCw, User } from "lucide-react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -98,11 +98,6 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    window.location.reload();
-  };
-
   const handleEndSession = async () => {
     if (station.isOccupied && station.currentSession) {
       try {
@@ -125,6 +120,9 @@ const StationActions: React.FC<StationActionsProps> = ({
           description: "Session has been ended and added to cart. Redirecting to checkout...",
         });
         
+        // Before redirecting, store the current path to enable subtle auto-refresh on return
+        sessionStorage.setItem('prevRoute', '/pos');
+        
         // Give DB operations time to complete before redirecting
         setTimeout(() => {
           navigate('/pos');
@@ -142,40 +140,21 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
-  // JSX for refresh button
-  const RefreshButton = () => (
-    <Button 
-      variant="outline" 
-      size="sm"
-      className="mb-2 w-full"
-      onClick={handleRefresh}
-      disabled={isRefreshing}
-    >
-      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-      {isRefreshing ? "Refreshing..." : "Refresh Status"}
-    </Button>
-  );
-
   if (station.isOccupied) {
     return (
-      <>
-        <RefreshButton />
-        <Button 
-          variant="destructive" 
-          className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
-          onClick={handleEndSession}
-          disabled={isLoading}
-        >
-          {isLoading ? "Processing..." : "End Session"}
-        </Button>
-      </>
+      <Button 
+        variant="destructive" 
+        className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
+        onClick={handleEndSession}
+        disabled={isLoading}
+      >
+        {isLoading ? "Processing..." : "End Session"}
+      </Button>
     );
   }
 
   return (
     <>
-      <RefreshButton />
-      
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
