@@ -133,7 +133,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
     }
   };
   
-  // End an active session - improved with reliable completion check
+  // End an active session
   const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
       // Check if we're already ending this session
@@ -159,16 +159,10 @@ export const useSessionActions = (props: SessionActionsProps) => {
         throw new Error('No active session found');
       }
       
-      // Call the enhanced endSession implementation that verifies everything worked
+      // Call the original hook implementation to handle session ending
       const result = await endSessionHook.endSession(stationId, customersList);
-      
-      if (!result) {
-        throw new Error('Failed to end session - no result returned');
-      }
-      
       console.log("Session ended successfully, result:", result);
       
-      // The session has been fully updated and verified in endSessionHook
       return result;
       
     } catch (error) {

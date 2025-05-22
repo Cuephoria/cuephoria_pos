@@ -7,14 +7,14 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, User, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StationActionsProps {
   station: Station;
   customers: Customer[];
   onStartSession: (stationId: string, customerId: string) => Promise<void>;
-  onEndSession: (stationId: string) => Promise<any>; 
+  onEndSession: (stationId: string) => Promise<void>;
 }
 
 const StationActions: React.FC<StationActionsProps> = ({ 
@@ -30,10 +30,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'verifying' | 'success' | 'failed'>('idle');
-  const [attempts, setAttempts] = useState(0);
-  const [timeoutId, setTimeoutId] = useState<number | null>(null);
-  
+
   // Debounce function to prevent double-clicks
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
@@ -76,30 +73,6 @@ const StationActions: React.FC<StationActionsProps> = ({
       
       try {
         setIsLoading(true);
-        setProcessingState('processing');
-        setAttempts(prev => prev + 1);
-        
-        // Clear any existing timeout
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
-        
-        // Set a timeout to prevent hanging indefinitely
-        const timeout = window.setTimeout(() => {
-          if (processingState === 'processing' || processingState === 'verifying') {
-            console.log('End session timeout triggered - operation took too long');
-            setProcessingState('failed');
-            setIsLoading(false);
-            
-            toast({
-              title: "Operation Timeout",
-              description: "Session ending took too long. Please try again.",
-              variant: "destructive"
-            });
-          }
-        }, 15000); // 15 second timeout
-        
-        setTimeoutId(timeout);
         
         const customerId = station.currentSession.customerId;
         console.log('Ending session for station:', station.id, 'customer:', customerId);
@@ -110,118 +83,48 @@ const StationActions: React.FC<StationActionsProps> = ({
           selectCustomer(customer.id);
         }
         
-        // Show processing toast
+        // Show loading toast to indicate process has started
         toast({
           title: "Processing...",
           description: "Ending session and preparing checkout...",
         });
         
         // Wait for session to fully end before redirecting
-        const result = await onEndSession(station.id);
+        await onEndSession(station.id);
         
-        if (!result) {
-          throw new Error("Failed to end session - no result returned");
-        }
+        setIsRedirecting(true); // Set redirecting state to prevent multiple navigations
         
-        setProcessingState('verifying');
+        toast({
+          title: "Session Ended",
+          description: "Session has been ended and added to cart.",
+        });
         
-        // Verify the session was properly ended
-        if (result.isFullyUpdated) {
-          setProcessingState('success');
-          console.log("Session fully ended, proceeding to checkout");
-          
-          // Success toast
-          toast({
-            title: "Session Ended",
-            description: "Session has been ended successfully and added to cart.",
-          });
-          
-          // Clear the timeout since we succeeded
-          if (timeoutId) {
-            window.clearTimeout(timeoutId);
-          }
-          
-          // Set redirecting state
-          setIsRedirecting(true);
-          
-          // Add a small delay before redirecting to ensure state updates are complete
-          setTimeout(() => {
-            navigate('/pos');
-          }, 500);
-        } else {
-          console.error("Session was not fully updated, not redirecting");
-          setProcessingState('failed');
-          
-          toast({
-            title: "Error",
-            description: "Failed to properly end session. Please try again.",
-            variant: "destructive"
-          });
-          
-          setIsRedirecting(false);
-          setIsLoading(false);
-        }
+        // Add a small delay before redirecting to ensure state updates are complete
+        setTimeout(() => {
+          navigate('/pos');
+        }, 500);
       } catch (error) {
         console.error("Error ending session:", error);
-        setProcessingState('failed');
-        
         toast({
           title: "Error",
           description: "Failed to end session. Please try again.",
           variant: "destructive"
         });
-        
         setIsRedirecting(false);
         setIsLoading(false);
-        
-        // Clear the timeout
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
       }
     }
-  };
-
-  // Cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [timeoutId]);
-
-  const getButtonText = () => {
-    if (isLoading) {
-      switch (processingState) {
-        case 'processing': return "Processing...";
-        case 'verifying': return "Verifying...";
-        case 'success': return "Success! Redirecting...";
-        case 'failed': return "Failed - Try Again";
-        default: return "Processing...";
-      }
-    }
-    
-    if (isRedirecting) return "Redirecting...";
-    return "End Session";
   };
 
   if (station.isOccupied) {
     return (
       <Button 
         variant="destructive" 
-        className={`w-full text-white font-bold py-3 text-lg 
-          ${processingState === 'failed' ? 'bg-red-600 hover:bg-red-700' : 
-            processingState === 'success' ? 'bg-green-600 hover:bg-green-700' : 
-            'bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90'} 
-          transition-all duration-300`}
+        className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
         onClick={handleEndSession}
         disabled={isLoading || isRedirecting}
       >
-        {isLoading && (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        )}
-        {getButtonText()}
+        {isLoading ? "Processing..." : isRedirecting ? "Redirecting..." : "End Session"}
       </Button>
     );
   }
@@ -287,12 +190,7 @@ const StationActions: React.FC<StationActionsProps> = ({
         disabled={!selectedCustomerId || isLoading || customers.length === 0} 
         onClick={handleStartSession}
       >
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Starting...
-          </>
-        ) : customers.length === 0 ? "No Customers Available" : "Start Session"}
+        {isLoading ? "Starting..." : customers.length === 0 ? "No Customers Available" : "Start Session"}
       </Button>
     </>
   );

@@ -16,7 +16,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
-  const [isSyncWithServer, setIsSyncWithServer] = useState<boolean>(true);
   const { toast } = useToast();
   const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
@@ -27,33 +26,15 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     stationId: string;
     customerId: string;
     hourlyRate: number;
-    isActive: boolean;
   } | null>(null);
-  const lastFetchRef = useRef<number>(Date.now());
-  const fetchIntervalRef = useRef<number | null>(null);
-  const mountedRef = useRef<boolean>(true);
 
-  // Clear all timers and intervals on component unmount to prevent memory leaks
+  // Clear interval on component unmount to prevent memory leaks
   useEffect(() => {
-    mountedRef.current = true;
-    
     return () => {
-      mountedRef.current = false;
-      
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
-      if (fetchIntervalRef.current) {
-        window.clearInterval(fetchIntervalRef.current);
-        fetchIntervalRef.current = null;
-      }
-      
-      // Reset state on unmount
-      sessionDataRef.current = null;
-      activeSessionIdRef.current = null;
-      setIsSyncWithServer(true); // Reset sync state
     };
   }, []);
 
@@ -66,21 +47,10 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       sessionId: station.currentSession?.id
     });
 
-    // Immediately check if the session is truly active in database
-    if (station.isOccupied && station.currentSession) {
-      checkSessionStatusInDatabase(station.currentSession.id);
-    }
-
     // Clear existing timer when station changes or session ends
     if (timerRef.current) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
-    }
-    
-    // Clear fetch interval when station changes
-    if (fetchIntervalRef.current) {
-      window.clearInterval(fetchIntervalRef.current);
-      fetchIntervalRef.current = null;
     }
 
     // If we were tracking a different session or no longer have a session, reset state
@@ -91,7 +61,6 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       setMinutes(0);
       setSeconds(0);
       setCost(0);
-      setIsSyncWithServer(true); // Reset sync state
       sessionDataRef.current = null;
       activeSessionIdRef.current = null;
       return;
@@ -115,8 +84,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           startTime: new Date(station.currentSession.startTime),
           stationId: station.id,
           customerId: station.currentSession.customerId,
-          hourlyRate: station.hourlyRate,
-          isActive: true
+          hourlyRate: station.hourlyRate
         };
         
         // Ensure we have a valid start time
@@ -137,67 +105,17 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       console.log("StationTimer: Setting up timer interval for station", station.id);
       
       timerRef.current = window.setInterval(() => {
-        // Only update if the component is still mounted and session is active
-        if (mountedRef.current && sessionDataRef.current?.isActive) {
-          updateTimerCalculation();
-        }
+        updateTimerCalculation();
       }, 1000);
-      
-      // Set up periodic check with Supabase to verify session status
-      fetchIntervalRef.current = window.setInterval(() => {
-        // Only fetch if component is mounted and enough time has passed
-        if (mountedRef.current) {
-          const now = Date.now();
-          if (now - lastFetchRef.current > 5000) { // Check every 5 seconds
-            lastFetchRef.current = now;
-            fetchSessionData();
-          }
-        }
-      }, 5000); // Check every 5 seconds
     }
 
     // Fetch the latest session data from Supabase for accuracy
     fetchSessionData();
   }, [station, station.isOccupied, station.currentSession?.id]);
-  
-  // Check if a session is truly active in the database
-  const checkSessionStatusInDatabase = async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .single();
-        
-      if (error) {
-        console.error("StationTimer: Error checking session status in database", error);
-        setIsSyncWithServer(false);
-        return;
-      }
-      
-      if (data) {
-        // Check if session is already completed in the database
-        if (data.end_time || data.status === 'completed') {
-          console.warn("StationTimer: Session is already marked as completed in the database, but local state shows it as active");
-          
-          if (sessionDataRef.current) {
-            sessionDataRef.current.isActive = false;
-          }
-          
-          setIsSyncWithServer(false);
-        } else {
-          setIsSyncWithServer(true);
-        }
-      }
-    } catch (error) {
-      console.error("StationTimer: Error checking session status", error);
-      setIsSyncWithServer(false);
-    }
-  };
 
   // Function to update timer calculation based on session data
   const updateTimerCalculation = () => {
-    if (!mountedRef.current || !sessionDataRef.current || !sessionDataRef.current.isActive) return;
+    if (!sessionDataRef.current) return;
     
     try {
       const customer = customers.find(c => c.id === sessionDataRef.current?.customerId);
@@ -227,16 +145,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
 
   // Fetch the latest session data from Supabase
   const fetchSessionData = async () => {
-    if (!mountedRef.current) return;
-    
     try {
-      if (!station.currentSession) {
-        if (sessionDataRef.current?.isActive) {
-          console.log("StationTimer: No current session but timer was active, stopping timer");
-          sessionDataRef.current.isActive = false;
-        }
-        return;
-      }
+      if (!station.currentSession) return;
       
       const sessionId = station.currentSession.id;
       console.log("StationTimer: Fetching session data for ID:", sessionId);
@@ -249,46 +159,27 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         
       if (error) {
         console.error("StationTimer: Error fetching session data", error);
-        setIsSyncWithServer(false);
+        // Fallback to current data
         return;
       }
       
       if (data) {
         // Use type assertion since we know this data should exist
         const sessionData = data as any;
-        setIsSyncWithServer(true);
         
         // Check if the session has been ended on the server but local state hasn't updated yet
         if (sessionData.end_time || sessionData.status === 'completed') {
-          console.log("StationTimer: Session has been ended on server, stopping timer");
+          console.log("StationTimer: Session has been ended on server, clearing timer");
           
-          // Mark session as inactive to stop updates
-          if (sessionDataRef.current) {
-            sessionDataRef.current.isActive = false;
-          }
-          
-          // Clear timers
+          // Clear timer if session has ended
           if (timerRef.current) {
             window.clearInterval(timerRef.current);
             timerRef.current = null;
           }
           
-          if (fetchIntervalRef.current) {
-            window.clearInterval(fetchIntervalRef.current);
-            fetchIntervalRef.current = null;
-          }
-          
           // Reset session refs
           sessionDataRef.current = null;
           activeSessionIdRef.current = null;
-          
-          // We could potentially notify the user that this session is actually ended
-          toast({
-            title: "Session Status Updated",
-            description: "This session has already been ended.",
-            variant: "default"
-          });
-          
           return;
         }
         
@@ -299,16 +190,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           // Update the sessionDataRef with data from Supabase
           if (sessionDataRef.current) {
             sessionDataRef.current.startTime = startTime;
-            // Session is still active in the database
-            sessionDataRef.current.isActive = true;
           } else {
             sessionDataRef.current = {
               sessionId,
               startTime,
               stationId: station.id,
               customerId: station.currentSession.customerId,
-              hourlyRate: station.hourlyRate,
-              isActive: true
+              hourlyRate: station.hourlyRate
             };
           }
           
@@ -318,21 +206,15 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       }
     } catch (error) {
       console.error("StationTimer: Error in fetchSessionData", error);
-      setIsSyncWithServer(false);
     }
   };
 
-  if (!station.isOccupied || !station.currentSession || !sessionDataRef.current?.isActive) {
+  if (!station.isOccupied || !station.currentSession) {
     return null;
   }
 
   return (
     <div className="space-y-4 bg-black/70 p-3 rounded-lg">
-      {!isSyncWithServer && (
-        <div className="bg-yellow-900/50 text-yellow-300 text-xs p-1 rounded text-center mb-2">
-          Warning: Session might be out of sync with server
-        </div>
-      )}
       <div className="text-center">
         <span className="font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full">
           {formatTimeDisplay(hours, minutes, seconds)}

@@ -1,3 +1,4 @@
+
 // Types for the POS system
 export interface Product {
   id: string;
@@ -90,7 +91,6 @@ export interface SessionResult {
   updatedSession?: Session;
   sessionCartItem?: CartItem;
   customer?: Customer;
-  isFullyUpdated?: boolean; // New flag to indicate if both local and database states are updated
 }
 
 export interface POSContextType {
