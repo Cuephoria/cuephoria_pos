@@ -51,10 +51,11 @@ export const useEndSession = ({
       const updatedSession: Session = {
         ...session,
         endTime,
-        duration: durationMinutes
+        duration: durationMinutes,
+        status: 'completed' // Explicitly set status to completed
       };
       
-      console.log("Updated session with end time and duration:", updatedSession);
+      console.log("Updated session with end time, duration and status:", updatedSession);
       
       // Update local state immediately for UI responsiveness
       setSessions(prev => prev.map(s => 
@@ -73,13 +74,16 @@ export const useEndSession = ({
           .from('sessions')
           .update({
             end_time: endTime.toISOString(),
-            duration: durationMinutes
+            duration: durationMinutes,
+            status: 'completed' // Update status in database as well
           })
           .eq('id', session.id);
           
         if (sessionError) {
           console.error('Error updating session in Supabase:', sessionError);
           // Continue since local state is already updated
+        } else {
+          console.log('Session successfully marked as completed in database');
         }
       } catch (supabaseError) {
         console.error('Error updating session in Supabase:', supabaseError);
@@ -100,6 +104,8 @@ export const useEndSession = ({
           if (stationError) {
             console.error('Error updating station in Supabase:', stationError);
             // Continue since local state is already updated
+          } else {
+            console.log('Station successfully updated to unoccupied in database');
           }
         } else {
           console.log("Skipping station update in Supabase due to non-UUID station ID");

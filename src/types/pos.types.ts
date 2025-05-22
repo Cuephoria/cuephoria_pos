@@ -50,6 +50,7 @@ export interface Session {
   startTime: Date;
   endTime?: Date;
   duration?: number; // in minutes
+  status?: 'active' | 'completed' | 'paused'; // Added status field to match database
 }
 
 export interface CartItem {

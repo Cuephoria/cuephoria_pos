@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePOS } from '@/context/POSContext';
 import StationCard from '@/components/StationCard';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,8 +8,26 @@ import { Button } from '@/components/ui/button';
 import AddStationDialog from '@/components/AddStationDialog';
 
 const Stations = () => {
-  const { stations } = usePOS();
+  const { stations, refreshStations } = usePOS();
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  
+  // Add event listener for global station refresh
+  useEffect(() => {
+    const handleRefreshStations = () => {
+      console.log("Global refresh stations event triggered");
+      if (refreshStations) {
+        refreshStations();
+      }
+    };
+    
+    // Listen for custom refresh event
+    window.addEventListener('refresh-stations', handleRefreshStations);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('refresh-stations', handleRefreshStations);
+    };
+  }, [refreshStations]);
   
   // Separate stations by type
   const ps5Stations = stations.filter(station => station.type === 'ps5');

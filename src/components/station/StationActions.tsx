@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Station, Customer } from '@/context/POSContext';
@@ -7,8 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, User } from "lucide-react";
+import { Check, ChevronsUpDown, RefreshCw, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from '@/integrations/supabase/client';
 
 interface StationActionsProps {
   station: Station;
@@ -29,6 +30,40 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Verify station status from database to ensure UI correctness
+  useEffect(() => {
+    const verifyStationStatus = async () => {
+      if (!station.currentSession) return;
+      
+      try {
+        // Check if the session is already completed in the database
+        const { data, error } = await supabase
+          .from('sessions')
+          .select('status, end_time')
+          .eq('id', station.currentSession.id)
+          .single();
+          
+        if (error) {
+          console.error("Error checking session status:", error);
+          return;
+        }
+        
+        // If session is completed in DB but UI shows it as active, refresh the page
+        if ((data.status === 'completed' || data.end_time) && station.isOccupied) {
+          console.log("Session marked as completed in database but still showing as active in UI. Refreshing state...");
+          
+          // This will refresh the stations data without refreshing the page
+          window.dispatchEvent(new CustomEvent('refresh-stations'));
+        }
+      } catch (error) {
+        console.error("Error verifying station status:", error);
+      }
+    };
+    
+    verifyStationStatus();
+  }, [station]);
 
   const handleStartSession = async () => {
     if (!selectedCustomerId) {
@@ -63,6 +98,11 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    window.location.reload();
+  };
+
   const handleEndSession = async () => {
     if (station.isOccupied && station.currentSession) {
       try {
@@ -77,6 +117,7 @@ const StationActions: React.FC<StationActionsProps> = ({
           selectCustomer(customer.id);
         }
         
+        // End the session
         await onEndSession(station.id);
         
         toast({
@@ -84,9 +125,10 @@ const StationActions: React.FC<StationActionsProps> = ({
           description: "Session has been ended and added to cart. Redirecting to checkout...",
         });
         
+        // Give DB operations time to complete before redirecting
         setTimeout(() => {
           navigate('/pos');
-        }, 1500);
+        }, 2000);
       } catch (error) {
         console.error("Error ending session:", error);
         toast({
@@ -100,21 +142,40 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
+  // JSX for refresh button
+  const RefreshButton = () => (
+    <Button 
+      variant="outline" 
+      size="sm"
+      className="mb-2 w-full"
+      onClick={handleRefresh}
+      disabled={isRefreshing}
+    >
+      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+      {isRefreshing ? "Refreshing..." : "Refresh Status"}
+    </Button>
+  );
+
   if (station.isOccupied) {
     return (
-      <Button 
-        variant="destructive" 
-        className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
-        onClick={handleEndSession}
-        disabled={isLoading}
-      >
-        {isLoading ? "Processing..." : "End Session"}
-      </Button>
+      <>
+        <RefreshButton />
+        <Button 
+          variant="destructive" 
+          className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
+          onClick={handleEndSession}
+          disabled={isLoading}
+        >
+          {isLoading ? "Processing..." : "End Session"}
+        </Button>
+      </>
     );
   }
 
   return (
     <>
+      <RefreshButton />
+      
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button

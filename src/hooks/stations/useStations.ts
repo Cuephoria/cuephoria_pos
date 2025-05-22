@@ -48,6 +48,19 @@ export const useStations = (
       }
     }
   }, [sessions, stations, stationsLoading, sessionsLoading]);
+  
+  // Add auto-refresh for stations every 30 seconds
+  useEffect(() => {
+    const autoRefreshInterval = setInterval(() => {
+      if (!stationsLoading && !sessionsLoading) {
+        console.log("Auto-refreshing stations and sessions data");
+        refreshStations();
+        refreshSessions();
+      }
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(autoRefreshInterval);
+  }, [refreshStations, refreshSessions, stationsLoading, sessionsLoading]);
 
   // Create session action props
   const sessionActionsProps = {
