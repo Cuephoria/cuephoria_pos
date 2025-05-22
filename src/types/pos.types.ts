@@ -125,6 +125,10 @@ export interface POSContextType {
   // Station state setter
   setStations: (stations: Station[]) => void;
   
+  // Add the refreshStations function to the interface definition
+  refreshStations?: () => void;
+  refreshSessions?: () => void;
+  
   // Product functions
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (product: Product) => void;
