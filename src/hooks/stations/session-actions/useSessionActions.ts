@@ -133,7 +133,7 @@ export const useSessionActions = (props: SessionActionsProps) => {
     }
   };
   
-  // End an active session
+  // End an active session - improved with reliable completion check
   const endSession = async (stationId: string, customersList?: Customer[]): Promise<SessionResult | undefined> => {
     try {
       // Check if we're already ending this session
@@ -159,56 +159,16 @@ export const useSessionActions = (props: SessionActionsProps) => {
         throw new Error('No active session found');
       }
       
-      // Call the original hook implementation to handle session ending
+      // Call the enhanced endSession implementation that verifies everything worked
       const result = await endSessionHook.endSession(stationId, customersList);
-      console.log("Session ended successfully, result:", result);
       
-      // Verify session status in database one more time if result exists
-      if (result && result.updatedSession) {
-        const sessionId = result.updatedSession.id;
-        
-        try {
-          // Double-check if session is properly marked as completed
-          const { data: sessionData } = await supabase
-            .from('sessions')
-            .select('*')
-            .eq('id', sessionId)
-            .single();
-            
-          if (sessionData) {
-            // If the status is still not 'completed', make one final attempt
-            if (sessionData.status !== 'completed') {
-              console.log('Session not marked as completed in database, making final attempt');
-              
-              const { error } = await supabase
-                .from('sessions')
-                .update({
-                  status: 'completed',
-                  end_time: result.updatedSession.endTime?.toISOString(),
-                  duration: result.updatedSession.duration
-                })
-                .eq('id', sessionId);
-                
-              if (error) {
-                console.error('Final attempt to update session status failed:', error);
-              } else {
-                console.log('Final update to session status successful');
-                if (result && !result.isFullyUpdated) {
-                  result.isFullyUpdated = true;
-                }
-              }
-            } else {
-              console.log('Session already marked as completed in database');
-              if (result) {
-                result.isFullyUpdated = true;
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error verifying session status:', error);
-        }
+      if (!result) {
+        throw new Error('Failed to end session - no result returned');
       }
       
+      console.log("Session ended successfully, result:", result);
+      
+      // The session has been fully updated and verified in endSessionHook
       return result;
       
     } catch (error) {
