@@ -87,8 +87,8 @@ export const useEndSession = ({
           if (sessionError) {
             console.error(`Error updating session in Supabase (retry ${6-retries}/5):`, sessionError);
             retries--;
-            // Wait longer between retries
-            if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+            // Wait longer between retries with exponential backoff
+            if (retries > 0) await new Promise(r => setTimeout(r, 1000 * (6-retries)));
           } else {
             sessionUpdateSuccess = true;
             console.log('Successfully updated session in Supabase:', data);
@@ -96,7 +96,7 @@ export const useEndSession = ({
         } catch (supabaseError) {
           console.error(`Error updating session in Supabase (retry ${6-retries}/5):`, supabaseError);
           retries--;
-          if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+          if (retries > 0) await new Promise(r => setTimeout(r, 1000 * (6-retries)));
         }
       }
 
@@ -132,7 +132,7 @@ export const useEndSession = ({
             if (stationError) {
               console.error(`Error updating station in Supabase (retry ${6-retries}/5):`, stationError);
               retries--;
-              if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+              if (retries > 0) await new Promise(r => setTimeout(r, 1000 * (6-retries)));
             } else {
               stationUpdateSuccess = true;
               console.log('Successfully updated station in Supabase:', data);
@@ -140,7 +140,7 @@ export const useEndSession = ({
           } catch (supabaseError) {
             console.error(`Error updating station in Supabase (retry ${6-retries}/5):`, supabaseError);
             retries--;
-            if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+            if (retries > 0) await new Promise(r => setTimeout(r, 1000 * (6-retries)));
           }
         }
         
@@ -239,6 +239,9 @@ export const useEndSession = ({
           if (finalUpdateError) {
             console.error('Final attempt to fix session status failed', finalUpdateError);
             throw new Error('Session completion verification failed');
+          } else {
+            // Final check succeeded
+            console.log('Session status fixed in final attempt');
           }
         }
         

@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { generateId } from '@/utils/pos.utils';
 import { Session, SessionResult, Customer } from '@/types/pos.types';
-import { isMembershipActive } from '@/utils/membership.utils';
 
 export const useSessionActions = (props: SessionActionsProps) => {
   const { stations, setStations, sessions, setSessions, updateCustomer } = props;
@@ -166,7 +165,48 @@ export const useSessionActions = (props: SessionActionsProps) => {
         throw new Error('Failed to end session - no result returned');
       }
       
+      if (!result.isFullyUpdated) {
+        throw new Error('Session was not fully updated - please try again');
+      }
+      
       console.log("Session ended successfully, result:", result);
+      
+      // Add an extra verification step to double-check the session status
+      try {
+        const sessionId = station.currentSession.id;
+        const { data: verifyData, error: verifyError } = await supabase
+          .from('sessions')
+          .select('status, end_time')
+          .eq('id', sessionId)
+          .single();
+          
+        if (verifyError) {
+          console.warn('Final verification check failed, but continuing:', verifyError);
+        } else if (!verifyData.end_time || verifyData.status !== 'completed') {
+          console.error('Session still not properly marked as completed after all attempts', verifyData);
+          
+          // One absolutely final attempt before giving up
+          const { error: lastAttemptError } = await supabase
+            .from('sessions')
+            .update({
+              status: 'completed',
+              end_time: new Date().toISOString()
+            })
+            .eq('id', sessionId);
+            
+          if (lastAttemptError) {
+            console.error('Final attempt to update session status failed:', lastAttemptError);
+            throw new Error('Could not update session status in database');
+          } else {
+            console.log('Final attempt to update session status succeeded');
+          }
+        } else {
+          console.log('Final verification confirmed session is properly ended:', verifyData);
+        }
+      } catch (error) {
+        console.error('Error in final verification:', error);
+        // Continue despite error since we've tried our best
+      }
       
       // The session has been fully updated and verified in endSessionHook
       return result;

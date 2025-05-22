@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Station, Customer } from '@/context/POSContext';
@@ -33,6 +33,30 @@ const StationActions: React.FC<StationActionsProps> = ({
   const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'verifying' | 'success' | 'failed'>('idle');
   const [attempts, setAttempts] = useState(0);
   const [timeoutId, setTimeoutId] = useState<number | null>(null);
+  const [maxRetries, setMaxRetries] = useState(3);
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Cleanup any timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [timeoutId]);
+  
+  // Reset states when station changes
+  useEffect(() => {
+    setProcessingState('idle');
+    setIsLoading(false);
+    setIsRedirecting(false);
+    setRetryCount(0);
+    
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      setTimeoutId(null);
+    }
+  }, [station.id]);
   
   // Debounce function to prevent double-clicks
   const handleStartSession = async () => {
@@ -88,12 +112,28 @@ const StationActions: React.FC<StationActionsProps> = ({
         const timeout = window.setTimeout(() => {
           if (processingState === 'processing' || processingState === 'verifying') {
             console.log('End session timeout triggered - operation took too long');
+            
+            // If we still have retries left, attempt again
+            if (retryCount < maxRetries) {
+              setRetryCount(prev => prev + 1);
+              console.log(`Retrying end session (${retryCount + 1}/${maxRetries})`);
+              
+              toast({
+                title: "Retrying",
+                description: `Operation taking longer than expected. Retry ${retryCount + 1} of ${maxRetries}...`,
+              });
+              
+              // Recursive call to try again
+              handleEndSession();
+              return;
+            }
+            
             setProcessingState('failed');
             setIsLoading(false);
             
             toast({
-              title: "Operation Timeout",
-              description: "Session ending took too long. Please try again.",
+              title: "Operation Failed",
+              description: "Session ending failed after multiple attempts. Please try again.",
               variant: "destructive"
             });
           }
@@ -125,6 +165,9 @@ const StationActions: React.FC<StationActionsProps> = ({
         
         setProcessingState('verifying');
         
+        // Double-checking the result
+        console.log("Verifying session end result:", result);
+        
         // Verify the session was properly ended
         if (result.isFullyUpdated) {
           setProcessingState('success');
@@ -144,17 +187,35 @@ const StationActions: React.FC<StationActionsProps> = ({
           // Set redirecting state
           setIsRedirecting(true);
           
-          // Add a small delay before redirecting to ensure state updates are complete
+          // Add a longer delay before redirecting to ensure state updates are complete
           setTimeout(() => {
             navigate('/pos');
-          }, 500);
+          }, 1000);
         } else {
           console.error("Session was not fully updated, not redirecting");
+          
+          // If we still have retries left, attempt again
+          if (retryCount < maxRetries) {
+            setRetryCount(prev => prev + 1);
+            console.log(`Session not fully updated. Retrying (${retryCount + 1}/${maxRetries})`);
+            
+            toast({
+              title: "Retrying",
+              description: `Session not fully updated. Retry ${retryCount + 1} of ${maxRetries}...`,
+            });
+            
+            // Set a short delay before retrying
+            setTimeout(() => {
+              handleEndSession();
+            }, 2000);
+            return;
+          }
+          
           setProcessingState('failed');
           
           toast({
             title: "Error",
-            description: "Failed to properly end session. Please try again.",
+            description: "Failed to properly end session after multiple attempts. Please try again.",
             variant: "destructive"
           });
           
@@ -165,9 +226,26 @@ const StationActions: React.FC<StationActionsProps> = ({
         console.error("Error ending session:", error);
         setProcessingState('failed');
         
+        // If we still have retries left and it's not a "not found" error, attempt again
+        if (retryCount < maxRetries && !(error instanceof Error && error.message.includes("not found"))) {
+          setRetryCount(prev => prev + 1);
+          console.log(`Error ending session. Retrying (${retryCount + 1}/${maxRetries})`);
+          
+          toast({
+            title: "Retrying",
+            description: `Error encountered. Retry ${retryCount + 1} of ${maxRetries}...`,
+          });
+          
+          // Set a short delay before retrying
+          setTimeout(() => {
+            handleEndSession();
+          }, 2000);
+          return;
+        }
+        
         toast({
           title: "Error",
-          description: "Failed to end session. Please try again.",
+          description: "Failed to end session after multiple attempts. Please try again.",
           variant: "destructive"
         });
         
@@ -194,7 +272,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const getButtonText = () => {
     if (isLoading) {
       switch (processingState) {
-        case 'processing': return "Processing...";
+        case 'processing': return retryCount > 0 ? `Processing (Retry ${retryCount}/${maxRetries})...` : "Processing...";
         case 'verifying': return "Verifying...";
         case 'success': return "Success! Redirecting...";
         case 'failed': return "Failed - Try Again";
