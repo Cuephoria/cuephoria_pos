@@ -1,705 +1,454 @@
 
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button'; // Fixed import path
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Gamepad2, Clock, Book, User, Table2, Star, ChevronRight, CheckCircle, Trophy, Sparkles, Zap, Heart, Users, Award } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import LiveSessionsSection from '@/components/dashboard/LiveSessionsSection';
-import { useTodayBookings } from '@/hooks/booking/useTodayBookings';
-import UpcomingTournaments from '@/components/dashboard/UpcomingTournaments';
-import { motion } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/Logo';
+import { Button } from '@/components/ui/button';
+import { Monitor, Gamepad, Trophy, Users, Star, ZapIcon, ShieldCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Mail, Phone, Clock, MapPin } from 'lucide-react';
 
-const Index = () => {
+const Index: React.FC = () => {
   const navigate = useNavigate();
-  const { todayBookings, loading, fetchTodayBookings } = useTodayBookings();
+  const { user } = useAuth();
+  const [openDialog, setOpenDialog] = useState<string | null>(null);
 
   useEffect(() => {
-    document.title = "Cuephoria Gaming";
-  }, []);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-500/20 text-green-500 border-green-500/50';
-      case 'in-progress':
-        return 'bg-blue-500/20 text-blue-500 border-blue-500/50';
-      case 'completed':
-        return 'bg-purple-500/20 text-purple-500 border-purple-500/50';
-      case 'cancelled':
-        return 'bg-red-500/20 text-red-500 border-red-500/50';
-      case 'no-show':
-        return 'bg-orange-500/20 text-orange-500 border-orange-500/50';
-      default:
-        return 'bg-gray-500/20 text-gray-500 border-gray-500/50';
+    if (user) {
+      navigate('/dashboard');
     }
-  };
-
-  // Function to check if a booking is upcoming (within next hour)
-  const isUpcoming = (startTimeStr) => {
-    const now = new Date();
-    const [hours, minutes] = startTimeStr.split(':').map(Number);
-    const startTime = new Date();
-    startTime.setHours(hours, minutes, 0);
-    
-    const diffMs = startTime.getTime() - now.getTime();
-    const diffMinutes = diffMs / (1000 * 60);
-    
-    return diffMinutes > 0 && diffMinutes <= 60;
-  };
-
-  // Animation variants
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-  
-  const item = {
-    hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1 }
-  };
+  }, [user, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
-      {/* Hero Section with Action Cards */}
-      <div className="bg-gradient-to-br from-gray-900 to-black py-16 px-6 flex flex-col justify-center items-center text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-        <div className="absolute inset-0 bg-gradient-radial from-cuephoria-purple/30 to-transparent"></div>
+    <div className="min-h-screen bg-cuephoria-dark flex flex-col relative overflow-hidden">
+      {/* Minimalistic animated background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Subtle grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{ 
+            backgroundImage: 'linear-gradient(to right, rgb(40, 44, 52) 1px, transparent 1px), linear-gradient(to bottom, rgb(40, 44, 52) 1px, transparent 1px)',
+            backgroundSize: '50px 50px' 
+          }}>
+        </div>
         
-        {/* Animated Orbs */}
-        <div className="absolute top-20 -left-20 w-40 h-40 rounded-full bg-cuephoria-purple/20 blur-3xl animate-float-shadow"></div>
-        <div className="absolute bottom-20 -right-20 w-40 h-40 rounded-full bg-cuephoria-blue/20 blur-3xl animate-float delay-300"></div>
+        {/* Animated gradients */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-cuephoria-purple/10 to-transparent blur-[100px] animate-float opacity-20"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-cuephoria-blue/10 to-transparent blur-[80px] animate-float opacity-20" style={{animationDelay: '2s'}}></div>
         
-        <motion.div 
-          className="max-w-4xl mx-auto relative z-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="mb-6 flex justify-center">
-            <motion.img 
-              src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png" 
-              alt="Cuephoria Logo" 
-              className="h-24 md:h-28"
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              whileHover={{ scale: 1.05, rotate: 5 }}
-            />
-          </div>
-          <motion.h1 
-            className="text-5xl md:text-7xl font-bold mb-4 font-heading bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple via-cuephoria-lightpurple to-cuephoria-blue"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            Cuephoria
-          </motion.h1>
-          <motion.p 
-            className="text-xl md:text-2xl mb-4 text-gray-300 max-w-2xl mx-auto"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            Premium Gaming and Billiards Experience
-          </motion.p>
-          <motion.div
-            className="flex justify-center mb-8"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <div className="flex space-x-2">
-              {[1, 2, 3, 4, 5].map((index) => (
-                <Star key={index} className="h-5 w-5 text-yellow-400" fill="#FACC15" />
-              ))}
-            </div>
-          </motion.div>
-          
-          {/* Quick Action Buttons */}
-          <motion.div 
-            className="flex flex-wrap justify-center gap-4 mb-12"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
-            <Button 
-              onClick={() => navigate('/booknow')} 
-              size="lg"
-              className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple hover:opacity-90 text-white shadow-lg shadow-purple-900/20 group"
-            >
-              Book Now <ChevronRight className="ml-1 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button 
-              onClick={() => navigate('/bookings/check')} 
-              size="lg" 
-              variant="outline" 
-              className="border-white/20 hover:bg-white/10 text-white shadow-lg"
-            >
-              Check Booking Status
-            </Button>
-          </motion.div>
-          
-          {/* Main Action Cards */}
-          <motion.div 
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 max-w-6xl mx-auto"
-            variants={container}
-            initial="hidden"
-            animate="show"
-          >
-            <motion.div variants={item} whileHover={{ y: -5 }} transition={{ type: "spring" }}>
-              <Card className="bg-gradient-to-br from-cuephoria-purple/20 to-cuephoria-lightpurple/10 border-cuephoria-purple/40 backdrop-blur-sm hover:shadow-[0_5px_25px_rgba(155,135,245,0.3)] transition-all duration-300 group overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-cuephoria-purple/20 blur-2xl"></div>
-                <CardHeader className="pb-2 relative z-10">
-                  <div className="w-14 h-14 rounded-xl bg-cuephoria-purple/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg">
-                    <Gamepad2 className="h-7 w-7 text-cuephoria-lightpurple" />
-                  </div>
-                  <CardTitle className="text-white text-2xl">Gaming Sessions</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Premium PS5 gaming stations with the latest titles
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-300 relative z-10">
-                  <ul className="space-y-2">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Latest PS5 consoles with 4K displays</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Extensive game library</span>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter className="pt-2">
-                  <Button 
-                    onClick={() => navigate('/booknow')} 
-                    className="w-full bg-cuephoria-purple hover:bg-cuephoria-purple/80 group"
-                    variant="default"
-                  >
-                    Book Gaming Session <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-            
-            <motion.div variants={item} whileHover={{ y: -5 }} transition={{ type: "spring" }}>
-              <Card className="bg-gradient-to-br from-cuephoria-blue/20 to-cuephoria-blue/5 border-cuephoria-blue/40 backdrop-blur-sm hover:shadow-[0_5px_25px_rgba(14,165,233,0.3)] transition-all duration-300 group overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-cuephoria-blue/20 blur-2xl"></div>
-                <CardHeader className="pb-2 relative z-10">
-                  <div className="w-14 h-14 rounded-xl bg-cuephoria-blue/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg">
-                    <Table2 className="h-7 w-7 text-blue-300" />
-                  </div>
-                  <CardTitle className="text-white text-2xl">Pool Tables</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Professional billiards tables for casual play and competition
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-300 relative z-10">
-                  <ul className="space-y-2">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Competition-grade tables</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Professional equipment</span>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter className="pt-2">
-                  <Button 
-                    onClick={() => navigate('/booknow')} 
-                    className="w-full bg-cuephoria-blue hover:bg-cuephoria-blue/80 group"
-                    variant="default"
-                  >
-                    Book Pool Table <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-            
-            <motion.div variants={item} whileHover={{ y: -5 }} transition={{ type: "spring" }}>
-              <Card className="bg-gradient-to-br from-cuephoria-orange/20 to-cuephoria-orange/5 border-cuephoria-orange/40 backdrop-blur-sm hover:shadow-[0_5px_25px_rgba(249,115,22,0.3)] transition-all duration-300 group overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-32 h-32 rounded-full bg-cuephoria-orange/20 blur-2xl"></div>
-                <CardHeader className="pb-2 relative z-10">
-                  <div className="w-14 h-14 rounded-xl bg-cuephoria-orange/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg">
-                    <Trophy className="h-7 w-7 text-orange-300" />
-                  </div>
-                  <CardTitle className="text-white text-2xl">Tournaments</CardTitle>
-                  <CardDescription className="text-gray-300">
-                    Regular gaming events and pool competitions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-300 relative z-10">
-                  <ul className="space-y-2">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Weekly tournaments</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Great prizes and competition</span>
-                    </li>
-                  </ul>
-                </CardContent>
-                <CardFooter className="pt-2">
-                  <Button 
-                    onClick={() => navigate('/tournaments')} 
-                    className="w-full bg-cuephoria-orange hover:bg-cuephoria-orange/80 group"
-                    variant="default"
-                  >
-                    View Tournaments <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          </motion.div>
-        </motion.div>
+        {/* Light streaks */}
+        <div className="absolute top-[30%] w-full h-px bg-gradient-to-r from-transparent via-cuephoria-purple/20 to-transparent"></div>
+        <div className="absolute top-[60%] w-full h-px bg-gradient-to-r from-transparent via-cuephoria-blue/20 to-transparent"></div>
+        
+        {/* Floating particles */}
+        <div className="absolute w-1 h-1 bg-cuephoria-purple/30 rounded-full top-1/4 left-1/4 animate-float"></div>
+        <div className="absolute w-1 h-1 bg-cuephoria-blue/30 rounded-full top-3/4 right-1/4 animate-float" style={{animationDelay: '1s'}}></div>
+        <div className="absolute w-1 h-1 bg-cuephoria-lightpurple/30 rounded-full top-1/2 left-3/4 animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute w-1 h-1 bg-cuephoria-orange/30 rounded-full top-1/3 right-1/3 animate-float" style={{animationDelay: '3s'}}></div>
       </div>
 
-      {/* Today's Bookings & Active Sessions Section */}
-      <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.div 
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue">
-            Live Status & Upcoming Events
-          </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto">
-            Check out our current facility status and upcoming tournaments
-          </p>
-        </motion.div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Today's Bookings Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+      {/* Header */}
+      <header className="h-20 flex items-center px-6 border-b border-gray-800 relative z-10 backdrop-blur-sm bg-cuephoria-dark/80">
+        <Logo />
+        <div className="ml-auto space-x-4">
+          <Button
+            variant="outline"
+            className="text-white border-gray-700 hover:bg-gray-800"
+            onClick={() => window.open('https://cuephoria.in', '_blank')}
           >
-            <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-800 overflow-hidden shadow-xl hover:shadow-purple-900/20 transition-all duration-500">
-              <CardHeader className="pb-2 flex flex-row justify-between items-center">
-                <div>
-                  <CardTitle className="flex items-center text-lg">
-                    <Calendar className="h-5 w-5 mr-2 text-cuephoria-purple" />
-                    Today's Schedule
-                  </CardTitle>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {format(new Date(), "EEEE, MMMM d, yyyy")}
-                  </p>
-                </div>
+            Official Website
+          </Button>
+          <Button
+            variant="default"
+            className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90"
+            onClick={() => window.open('https://cuephoria.in/book', '_blank')}
+          >
+            Book Now
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero section */}
+      <section className="flex-1 flex flex-col items-center justify-center px-4 py-12 relative z-10">
+        <div className="mb-8 animate-float-shadow">
+          <div className="relative">
+            <div className="absolute -inset-2 bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue rounded-full opacity-70 blur-lg animate-pulse-glow"></div>
+            <img
+              src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png"
+              alt="Cuephoria Logo" 
+              className="h-32 md:h-40 relative z-10 drop-shadow-[0_0_15px_rgba(155,135,245,0.5)]"
+            />
+          </div>
+        </div>
+        
+        <h1 className="text-4xl md:text-6xl font-bold text-center text-white font-heading leading-tight mb-6">
+          Welcome to{" "}
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-lightpurple animate-text-gradient">
+            Cuephoria
+          </span>
+        </h1>
+        
+        <p className="text-xl text-center text-gray-300 max-w-2xl mb-8">
+          A modern gaming lounge with premium PlayStation 5 consoles and professional 8-ball pool tables.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 mb-16">
+          <Button
+            size="lg"
+            className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 shadow-lg shadow-cuephoria-purple/20"
+            onClick={() => navigate('/login')}
+          >
+            Login to Dashboard
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="text-white border-gray-700 hover:bg-gray-800 group relative overflow-hidden"
+            onClick={() => navigate('/public/stations')}
+          >
+            <div className="absolute inset-0 w-full bg-gradient-to-r from-cuephoria-purple/0 via-cuephoria-lightpurple/20 to-cuephoria-purple/0 animate-shimmer pointer-events-none"></div>
+            <Monitor className="mr-2 h-5 w-5 animate-pulse-soft" />
+            <span>View Station Availability</span>
+          </Button>
+        </div>
+        
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mx-auto mb-16">
+          <div className="bg-cuephoria-darker p-6 rounded-xl border border-gray-800 hover:border-cuephoria-purple/40 transition-all duration-300 hover:shadow-lg hover:shadow-cuephoria-purple/20 hover:-translate-y-1 group">
+            <div className="flex items-center mb-4">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cuephoria-purple/20 to-cuephoria-blue/20 flex items-center justify-center text-cuephoria-purple group-hover:scale-110 transition-transform">
+                <Gamepad size={20} />
+              </div>
+              <h3 className="ml-3 text-lg font-semibold text-white">Premium Gaming</h3>
+            </div>
+            <p className="text-gray-400">Experience gaming like never before with our high-end PlayStation 5 consoles and 4K displays.</p>
+          </div>
+          
+          <div className="bg-cuephoria-darker p-6 rounded-xl border border-gray-800 hover:border-cuephoria-orange/40 transition-all duration-300 hover:shadow-lg hover:shadow-cuephoria-orange/20 hover:-translate-y-1 group">
+            <div className="flex items-center mb-4">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cuephoria-orange/20 to-cuephoria-red/20 flex items-center justify-center text-cuephoria-orange group-hover:scale-110 transition-transform">
+                <Trophy size={20} />
+              </div>
+              <h3 className="ml-3 text-lg font-semibold text-white">Pool Tables</h3>
+            </div>
+            <p className="text-gray-400">Professional 8-ball pool tables for casual games or competitive tournaments.</p>
+          </div>
+          
+          <div className="bg-cuephoria-darker p-6 rounded-xl border border-gray-800 hover:border-cuephoria-blue/40 transition-all duration-300 hover:shadow-lg hover:shadow-cuephoria-blue/20 hover:-translate-y-1 group">
+            <div className="flex items-center mb-4">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cuephoria-blue/20 to-cuephoria-lightpurple/20 flex items-center justify-center text-cuephoria-blue group-hover:scale-110 transition-transform">
+                <Users size={20} />
+              </div>
+              <h3 className="ml-3 text-lg font-semibold text-white">Community Events</h3>
+            </div>
+            <p className="text-gray-400">Join our regular tournaments and gaming events for prizes and bragging rights.</p>
+          </div>
+        </div>
+        
+        {/* Stats */}
+        <div className="w-full max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+          <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
+            <Star className="h-6 w-6 text-cuephoria-purple mx-auto mb-2" />
+            <div className="text-2xl font-bold text-white">12+</div>
+            <div className="text-sm text-gray-400">Gaming Stations</div>
+          </div>
+          
+          <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
+            <Trophy className="h-6 w-6 text-cuephoria-orange mx-auto mb-2" />
+            <div className="text-2xl font-bold text-white">8</div>
+            <div className="text-sm text-gray-400">Pool Tables</div>
+          </div>
+          
+          <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
+            <Users className="h-6 w-6 text-cuephoria-blue mx-auto mb-2" />
+            <div className="text-2xl font-bold text-white">500+</div>
+            <div className="text-sm text-gray-400">Members</div>
+          </div>
+          
+          <div className="text-center p-4 bg-cuephoria-darker/50 backdrop-blur-md rounded-lg border border-gray-800">
+            <ZapIcon className="h-6 w-6 text-cuephoria-green mx-auto mb-2" />
+            <div className="text-2xl font-bold text-white">24/7</div>
+            <div className="text-sm text-gray-400">Support</div>
+          </div>
+        </div>
+        
+        {/* CTA Section */}
+        <div className="w-full max-w-4xl mx-auto bg-gradient-to-br from-cuephoria-darker to-cuephoria-dark border border-gray-800 rounded-2xl p-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+          <div className="absolute top-0 right-0 h-64 w-64 bg-cuephoria-purple/10 blur-3xl rounded-full"></div>
+          
+          <div className="relative z-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-white mb-4">Ready to Experience Cuephoria?</h2>
+            <p className="text-center text-gray-300 mb-8 max-w-2xl mx-auto">
+              Join our community of gamers and pool enthusiasts. Book a station, participate in tournaments, and connect with fellow players.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Button
+                size="lg"
+                className="bg-cuephoria-purple text-white hover:bg-cuephoria-purple/90 shadow-md group"
+                onClick={() => navigate('/login')}
+              >
+                <ShieldCheck className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                Admin Access
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-gray-700 hover:bg-gray-800 hover:border-cuephoria-lightpurple"
+                onClick={() => navigate('/public/stations')}
+              >
+                <Monitor className="mr-2 h-5 w-5" />
+                Public Station View
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-gray-800 relative z-10 mt-auto">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div className="flex items-center mb-4 md:mb-0">
+              <Logo size="sm" />
+              <span className="ml-2 text-gray-400">© {new Date().getFullYear()} Cuephoria. All rights reserved.</span>
+            </div>
+            
+            <div className="flex space-x-4">
+              <Dialog open={openDialog === 'terms'} onOpenChange={(open) => setOpenDialog(open ? 'terms' : null)}>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={fetchTodayBookings} 
                   className="text-gray-400 hover:text-white"
+                  onClick={() => setOpenDialog('terms')}
                 >
-                  Refresh
+                  Terms
                 </Button>
-              </CardHeader>
-              
-              <CardContent className="p-0">
-                {loading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <LoadingSpinner className="mr-2" />
-                    <span className="text-gray-400">Loading schedule...</span>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-cuephoria-dark border-gray-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold text-white">Terms and Conditions</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 text-gray-300 mt-4">
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">1. Acceptance of Terms</h2>
+                      <p>
+                        By accessing and using Cuephoria's services, you agree to be bound by these Terms and Conditions. 
+                        If you do not agree to these terms, please do not use our services.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">2. Membership and Gaming Sessions</h2>
+                      <p>
+                        Cuephoria provides gaming facilities and services on a pre-booking or walk-in basis, subject to availability.
+                        Members may receive preferential rates and privileges as communicated in our membership plans.
+                      </p>
+                      <p>
+                        All gaming sessions are charged according to our current rate card. Time extensions may be 
+                        subject to availability and additional charges.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">3. Conduct and Responsibilities</h2>
+                      <p>
+                        Users must maintain appropriate conduct within our premises. Cuephoria reserves the right to refuse service 
+                        to anyone engaging in disruptive, abusive, or inappropriate behavior.
+                      </p>
+                      <p>
+                        Users are responsible for any damage caused to equipment, furniture, or fixtures through improper use.
+                        Such damage may result in charges equivalent to repair or replacement costs.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">4. Refunds and Cancellations</h2>
+                      <p>
+                        Bookings may be cancelled or rescheduled at least 2 hours prior to the reserved time without penalty.
+                        Late cancellations or no-shows may be charged a fee equivalent to 50% of the booking amount.
+                      </p>
+                      <p>
+                        Refunds for technical issues or service interruptions will be assessed on a case-by-case basis by management.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">5. Modifications to Terms</h2>
+                      <p>
+                        Cuephoria reserves the right to modify these terms at any time. Changes will be effective immediately 
+                        upon posting on our website or premises. Continued use of our services constitutes acceptance of modified terms.
+                      </p>
+                    </section>
                   </div>
-                ) : todayBookings.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[120px]">Time</TableHead>
-                          <TableHead>Station</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {todayBookings.slice(0, 5).map((booking, index) => (
-                          <motion.tr
-                            key={booking.id} 
-                            className={`${isUpcoming(booking.start_time) ? 'bg-cuephoria-purple/10' : ''} ${index % 2 === 0 ? 'bg-black/20' : ''}`}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 + 0.2 }}
-                            whileHover={{ backgroundColor: 'rgba(155, 135, 245, 0.05)' }}
-                          >
-                            <TableCell className="font-medium">
-                              {booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                {booking.stations.type === 'ps5' ? (
-                                  <Gamepad2 className="h-4 w-4 mr-1 text-cuephoria-lightpurple" />
-                                ) : (
-                                  <Table2 className="h-4 w-4 mr-1 text-cuephoria-lightpurple" />
-                                )}
-                                <span>{booking.stations.name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getStatusColor(booking.status)}>
-                                {booking.status.replace('-', ' ')}
-                              </Badge>
-                            </TableCell>
-                          </motion.tr>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500 bg-black/20 px-4">
-                    <Calendar className="h-12 w-12 mx-auto opacity-30 mb-3" />
-                    <p>No bookings scheduled for today</p>
-                    <p className="text-sm mt-1 mb-4">Be the first to reserve your spot!</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate('/booknow')} 
-                      className="border-gray-700 hover:bg-gray-800 text-gray-300"
-                    >
-                      Create a Booking
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-              
-              <CardFooter className="pt-2 pb-4 px-6 bg-gradient-to-r from-gray-800/80 to-gray-800/50">
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={openDialog === 'privacy'} onOpenChange={(open) => setOpenDialog(open ? 'privacy' : null)}>
                 <Button 
-                  onClick={() => navigate('/booknow')} 
-                  variant="default" 
-                  className="w-full bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue hover:opacity-90 group"
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-400 hover:text-white"
+                  onClick={() => setOpenDialog('privacy')}
                 >
-                  Book Your Session Now <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  Privacy
                 </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
-          
-          {/* Upcoming Tournaments Section */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            <UpcomingTournaments />
-          </motion.div>
-        </div>
-        
-        {/* Live Sessions Section */}
-        <motion.div
-          className="mt-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <LiveSessionsSection publicView={true} />
-        </motion.div>
-        
-        {/* Features Section */}
-        <motion.div 
-          className="mt-20"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue">
-              Premium Gaming Experience
-            </h2>
-            <p className="text-gray-300 max-w-3xl mx-auto">
-              Our state-of-the-art gaming facility offers the latest PS5 consoles and premium billiards tables
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            <motion.div 
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/90 border-gray-700/50 transform transition-all overflow-hidden">
-                <div className="absolute -right-8 -top-8 w-20 h-20 rounded-full bg-cuephoria-purple/20 blur-xl"></div>
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-full bg-cuephoria-purple/20 flex items-center justify-center mb-4">
-                    <Gamepad2 className="h-6 w-6 text-cuephoria-lightpurple" />
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-cuephoria-dark border-gray-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold text-white">Privacy Policy</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 text-gray-300 mt-4">
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">1. Information We Collect</h2>
+                      <p>
+                        Cuephoria may collect personal information including but not limited to name, contact details, 
+                        and payment information when you register or book our services.
+                      </p>
+                      <p>
+                        We also collect usage data such as gaming preferences, session duration, and purchase history 
+                        to improve our services and customize your experience.
+                      </p>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">2. How We Use Your Information</h2>
+                      <p>
+                        We use collected information to:
+                      </p>
+                      <ul className="list-disc pl-6 space-y-2">
+                        <li>Process bookings and payments</li>
+                        <li>Personalize your gaming experience</li>
+                        <li>Communicate regarding services and promotions</li>
+                        <li>Improve our facilities and offerings</li>
+                        <li>Maintain security and prevent fraud</li>
+                      </ul>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">3. Information Sharing</h2>
+                      <p>
+                        We do not sell or rent your personal information to third parties. We may share information with:
+                      </p>
+                      <ul className="list-disc pl-6 space-y-2">
+                        <li>Service providers who assist in our operations</li>
+                        <li>Legal authorities when required by law</li>
+                        <li>Business partners with your explicit consent</li>
+                      </ul>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">4. Your Rights</h2>
+                      <p>
+                        You have the right to:
+                      </p>
+                      <ul className="list-disc pl-6 space-y-2">
+                        <li>Access your personal information</li>
+                        <li>Request correction of inaccurate information</li>
+                        <li>Request deletion of your information</li>
+                        <li>Opt-out of marketing communications</li>
+                        <li>Lodge a complaint with relevant authorities</li>
+                      </ul>
+                    </section>
+                    
+                    <section className="space-y-4">
+                      <h2 className="text-lg font-semibold text-white">5. Changes to Privacy Policy</h2>
+                      <p>
+                        Cuephoria reserves the right to update this privacy policy at any time. Changes will be posted on our website, 
+                        and your continued use of our services after such modifications constitutes acceptance of the updated policy.
+                      </p>
+                    </section>
                   </div>
-                  <CardTitle className="text-xl text-white">Modern Gaming</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Latest PlayStation 5 consoles
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Latest games library</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Pro gaming accessories</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </DialogContent>
+              </Dialog>
 
-            <motion.div 
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/90 border-gray-700/50 transform transition-all overflow-hidden">
-                <div className="absolute -right-8 -top-8 w-20 h-20 rounded-full bg-cuephoria-blue/20 blur-xl"></div>
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-full bg-cuephoria-blue/20 flex items-center justify-center mb-4">
-                    <Table2 className="h-6 w-6 text-blue-400" />
-                  </div>
-                  <CardTitle className="text-xl text-white">Premium Billiards</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Professional tables
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Competition-quality</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Professional equipment</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div 
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/90 border-gray-700/50 transform transition-all overflow-hidden">
-                <div className="absolute -right-8 -top-8 w-20 h-20 rounded-full bg-cuephoria-orange/20 blur-xl"></div>
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-full bg-cuephoria-orange/20 flex items-center justify-center mb-4">
-                    <Trophy className="h-6 w-6 text-cuephoria-orange" />
-                  </div>
-                  <CardTitle className="text-xl text-white">Tournaments</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Regular events and prizes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Weekly competitions</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Cash prizes</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div 
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Card className="bg-gradient-to-br from-gray-800/80 to-gray-900/90 border-gray-700/50 transform transition-all overflow-hidden">
-                <div className="absolute -right-8 -top-8 w-20 h-20 rounded-full bg-green-500/20 blur-xl"></div>
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
-                    <Users className="h-6 w-6 text-green-400" />
-                  </div>
-                  <CardTitle className="text-xl text-white">Membership</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Exclusive perks for regulars
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Discounted rates</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-                      <span>Priority booking</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-        </motion.div>
-        
-        {/* Membership & Promotions Banner */}
-        <motion.div 
-          className="mb-16 mt-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          <Card className="overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-cuephoria-purple/20 via-cuephoria-blue/20 to-cuephoria-purple/20"></div>
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-cuephoria-blue/20 blur-3xl"></div>
-            <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-cuephoria-purple/20 blur-3xl"></div>
-            
-            <CardContent className="p-8 md:p-12">
-              <div className="flex flex-col md:flex-row items-center justify-between">
-                <div className="text-center md:text-left mb-6 md:mb-0">
-                  <h3 className="text-2xl md:text-3xl font-bold mb-2">Become a Member</h3>
-                  <p className="text-gray-300 max-w-md">
-                    Join our membership program and enjoy exclusive discounts, priority bookings, and special event access.
-                  </p>
-                </div>
-                <div className="flex flex-col space-y-3">
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button 
-                    onClick={() => navigate('/membership')}
-                    className="bg-white text-gray-900 hover:bg-gray-100 shadow-lg px-6"
-                    size="lg"
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-gray-400 hover:text-white"
                   >
-                    <Award className="mr-2 h-5 w-5" /> View Membership Plans
+                    Contact
                   </Button>
-                  <Button
-                    onClick={() => navigate('/contact')}
-                    variant="outline"
-                    className="border-white/30 hover:bg-white/10"
-                  >
-                    Contact for Group Bookings
-                  </Button>
-                </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 bg-cuephoria-dark border-gray-800 text-white p-4">
+                  <h3 className="font-semibold text-lg mb-3 text-white">Contact Us</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <Phone className="h-5 w-5 text-cuephoria-purple mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Phone</p>
+                        <a href="tel:+918637625155" className="text-gray-300 text-sm hover:text-white transition-colors">
+                          +91 86376 25155
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <Mail className="h-5 w-5 text-cuephoria-blue mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Email</p>
+                        <a href="mailto:contact@cuephoria.in" className="text-gray-300 text-sm hover:text-white transition-colors">
+                          contact@cuephoria.in
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <Clock className="h-5 w-5 text-cuephoria-orange mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Hours</p>
+                        <span className="text-gray-300 text-sm">11:00 AM - 11:00 PM</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <MapPin className="h-5 w-5 text-cuephoria-green mr-2 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Location</p>
+                        <span className="text-gray-300 text-sm">Cuephoria Gaming Lounge</span>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          
+          <div className="text-xs text-center text-gray-500">
+            <p className="mb-1">Designed and developed by RK<sup>™</sup></p>
+            <div className="flex flex-col md:flex-row justify-center items-center gap-4 text-gray-400">
+              <div className="flex items-center gap-2">
+                <span>Phone: </span>
+                <a href="tel:+918637625155" className="hover:text-white transition-colors">+91 86376 25155</a>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Call to Action Section */}
-      <div className="bg-gradient-to-r from-cuephoria-purple/20 to-cuephoria-blue/20 py-16 px-6">
-        <motion.div 
-          className="max-w-5xl mx-auto text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <Sparkles className="h-8 w-8 mx-auto mb-4 text-yellow-300" />
-          <h2 className="text-3xl font-bold mb-4">Ready to Experience Cuephoria?</h2>
-          <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-            Book your gaming session or billiards table now and enjoy our premium facilities
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button 
-              onClick={() => navigate('/booknow')} 
-              size="lg" 
-              className="bg-gradient-to-r from-cuephoria-purple to-cuephoria-blue hover:opacity-90 text-white px-8 shadow-lg shadow-cuephoria-purple/30"
-            >
-              Book Now <Zap className="ml-2 h-4 w-4" />
-            </Button>
-            <Button 
-              onClick={() => navigate('/contact')} 
-              size="lg" 
-              variant="outline" 
-              className="text-white border-white/25 hover:bg-white/10"
-            >
-              Contact Us
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-gradient-to-b from-gray-900 to-black text-gray-400 text-center py-12 px-4 border-t border-gray-800">
-        <motion.div 
-          className="max-w-6xl mx-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <img 
-            src="/lovable-uploads/61f60a38-12c2-4710-b1c8-0000eb74593c.png" 
-            alt="Cuephoria Logo" 
-            className="h-10 mx-auto mb-6" 
-          />
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 text-left max-w-4xl mx-auto">
-            <div>
-              <h4 className="font-medium text-white mb-3">Quick Links</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/')}>Home</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/booknow')}>Book Now</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/public/stations')}>Stations</Button></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-white mb-3">Information</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/about')}>About Us</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/membership')}>Membership</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/tournaments')}>Tournaments</Button></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-white mb-3">Support</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/contact')}>Contact Us</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/faq')}>FAQs</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/help')}>Help Center</Button></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-white mb-3">Legal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/terms')}>Terms</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/privacy')}>Privacy</Button></li>
-                <li><Button variant="link" className="p-0 h-auto text-gray-400 hover:text-white" onClick={() => navigate('/cookies')}>Cookies</Button></li>
-              </ul>
+              <div className="flex items-center gap-2">
+                <span>Email: </span>
+                <a href="mailto:contact@cuephoria.in" className="hover:text-white transition-colors">contact@cuephoria.in</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Hours: </span>
+                <span>11:00 AM - 11:00 PM</span>
+              </div>
             </div>
           </div>
-          
-          <div className="flex flex-col md:flex-row justify-between items-center border-t border-gray-800 pt-8">
-            <div className="mb-4 md:mb-0">
-              <p className="text-sm">
-                &copy; {new Date().getFullYear()} Cuephoria. All rights reserved.
-              </p>
-            </div>
-            <div className="flex space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white rounded-full p-2 h-auto w-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
-                <span className="sr-only">Facebook</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white rounded-full p-2 h-auto w-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>
-                <span className="sr-only">YouTube</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white rounded-full p-2 h-auto w-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
-                <span className="sr-only">Twitter</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white rounded-full p-2 h-auto w-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                <span className="sr-only">Instagram</span>
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </footer>
+      
+      {/* Animated elements */}
+      <div className="fixed top-[10%] left-[10%] text-cuephoria-lightpurple opacity-20 animate-float">
+        <Gamepad size={24} className="animate-wiggle" />
+      </div>
+      <div className="fixed bottom-[15%] right-[15%] text-accent opacity-20 animate-float delay-300">
+        <ZapIcon size={24} className="animate-pulse-soft" />
+      </div>
+      <div className="fixed top-[30%] right-[10%] text-cuephoria-orange opacity-20 animate-float delay-150">
+        <Trophy size={20} className="animate-wiggle" />
+      </div>
+      <div className="fixed bottom-[25%] left-[20%] text-cuephoria-blue opacity-20 animate-float delay-200">
+        <Star size={22} className="animate-pulse-soft" />
+      </div>
     </div>
   );
 };
