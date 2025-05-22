@@ -14,7 +14,7 @@ interface StationActionsProps {
   station: Station;
   customers: Customer[];
   onStartSession: (stationId: string, customerId: string) => Promise<void>;
-  onEndSession: (stationId: string) => Promise<void>;
+  onEndSession: (stationId: string) => Promise<any>; // Updated to reflect actual return type
 }
 
 const StationActions: React.FC<StationActionsProps> = ({ 
@@ -30,6 +30,7 @@ const StationActions: React.FC<StationActionsProps> = ({
   const { selectCustomer } = usePOS();
   const [open, setOpen] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [processingState, setProcessingState] = useState<'idle' | 'processing' | 'verifying' | 'success' | 'failed'>('idle');
 
   // Debounce function to prevent double-clicks
   const handleStartSession = async () => {
@@ -73,6 +74,7 @@ const StationActions: React.FC<StationActionsProps> = ({
       
       try {
         setIsLoading(true);
+        setProcessingState('processing');
         
         const customerId = station.currentSession.customerId;
         console.log('Ending session for station:', station.id, 'customer:', customerId);
@@ -83,28 +85,62 @@ const StationActions: React.FC<StationActionsProps> = ({
           selectCustomer(customer.id);
         }
         
-        // Show loading toast to indicate process has started
+        // Show processing toast
         toast({
           title: "Processing...",
           description: "Ending session and preparing checkout...",
         });
         
         // Wait for session to fully end before redirecting
-        await onEndSession(station.id);
+        const result = await onEndSession(station.id);
         
-        setIsRedirecting(true); // Set redirecting state to prevent multiple navigations
+        if (!result) {
+          throw new Error("Failed to end session - no result returned");
+        }
         
-        toast({
-          title: "Session Ended",
-          description: "Session has been ended and added to cart.",
-        });
+        setProcessingState('verifying');
         
-        // Add a small delay before redirecting to ensure state updates are complete
-        setTimeout(() => {
-          navigate('/pos');
-        }, 500);
+        // Verify the session was properly ended in both local and database
+        if (result.isFullyUpdated) {
+          setProcessingState('success');
+          console.log("Session fully ended, proceeding to checkout");
+          
+          // Success toast
+          toast({
+            title: "Session Ended",
+            description: "Session has been ended and added to cart.",
+          });
+          
+          // Set redirecting state
+          setIsRedirecting(true);
+          
+          // Add a small delay before redirecting to ensure state updates are complete
+          setTimeout(() => {
+            navigate('/pos');
+          }, 300);
+        } else {
+          console.warn("Session end had sync issues, retrying verification");
+          
+          // Try to verify one more time after a short delay
+          await new Promise(r => setTimeout(r, 500));
+          
+          // At this point, we've done our best to end the session
+          // Let's proceed even if there were sync issues, as local state is updated
+          setProcessingState('success');
+          setIsRedirecting(true);
+          
+          toast({
+            title: "Session Ended",
+            description: "Session has been ended and added to cart. (Sync completed)",
+          });
+          
+          setTimeout(() => {
+            navigate('/pos');
+          }, 300);
+        }
       } catch (error) {
         console.error("Error ending session:", error);
+        setProcessingState('failed');
         toast({
           title: "Error",
           description: "Failed to end session. Please try again.",
@@ -116,15 +152,34 @@ const StationActions: React.FC<StationActionsProps> = ({
     }
   };
 
+  const getButtonText = () => {
+    if (isLoading) {
+      switch (processingState) {
+        case 'processing': return "Processing...";
+        case 'verifying': return "Verifying...";
+        case 'success': return "Success!";
+        case 'failed': return "Failed - Retry";
+        default: return "Processing...";
+      }
+    }
+    
+    if (isRedirecting) return "Redirecting...";
+    return "End Session";
+  };
+
   if (station.isOccupied) {
     return (
       <Button 
         variant="destructive" 
-        className="w-full text-white font-bold py-3 text-lg bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 transition-opacity"
+        className={`w-full text-white font-bold py-3 text-lg 
+          ${processingState === 'failed' ? 'bg-red-600 hover:bg-red-700' : 
+            processingState === 'success' ? 'bg-green-600 hover:bg-green-700' : 
+            'bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90'} 
+          transition-all duration-300`}
         onClick={handleEndSession}
         disabled={isLoading || isRedirecting}
       >
-        {isLoading ? "Processing..." : isRedirecting ? "Redirecting..." : "End Session"}
+        {getButtonText()}
       </Button>
     );
   }

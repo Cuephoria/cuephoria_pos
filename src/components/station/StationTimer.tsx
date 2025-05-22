@@ -26,15 +26,27 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     stationId: string;
     customerId: string;
     hourlyRate: number;
+    isActive: boolean;
   } | null>(null);
+  const lastFetchRef = useRef<number>(Date.now());
+  const fetchIntervalRef = useRef<number | null>(null);
 
-  // Clear interval on component unmount to prevent memory leaks
+  // Clear all timers and intervals on component unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      
+      if (fetchIntervalRef.current) {
+        window.clearInterval(fetchIntervalRef.current);
+        fetchIntervalRef.current = null;
+      }
+      
+      // Reset state on unmount
+      sessionDataRef.current = null;
+      activeSessionIdRef.current = null;
     };
   }, []);
 
@@ -51,6 +63,12 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     if (timerRef.current) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    
+    // Clear fetch interval when station changes
+    if (fetchIntervalRef.current) {
+      window.clearInterval(fetchIntervalRef.current);
+      fetchIntervalRef.current = null;
     }
 
     // If we were tracking a different session or no longer have a session, reset state
@@ -84,7 +102,8 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           startTime: new Date(station.currentSession.startTime),
           stationId: station.id,
           customerId: station.currentSession.customerId,
-          hourlyRate: station.hourlyRate
+          hourlyRate: station.hourlyRate,
+          isActive: true
         };
         
         // Ensure we have a valid start time
@@ -105,8 +124,21 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       console.log("StationTimer: Setting up timer interval for station", station.id);
       
       timerRef.current = window.setInterval(() => {
-        updateTimerCalculation();
+        // Only update if the session is still active
+        if (sessionDataRef.current?.isActive) {
+          updateTimerCalculation();
+        }
       }, 1000);
+      
+      // Set up periodic check with Supabase to verify session status
+      fetchIntervalRef.current = window.setInterval(() => {
+        // Only fetch if enough time has passed (avoid excessive API calls)
+        const now = Date.now();
+        if (now - lastFetchRef.current > 10000) { // 10 second cooldown
+          lastFetchRef.current = now;
+          fetchSessionData();
+        }
+      }, 10000); // Check every 10 seconds
     }
 
     // Fetch the latest session data from Supabase for accuracy
@@ -115,7 +147,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
 
   // Function to update timer calculation based on session data
   const updateTimerCalculation = () => {
-    if (!sessionDataRef.current) return;
+    if (!sessionDataRef.current || !sessionDataRef.current.isActive) return;
     
     try {
       const customer = customers.find(c => c.id === sessionDataRef.current?.customerId);
@@ -146,7 +178,13 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
   // Fetch the latest session data from Supabase
   const fetchSessionData = async () => {
     try {
-      if (!station.currentSession) return;
+      if (!station.currentSession) {
+        if (sessionDataRef.current?.isActive) {
+          console.log("StationTimer: No current session but timer was active, stopping timer");
+          sessionDataRef.current.isActive = false;
+        }
+        return;
+      }
       
       const sessionId = station.currentSession.id;
       console.log("StationTimer: Fetching session data for ID:", sessionId);
@@ -159,7 +197,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         
       if (error) {
         console.error("StationTimer: Error fetching session data", error);
-        // Fallback to current data
+        // Continue with current data
         return;
       }
       
@@ -171,10 +209,20 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         if (sessionData.end_time || sessionData.status === 'completed') {
           console.log("StationTimer: Session has been ended on server, clearing timer");
           
-          // Clear timer if session has ended
+          // Mark session as inactive to stop updates
+          if (sessionDataRef.current) {
+            sessionDataRef.current.isActive = false;
+          }
+          
+          // Clear timers
           if (timerRef.current) {
             window.clearInterval(timerRef.current);
             timerRef.current = null;
+          }
+          
+          if (fetchIntervalRef.current) {
+            window.clearInterval(fetchIntervalRef.current);
+            fetchIntervalRef.current = null;
           }
           
           // Reset session refs
@@ -190,13 +238,16 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
           // Update the sessionDataRef with data from Supabase
           if (sessionDataRef.current) {
             sessionDataRef.current.startTime = startTime;
+            // Session is still active in the database
+            sessionDataRef.current.isActive = true;
           } else {
             sessionDataRef.current = {
               sessionId,
               startTime,
               stationId: station.id,
               customerId: station.currentSession.customerId,
-              hourlyRate: station.hourlyRate
+              hourlyRate: station.hourlyRate,
+              isActive: true
             };
           }
           
@@ -209,7 +260,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     }
   };
 
-  if (!station.isOccupied || !station.currentSession) {
+  if (!station.isOccupied || !station.currentSession || !sessionDataRef.current?.isActive) {
     return null;
   }
 

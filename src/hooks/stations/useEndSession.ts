@@ -69,19 +69,20 @@ export const useEndSession = ({
       ));
       
       // Try to update session in Supabase with retry logic
-      let retries = 2;
       let sessionUpdateSuccess = false;
+      let retries = 3; // Increase retries for better success rate
       
       while (retries > 0 && !sessionUpdateSuccess) {
         try {
-          const { error: sessionError } = await supabase
+          const { data, error: sessionError } = await supabase
             .from('sessions')
             .update({
               end_time: endTime.toISOString(),
               duration: durationMinutes,
               status: 'completed'  // Explicitly mark as completed
             })
-            .eq('id', session.id);
+            .eq('id', session.id)
+            .select();
             
           if (sessionError) {
             console.error('Error updating session in Supabase:', sessionError);
@@ -90,7 +91,7 @@ export const useEndSession = ({
             if (retries > 0) await new Promise(r => setTimeout(r, 500));
           } else {
             sessionUpdateSuccess = true;
-            console.log('Successfully updated session in Supabase');
+            console.log('Successfully updated session in Supabase:', data);
           }
         } catch (supabaseError) {
           console.error('Error updating session in Supabase:', supabaseError);
@@ -98,32 +99,51 @@ export const useEndSession = ({
           if (retries > 0) await new Promise(r => setTimeout(r, 500));
         }
       }
+
+      if (!sessionUpdateSuccess) {
+        console.error('Failed to update session in Supabase after retries');
+        toast({
+          title: 'Warning',
+          description: 'Session ended locally but database update failed. Sync issues may occur.',
+          variant: 'destructive'
+        });
+        // We continue since local state is already updated, but flag this as an issue
+      }
       
       // Try to update station in Supabase
-      try {
-        // Check if stationId is a proper UUID format
-        const dbStationId = stationId.includes('-') ? stationId : null;
-        
-        if (dbStationId) {
-          const { error: stationError } = await supabase
-            .from('stations')
-            .update({ 
-              is_occupied: false 
-            })
-            .eq('id', dbStationId);
-          
-          if (stationError) {
-            console.error('Error updating station in Supabase:', stationError);
-            // Continue since local state is already updated
-          } else {
-            console.log('Successfully updated station in Supabase');
+      let stationUpdateSuccess = false;
+      retries = 3; // Reset retries
+      
+      // Check if stationId is a proper UUID format
+      const dbStationId = stationId.includes('-') ? stationId : null;
+      
+      if (dbStationId) {
+        while (retries > 0 && !stationUpdateSuccess) {
+          try {
+            const { data, error: stationError } = await supabase
+              .from('stations')
+              .update({ 
+                is_occupied: false
+              })
+              .eq('id', dbStationId)
+              .select();
+            
+            if (stationError) {
+              console.error('Error updating station in Supabase:', stationError);
+              retries--;
+              if (retries > 0) await new Promise(r => setTimeout(r, 500));
+            } else {
+              stationUpdateSuccess = true;
+              console.log('Successfully updated station in Supabase:', data);
+            }
+          } catch (supabaseError) {
+            console.error('Error updating station in Supabase:', supabaseError);
+            retries--;
+            if (retries > 0) await new Promise(r => setTimeout(r, 500));
           }
-        } else {
-          console.log("Skipping station update in Supabase due to non-UUID station ID");
         }
-      } catch (supabaseError) {
-        console.error('Error updating station in Supabase:', supabaseError);
-        // Continue since local state is already updated
+      } else {
+        console.log("Skipping station update in Supabase due to non-UUID station ID");
       }
       
       // Find customer
@@ -184,15 +204,26 @@ export const useEndSession = ({
         updateCustomer(updatedCustomer);
       }
       
+      // Final check - verify session was properly updated in both local and remote state
+      const isFullyUpdated = sessionUpdateSuccess && (stationUpdateSuccess || !dbStationId);
+      
+      if (!isFullyUpdated) {
+        console.warn("Session ended with sync issues. Local state updated but database update failed.");
+      } else {
+        console.log("Session successfully ended in both local state and database");
+      }
+      
       toast({
         title: 'Success',
         description: 'Session ended successfully',
       });
       
+      // Return result with update status
       return { 
         updatedSession, 
         sessionCartItem, 
-        customer 
+        customer,
+        isFullyUpdated // New flag indicating if local and remote states are in sync
       };
     } catch (error) {
       console.error('Error in endSession:', error);
