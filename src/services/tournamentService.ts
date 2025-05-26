@@ -231,7 +231,7 @@ export const determineWinner = (matches: Match[], players: Player[]): Player | u
 };
 
 // Fetch all tournaments from Supabase
-export const fetchTournaments = async (): Promise<Tournament[]> => {
+const fetchTournaments = async (): Promise<Tournament[]> => {
   try {
     const { data, error } = await tournamentsTable
       .select()
@@ -262,7 +262,7 @@ const formatTournamentError = (error: PostgrestError): string => {
 };
 
 // Save a tournament to Supabase (create or update)
-export const saveTournament = async (tournament: Tournament): Promise<{ data: Tournament | null; error: string | null }> => {
+const saveTournament = async (tournament: Tournament): Promise<{ data: Tournament | null; error: string | null }> => {
   try {
     // Log the tournament being saved for debugging
     console.log('Saving tournament to Supabase:', tournament);
@@ -348,7 +348,7 @@ export const saveTournament = async (tournament: Tournament): Promise<{ data: To
 };
 
 // Delete a tournament from Supabase
-export const deleteTournament = async (id: string): Promise<{ success: boolean; error: string | null }> => {
+const deleteTournament = async (id: string): Promise<{ success: boolean; error: string | null }> => {
   try {
     const { error } = await tournamentsTable
       .delete()

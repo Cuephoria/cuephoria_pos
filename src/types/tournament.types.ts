@@ -1,7 +1,7 @@
 
 export type GameType = 'PS5' | 'Pool';
-export type PoolGameVariant = '8 Ball' | 'Snooker';
-export type PS5GameTitle = 'FIFA' | 'COD' | string;
+type PoolGameVariant = '8 Ball' | 'Snooker';
+type PS5GameTitle = 'FIFA' | 'COD' | string;
 export type MatchStatus = 'scheduled' | 'completed' | 'cancelled';
 export type MatchStage = 'regular' | 'quarter_final' | 'semi_final' | 'final';
 

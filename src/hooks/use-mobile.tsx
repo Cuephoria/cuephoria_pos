@@ -32,7 +32,7 @@ export function useIsMobile() {
 }
 
 // Helper function to make layout more responsive
-export function useResponsiveLayout() {
+function useResponsiveLayout() {
   const isMobile = useIsMobile()
   const [columnCount, setColumnCount] = React.useState(3)
   const [containerWidth, setContainerWidth] = React.useState("100%")
