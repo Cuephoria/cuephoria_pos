@@ -94,6 +94,5 @@ export const useStations = (initialStations: Station[] = [], updateCustomer: (cu
   };
 };
 
-export { u} from './useSessionsData';
-export { u} from './useStationsData';
-;
+export { useSessionsData } from './useSessionsData';
+export { useStationsData } from './useStationsData';
