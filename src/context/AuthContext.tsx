@@ -40,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data, error } = await supabase
           .from('admin_users')
           .select('id, username, is_admin')
+          .limit(1)
           .single();
         
         if (error) {
