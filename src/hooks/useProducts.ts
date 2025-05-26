@@ -304,3 +304,4 @@ export const useProducts = () => {
   };
 };
 
+export default useProducts;

@@ -18,7 +18,7 @@ export const generateId = (): string => {
 };
 
 // Export functions for CSV generation
-const exportCustomersToCSV = (customers: Customer[]) => {
+export const exportCustomersToCSV = (customers: Customer[]) => {
   let csvContent = "data:text/csv;charset=utf-8,";
   
   // Header row
@@ -50,7 +50,7 @@ const exportCustomersToCSV = (customers: Customer[]) => {
   document.body.removeChild(link);
 };
 
-const exportBillsToCSV = (bills: Bill[], customers: Customer[]) => {
+export const exportBillsToCSV = (bills: Bill[], customers: Customer[]) => {
   let csvContent = "data:text/csv;charset=utf-8,";
   
   // Header row
@@ -85,7 +85,7 @@ const exportBillsToCSV = (bills: Bill[], customers: Customer[]) => {
 };
 
 // Calculate cart totals
-const calculateCartTotal = (
+export const calculateCartTotal = (
   cart: CartItem[], 
   discount: number, 
   discountType: 'percentage' | 'fixed',
