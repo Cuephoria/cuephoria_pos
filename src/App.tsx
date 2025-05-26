@@ -22,8 +22,7 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
-import BookNow from "./pages/BookNow";
-import Bookings from "./pages/Bookings";
+import PublicStations from "./pages/PublicStations";
 
 // Create a new QueryClient instance outside of the component
 const queryClient = new QueryClient({
@@ -97,7 +96,7 @@ const App = () => (
                   <Route path="/login" element={<Login />} />
                   
                   {/* Public routes */}
-                  <Route path="/booknow" element={<BookNow />} />
+                  <Route path="/public/stations" element={<PublicStations />} />
                   
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
@@ -126,12 +125,6 @@ const App = () => (
                   <Route path="/customers" element={
                     <ProtectedRoute>
                       <Customers />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/bookings" element={
-                    <ProtectedRoute>
-                      <Bookings />
                     </ProtectedRoute>
                   } />
                   
