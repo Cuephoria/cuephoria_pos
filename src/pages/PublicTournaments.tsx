@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Trophy, Users, DollarSign, Clock, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Tournament } from '@/types/tournament.types';
+import { Tournament, convertFromSupabaseTournament } from '@/types/tournament.types';
 import { useToast } from '@/hooks/use-toast';
 import TournamentRegistrationDialog from '@/components/tournaments/TournamentRegistrationDialog';
 
@@ -38,21 +38,10 @@ const PublicTournaments = () => {
         return;
       }
 
-      const transformedTournaments = data?.map(tournament => ({
-        id: tournament.id,
-        name: tournament.name,
-        gameType: tournament.game_type as any,
-        gameVariant: tournament.game_variant,
-        gameTitle: tournament.game_title,
-        date: tournament.date,
-        players: tournament.players || [],
-        matches: tournament.matches || [],
-        status: tournament.status as any,
-        budget: tournament.budget,
-        winnerPrize: tournament.winner_prize,
-        runnerUpPrize: tournament.runner_up_prize,
-        winner: tournament.winner
-      })) || [];
+      // Use the conversion utility to properly transform the data
+      const transformedTournaments = data?.map(tournament => 
+        convertFromSupabaseTournament(tournament)
+      ) || [];
 
       setTournaments(transformedTournaments);
     } catch (error) {
