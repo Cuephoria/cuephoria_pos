@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +53,15 @@ export default function PublicTournaments() {
         return;
       }
 
-      setTournaments(data || []);
+      // Transform the data to ensure proper types
+      const transformedData = (data || []).map(tournament => ({
+        ...tournament,
+        players: Array.isArray(tournament.players) ? tournament.players : [],
+        matches: Array.isArray(tournament.matches) ? tournament.matches : [],
+        winner: tournament.winner || undefined
+      }));
+
+      setTournaments(transformedData);
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
