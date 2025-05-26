@@ -752,60 +752,6 @@ export type Database = {
           },
         ]
       }
-      tournament_registrations: {
-        Row: {
-          created_at: string | null
-          customer_email: string | null
-          customer_name: string
-          customer_phone: string
-          entry_fee: number | null
-          id: string
-          registration_date: string | null
-          registration_source: string | null
-          status: string | null
-          tournament_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          customer_email?: string | null
-          customer_name: string
-          customer_phone: string
-          entry_fee?: number | null
-          id?: string
-          registration_date?: string | null
-          registration_source?: string | null
-          status?: string | null
-          tournament_id: string
-        }
-        Update: {
-          created_at?: string | null
-          customer_email?: string | null
-          customer_name?: string
-          customer_phone?: string
-          entry_fee?: number | null
-          id?: string
-          registration_date?: string | null
-          registration_source?: string | null
-          status?: string | null
-          tournament_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tournament_registrations_tournament_id_fkey"
-            columns: ["tournament_id"]
-            isOneToOne: false
-            referencedRelation: "tournament_stats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tournament_registrations_tournament_id_fkey"
-            columns: ["tournament_id"]
-            isOneToOne: false
-            referencedRelation: "tournaments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tournaments: {
         Row: {
           budget: number | null
@@ -862,26 +808,7 @@ export type Database = {
       }
     }
     Views: {
-      tournament_stats: {
-        Row: {
-          budget: number | null
-          date: string | null
-          game_title: string | null
-          game_type: string | null
-          game_variant: string | null
-          id: string | null
-          matches: Json | null
-          max_players: number | null
-          name: string | null
-          players: Json | null
-          runner_up_prize: number | null
-          status: string | null
-          total_registrations: number | null
-          winner: Json | null
-          winner_prize: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       check_stations_availability: {

@@ -5,16 +5,20 @@ import { CurrencyDisplay } from '@/components/ui/currency';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePOS } from '@/context/POSContext';
+import { formatTimeDisplay, calculateElapsedTime, calculateSessionCost } from '@/utils/booking/formatters';
+import { Clock, DollarSign } from 'lucide-react';
 
 interface StationTimerProps {
   station: Station;
+  compact?: boolean;
 }
 
-const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
+const StationTimer: React.FC<StationTimerProps> = ({ station, compact = false }) => {
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
   const [cost, setCost] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const { toast } = useToast();
   const { customers } = usePOS();
   const timerRef = useRef<number | null>(null);
@@ -26,8 +30,20 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     hourlyRate: number;
   } | null>(null);
 
+  // Clear interval on component unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Re-initialize timer when station data changes
   useEffect(() => {
     if (!station.isOccupied || !station.currentSession) {
+      // Reset timer state when station is not occupied
       setHours(0);
       setMinutes(0);
       setSeconds(0);
@@ -35,7 +51,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
       
       // Clear any existing timer
       if (timerRef.current) {
-        clearInterval(timerRef.current);
+        window.clearInterval(timerRef.current);
         timerRef.current = null;
       }
       
@@ -44,7 +60,7 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
     }
 
     // Store the session data in ref to maintain persistence across renders
-    if (station.currentSession && !sessionDataRef.current) {
+    if (station.currentSession) {
       sessionDataRef.current = {
         sessionId: station.currentSession.id,
         startTime: new Date(station.currentSession.startTime),
@@ -52,156 +68,153 @@ const StationTimer: React.FC<StationTimerProps> = ({ station }) => {
         customerId: station.currentSession.customerId,
         hourlyRate: station.hourlyRate
       };
+      
+      // Ensure we have a valid start time
+      if (isNaN(sessionDataRef.current.startTime.getTime())) {
+        console.error("StationTimer: Invalid start time for session", station.currentSession);
+        sessionDataRef.current.startTime = new Date();
+      }
     }
 
-    // Find the customer to check if they are a member
-    const customer = customers.find(c => c.id === station.currentSession?.customerId);
-    const isMember = customer?.isMember || false;
+    // Initialize timer calculation immediately
+    if (sessionDataRef.current) {
+      updateTimerCalculation();
+    }
 
-    // Initial calculation based on local session data
-    const updateTimerFromLocalData = () => {
-      if (!sessionDataRef.current) return;
-      
-      const startTime = sessionDataRef.current.startTime;
-      const now = new Date();
-      const elapsedMs = now.getTime() - startTime.getTime();
-      
-      const secondsTotal = Math.floor(elapsedMs / 1000);
-      const minutesTotal = Math.floor(secondsTotal / 60);
-      const hoursTotal = Math.floor(minutesTotal / 60);
-      
-      setSeconds(secondsTotal % 60);
-      setMinutes(minutesTotal % 60);
-      setHours(hoursTotal);
-      
-      // Calculate cost based on hourly rate
-      const hoursElapsed = elapsedMs / (1000 * 60 * 60);
-      let calculatedCost = Math.ceil(hoursElapsed * station.hourlyRate);
-      
-      // Apply 50% discount for members - IMPORTANT: Same logic as in useEndSession
-      if (isMember) {
-        calculatedCost = Math.ceil(calculatedCost * 0.5); // 50% discount
-      }
-      
-      setCost(calculatedCost);
-      
-      console.log("Timer update:", {
-        sessionId: sessionDataRef.current.sessionId,
-        startTime: startTime.toISOString(),
-        elapsedMs,
-        secondsTotal,
-        minutesTotal,
-        hoursTotal,
-        hourlyRate: station.hourlyRate,
-        isMember,
-        discountApplied: isMember,
-        calculatedCost
-      });
-    };
-
-    // Try to get session data from Supabase
-    const fetchSessionData = async () => {
-      try {
-        if (!station.currentSession) return;
-        
-        const sessionId = station.currentSession.id;
-        console.log("Fetching session data for ID:", sessionId);
-        
-        const { data, error } = await supabase
-          .from('sessions')
-          .select('*')
-          .eq('id', sessionId)
-          .single();
-          
-        if (error) {
-          console.error("Error fetching session data:", error);
-          // Fallback to local data
-          updateTimerFromLocalData();
-          return;
-        }
-        
-        if (data) {
-          // Use type assertion since we know this data should exist
-          const sessionData = data as any;
-          
-          if (sessionData && sessionData.start_time) {
-            const startTime = new Date(sessionData.start_time);
-            console.log("Session start time from Supabase:", startTime);
-            
-            // Update the sessionDataRef with data from Supabase
-            if (sessionDataRef.current) {
-              sessionDataRef.current.startTime = startTime;
-            } else {
-              sessionDataRef.current = {
-                sessionId,
-                startTime,
-                stationId: station.id,
-                customerId: station.currentSession.customerId,
-                hourlyRate: station.hourlyRate
-              };
-            }
-            
-            updateTimerFromLocalData();
-          } else {
-            // Fallback to local data
-            updateTimerFromLocalData();
-          }
-        } else {
-          // Fallback to local data
-          updateTimerFromLocalData();
-        }
-      } catch (error) {
-        console.error("Error in fetchSessionData:", error);
-        // Fallback to local data
-        updateTimerFromLocalData();
-      }
-    };
-    
-    // Fetch data initially
-    fetchSessionData();
-    
-    // Set up interval for regular updates that persists
-    if (timerRef.current === null) {
+    // Set up interval for regular updates if not already running
+    if (timerRef.current === null && station.currentSession) {
       timerRef.current = window.setInterval(() => {
-        updateTimerFromLocalData();
+        updateTimerCalculation();
       }, 1000);
     }
+
+    // Fetch the latest session data from Supabase for accuracy
+    fetchSessionData();
+  }, [station]);
+
+  // Function to update timer calculation based on session data
+  const updateTimerCalculation = () => {
+    if (!sessionDataRef.current) return;
     
-    // Clean up on unmount
-    return () => {
-      // Don't clear the interval - let the timer continue running
-      // This is intentional to keep the session running in the background
-      // even if component unmounts
-    };
-  }, [station, customers]);
+    try {
+      const customer = customers.find(c => c.id === sessionDataRef.current?.customerId);
+      const isMember = customer?.isMember || false;
+      
+      // Calculate elapsed time components
+      const { hours: h, minutes: m, seconds: s, elapsedMs } = 
+        calculateElapsedTime(sessionDataRef.current.startTime);
+      
+      // Update state with calculated values
+      setHours(h);
+      setMinutes(m);
+      setSeconds(s);
+      
+      // Calculate and update cost
+      const calculatedCost = calculateSessionCost(
+        sessionDataRef.current.hourlyRate, 
+        elapsedMs, 
+        isMember
+      );
+      
+      setCost(calculatedCost);
+    } catch (error) {
+      console.error("StationTimer: Error updating timer", error);
+    }
+  };
 
-  // Add a cleanup function for component unmount
-  useEffect(() => {
-    return () => {
-      // This will only run when the component is truly unmounted (not page change)
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+  // Fetch the latest session data from Supabase
+  const fetchSessionData = async () => {
+    try {
+      setIsRefreshing(true);
+      if (!station.currentSession) return;
+      
+      const sessionId = station.currentSession.id;
+      
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+        
+      if (error) {
+        console.error("StationTimer: Error fetching session data", error);
+        // Fallback to current data
+        setIsRefreshing(false);
+        return;
       }
-    };
-  }, []);
-
-  const formatTimeDisplay = () => {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      if (data) {
+        // Use type assertion since we know this data should exist
+        const sessionData = data as any;
+        
+        if (sessionData && sessionData.start_time) {
+          const startTime = new Date(sessionData.start_time);
+          
+          // Update the sessionDataRef with data from Supabase
+          if (sessionDataRef.current) {
+            sessionDataRef.current.startTime = startTime;
+          } else {
+            sessionDataRef.current = {
+              sessionId,
+              startTime,
+              stationId: station.id,
+              customerId: station.currentSession.customerId,
+              hourlyRate: station.hourlyRate
+            };
+          }
+          
+          // Update timer calculation with fresh data
+          updateTimerCalculation();
+        }
+      }
+      setIsRefreshing(false);
+    } catch (error) {
+      console.error("StationTimer: Error in fetchSessionData", error);
+      setIsRefreshing(false);
+    }
   };
 
   if (!station.isOccupied || !station.currentSession) {
     return null;
   }
 
-  return (
-    <div className="space-y-4 bg-black/70 p-3 rounded-lg">
-      <div className="text-center">
-        <span className="font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full">
-          {formatTimeDisplay()}
-        </span>
+  if (compact) {
+    return (
+      <div className="text-center flex flex-col items-center">
+        <div className="relative inline-block">
+          <span className={`font-mono text-base ${seconds % 2 === 0 ? 'text-white' : 'text-white/90'} 
+            bg-black bg-opacity-80 px-3 py-1 rounded text-white font-medium inline-block
+            border border-gray-700/50 shadow-[0_0_15px_rgba(14,165,233,0.2)]`}
+          >
+            {formatTimeDisplay(hours, minutes, seconds)}
+          </span>
+          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-cuephoria-blue to-transparent"></div>
+        </div>
+        <div className="mt-1 text-xs font-medium text-cuephoria-orange">
+          <CurrencyDisplay amount={cost} className="text-xs" />
+        </div>
       </div>
-      <div className="flex justify-between items-center">
-        <span className="text-white">Current Cost:</span>
+    );
+  }
+
+  return (
+    <div className="space-y-4 bg-gradient-to-b from-black/80 to-gray-900/80 p-4 rounded-lg border border-gray-700/30 shadow-lg relative overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-r from-cuephoria-purple/5 to-cuephoria-blue/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      
+      <div className="text-center relative">
+        <Clock className="h-4 w-4 text-gray-400 absolute left-1/2 -translate-x-1/2 -top-2" />
+        <span className={`font-mono text-2xl bg-black px-4 py-2 rounded-lg text-white font-bold inline-block w-full
+          ${seconds % 2 === 0 ? 'text-white' : 'text-white/90'} border border-gray-700/50 shadow-inner`}
+        >
+          {formatTimeDisplay(hours, minutes, seconds)}
+        </span>
+        <div className="h-[2px] w-3/4 mx-auto mt-1 bg-gradient-to-r from-transparent via-cuephoria-blue/50 to-transparent"></div>
+      </div>
+      
+      <div className="flex justify-between items-center relative">
+        <span className="text-white flex items-center">
+          <DollarSign className="h-4 w-4 text-cuephoria-orange mr-1" /> Current Cost:
+        </span>
         <CurrencyDisplay amount={cost} className="text-cuephoria-orange font-bold text-lg" />
       </div>
     </div>
