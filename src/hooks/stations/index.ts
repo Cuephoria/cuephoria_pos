@@ -1,49 +1,100 @@
 
-// Import React properly
-import React from 'react';
+// This file exports the useStations hook
+import { useSessionsData } from './useSessionsData';
+import { useStationsData } from './useStationsData';
+import { useSessionActions } from './session-actions';
+import { Station, Session, Customer } from '@/types/pos.types';
+import { useState, useEffect } from 'react';
 
-// Export hooks from this directory
-export * from './useSessionsData';
-export * from './useSessionActions';
-export * from './useEndSession';
-export * from './useStationsData';
-export * from './useStations';  // Add the new useStations hook
-
-// This hook periodically updates booking statuses
-export const useUpdateBookingStatuses = () => {
-  // Only call hooks inside React function components
-  React.useEffect(() => {
-    // Function to update booking statuses
-    const updateBookingStatuses = async () => {
-      try {
-        const response = await fetch('https://apltkougkglbsfphbghi.supabase.co/functions/v1/update-booking-statuses', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
-          }
-        });
+export const useStations = (initialStations: Station[] = [], updateCustomer: (customer: Customer) => void) => {
+  const { 
+    stations, 
+    setStations,
+    stationsLoading,
+    stationsError,
+    refreshStations,
+    deleteStation,
+    updateStation
+  } = useStationsData();
+  
+  const {
+    sessions,
+    setSessions,
+    sessionsLoading,
+    sessionsError,
+    refreshSessions
+  } = useSessionsData();
+  
+  // Connect active sessions to stations
+  useEffect(() => {
+    if (stations.length > 0 && sessions.length >= 0) {
+      console.log("Connecting active sessions to stations");
+      
+      // Find active sessions (without endTime) if sessions exist
+      const activeSessions = sessions.filter(s => !s.endTime);
+      
+      console.log(`Found ${activeSessions.length} active sessions to connect, out of ${sessions.length} total sessions`);
+      
+      // Create a mapping of station ID to session
+      const activeSessionMap = new Map<string, Session>();
+      activeSessions.forEach(session => {
+        activeSessionMap.set(session.stationId, session);
+      });
+      
+      // Update stations with their active sessions
+      setStations(prev => prev.map(station => {
+        const activeSession = activeSessionMap.get(station.id);
         
-        if (!response.ok) {
-          throw new Error(`Failed to update booking statuses: ${response.status}`);
+        if (activeSession) {
+          console.log(`Connecting session to station ${station.name}`);
+          return {
+            ...station,
+            isOccupied: true,
+            currentSession: activeSession
+          };
+        } else {
+          // If there's no active session for this station, ensure it's marked as unoccupied
+          return {
+            ...station,
+            isOccupied: false,
+            currentSession: null
+          };
         }
-        
-        const data = await response.json();
-        console.log('Booking statuses updated:', data);
-      } catch (error) {
-        console.error('Error updating booking statuses:', error);
-      }
-    };
-    
-    // Run once on component mount
-    updateBookingStatuses();
-    
-    // Schedule to run every 15 minutes
-    const intervalId = setInterval(updateBookingStatuses, 15 * 60 * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
+      }));
+    }
+  }, [sessions, stations.length]);
+  
+  const {
+    startSession,
+    endSession,
+    isLoading
+  } = useSessionActions({
+    stations,
+    setStations,
+    sessions,
+    setSessions,
+    updateCustomer
+  });
+
+  return {
+    stations,
+    setStations,
+    sessions,
+    setSessions,
+    startSession,
+    endSession,
+    deleteStation,
+    updateStation,
+    stationsLoading,
+    stationsError,
+    sessionsLoading,
+    sessionsError,
+    refreshStations,
+    refreshSessions,
+    isLoading
+  };
 };
 
-// Also export the useStations hook directly for backward compatibility
-export { useStations } from './useStations';
+export { useSessionsData } from './useSessionsData';
+export { useStationsData } from './useStationsData';
+export { useSessionActions } from './session-actions';

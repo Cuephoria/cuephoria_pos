@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Station, Session } from '@/types/pos.types';
 import { supabase } from "@/integrations/supabase/client";
@@ -70,46 +71,6 @@ export const useStationsData = () => {
     } finally {
       setStationsLoading(false);
     }
-  };
-  
-  /**
-   * Connect active sessions to their stations
-   * @param stationsList List of stations to update
-   * @param sessionsList List of sessions to connect
-   * @returns Updated station list with connected sessions
-   */
-  const connectSessionsToStations = (stationsList: Station[], sessionsList: Session[]): Station[] => {
-    // Filter only active sessions (no end time)
-    const activeSessions = sessionsList.filter(session => !session.endTime);
-    
-    console.log(`Connecting ${activeSessions.length} active sessions to ${stationsList.length} stations`);
-    
-    if (activeSessions.length === 0) {
-      return stationsList;
-    }
-    
-    // Map of stationId to active session
-    const stationSessionMap = new Map<string, Session>();
-    activeSessions.forEach(session => {
-      stationSessionMap.set(session.stationId, session);
-    });
-    
-    // Connect sessions to stations
-    const updatedStations = stationsList.map(station => {
-      const activeSession = stationSessionMap.get(station.id);
-      
-      if (activeSession) {
-        console.log(`Connected station ${station.name} (${station.id}) to session ${activeSession.id}`);
-        return {
-          ...station,
-          isOccupied: true,
-          currentSession: activeSession
-        };
-      }
-      return station;
-    });
-    
-    return updatedStations;
   };
   
   const updateStation = async (stationId: string, name: string, hourlyRate: number) => {
@@ -250,7 +211,6 @@ export const useStationsData = () => {
     stationsError,
     refreshStations,
     deleteStation,
-    updateStation,
-    connectSessionsToStations
+    updateStation
   };
 };
